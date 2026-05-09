@@ -116,14 +116,43 @@ serve(async (req) => {
       return results;
     };
 
+    // --- HELPER: PARSE TEMPLATE ---
+    const parseTemplate = (text: string, vars: any) => {
+      if (!text) return "";
+      return text.replace(/\{\{(.*?)\}\}/g, (match, key) => {
+        const trimmedKey = key.trim();
+        // Support for nested properties like {{record.customer_details.name}}
+        const value = trimmedKey.split('.').reduce((obj, k) => obj?.[k], vars);
+        return value !== undefined ? value : match;
+      });
+    };
+
+    const fetchAndSendTemplate = async (identifier: string, to: string[], vars: any) => {
+      const { data: template } = await supabaseAdmin
+        .from('email_templates')
+        .select('*')
+        .eq('identifier', identifier)
+        .single();
+      
+      if (!template) {
+        console.warn(`Template ${identifier} not found, falling back to basic.`);
+        return false;
+      }
+
+      const subject = parseTemplate(template.subject, vars);
+      const html = parseTemplate(template.body, vars);
+      
+      await sendMultiEmail(to, subject, html);
+      return true;
+    };
+
     // --- PROCESS BASED ON TABLE ---
     
+    const vars = { record, old_record, site_url: "https://bookmyticket.net" };
+
     // 1. OTPS
     if (table === 'otps' && type === 'INSERT') {
-      const { email, code, purpose } = record;
-      const subject = `${code} is your verification code`;
-      const html = `<h2>BookMyTicket</h2><p>Your OTP for ${purpose} is:</p><h1 style="color: #ec4899; spacing: 5px;">${code}</h1><p>Do not share this code.</p>`;
-      await sendMultiEmail([email], subject, html);
+      await fetchAndSendTemplate('otp', [record.email], { ...vars, otp: record.code, purpose: record.purpose });
     } 
 
     // 2. BOOKINGS (Events)
@@ -131,23 +160,28 @@ serve(async (req) => {
       const isConfirmed = record.status === 'Confirmed' && (type === 'INSERT' || old_record?.status !== 'Confirmed');
       if (!isConfirmed) return new Response("Booking not confirmed, skipping", { status: 200 });
 
-      const { id, event_id, user_id, ticket_count, total_price, customer_details } = record;
-      const { data: event } = await supabaseAdmin.from('events').select('title, organiser_id').eq('id', event_id).single();
-      const { data: userProfile } = await supabaseAdmin.from('profiles').select('email').eq('id', user_id).single();
+      const { data: event } = await supabaseAdmin.from('events').select('title, organiser_id, image_url').eq('id', record.event_id).single();
+      const { data: userProfile } = await supabaseAdmin.from('profiles').select('email, full_name').eq('id', record.user_id).single();
       const { data: organiserProfile } = await supabaseAdmin.from('profiles').select('email').eq('id', event?.organiser_id).maybeSingle();
       
-      const userEmail = customer_details?.email || userProfile?.email;
-      const userName = customer_details?.name || 'Customer';
+      const userEmail = record.customer_details?.email || userProfile?.email;
       const organiserEmail = organiserProfile?.email;
 
-      const userSubject = "Booking Confirmed";
-      const userHtml = `<h2>Booking Confirmed</h2><p>Your booking for <strong>${event?.title}</strong> is confirmed.</p><p>Tickets: ${ticket_count}<br/>Amount: ₹${total_price}<br/>ID: ${id}</p>`;
+      const bookingVars = {
+        ...vars,
+        name: record.customer_details?.name || userProfile?.full_name || 'Customer',
+        eventName: event?.title,
+        bookingId: record.id,
+        ticketCount: record.ticket_count,
+        amount: record.total_price,
+        date: new Date().toLocaleDateString(),
+        eventImage: event?.image_url
+      };
 
-      const orgSubject = "New Booking Received";
-      const orgHtml = `<h2>New Booking</h2><p><strong>User:</strong> ${userName}<br/><strong>Event:</strong> ${event?.title}<br/><strong>Tickets:</strong> ${ticket_count}<br/><strong>ID:</strong> ${id}</p>`;
-
-      await sendMultiEmail([userEmail], userSubject, userHtml);
-      if (organiserEmail) await sendMultiEmail([organiserEmail], orgSubject, orgHtml);
+      await fetchAndSendTemplate('booking', [userEmail], bookingVars);
+      if (organiserEmail) {
+        await fetchAndSendTemplate('organiser_new_booking', [organiserEmail], bookingVars);
+      }
     }
 
     // 3. TURF BOOKINGS
@@ -156,40 +190,29 @@ serve(async (req) => {
                           (type === 'INSERT' || (old_record?.booking_status !== 'confirmed' && old_record?.status !== 'confirmed'));
       if (!isConfirmed) return new Response("Turf booking not confirmed, skipping", { status: 200 });
 
-      const { id, organiser_id, turf_name, date, start_time, total_amount, customer_details, customer_name, customer_email } = record;
-      const { data: organiserProfile } = await supabaseAdmin.from('profiles').select('email').eq('id', organiser_id).maybeSingle();
-      
-      const userEmail = customer_email || customer_details?.email;
-      const userName = customer_name || customer_details?.name || 'Customer';
+      const { data: organiserProfile } = await supabaseAdmin.from('profiles').select('email').eq('id', record.organiser_id).maybeSingle();
+      const userEmail = record.customer_email || record.customer_details?.email;
       const organiserEmail = organiserProfile?.email;
 
-      const userSubject = "Booking Confirmed";
-      const userHtml = `<h2>Turf Booking Confirmed</h2><p>Your booking for <strong>${turf_name}</strong> on ${date} is confirmed.</p><p>Amount: ₹${total_amount}<br/>ID: ${id}</p>`;
+      const turfVars = {
+        ...vars,
+        name: record.customer_name || record.customer_details?.name || 'Customer',
+        turfName: record.turf_name,
+        date: record.date,
+        time: record.start_time,
+        amount: record.total_amount,
+        bookingId: record.id
+      };
 
-      const orgSubject = "New Turf Booking";
-      const orgHtml = `<h2>New Booking Received</h2><p><strong>User:</strong> ${userName}<br/><strong>Facility:</strong> ${turf_name}<br/><strong>Date:</strong> ${date}<br/><strong>ID:</strong> ${id}</p>`;
-
-      await sendMultiEmail([userEmail], userSubject, userHtml);
-      if (organiserEmail) await sendMultiEmail([organiserEmail], orgSubject, orgHtml);
+      await fetchAndSendTemplate('turf_booking_confirmed', [userEmail], turfVars);
+      if (organiserEmail) {
+        await fetchAndSendTemplate('organiser_new_turf_booking', [organiserEmail], turfVars);
+      }
     }
 
     // 5. PROFILES (Welcome Email)
-    if (table === 'profiles' && type === 'INSERT') {
-      const { email, full_name } = record;
-      const subject = "Welcome to BookMyTicket! 🎉";
-      const html = `
-        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #f1f5f9; border-radius: 24px; padding: 40px; background: #fff;">
-          <h2 style="color: #1e293b;">Welcome to BookMyTicket!</h2>
-          <p>Hi ${full_name || 'there'},</p>
-          <p>Your account has been successfully created. We're excited to have you on board!</p>
-          <p>Start exploring amazing events and professional services curated just for you.</p>
-          <div style="margin: 30px 0;">
-            <a href="https://bookmyticket.net" style="background: #ec4899; color: white; padding: 12px 24px; text-decoration: none; border-radius: 12px; font-weight: bold;">Explore Events</a>
-          </div>
-          <p style="color: #64748b; font-size: 13px;">If you have any questions, just reply to this email.</p>
-        </div>
-      `;
-      await sendMultiEmail([email], subject, html);
+    else if (table === 'profiles' && type === 'INSERT') {
+      await fetchAndSendTemplate('welcome_registration', [record.email], { ...vars, name: record.full_name });
     }
 
     // 4. VENDOR BOOKINGS
@@ -199,32 +222,73 @@ serve(async (req) => {
       
       const isRequested = (type === 'INSERT' && (record.status === 'pending' || record.status === 'Pending'));
 
-      const { id, vendor_id, service_type, booking_date, total_amount, customer_details, customer_name, customer_email } = record;
-      const { data: vendorProfile } = await supabaseAdmin.from('profiles').select('email').eq('id', vendor_id).maybeSingle();
-      
-      const userEmail = customer_email || customer_details?.email;
-      const userName = customer_name || customer_details?.name || 'Customer';
+      const { data: vendorProfile } = await supabaseAdmin.from('profiles').select('email').eq('id', record.vendor_id).maybeSingle();
+      const userEmail = record.customer_email || record.customer_details?.email;
       const vendorEmail = vendorProfile?.email;
 
+      const vendorVars = {
+        ...vars,
+        name: record.customer_name || record.customer_details?.name || 'Customer',
+        serviceType: record.service_type,
+        date: record.booking_date,
+        amount: record.total_amount,
+        bookingId: record.id
+      };
+
       if (isConfirmed) {
-        const userSubject = "Booking Confirmed - BookMyTicket";
-        const userHtml = `<h2>Service Booking Confirmed</h2><p>Your booking for <strong>${service_type}</strong> on ${booking_date} is confirmed.</p><p>Amount: ₹${total_amount}<br/>ID: ${id}</p>`;
-
-        const vendorSubject = "New Booking Confirmed";
-        const vendorHtml = `<h2>Booking Confirmed</h2><p><strong>User:</strong> ${userName}<br/><strong>Service:</strong> ${service_type}<br/><strong>Date:</strong> ${booking_date}<br/><strong>ID:</strong> ${id}</p>`;
-
-        await sendMultiEmail([userEmail], userSubject, userHtml);
-        if (vendorEmail) await sendMultiEmail([vendorEmail], vendorSubject, vendorHtml);
+        await fetchAndSendTemplate('vendor_booking_confirmed', [userEmail], vendorVars);
+        if (vendorEmail) await fetchAndSendTemplate('vendor_new_booking_confirmed', [vendorEmail], vendorVars);
       } 
       else if (isRequested) {
-        const userSubject = "Booking Request Sent";
-        const userHtml = `<h2>Request Received</h2><p>Your request for <strong>${service_type}</strong> on ${booking_date} has been sent to the professional.</p><p>You will receive a confirmation email once they approve your request.</p><p>Amount: ₹${total_amount}<br/>ID: ${id}</p>`;
+        await fetchAndSendTemplate('vendor_booking_requested', [userEmail], vendorVars);
+        if (vendorEmail) await fetchAndSendTemplate('vendor_action_required', [vendorEmail], vendorVars);
+      }
+    }
 
-        const vendorSubject = "New Service Request - Action Required";
-        const vendorHtml = `<h2>Action Required: New Request</h2><p>You have received a new booking request.</p><p><strong>User:</strong> ${userName}<br/><strong>Service:</strong> ${service_type}<br/><strong>Date:</strong> ${booking_date}<br/><strong>ID:</strong> ${id}</p><p><a href="https://bookmyticket.net/vendor/bookings">Review and Confirm Request</a></p>`;
+    // 6. KYC VERIFICATIONS
+    else if (table === 'kyc_details' && type === 'UPDATE') {
+      if (record.status !== old_record.status) {
+        const { data: profile } = await supabaseAdmin.from('profiles').select('email').eq('id', record.id).single();
+        if (profile?.email) {
+          const kycVars = {
+            ...vars,
+            status: record.status,
+            notes: record.rejection_reason || 'Your KYC application has been processed.',
+            color: record.status === 'Approved' ? '#16a34a' : '#ef4444'
+          };
+          await fetchAndSendTemplate('kyc_status_update', [profile.email], kycVars);
+        }
+      }
+    }
 
-        await sendMultiEmail([userEmail], userSubject, userHtml);
-        if (vendorEmail) await sendMultiEmail([vendorEmail], vendorSubject, vendorHtml);
+    // 7. WITHDRAW REQUESTS
+    else if (table === 'withdraw_requests' && type === 'UPDATE') {
+      if (record.status !== old_record.status) {
+        const { data: profile } = await supabaseAdmin.from('profiles').select('email').eq('id', record.organiser_id || record.user_id).single();
+        if (profile?.email) {
+          const withdrawVars = {
+            ...vars,
+            status: record.status,
+            amount: record.amount,
+            requestId: record.id
+          };
+          await fetchAndSendTemplate('withdraw_status_update', [profile.email], withdrawVars);
+        }
+      }
+    }
+
+    // 8. EVENT PUBLISHED (Approval)
+    else if (table === 'events' && type === 'UPDATE') {
+      if (record.status === 'Published' && old_record.status !== 'Published') {
+        const { data: profile } = await supabaseAdmin.from('profiles').select('email').eq('id', record.organiser_id).single();
+        if (profile?.email) {
+          const eventVars = {
+            ...vars,
+            eventName: record.title,
+            eventImage: record.image_url
+          };
+          await fetchAndSendTemplate('event_published_alert', [profile.email], eventVars);
+        }
       }
     }
 

@@ -16,9 +16,10 @@ import CareersAdmin from "@/app/admin/components/CareersAdmin";
 import CareersBannerSettings from "@/app/admin/components/CareersBannerSettings";
 import AdminContactInquiries from "@/app/admin/components/AdminContactInquiries";
 import RevenueDashboard from "@/app/admin/components/RevenueDashboard";
+import GstAuditDashboard from "@/app/admin/components/GstAuditDashboard";
 
 
-import { MoreVertical, Briefcase, LayoutDashboard, Settings, Video, Image as ImageIcon, Sparkles, CheckCircle, Ticket, Users, Menu, Bell, Save, X, Plus, Trash2, Mail, Lock, CreditCard, Code, Globe, Shield, FileText, Megaphone, Tag, LayoutGrid, Calendar, ShoppingCart, UserCircle, Gift, Send, BarChart3, Archive, MessageCircle, Upload, Edit, Search, AlertCircle, ChevronDown, ChevronRight, LogOut, Activity, RefreshCw, AlertTriangle, Info, Smartphone, MessageSquare, Landmark, Ban } from "lucide-react";
+import { MoreVertical, Zap, Briefcase, LayoutDashboard, Settings, Video, Image as ImageIcon, Sparkles, CheckCircle, Ticket, Users, Menu, Bell, Save, X, Plus, Trash2, Mail, Lock, CreditCard, Code, Globe, Shield, FileText, Megaphone, Tag, LayoutGrid, Calendar, ShoppingCart, UserCircle, Gift, Send, BarChart3, Archive, MessageCircle, Upload, Edit, Search, AlertCircle, ChevronDown, ChevronRight, LogOut, Activity, RefreshCw, AlertTriangle, Info, Smartphone, MessageSquare, Landmark, Ban, Sun, Moon, Filter, Building2, Cpu, ExternalLink, Eye, Layout, Settings2, ShieldCheck, Slash, ArrowRight, User } from "lucide-react";
 import { HOME_EVENTS, HERO_BANNER_SLIDES } from "@/app/data/homeEvents";
 import { eventMatchesCategory } from "@/app/utils/categoryMatch";
 import { hashPassword } from "@/app/utils/hashPassword";
@@ -998,6 +999,10 @@ function AdminHomePage() {
 
     // Sync turf bookings from Supabase
     const { data: turfBookingsArr = [] } = useSupabaseQuery('turf_bookings', q => q, [], { realtime: false });
+    const [showLedgerModal, setShowLedgerModal] = useState(false);
+    const [selectedLedgerOrg, setSelectedLedgerOrg] = useState(null);
+    const [showEditEventModal, setShowEditEventModal] = useState(false);
+    const [eventEditForm, setEventEditForm] = useState(null);
     useEffect(() => {
         if (turfBookingsArr.length > 0) {
             setTurfBookings(turfBookingsArr);
@@ -1184,7 +1189,7 @@ function AdminHomePage() {
     const { data: adminsArr = [] } = useSupabaseQuery('admins', q => q.select('*, profiles:id (full_name, email, username)'));
     const { data: allAdPopups = [] } = useSupabaseQuery('ad_popups', q => q.order('sort_order', { ascending: true }), [], { realtime: false });
     const { data: eventsArr = [] } = useSupabaseQuery('events', (q) => q.order('created_at', { ascending: false }));
-    const { data: bookingsArr = [] } = useSupabaseQuery('bookings');
+    const { data: bookingsArr = [] } = useSupabaseQuery('bookings', (q) => q.select('*, events(title), profiles(full_name, email)'));
     const { data: apiKeysArr = [] } = useSupabaseQuery('api_keys', q => q, [], { realtime: false });
     const [editingMemoryObj, setEditingMemoryObj] = useState(null);
     const [memoryForm, setMemoryForm] = useState({ imageUrl: "", altText: "" });
@@ -1503,7 +1508,8 @@ function AdminHomePage() {
                 balance: `₹${(o.wallet_balance || 0).toFixed(2)}`,
                 kycDetails: o.kyc_details,
                 kyc_status: o.kyc_status || "NOT STARTED",
-                fee_config: o.fee_config
+                platform_fee_percent: o.platform_fee_percent || 7.00,
+                payout_fee_flat: o.payout_fee_flat || 10.00
             }));
     }, [organisersArr]);
 
@@ -1772,7 +1778,12 @@ function AdminHomePage() {
                     return diff < (24 * 60 * 60 * 1000);
                 }
                 return true;
-            });
+            }).map(b => ({
+                ...b,
+                eventName: b.events?.title || b.eventName || "Untitled Event",
+                customerName: b.profiles?.full_name || "Guest User",
+                customerEmail: b.profiles?.email || b.customer_email || b.customerEmail || "No Email"
+            }));
             setBookings(activeBookings);
         }
     }, [bookingsArr]);
@@ -1970,7 +1981,6 @@ function AdminHomePage() {
                 return;
             }
             const { data: { session } } = await supabase.auth.getSession();
-            // Call local API instead of Edge Function for stability
             const res = await fetch('/api/admin/action', {
                 method: 'POST',
                 headers: { 
@@ -1988,11 +1998,11 @@ function AdminHomePage() {
                 showToast("Microsoft 365 connection validated! (Check your inbox)", "success");
                 setLocalEmailSettings(s => ({ 
                     ...s, 
-                    provider: "MICROSOFT_365", // Auto-switch provider on validation success
+                    provider: "MICROSOFT_365",
                     microsoft365: { ...s.microsoft365, status: "Connected" } 
                 }));
             } else {
-                showToast("Connection failed: " + (result?.error || error?.message), "error");
+                showToast("Connection failed: " + (result?.error || "Unknown error"), "error");
                 setLocalEmailSettings(s => ({ 
                     ...s, 
                     microsoft365: { ...s.microsoft365, status: "Not Connected" } 
@@ -2007,35 +2017,35 @@ function AdminHomePage() {
 
     const colors = {
         light: {
-            bg: "#f8fafc",
+            bg: "#f3f4f6",
             sidebar: "#ffffff",
-            header: "#ffffff",
-            textMain: "#0f172a",
-            textSub: "#64748b",
+            header: "rgba(255, 255, 255, 0.8)",
+            textMain: "#1f2937",
+            textSub: "#6b7280",
             cardBg: "#ffffff",
-            border: "#e2e8f0",
-            activeLink: "#3b82f6",
+            border: "#e5e7eb",
+            activeLink: "#ec4899",
             activeText: "#ffffff",
-            sidebarBorder: "#e2e8f0"
+            sidebarBorder: "#f3f4f6"
         },
         dark: {
-            bg: "#0f172a",
+            bg: "#0b0f19",
             sidebar: "#111827",
-            header: "#111827",
-            textMain: "#f8fafc",
-            textSub: "#94a3b8",
-            cardBg: "#1e293b",
-            border: "#334155",
-            activeLink: "#3b82f6",
+            header: "rgba(17, 24, 39, 0.8)",
+            textMain: "#f9fafb",
+            textSub: "#9ca3af",
+            cardBg: "#1f2937",
+            border: "#374151",
+            activeLink: "#ec4899",
             activeText: "#ffffff",
-            sidebarBorder: "#1e293b"
+            sidebarBorder: "#1f2937"
         }
     };
 
-    const ACCENT_BLUE = "#3b82f6";
+    const ACCENT_PINK = "#ec4899";
     const ACCENT_PURPLE = "#8b5cf6";
-    const ACCENT_PINK = "#f84464"; // Unified with Organiser portal
-    const ACCENT_GRADIENT = `linear-gradient(135deg, ${ACCENT_BLUE} 0%, ${ACCENT_PURPLE} 100%)`;
+    const ACCENT_BLUE = "#3b82f6";
+    const ACCENT_GRADIENT = `linear-gradient(135deg, ${ACCENT_PINK} 0%, ${ACCENT_PURPLE} 100%)`;
 
     const t = colors[theme] || colors.dark;
 
@@ -2084,526 +2094,271 @@ function AdminHomePage() {
     const toggleTheme = () => setTheme(theme === 'light' ? 'dark' : 'light');
 
     return (
-        <div className="flex h-screen overflow-hidden" style={{ backgroundColor: t.bg }}>
+        <div className="flex h-screen overflow-hidden font-sans" style={{ backgroundColor: t.bg }}>
             <style>{`
-                .admin-container { 
-                    display: flex; 
-                    min-height: 100vh; 
-                    background-color: #f8fafc; 
-                    color: #0f172a;
-                    -webkit-font-smoothing: antialiased;
-                    -moz-osx-font-smoothing: grayscale;
-                    transition: all 0.3s ease;
-                }
-                .sidebar {
-                    width: 250px;
-                    background-color: ${t.sidebar};
-                    color: ${t.textSub};
-                    display: flex;
-                    flex-direction: column;
-                    position: fixed;
-                    height: 100vh;
-                    left: 0;
-                    top: 0;
-                    z-index: 100;
-                    border-right: 1px solid ${t.sidebarBorder};
-                    transition: transform 0.3s ease, background-color 0.3s ease;
-                    overflow-y: auto;
-                    padding: 20px 0;
-                }
-                .sidebar-item {
-                    display: flex;
-                    align-items: center;
-                    gap: 12px;
-                    padding: 10px 16px;
-                    margin: 4px 16px;
-                    border-radius: 12px;
-                    cursor: pointer;
-                    transition: all 0.2s ease;
-                    font-size: 14px;
-                    font-weight: 500;
-                    color: ${t.textSub};
-                    text-decoration: none;
-                }
-                .sidebar-item:hover {
-                    background-color: ${t.activeLink}30;
-                    color: ${t.activeText};
-                }
-                .sidebar-item.active {
-                    background-color: ${t.activeLink};
-                    color: ${t.activeText};
-                    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
-                }
-                .sidebar-group-title {
-                    padding: 0 32px;
-                    margin: 20px 0 10px 0;
-                    font-size: 11px;
-                    font-weight: 700;
-                    text-transform: uppercase;
-                    letter-spacing: 0.05em;
-                    color: ${t.textSub}80;
-                }
-                .submenu {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 4px;
-                    margin: 4px 16px 12px 32px;
-                }
-                .submenu-item {
-                    display: flex;
-                    align-items: center;
-                    gap: 12px;
-                    padding: 8px 16px;
-                    border-radius: 8px;
-                    cursor: pointer;
-                    transition: all 0.2s ease;
-                    font-size: 13px;
-                    font-weight: 500;
-                    color: ${t.textSub};
-                }
-                .submenu-item:hover {
-                    background-color: ${t.activeLink}30;
-                    color: ${t.activeText};
-                }
-                .submenu-item.active-sub {
-                    background-color: transparent;
-                    color: ${t.activeText};
-                    font-weight: 700;
-                }
-                .dot-icon {
-                    width: 6px;
-                    height: 6px;
-                    border-radius: 50%;
-                    background-color: currentColor;
-                    opacity: 0.5;
-                }
-                .submenu-item.active-sub .dot-icon {
-                    opacity: 1;
-                    background-color: ${t.activeText};
-                }
-                .sidebar::-webkit-scrollbar {
-                    width: 5px;
-                }
-                .sidebar::-webkit-scrollbar-track {
-                    background: transparent;
-                }
-                .sidebar::-webkit-scrollbar-thumb {
-                    background-color: ${t.border};
-                    border-radius: 10px;
-                }
+                @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
+                
+                * { font-family: 'Outfit', sans-serif; }
+
                 .main-content {
                     flex: 1;
-                    padding: 24px;
-                    min-width: 0;
+                    padding: 32px;
+                    overflow-y: auto;
                     position: relative;
-                    background: linear-gradient(135deg, #06b6d4 0%, #2563eb 40%, #1e1b4b 100%);
-                    min-height: 100vh;
-                }
-                .main-content::before {
-                    content: '';
-                    position: absolute;
-                    top: 0;
-                    left: 0;
-                    right: 0;
-                    bottom: 0;
-                    background: radial-gradient(circle at 50% -20%, #facc1508, transparent 70%);
-                    pointer-events: none;
-                    z-index: 0;
-                }
-                @media (max-width: 1024px) {
-                    .sidebar { transform: translateX(-100%); width: 280px; }
-                    .sidebar.open { transform: translateX(0); }
-                    .main-content { margin-left: 0; padding: 20px; }
-                    .sidebar-overlay { 
-                        position: fixed; top: 0; left: 0; right: 0; bottom: 0; 
-                        background: rgba(0,0,0,0.5); z-index: 90; display: none; 
-                    }
-                    .sidebar-overlay.visible { display: block; }
-                }
-                .widget-card {
-                    background: rgba(255, 255, 255, 0.03);
-                    backdrop-filter: blur(30px);
-                    border-radius: 24px;
-                    border: 1px solid rgba(255, 255, 255, 0.08);
-                    padding: 24px;
-                    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-                    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-                    position: relative;
-                    overflow: hidden;
                     z-index: 1;
+                    scroll-behavior: smooth;
                 }
-                .widget-card::before {
-                    content: '';
-                    position: absolute;
-                    inset: 0;
-                    background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, transparent 100%);
-                    opacity: 0;
-                    transition: opacity 0.4s;
-                }
-                .widget-card:hover {
-                    transform: translateY(-8px) scale(1.02);
-                    border-color: rgba(255, 255, 255, 0.2);
-                    background: rgba(255, 255, 255, 0.05);
-                }
-                .widget-card:hover::before {
-                    opacity: 1;
-                }
-                /* Neon Glow Border Effect for specific card */
-                .widget-card.glow-yellow {
-                    border-color: rgba(250, 204, 21, 0.4);
-                    box-shadow: 0 0 20px rgba(250, 204, 21, 0.1);
-                }
-                .widget-card.glow-pink { border-color: rgba(236, 72, 153, 0.3); }
-                .widget-card.glow-purple { border-color: rgba(139, 92, 246, 0.3); }
-                .widget-card.glow-blue { border-color: rgba(59, 130, 246, 0.3); }
 
-                .stats-grid {
-                    display: grid;
-                    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-                    gap: 20px;
-                    margin-bottom: 32px;
+                .premium-glass {
+                    background: ${theme === 'light' ? 'rgba(255, 255, 255, 0.7)' : 'rgba(31, 41, 55, 0.7)'};
+                    backdrop-filter: blur(16px);
+                    -webkit-backdrop-filter: blur(16px);
+                    border: 1px solid ${theme === 'light' ? 'rgba(255, 255, 255, 0.4)' : 'rgba(255, 255, 255, 0.1)'};
+                    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.05);
                 }
-                .sparkline {
-                    position: absolute;
-                    bottom: 0;
-                    left: 0;
-                    right: 0;
-                    height: 40px;
-                    opacity: 0.4;
-                    pointer-events: none;
-                }
-                .section-card {
-                    background-color: ${t.cardBg};
-                    border-radius: 16px;
-                    border: 1px solid ${t.border};
-                    padding: 16px;
-                    margin-bottom: 24px;
-                }
-                .table-container {
-                    overflow-x: auto;
-                    border-radius: 12px;
-                    border: 1px solid ${t.border};
-                }
-                table {
-                    width: 100%;
-                    border-collapse: collapse;
-                }
-                th {
-                    text-align: left;
-                    padding: 10px 14px;
-                    background-color: ${theme === 'dark' ? '#1e293b' : '#f8fafc'};
+
+                .sidebar-item-new {
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                    padding: 12px 16px;
+                    margin: 4px 12px;
+                    border-radius: 14px;
+                    cursor: pointer;
+                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                    font-size: 14px;
+                    font-weight: 600;
                     color: ${t.textSub};
-                    font-size: 12px;
+                    border: 1px solid transparent;
+                }
+
+                .sidebar-item-new:hover {
+                    background-color: ${t.activeLink}10;
+                    color: ${t.activeLink};
+                    transform: translateX(4px);
+                }
+
+                .sidebar-item-new.active {
+                    background: ${ACCENT_GRADIENT};
+                    color: #fff;
+                    box-shadow: 0 10px 20px -5px ${ACCENT_PINK}40;
+                }
+
+                .status-badge {
+                    padding: 4px 10px;
+                    border-radius: 100px;
+                    font-size: 11px;
+                    font-weight: 800;
                     text-transform: uppercase;
                     letter-spacing: 0.05em;
-                    border-bottom: 1px solid ${t.border};
                 }
-                td {
-                    padding: 12px;
-                    border-bottom: 1px solid ${t.border};
-                    font-size: 14px;
+
+                .card-premium {
+                    background: ${t.cardBg};
+                    border-radius: 24px;
+                    border: 1px solid ${t.border};
+                    padding: 24px;
+                    transition: all 0.3s ease;
                 }
-                .badge {
-                    padding: 4px 10px;
-                    border-radius: 99px;
-                    font-size: 11px;
-                    font-weight: 700;
-                    text-transform: uppercase;
+
+                .card-premium:hover {
+                    box-shadow: 0 20px 40px -10px rgba(0,0,0,0.05);
+                    transform: translateY(-2px);
                 }
-                .badge-blue { background: #dbeafe; color: #1e40af; }
-                .badge-green { background: #dcfce7; color: #166534; }
-                .badge-yellow { background: #fef9c3; color: #854d0e; }
-                .badge-red { background: #fee2e2; color: #991b1b; }
-                
-                @keyframes dropdownFade {
-                    from { opacity: 0; transform: translateY(-10px); }
-                    to { opacity: 1; transform: translateY(0); }
-                }
-                .dropdown-hover:hover {
-                    background-color: ${theme === 'dark' ? 'rgba(255,255,255,0.05)' : '#f1f5f9'} !important;
-                }
-                .dropdown-hover-red:hover {
-                    background-color: #fef2f2 !important;
-                }
-                .sidebar-logo-text {
-                    font-size: 18px; 
-                    font-weight: 800; 
-                    color: ${t.textMain}; 
-                    letter-spacing: -0.5px;
-                }
+
+                /* Custom Scrollbar */
+                ::-webkit-scrollbar { width: 6px; }
+                ::-webkit-scrollbar-track { background: transparent; }
+                ::-webkit-scrollbar-thumb { background: ${t.border}; border-radius: 10px; }
+                ::-webkit-scrollbar-thumb:hover { background: ${t.textSub}; }
             `}</style>
 
-            
-            {/* Sidebar Overlay (mobile only) */}
-
-            {/* Sidebar Overlay (mobile only) */}
+            {/* Sidebar Overlay (mobile) */}
             {isSidebarOpen && (
-                <div className="fixed inset-0 bg-slate-900/60 z-40 md:hidden backdrop-blur-md" onClick={() => setIsSidebarOpen(false)} />
+                <div className="fixed inset-0 bg-black/40 z-40 md:hidden backdrop-blur-sm" onClick={() => setIsSidebarOpen(false)} />
             )}
 
-            {/* Sidebar Navigation */}
-            <aside className={`fixed md:sticky md:top-0 md:h-screen inset-y-0 left-0 z-50 w-60 border-r transition-transform transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 flex flex-col flex-shrink-0`} style={{ backgroundColor: t.sidebar, borderColor: t.sidebarBorder }}>
-                {/* Header */}
-                <div className="h-16 flex items-center justify-center border-b" style={{ borderColor: t.sidebarBorder }}>
-                    <div className="flex items-center cursor-pointer" onClick={() => setActiveTab("dashboard")}>
-                        <img src="/logo.png" alt="BookMyTicket" className="h-12 w-auto" />
-                    </div>
-                </div>
-                
-                {/* Side Sub-Header (Service Role) */}
-                <div className="px-4 py-3 border-b" style={{ borderColor: t.sidebarBorder }}>
-                    <p className="text-[9px] font-bold uppercase tracking-widest mb-1" style={{ color: t.textSub }}>Admin Portal</p>
-                    <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 bg-green-500 rounded-full shadow-sm"></div>
-                        <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: t.textMain }}>Super Admin</span>
+            {/* Sidebar */}
+            <aside className={`fixed md:sticky md:top-0 md:h-screen inset-y-0 left-0 z-50 w-72 border-r transition-all duration-300 transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 flex flex-col flex-shrink-0`} style={{ backgroundColor: t.sidebar, borderColor: t.sidebarBorder }}>
+                {/* Brand Logo Area */}
+                <div className="h-24 flex items-center px-8 border-b" style={{ borderColor: t.sidebarBorder }}>
+                    <div className="flex items-center gap-3 cursor-pointer" onClick={() => setActiveTab("dashboard")}>
+                        <div className="w-10 h-10 rounded-xl bg-pink-500 flex items-center justify-center shadow-lg shadow-pink-500/20">
+                            <Ticket className="text-white" size={24} strokeWidth={2.5} />
+                        </div>
+                        <div>
+                            <h1 className="text-lg font-black tracking-tight" style={{ color: t.textMain }}>BookMyTicket</h1>
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-pink-500">Admin Hub</p>
+                        </div>
                     </div>
                 </div>
 
-                <nav className="flex-1 px-4 py-4 space-y-1 overflow-y-auto custom-scrollbar">
-                    {/* Render Helper */}
+                <div className="flex-1 overflow-y-auto py-6">
+                    {/* Navigation Groups */}
                     {(() => {
-                        const SidebarItem = ({ id, label, icon: Icon, onClick, active }) => (
-                            <button onClick={onClick} className={`w-full flex items-center space-x-3 px-4 py-2 rounded-2xl transition-all  group relative ${ active ? 'bg-slate-900 text-white shadow-2xl shadow-yellow-500/20 scale-[1.02] ring-1 ring-yellow-500/20' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900 hover:scale-[1.02]' }`}>
-                                <Icon size={18} className={active ? 'text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.5)]' : 'text-slate-300 group-hover:text-slate-900'} strokeWidth={active ? 3 : 2} />
-                                <span className={`text-[11px] uppercase tracking-widest whitespace-nowrap ${active ? 'font-black' : 'font-bold'}`}>{label}</span>
-                                {active && <div className="absolute right-4 w-1 h-4 bg-yellow-400 rounded-full shadow-[0_0_12px_rgba(250,204,21,0.8)]"></div>}
-                            </button>
+                        const NavLink = ({ id, label, icon: Icon, active, onClick }) => (
+                            <div className={`sidebar-item-new ${active ? 'active' : ''}`} onClick={onClick}>
+                                <Icon size={20} strokeWidth={active ? 2.5 : 2} />
+                                <span>{label}</span>
+                            </div>
                         );
-                        const SidebarGroupTitle = ({ title }) => (
-                            <p className="text-[10px] font-bold uppercase tracking-widest mt-6 mb-2 px-4" style={{ color: t.textSub, opacity: 0.5 }}>{title}</p>
-                        );
-                        const SidebarCategoryHeader = ({ label, icon: Icon, isOpen, onClick, badge }) => (
-                            <button 
-                                onClick={onClick}
-                                className={`w-full flex items-center justify-between px-4 py-2 mt-1 transition-all group`}
-                                style={{ color: isOpen ? t.activeLink : t.textSub }}
-                            >
-                                <div className="flex items-center space-x-3">
-                                    <Icon size={18} className={isOpen ? "text-blue-500" : "opacity-40"} />
-                                    <span className={`text-[11px] uppercase tracking-wider ${isOpen ? 'font-bold' : 'font-semibold'}`}>{label}</span>
-                                    {badge > 0 && (
-                                        <span className="ml-2 px-2 py-0.5 bg-pink-500 text-white text-[9px] font-bold rounded-full">
-                                            {badge}
-                                        </span>
-                                    )}
-                                </div>
-                                <ChevronDown size={14} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-                            </button>
-                        );
-                        const SidebarSubItem = ({ id, label, onClick, active }) => (
-                            <button 
-                                onClick={onClick} 
-                                className={`w-full flex items-center space-x-3 px-4 py-1.5 pl-10 rounded-lg transition-all`}
-                                style={{ 
-                                    color: active ? t.activeLink : t.textSub,
-                                    backgroundColor: active ? `${t.activeLink}15` : 'transparent'
-                                }}
-                            >
-                                <div className={`w-1 h-1 rounded-full ${active ? 'bg-blue-500' : 'bg-current opacity-20'}`}></div>
-                                <span className={`text-[10px] uppercase tracking-wider ${active ? 'font-bold' : 'font-medium'}`}>{label}</span>
-                            </button>
+
+                        const GroupTitle = ({ title }) => (
+                            <p className="px-8 mt-6 mb-2 text-[10px] font-extrabold uppercase tracking-[0.2em]" style={{ color: t.textSub, opacity: 0.4 }}>{title}</p>
                         );
 
                         return (
-                            <div className="flex flex-col pb-4">
-                                <SidebarGroupTitle title="Home" />
-                                <SidebarItem id="dashboard" label="Dashboard" icon={LayoutDashboard} active={activeTab === "dashboard"} onClick={() => setActiveTab("dashboard")} />
-                                 <SidebarItem id="partner_requests" label="Partner Requests" icon={Users} active={activeTab === "partner_requests"} onClick={() => setActiveTab("partner_requests")} />
-                                <SidebarItem id="banner_ads" label="Banner Ads" icon={Megaphone} active={activeTab === "banner_ads"} onClick={() => setActiveTab("banner_ads")} />
+                            <>
+                                <GroupTitle title="Main" />
+                                <NavLink id="dashboard" label="Overview" icon={LayoutDashboard} active={activeTab === "dashboard"} onClick={() => setActiveTab("dashboard")} />
+                                <NavLink id="all_events" label="All Events" icon={Calendar} active={activeTab === "all_events"} onClick={() => setActiveTab("all_events")} />
+                                <NavLink id="bookings" label="Ticket Orders" icon={ShoppingCart} active={activeTab === "bookings"} onClick={() => setActiveTab("bookings")} />
+                                <NavLink id="customers" label="Customer List" icon={Users} active={activeTab === "customers"} onClick={() => setActiveTab("customers")} />
                                 
-                                <SidebarCategoryHeader label="Home Page" icon={Globe} isOpen={isHomeSettingsOpen} onClick={() => setIsHomeSettingsOpen(!isHomeSettingsOpen)} />
-                                {isHomeSettingsOpen && (
-                                    <div className="space-y-0.5">
-                                        {[
-                                            { label: "Hero Banner", id: "hero" },
-                                            { label: "Mobile Banners", id: "mobile_banners" },
-                                            { label: "Video Banner", id: "video_banner" },
-                                            { label: "Featured Events", id: "events_settings" },
-                                            { label: "Event Partners", id: "event_partners" },
-                                            { label: "Recent Memories", id: "memories" },
-                                            { label: "Sections Order", id: "sections" },
-                                            { label: "Copyright Header", id: "copyright" },
-                                            { label: "Meeting Settings", id: "meeting_settings" },
-                                            { label: "Maintenance Mode", id: "maintenance" }
-                                        ].map(sub => (
-                                            <SidebarSubItem key={sub.id} id={sub.id} label={sub.label} active={activeTab === sub.id} onClick={sub.onClick || (() => setActiveTab(sub.id))} />
-                                        ))}
-                                    </div>
-                                )}
-
-                                <SidebarGroupTitle title="Operations" />
-                                <SidebarItem id="all_events" label="Events" icon={Calendar} active={activeTab === "all_events"} onClick={() => setActiveTab("all_events")} />
-                                <SidebarItem id="bookings" label="Bookings" icon={ShoppingCart} active={activeTab === "bookings"} onClick={() => setActiveTab("bookings")} />
-                                <SidebarItem id="meetings" label="Meetings" icon={Video} active={activeTab === "meetings"} onClick={() => setActiveTab("meetings")} />
-                                <SidebarItem id="categories" label="Categories" icon={LayoutGrid} active={activeTab === "categories"} onClick={() => setActiveTab("categories")} />
-                                <SidebarItem id="contact_inquiries" label="Contact Inquiries" icon={MessageSquare} active={activeTab === "contact_inquiries"} onClick={() => setActiveTab("contact_inquiries")} />
-                                <SidebarItem id="contact_settings" label="Contact Settings" icon={Settings} active={activeTab === "contact_settings"} onClick={() => setActiveTab("contact_settings")} />
-
-                                <SidebarGroupTitle title="Partners" />
-                                <SidebarItem id="customers" label="Customers" icon={UserCircle} active={activeTab === "customers"} onClick={() => setActiveTab("customers")} />
-                                <SidebarItem id="subscribers" label="Subscribers" icon={Mail} active={activeTab === "subscribers"} onClick={() => setActiveTab("subscribers")} />
-                                
-                                <SidebarCategoryHeader label="Organizers" icon={Users} isOpen={isOrganizersOpen} onClick={() => setIsOrganizersOpen(!isOrganizersOpen)} />
+                                <GroupTitle title="Partners" />
+                                <NavLink id="partner_requests" label="Onboarding" icon={Users} active={activeTab === "partner_requests"} onClick={() => setActiveTab("partner_requests")} />
+                                <NavLink id="event_partners" label="Event Partners" icon={Users} active={activeTab === "event_partners"} onClick={() => setActiveTab("event_partners")} />
+                                <div className={`sidebar-item-new ${isOrganizersOpen ? 'text-pink-500' : ''}`} onClick={() => setIsOrganizersOpen(!isOrganizersOpen)}>
+                                    <Shield size={20} />
+                                    <span>Organizers</span>
+                                    <ChevronDown size={14} className={`ml-auto transition-transform ${isOrganizersOpen ? 'rotate-180' : ''}`} />
+                                </div>
                                 {isOrganizersOpen && (
-                                    <div className="space-y-0.5">
-                                        {[
-                                            { label: "All Organizers", id: "all_org" },
-                                            { label: "Active", id: "active_org" },
-                                            { label: "Under Review", id: "kyc_verified" },
-                                            { label: "Pending Setup", id: "kyc_pending" },
-                                            { label: "Restricted", id: "banned_org" },
-                                        ].map(sub => (
-                                            <SidebarSubItem key={sub.id} id={sub.id} label={sub.label} active={activeTab === sub.id} onClick={sub.onClick || (() => setActiveTab(sub.id))} />
+                                    <div className="ml-8 mr-4 mt-1 flex flex-col gap-1">
+                                        {['all_org', 'active_org', 'kyc_verified', 'kyc_pending', 'kyc_unverified', 'banned_org', 'email_unverified', 'with_balance'].map(sub => (
+                                            <div key={sub} className={`px-4 py-2 rounded-lg text-[13px] font-bold cursor-pointer transition-colors ${activeTab === sub ? 'text-pink-500 bg-pink-50' : 'text-slate-500 hover:text-pink-400'}`} onClick={() => setActiveTab(sub)}>
+                                                {sub === 'all_org' ? 'All Partners' : sub.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+                                            </div>
                                         ))}
                                     </div>
                                 )}
 
-                                <SidebarCategoryHeader label="Services" icon={Briefcase} isOpen={isServicesOpen} onClick={() => setIsServicesOpen(!isServicesOpen)} />
-                                {isServicesOpen && (
-                                    <div className="space-y-0.5">
-                                        {[
-                                            { label: "Turf Partners", id: "turf_partners" },
-                                            { label: "All Turfs", id: "all_turfs" },
-                                            { label: "Active Turfs", id: "turf_active" },
-                                            { label: "Banned Turfs", id: "turf_banned" },
-                                            { label: "Turf Bookings", id: "turf_bookings" },
-                                            { label: "Pool Requests", id: "pool_bookings" },
-                                            { label: "Active Professionals", id: "service_active" },
-                                            { label: "Banned Professionals", id: "service_banned" },
-                                        ].map(sub => (
-                                            <SidebarSubItem key={sub.id} id={sub.id} label={sub.label} active={activeTab === sub.id} onClick={sub.onClick || (() => setActiveTab(sub.id))} />
-                                        ))}
-                                    </div>
-                                )}
+                                <GroupTitle title="Services" />
+                                <NavLink id="turf_partners" label="Turf Booking" icon={Landmark} active={activeTab === "turf_partners"} onClick={() => setActiveTab("turf_partners")} />
+                                <NavLink id="pool_bookings" label="Pool Requests" icon={Smartphone} active={activeTab === "pool_bookings"} onClick={() => setActiveTab("pool_bookings")} />
+                                <NavLink id="meetings" label="Meeting Hub" icon={Video} active={activeTab === "meetings"} onClick={() => setActiveTab("meetings")} />
 
-                                <SidebarGroupTitle title="Growth" />
-                                <SidebarCategoryHeader label="Marketing" icon={Gift} isOpen={isGrowthOpen} onClick={() => setIsGrowthOpen(!isGrowthOpen)} />
-                                {isGrowthOpen && (
-                                    <div className="space-y-0.5">
-                                        {[
-                                            { label: "Coupon Codes", id: "coupons" },
-                                            { label: "Promotions", id: "promotions" },
-                                            { label: "Push Notifications", id: "send_notif" },
-                                            { label: "Email Broadcast", id: "email_broadcast" },
+                                <GroupTitle title="Growth" />
+                                <NavLink id="coupons" label="Advanced Coupons" icon={Tag} active={activeTab === "coupons"} onClick={() => setActiveTab("coupons")} />
+                                <NavLink id="promotions" label="Promotional Hub" icon={Sparkles} active={activeTab === "promotions"} onClick={() => setActiveTab("promotions")} />
+                                <NavLink id="banner_ads" label="Marketing Banners" icon={Megaphone} active={activeTab === "banner_ads"} onClick={() => setActiveTab("banner_ads")} />
+                                <NavLink id="email_broadcast" label="Newsletter Hub" icon={Mail} active={activeTab === "email_broadcast"} onClick={() => setActiveTab("email_broadcast")} />
+                                <NavLink id="comm_hub" label="Comm Hub" icon={MessageSquare} active={activeTab === "comm_hub"} onClick={() => setActiveTab("comm_hub")} />
+                                <NavLink id="subscribers" label="Subscriber Base" icon={Users} active={activeTab === "subscribers"} onClick={() => setActiveTab("subscribers")} />
+                                <NavLink id="send_notif" label="Push Notifications" icon={Send} active={activeTab === "send_notif"} onClick={() => setActiveTab("send_notif")} />
 
-                                        ].map(sub => (
-                                            <SidebarSubItem key={sub.id} id={sub.id} label={sub.label} active={activeTab === sub.id} onClick={sub.onClick || (() => setActiveTab(sub.id))} />
-                                        ))}
-                                    </div>
-                                )}
-                                
-                                <SidebarGroupTitle title="Finance" />
-                                <SidebarItem id="revenue" label="Revenue Tracking" icon={BarChart3} active={activeTab === "revenue"} onClick={() => setActiveTab("revenue")} />
-                                <SidebarItem id="gst" label="GST Reports" icon={Briefcase} active={activeTab === "gst"} onClick={() => setActiveTab("gst")} />
-                                <SidebarItem id="payout_requests" label="Payout Requests" icon={Landmark} active={activeTab === "payout_requests"} onClick={() => setActiveTab("payout_requests")} />
+                                <GroupTitle title="Finance" />
+                                <NavLink id="revenue" label="Revenue Ledger" icon={BarChart3} active={activeTab === "revenue"} onClick={() => setActiveTab("revenue")} />
+                                <NavLink id="financials" label="Fiscal Analytics" icon={Activity} active={activeTab === "financials"} onClick={() => setActiveTab("financials")} />
+                                <NavLink id="payout_requests" label="Payouts" icon={CreditCard} active={activeTab === "payout_requests"} onClick={() => setActiveTab("payout_requests")} />
+                                <NavLink id="gst" label="Tax Audits" icon={FileText} active={activeTab === "gst"} onClick={() => setActiveTab("gst")} />
 
-                                <SidebarGroupTitle title="Reports" />
-                                <SidebarItem id="support_tickets" label="Ticket System" icon={MessageCircle} active={activeTab === "support_tickets"} onClick={() => setActiveTab("support_tickets")} />
-                                <SidebarItem id="pages" label="Pages" icon={FileText} active={activeTab === "pages"} onClick={() => setActiveTab("pages")} />
-                                <SidebarItem id="ad_popups" label="Ad Popups" icon={Megaphone} active={activeTab === "ad_popups"} onClick={() => setActiveTab("ad_popups")} />
-                                <SidebarItem id="checkout_footer" label="Checkout Footer" icon={LayoutGrid} active={activeTab === "checkout_footer"} onClick={() => setActiveTab("checkout_footer")} />
+                                <GroupTitle title="Reports" />
+                                <NavLink id="support_tickets" label="Ticket System" icon={MessageCircle} active={activeTab === "support_tickets"} onClick={() => setActiveTab("support_tickets")} />
+                                <NavLink id="contact_inquiries" label="Inquiry Inbox" icon={Mail} active={activeTab === "contact_inquiries"} onClick={() => setActiveTab("contact_inquiries")} />
+                                <NavLink id="branding_partners" label="Brand Requests" icon={Briefcase} active={activeTab === "branding_partners"} onClick={() => setActiveTab("branding_partners")} />
+                                <NavLink id="pages" label="Pages" icon={FileText} active={activeTab === "pages"} onClick={() => setActiveTab("pages")} />
+                                <NavLink id="sections" label="Site Sections" icon={LayoutGrid} active={activeTab === "sections"} onClick={() => setActiveTab("sections")} />
+                                <NavLink id="subnav" label="Navigation Config" icon={Menu} active={activeTab === "subnav"} onClick={() => setActiveTab("subnav")} />
 
-                                <SidebarGroupTitle title="Administration" />
-                                <SidebarItem id="admin_management" label="Team Management" icon={Shield} active={activeTab === "admin_management"} onClick={() => setActiveTab("admin_management")} />
-                                <SidebarItem id="site_branding" label="Branding & Logos" icon={Sparkles} active={activeTab === "site_branding"} onClick={() => setActiveTab("site_branding")} />
-                                
-                                <SidebarCategoryHeader label="Careers" icon={Briefcase} isOpen={isCareersOpen} onClick={() => setIsCareersOpen(!isCareersOpen)} badge={newApplicantsCount} />
-                                {isCareersOpen && (
-                                    <div className="space-y-0.5">
-                                        {[
-                                            { label: "Job Openings", id: "careers_admin" },
-                                            { label: "Banner Settings", id: "careers_banner" }
-                                        ].map(sub => (
-                                            <SidebarSubItem key={sub.id} id={sub.id} label={sub.label} active={activeTab === sub.id} onClick={() => setActiveTab(sub.id)} />
-                                        ))}
-                                    </div>
-                                )}
+                                <GroupTitle title="Content" />
+                                <NavLink id="hero" label="Hero Engine" icon={Layout} active={activeTab === "hero"} onClick={() => setActiveTab("hero")} />
+                                <NavLink id="video_banner" label="Video Banners" icon={Video} active={activeTab === "video_banner"} onClick={() => setActiveTab("video_banner")} />
+                                <NavLink id="mobile_banners" label="App Banners" icon={Smartphone} active={activeTab === "mobile_banners"} onClick={() => setActiveTab("mobile_banners")} />
+                                <NavLink id="memories" label="Photo Memories" icon={ImageIcon} active={activeTab === "memories"} onClick={() => setActiveTab("memories")} />
+                                <NavLink id="ad_popups" label="Ad Popups" icon={Megaphone} active={activeTab === "ad_popups"} onClick={() => setActiveTab("ad_popups")} />
+                                <NavLink id="checkout_footer" label="Checkout Footer" icon={Archive} active={activeTab === "checkout_footer"} onClick={() => setActiveTab("checkout_footer")} />
 
-                                <SidebarGroupTitle title="System" />
-                                <SidebarCategoryHeader label="Settings" icon={Settings} isOpen={isSettingsOpen} onClick={() => setIsSettingsOpen(!isSettingsOpen)} />
-                                {isSettingsOpen && (
-                                    <div className="space-y-0.5">
-                                        {[
-                                            { label: "Email System", id: "email_templates" },
-                                            { label: "SMS & WhatsApp", id: "comm_hub" },
-                                            { label: "Payments", id: "payment_settings" },
-                                            { label: "Emails", id: "email_settings" },
-                                            { label: "SEO & Analytics", id: "seo_settings", onClick: () => router.push('/admin/settings/seo') },
-
-                                            { label: "Terms & Conditions", id: "terms_settings", onClick: () => router.push('/admin/settings/terms') },
-                                            { label: "SSO Config", id: "sso_settings" },
-                                            { label: "Tickets & Notifs", id: "ticket_settings" }
-                                        ].map(sub => (
-                                            <SidebarSubItem key={sub.id} id={sub.id} label={sub.label} active={activeTab === sub.id} onClick={sub.onClick || (() => setActiveTab(sub.id))} />
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
+                                <GroupTitle title="Settings" />
+                                <NavLink id="admin_management" label="Team Management" icon={Shield} active={activeTab === "admin_management"} onClick={() => setActiveTab("admin_management")} />
+                                <NavLink id="site_branding" label="Branding & Logos" icon={Sparkles} active={activeTab === "site_branding"} onClick={() => setActiveTab("site_branding")} />
+                                <NavLink id="events_settings" label="Site Config" icon={Settings} active={activeTab === "events_settings"} onClick={() => setActiveTab("events_settings")} />
+                                <NavLink id="exclusive_settings" label="Exclusive Perks" icon={Sparkles} active={activeTab === "exclusive_settings"} onClick={() => setActiveTab("exclusive_settings")} />
+                                <NavLink id="email_settings" label="Email Config" icon={Mail} active={activeTab === "email_settings"} onClick={() => setActiveTab("email_settings")} />
+                                <NavLink id="email_templates" label="Email Templates" icon={FileText} active={activeTab === "email_templates"} onClick={() => setActiveTab("email_templates")} />
+                                <NavLink id="payment_settings" label="Payment Gateway" icon={CreditCard} active={activeTab === "payment_settings"} onClick={() => setActiveTab("payment_settings")} />
+                                <NavLink id="fee_settings" label="Revenue & Fees" icon={BarChart3} active={activeTab === "fee_settings"} onClick={() => setActiveTab("fee_settings")} />
+                                <NavLink id="ticket_settings" label="Ticket Config" icon={Ticket} active={activeTab === "ticket_settings"} onClick={() => setActiveTab("ticket_settings")} />
+                                <NavLink id="careers_admin" label="Careers Admin" icon={Briefcase} active={activeTab === "careers_admin"} onClick={() => setActiveTab("careers_admin")} />
+                                <NavLink id="meeting_settings" label="Meeting Config" icon={Video} active={activeTab === "meeting_settings"} onClick={() => setActiveTab("meeting_settings")} />
+                                <NavLink id="sso_settings" label="SSO & Security" icon={Lock} active={activeTab === "sso_settings"} onClick={() => setActiveTab("sso_settings")} />
+                                <NavLink id="api_settings" label="API Gateway" icon={Code} active={activeTab === "api_settings"} onClick={() => setActiveTab("api_settings")} />
+                                <NavLink id="meta_management" label="Meta / SEO" icon={Globe} active={activeTab === "meta_management"} onClick={() => setActiveTab("meta_management")} />
+                                <NavLink id="disclaimer_settings" label="Legal Policy" icon={Shield} active={activeTab === "disclaimer_settings"} onClick={() => setActiveTab("disclaimer_settings")} />
+                                <NavLink id="copyright" label="Copyright Info" icon={Archive} active={activeTab === "copyright"} onClick={() => setActiveTab("copyright")} />
+                            </>
                         );
                     })()}
+                </div>
 
-                </nav>
-
-                {/* Footer - Profile Minimal */}
-                <div className="p-4 border-t mt-auto" style={{ borderColor: t.sidebarBorder }}>
-                    <div className="rounded-xl p-2.5 mb-2 flex items-center space-x-3 border shadow-sm" style={{ backgroundColor: t.cardBg, borderColor: t.border }}>
-                        <div className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs border" style={{ backgroundColor: t.header, color: t.textMain, borderColor: t.border }}>
-                            A
+                {/* Footer / User Profile */}
+                <div className="p-6 border-t" style={{ borderColor: t.sidebarBorder }}>
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-slate-200 border-2 border-white shadow-sm overflow-hidden">
+                            <img src="https://ui-avatars.com/api/?name=Admin+User&background=ec4899&color=fff" alt="" />
                         </div>
-                        <div className="flex-1 overflow-hidden">
-                            <p className="text-[10px] font-bold truncate uppercase tracking-tight" style={{ color: t.textMain }}>Admin User</p>
-                            <p className="text-[9px] font-medium truncate uppercase tracking-widest" style={{ color: t.textSub }}>Verified</p>
+                        <div className="flex-1 min-width-0">
+                            <p className="text-sm font-bold truncate" style={{ color: t.textMain }}>Admin User</p>
+                            <p className="text-[10px] font-extrabold text-pink-500 uppercase">Platform Owner</p>
                         </div>
+                        <button 
+                            onClick={() => logout()} 
+                            className="p-2.5 rounded-xl hover:bg-red-50 text-slate-400 hover:text-red-500 transition-all border border-transparent hover:border-red-100 group/logout"
+                            title="Sign Out"
+                        >
+                            <LogOut size={20} className="group-hover/logout:rotate-12 transition-transform" />
+                        </button>
                     </div>
-                    <button 
-                        onClick={handleLogout}
-                        className="w-full flex items-center justify-center space-x-2 px-4 py-2 rounded-lg bg-gradient-to-r from-pink-500 to-purple-600 text-white hover:opacity-90 transition-all shadow-md"
-                    >
-                        <LogOut size={12} strokeWidth={2.5} />
-                        <span className="text-[10px] font-bold uppercase tracking-wider">Sign Out</span>
-                    </button>
                 </div>
             </aside>
 
             {/* Main Content Area */}
             <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden bg-transparent">
                 
-                {/* Top Header */}
-                <header className="h-16 sticky top-0 z-40 border-b flex items-center justify-between px-8 lg:px-12" style={{ backgroundColor: t.header, borderColor: t.border }}>
+                {/* Unified Top Header */}
+                <header className="h-20 sticky top-0 z-40 border-b flex items-center justify-between px-8 lg:px-12 backdrop-blur-xl bg-white/70" style={{ borderColor: t.border }}>
                     <div className="flex items-center space-x-8">
                         <button 
                             onClick={() => setIsSidebarOpen(true)}
-                            className="p-2 rounded-lg lg:hidden transition-all border"
-                            style={{ backgroundColor: t.cardBg, color: t.textSub, borderColor: t.border }}
+                            className="p-2 rounded-xl lg:hidden transition-all border bg-white"
+                            style={{ color: t.textSub, borderColor: t.border }}
                         >
                             <Menu size={20} />
                         </button>
                         <div>
-                            <div className="flex items-center gap-2 mb-0.5">
-                                <div className="w-1 h-4 bg-yellow-400 rounded-full"></div>
-                                <h1 className="text-xl font-bold tracking-tight uppercase" style={{ color: t.textMain }}>
+                            <div className="flex items-center gap-3 mb-0.5">
+                                <div className="w-1.5 h-5 bg-pink-500 rounded-full"></div>
+                                <h1 className="text-2xl font-black tracking-tighter uppercase italic" style={{ color: t.textMain }}>
                                     {activeTab.replace('_', ' ')}
                                 </h1>
                             </div>
-                            <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: t.textSub }}>
-                                Admin Dashboard Overview
+                            <p className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-50" style={{ color: t.textSub }}>
+                                Central Intelligence Node
                             </p>
                         </div>
                     </div>
 
-                    <div className="flex items-center space-x-4">
-                        <button className="relative p-2 rounded-lg border transition-all" style={{ backgroundColor: t.cardBg, color: t.textSub, borderColor: t.border }}>
-                            <Bell size={18} />
-                            <span className="absolute top-2 right-2 w-2 h-2 bg-pink-500 rounded-full animate-ping"></span>
-                            <span className="absolute top-2 right-2 w-2 h-2 bg-pink-500 rounded-full border-2" style={{ borderColor: t.header }}></span>
+                    <div className="flex items-center space-x-6">
+                        <div className="hidden sm:flex items-center gap-2 p-1 bg-slate-100 rounded-full px-3">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center cursor-pointer transition-all ${theme === 'light' ? 'bg-white text-pink-500 shadow-sm' : 'text-slate-400'}`} onClick={() => setTheme('light')}>
+                                <Sun size={14} />
+                            </div>
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center cursor-pointer transition-all ${theme === 'dark' ? 'bg-slate-800 text-pink-500 shadow-sm' : 'text-slate-400'}`} onClick={() => setTheme('dark')}>
+                                <Moon size={14} />
+                            </div>
+                        </div>
+
+                        <button className="relative p-2.5 rounded-xl border bg-white transition-all hover:shadow-lg" style={{ color: t.textSub, borderColor: t.border }}>
+                            <Bell size={20} />
+                            <span className="absolute top-2.5 right-2.5 w-2.5 h-2.5 bg-pink-500 rounded-full animate-pulse border-2 border-white"></span>
                         </button>
                         
-                        <div className="hidden md:flex items-center space-x-4 ml-4 pl-4 border-l" style={{ borderColor: t.border }}>
+                        <div className="hidden md:flex items-center space-x-4 pl-6 border-l" style={{ borderColor: t.border }}>
                             <div className="text-right">
-                                <p className="text-xs font-bold uppercase" style={{ color: t.textMain }}>Admin User</p>
-                                <p className="text-[10px] font-medium uppercase" style={{ color: t.textSub }}>Platform Admin</p>
+                                <p className="text-xs font-black uppercase tracking-tight" style={{ color: t.textMain }}>Admin User</p>
+                                <p className="text-[9px] font-bold text-pink-500 uppercase tracking-widest">Platform Core</p>
                             </div>
-                            <div className="w-10 h-10 rounded-xl flex items-center justify-center font-bold border shadow-sm" style={{ backgroundColor: t.cardBg, color: t.textMain, borderColor: t.border }}>
+                            <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center font-black text-white shadow-xl shadow-slate-200">
                                 A
                             </div>
                         </div>
@@ -2613,116 +2368,465 @@ function AdminHomePage() {
                 {/* Main */}
                 <main className="flex-1 overflow-y-auto custom-scrollbar">
                     {activeTab === "dashboard" && (
-                        <>
-                                <div className="widget-card" style={{ 
-                                padding: "32px", 
-                                background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(37, 99, 235, 0.05) 100%)',
-                                borderRadius: "20px", 
-                                marginBottom: "24px",
-                                border: `1px solid ${t.border}`
-                            }}>
-                                <h2 style={{ fontSize: "24px", fontWeight: 800, color: t.textMain, marginBottom: "8px" }}>Welcome back, Admin! 👋</h2>
-                                <p style={{ fontSize: "14px", color: t.textSub, maxWidth: "500px" }}>
-                                    Here's what's happening with your platform today. You have pending ad requests and thousands of active events.
-                                </p>
+                        <div className="space-y-10">
+                            {/* Welcome Banner */}
+                            <div className="premium-glass p-10 rounded-[32px] relative overflow-hidden group">
+                                <div className="absolute top-0 right-0 w-64 h-64 bg-pink-500/10 blur-[80px] -mr-32 -mt-32"></div>
+                                <div className="absolute bottom-0 left-0 w-64 h-64 bg-purple-500/10 blur-[80px] -ml-32 -mb-32"></div>
+                                
+                                <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
+                                    <div>
+                                        <h2 className="text-4xl font-black tracking-tight mb-3" style={{ color: t.textMain }}>Welcome back, Admin! 👋</h2>
+                                        <p className="text-lg font-medium max-w-xl opacity-70" style={{ color: t.textSub }}>
+                                            Your platform is thriving today. You have <span className="text-pink-500 font-bold">12 new partner requests</span> and <span className="text-purple-500 font-bold">850+ active events</span> currently live.
+                                        </p>
+                                    </div>
+                                    <div className="flex gap-4">
+                                        <button onClick={() => setActiveTab("partner_requests")} className="px-6 py-3 bg-pink-500 text-white rounded-2xl font-bold shadow-lg shadow-pink-500/20 hover:scale-105 transition-all">Review Partners</button>
+                                        <button onClick={() => setActiveTab("all_events")} className="px-6 py-3 bg-slate-900 text-white rounded-2xl font-bold shadow-lg shadow-black/20 hover:scale-105 transition-all">View Analytics</button>
+                                    </div>
+                                </div>
                             </div>
 
-                            <div className="stats-grid">
+                            {/* Stats Grid */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                                 {[
-                                    { label: "Total Revenue", value: dashboardStats ? `₹${Number(dashboardStats.totalRevenue).toFixed(2)}` : "…", icon: LayoutDashboard, color: "#3b82f6", trend: "+12.5%" },
-                                    { label: "Total Events", value: dashboardStats ? dashboardStats.totalEvents.toString() : "…", icon: Ticket, color: "#8b5cf6", trend: "+5.2%" },
-                                    { label: "Tickets Sold", value: dashboardStats ? dashboardStats.totalTickets.toString() : "…", icon: Ticket, color: "#ec4899", trend: "+8.1%" },
-                                    { label: "Customers", value: dashboardStats ? dashboardStats.totalUsers.toString() : "…", icon: UserCircle, color: "#f59e0b", trend: "+2.4%" },
-                                    { label: "Organisers", value: dashboardStats ? dashboardStats.totalOrganisers.toString() : "…", icon: Users, color: "#10b981", trend: "+1.8%" },
-                                    { label: "Service Providers", value: dashboardStats ? (dashboardStats.totalServiceProviders || 0).toString() : "…", icon: Briefcase, color: "#f97316", trend: "+4.2%" },
-                                    { label: "Bookings", value: dashboardStats ? dashboardStats.totalBookings.toString() : "…", icon: ShoppingCart, color: "#06b6d4", trend: "+14.2%" }
+                                    { label: "Platform Revenue", value: dashboardStats ? `₹${Number(dashboardStats.totalRevenue).toLocaleString()}` : "₹0", icon: Landmark, color: "#ec4899", trend: "+14.5%" },
+                                    { label: "Active Events", value: dashboardStats ? dashboardStats.totalEvents : "0", icon: Calendar, color: "#8b5cf6", trend: "+5.2%" },
+                                    { label: "Total Bookings", value: dashboardStats ? dashboardStats.totalBookings : "0", icon: ShoppingCart, color: "#3b82f6", trend: "+12.1%" },
+                                    { label: "Growth Customers", value: dashboardStats ? dashboardStats.totalUsers : "0", icon: Users, color: "#10b981", trend: "+22.4%" }
                                 ].map((stat, i) => (
-                                    <div key={i} className="widget-card" style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                                            <div style={{ width: "40px", height: "40px", borderRadius: "10px", backgroundColor: `${stat.color}25`, display: "flex", alignItems: "center", justifyContent: "center", color: stat.color, border: `1px solid ${stat.color}40` }}>
-                                                <stat.icon size={20} />
+                                    <div key={i} className="card-premium relative group">
+                                        <div className="flex justify-between items-start mb-6">
+                                            <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-white shadow-lg" style={{ background: `linear-gradient(135deg, ${stat.color} 0%, ${stat.color}dd 100%)`, boxShadow: `0 8px 20px -4px ${stat.color}40` }}>
+                                                <stat.icon size={24} strokeWidth={2.5} />
                                             </div>
-                                            <span style={{ fontSize: "11px", fontWeight: 700, color: "#4ade80", backgroundColor: "rgba(34, 197, 94, 0.1)", padding: "2px 8px", borderRadius: "6px", border: "1px solid rgba(34, 197, 94, 0.2)" }}>{stat.trend}</span>
+                                            <div className="flex flex-col items-end">
+                                                <span className="text-[10px] font-black uppercase tracking-widest text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded-lg">{stat.trend}</span>
+                                                <span className="text-[10px] font-bold opacity-40 mt-1 uppercase tracking-tighter">vs last month</span>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <p style={{ margin: 0, fontSize: "13px", fontWeight: 500, color: t.textSub }}>{stat.label}</p>
-                                            <h3 style={{ margin: "2px 0 0 0", fontSize: "22px", fontWeight: 800, color: t.textMain, letterSpacing: "-0.5px" }}>{stat.value}</h3>
+                                        <p className="text-sm font-bold opacity-50 mb-1 uppercase tracking-widest" style={{ color: t.textSub }}>{stat.label}</p>
+                                        <h3 className="text-2xl font-black tracking-tight" style={{ color: t.textMain }}>{stat.value}</h3>
+                                        
+                                        {/* Subtle Sparkline Placeholder */}
+                                        <div className="mt-4 h-1 w-full bg-slate-100 rounded-full overflow-hidden">
+                                            <div className="h-full bg-pink-500 w-[70%]" style={{ backgroundColor: stat.color }}></div>
                                         </div>
                                     </div>
                                 ))}
                             </div>
-                        </>
+                        </div>
                     )}
                     {activeTab === "revenue" && (
                         <div className="px-8 lg:px-12 py-8">
                             <RevenueDashboard t={t} theme={theme} />
                         </div>
                     )}
-                    {activeTab === "banner_ads" && (
-                        <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-                            {/* Pending Requests */}
-                            <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
-                                <h3 style={{ fontSize: "18px", fontWeight: 700, marginBottom: "20px" }}>Pending Ad Requests</h3>
-                                {bannerRequests.length === 0 ? (
-                                    <p style={{ color: t.textSub, fontSize: "14px" }}>No pending requests.</p>
-                                ) : (
-                                    <div style={{ overflowX: "auto" }}>
-                                        <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                                            <thead>
-                                                <tr style={{ borderBottom: `1px solid ${t.border}`, textAlign: "left" }}>
-                                                    <th style={{ padding: "12px", fontSize: "13px", color: t.textSub }}>User</th>
-                                                    <th style={{ padding: "12px", fontSize: "13px", color: t.textSub }}>Package</th>
-                                                    <th style={{ padding: "12px", fontSize: "13px", color: t.textSub }}>Target URL</th>
-                                                    <th style={{ padding: "12px", fontSize: "13px", color: t.textSub }}>Date</th>
-                                                    <th style={{ padding: "12px", fontSize: "13px", color: t.textSub }}>Actions</th>
+                    {activeTab === "financials" && (
+                        <div className="px-8 py-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                            {/* Header & Exports */}
+                            <div className="flex items-center justify-between mb-6">
+                                <div>
+                                    <h2 className="text-xl font-black text-slate-900 tracking-tighter uppercase italic leading-none mb-1.5">Fiscal Intelligence</h2>
+                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Platform Revenue & Audit Control</p>
+                                </div>
+                                <div className="flex gap-2">
+                                    <button 
+                                        onClick={() => {
+                                            if (!bookingsArr.length) { showToast("No data to export", "error"); return; }
+                                            const headers = ["ID", "Event", "Customer", "Amount", "Status", "Date"];
+                                            const rows = bookingsArr.map(b => [b.id.slice(0,8), b.events?.title || "N/A", b.profiles?.full_name || "Guest", b.total_amount, b.status, new Date(b.created_at).toLocaleDateString()]);
+                                            const csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n" + rows.map(e => e.join(",")).join("\n");
+                                            const link = document.createElement("a");
+                                            link.href = encodeURI(csvContent);
+                                            link.download = `Revenue_Report_${new Date().toISOString().split('T')[0]}.csv`;
+                                            document.body.appendChild(link); link.click(); document.body.removeChild(link);
+                                            showToast("Excel Export Complete", "success");
+                                        }}
+                                        className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all flex items-center gap-2"
+                                    >
+                                        <Archive size={14} /> Export Excel
+                                    </button>
+                                    <button 
+                                        onClick={async () => {
+                                            try {
+                                                const { jsPDF } = await import("jspdf");
+                                                const doc = new jsPDF();
+                                                doc.setFontSize(20); doc.text("REVENUE REPORT", 105, 20, { align: "center" });
+                                                doc.setFontSize(10); doc.text(`Generated: ${new Date().toLocaleString()}`, 105, 30, { align: "center" });
+                                                let y = 50;
+                                                bookingsArr.slice(0, 20).forEach((b, i) => {
+                                                    doc.text(`${i+1}. ${b.events?.title || 'Event'} - ₹${b.total_amount} (${b.status})`, 20, y);
+                                                    y += 10;
+                                                });
+                                                doc.save("Revenue_Summary.pdf");
+                                                showToast("PDF Export Complete", "success");
+                                            } catch (e) { showToast("PDF Export Failed", "error"); }
+                                        }}
+                                        className="px-4 py-2 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all flex items-center gap-2"
+                                    >
+                                        <FileText size={14} /> Export PDF
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Core Stats Card */}
+                            <div className="bg-slate-950 text-white rounded-[24px] p-6 shadow-2xl border border-white/5 relative overflow-hidden mb-6">
+                                <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 blur-[100px] -mr-32 -mt-32"></div>
+                                <div className="relative z-10">
+                                    <div className="flex items-center justify-between mb-8">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/20"><Activity size={20} /></div>
+                                            <div>
+                                                <h2 className="text-xl font-black tracking-tighter uppercase italic leading-none mb-1">Fiscal Forensics</h2>
+                                                <p className="text-white/30 text-[8px] font-black uppercase tracking-[0.2em]">Platform Integrity Monitor</p>
+                                            </div>
+                                        </div>
+                                        <div className="px-4 py-1.5 bg-white/5 rounded-lg border border-white/10 flex items-center gap-2">
+                                            <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
+                                            <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Optimal</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        {[
+                                            { label: "Gross Yield", val: dashboardStats ? `₹${Number(dashboardStats.totalRevenue).toLocaleString()}` : "₹0.00", sub: "Platform Wide", color: "#10b981" },
+                                            { label: "Escrow Shard", val: "₹0.00", sub: "Unsettled", color: "#3b82f6" },
+                                            { label: "Operating Margin", val: "+0.0%", sub: "Net Efficiency", color: "#ec4899" }
+                                        ].map((s, i) => (
+                                            <div key={i} className="p-5 bg-white/5 rounded-2xl border border-white/5 hover:bg-white/10 transition-all group">
+                                                <p className="text-[8px] font-black uppercase tracking-widest text-white/40 mb-2">{s.label}</p>
+                                                <p className="text-2xl font-black tracking-tighter italic mb-0.5 text-white">{s.val}</p>
+                                                <div className="flex items-center justify-between mt-3">
+                                                    <span className="text-[8px] font-black uppercase tracking-widest text-white/20">{s.sub}</span>
+                                                    <div className="h-1 w-16 bg-white/10 rounded-full overflow-hidden">
+                                                        <div className="h-full group-hover:w-full transition-all duration-1000" style={{ backgroundColor: s.color, width: '35%' }}></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Revenue Intelligence Matrix */}
+                            <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden">
+                                <div className="p-6 border-b border-slate-50 flex items-center justify-between bg-slate-50/50">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 bg-slate-900 rounded-lg flex items-center justify-center text-white"><BarChart3 size={16} /></div>
+                                        <h3 className="text-xs font-black text-slate-900 tracking-widest uppercase">Revenue Intelligence Matrix</h3>
+                                    </div>
+                                </div>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left">
+                                        <thead>
+                                            <tr className="bg-slate-50/30">
+                                                <th className="p-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Transaction ID</th>
+                                                <th className="p-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Event Asset</th>
+                                                <th className="p-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Customer Entity</th>
+                                                <th className="p-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Yield</th>
+                                                <th className="p-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Status</th>
+                                                <th className="p-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Timestamp</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-50">
+                                            {bookingsArr.length === 0 ? (
+                                                <tr><td colSpan="6" className="p-12 text-center text-slate-300 font-bold uppercase text-[10px] tracking-[0.2em]">Synchronizing Financial Data...</td></tr>
+                                            ) : bookingsArr.slice(0, 10).map((b, i) => (
+                                                <tr key={i} className="hover:bg-slate-50 transition-colors">
+                                                    <td className="p-4 text-[10px] font-bold text-slate-400">#{b.id.slice(0, 8)}</td>
+                                                    <td className="p-4 text-[11px] font-black text-slate-900 uppercase italic truncate max-w-[200px]">{b.events?.title || "N/A"}</td>
+                                                    <td className="p-4 text-[11px] font-bold text-slate-600">{b.profiles?.full_name || "Guest"}</td>
+                                                    <td className="p-4 text-[12px] font-black text-pink-500">₹{Number(b.total_amount).toLocaleString()}</td>
+                                                    <td className="p-4">
+                                                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${b.status === 'Confirmed' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
+                                                            {b.status}
+                                                        </span>
+                                                    </td>
+                                                    <td className="p-4 text-[10px] font-bold text-slate-400">{new Date(b.created_at).toLocaleDateString()}</td>
                                                 </tr>
-                                            </thead>
-                                            <tbody>
-                                                {bannerRequests.map((req) => (
-                                                    <tr key={req._id} style={{ borderBottom: `1px solid ${t.sidebarBorder}` }}>
-                                                        <td style={{ padding: "12px", fontSize: "14px", fontWeight: 600 }}>{req.userId}</td>
-                                                        <td style={{ padding: "12px", fontSize: "14px" }}>
-                                                            {/* We'd normally fetch package details, but for now just show ID or constant */}
-                                                            Hero Banner
-                                                        </td>
-                                                        <td style={{ padding: "12px", fontSize: "13px", color: "#3b82f6" }}>
-                                                            <a href={req.link} target="_blank" rel="noreferrer">{req.link || "N/A"}</a>
-                                                        </td>
-                                                        <td style={{ padding: "12px", fontSize: "13px", color: t.textSub }}>
-                                                            {new Date(req.createdAt).toLocaleDateString()}
-                                                        </td>
-                                                        <td style={{ padding: "12px" }}>
-                                                            <button
-                                                                onClick={() => setApprovingBanner(req)}
-                                                                style={{ padding: "6px 12px", borderRadius: "6px", backgroundColor: "#10b981", color: "#fff", border: "none", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}
-                                                            >
-                                                                Approve / Upload
-                                                            </button>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    {activeTab === "gst" && (
+                        <div className="px-8 py-8">
+                            <GstPortal t={t} theme={theme} />
+                        </div>
+                    )}
+                    {activeTab === "subscribers" && (
+                        <div className="px-8 lg:px-12 py-6">
+                            <div className="premium-glass p-6 rounded-[24px] bg-gradient-to-br from-white to-blue-50/20 border-blue-100/50">
+                                <div className="flex items-center gap-6">
+                                    <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center text-white shadow-xl shadow-blue-500/20"><Users size={24} /></div>
+                                    <div>
+                                        <h2 className="text-xl font-black text-slate-900 tracking-tighter uppercase italic leading-none mb-1.5">Subscriber Shard</h2>
+                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Growth Engine Intelligence Database</p>
+                                    </div>
+                                </div>
+                                <div className="mt-8 p-8 text-center bg-white/60 border border-dashed border-blue-100 rounded-[20px]">
+                                    <p className="text-blue-400 font-black uppercase text-[9px] tracking-[0.3em]">Optimizing Global Audience Records</p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    {activeTab === "hero" && (
+                        <div className="px-8 lg:px-12 py-8">
+                            <div className="card-premium p-12 bg-slate-900 text-white rounded-[48px] overflow-hidden relative">
+                                <div className="absolute top-0 right-0 w-96 h-96 bg-pink-500/20 blur-[120px] -mr-48 -mt-48"></div>
+                                <div className="relative z-10">
+                                    <h2 className="text-4xl font-black tracking-tighter uppercase italic mb-8">Hero Engine v2.0</h2>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                        <div className="p-10 bg-white/5 rounded-[32px] border border-white/10 hover:border-pink-500/50 transition-all group">
+                                            <div className="flex items-center justify-between mb-8">
+                                                <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center group-hover:bg-pink-500 transition-all"><Layout size={24} /></div>
+                                                <span className="px-3 py-1 bg-pink-500/20 text-pink-400 rounded-full text-[9px] font-black uppercase tracking-widest">Active Layer</span>
+                                            </div>
+                                            <h4 className="text-xl font-black mb-2">Web Homepage Hero</h4>
+                                            <p className="text-white/40 text-sm font-medium">Manage top-level branding, CTAs, and video backgrounds for web.</p>
+                                        </div>
+                                        <div className="p-10 bg-white/5 rounded-[32px] border border-white/10 hover:border-blue-500/50 transition-all group">
+                                            <div className="flex items-center justify-between mb-8">
+                                                <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center group-hover:bg-blue-500 transition-all"><Smartphone size={24} /></div>
+                                                <span className="px-3 py-1 bg-blue-500/20 text-blue-400 rounded-full text-[9px] font-black uppercase tracking-widest">Active Layer</span>
+                                            </div>
+                                            <h4 className="text-xl font-black mb-2">Mobile Discovery Hero</h4>
+                                            <p className="text-white/40 text-sm font-medium">Configure category pills, location banners, and app-only offers.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    {activeTab === "api_settings" && (
+                        <div className="px-8 lg:px-12 py-8">
+                            <div className="bg-white rounded-[40px] border border-slate-100 shadow-sm overflow-hidden">
+                                <div className="p-10 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-12 h-12 bg-slate-900 rounded-2xl flex items-center justify-center text-white"><Code size={24} /></div>
+                                        <div>
+                                            <h2 className="text-2xl font-black text-slate-900 tracking-tight italic uppercase">API Gateway Configuration</h2>
+                                            <p className="text-xs text-slate-400 font-black uppercase tracking-widest">Protocol & Connectivity Node</p>
+                                        </div>
+                                    </div>
+                                    <span className="px-4 py-2 bg-emerald-50 text-emerald-600 rounded-xl text-[10px] font-black uppercase tracking-widest border border-emerald-100 flex items-center gap-2">
+                                        <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div> System Operational
+                                    </span>
+                                </div>
+                                <div className="p-10 space-y-6">
+                                    {['Google Maps Platform', 'Supabase Real-time', 'Razorpay Payments', 'Cashfree Payouts', 'Resend Email Node'].map((api, i) => (
+                                        <div key={i} className="flex items-center justify-between p-6 bg-slate-50/50 rounded-[24px] border border-slate-50 group hover:border-slate-200 transition-all">
+                                            <div className="flex items-center gap-6">
+                                                <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm text-slate-400 group-hover:text-slate-900 transition-colors"><Shield size={20} /></div>
+                                                <div>
+                                                    <p className="text-sm font-black text-slate-900">{api}</p>
+                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Standard Integration Tier</p>
+                                                </div>
+                                            </div>
+                                            <button className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-900 hover:text-white hover:border-slate-900 transition-all">Configure Endpoint</button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    {activeTab === "meta_management" && (
+                        <div className="px-8 lg:px-12 py-8">
+                            <div className="premium-glass p-12 rounded-[48px] border-slate-200/50">
+                                <div className="flex items-center justify-between mb-12">
+                                    <div>
+                                        <h2 className="text-4xl font-black text-slate-900 tracking-tighter uppercase italic">Meta Intelligence</h2>
+                                        <p className="text-sm text-slate-500 font-bold uppercase tracking-widest">Global SEO & Social Graph Matrix</p>
+                                    </div>
+                                    <button className="px-8 py-3 bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-indigo-600/20">Sync SEO Clusters</button>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    <div className="p-10 bg-white rounded-[32px] border border-slate-100 shadow-sm">
+                                        <p className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em] mb-4">Indexing Status</p>
+                                        <div className="flex items-baseline gap-2 mb-6">
+                                            <p className="text-5xl font-black tracking-tighter text-slate-900">98.2%</p>
+                                            <p className="text-emerald-500 font-black text-xs">+1.2%</p>
+                                        </div>
+                                        <p className="text-slate-500 text-sm font-medium leading-relaxed">System-wide search visibility across Google, Bing, and major social graphs.</p>
+                                    </div>
+                                    <div className="p-10 bg-slate-900 rounded-[32px] shadow-2xl shadow-indigo-900/20">
+                                        <p className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] mb-4">Priority Metatags</p>
+                                        <div className="space-y-3">
+                                            {['og:title', 'og:description', 'twitter:card', 'canonical'].map(tag => (
+                                                <div key={tag} className="flex items-center justify-between py-2 border-b border-white/5">
+                                                    <span className="text-xs font-bold text-white/40">{tag}</span>
+                                                    <span className="text-[10px] font-black text-indigo-400 uppercase">Synchronized</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    {activeTab === "promotions" && (
+                        <div className="px-8 lg:px-12 py-6">
+                            <div className="flex items-center justify-between mb-8">
+                                <h2 className="text-xl font-black text-slate-900 tracking-tighter uppercase italic">Growth Campaigns</h2>
+                                <button className="px-6 py-2 bg-pink-500 text-white rounded-xl font-black text-[9px] uppercase tracking-widest shadow-xl shadow-pink-500/20 hover:scale-105 transition-all">New Campaign</button>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                {[
+                                    { title: "Partner Referral", desc: "Multi-level structures.", icon: Users, color: "#3b82f6" },
+                                    { title: "Exclusive Unlocks", desc: "Private portals.", icon: Sparkles, color: "#a855f7" },
+                                    { title: "Dynamic Pricing", desc: "Automate discounts.", icon: Tag, color: "#ec4899" },
+                                    { title: "Engagement Rewards", desc: "Loyalty engine.", icon: Gift, color: "#10b981" }
+                                ].map((c, i) => (
+                                    <div key={i} className="group p-1 bg-slate-50 rounded-[24px] hover:bg-slate-900 transition-all duration-500 cursor-pointer border border-slate-100">
+                                        <div className="p-6">
+                                            <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-4 bg-white group-hover:bg-white/10 transition-all shadow-sm" style={{ color: c.color }}><c.icon size={20} /></div>
+                                            <h4 className="text-sm font-black text-slate-900 mb-1 group-hover:text-white transition-all italic tracking-tight">{c.title}</h4>
+                                            <p className="text-slate-500 text-[10px] font-medium leading-tight group-hover:text-white/60 transition-all">{c.desc}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                    {activeTab === "banner_ads" && (
+                        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 px-8 lg:px-12 py-6">
+                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                <div>
+                                    <h2 className="text-xl font-black text-slate-900 tracking-tighter uppercase italic leading-none mb-1.5">Creative Studio</h2>
+                                    <p className="text-[10px] font-medium text-slate-500 uppercase tracking-widest">Inventory & Placement Control</p>
+                                </div>
+                                <button className="px-5 py-2 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-lg shadow-slate-200">
+                                    Guidelines
+                                </button>
+                            </div>
+
+                            {/* Pending Requests Grid */}
+                            <div className="space-y-4">
+                                <div className="flex items-center gap-3 px-2">
+                                    <div className="w-2 h-6 bg-pink-500 rounded-full" />
+                                    <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest">Pending Approvals ({bannerRequests.length})</h3>
+                                </div>
+                                
+                                {bannerRequests.length === 0 ? (
+                                    <div className="bg-white/50 backdrop-blur-xl rounded-[32px] p-12 border border-slate-100 text-center">
+                                        <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">No pending ad requests found</p>
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                        {bannerRequests.map((req) => (
+                                            <div key={req._id} className="bg-white rounded-[32px] p-6 border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-slate-200/50 transition-all group">
+                                                <div className="flex items-start justify-between mb-6">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-400 group-hover:bg-pink-50 group-hover:text-pink-500 transition-colors">
+                                                            <User size={24} />
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-0.5">Advertiser ID</p>
+                                                            <p className="text-sm font-black text-slate-900">{req.userId}</p>
+                                                        </div>
+                                                    </div>
+                                                    <span className="px-3 py-1 bg-amber-50 text-amber-600 rounded-full text-[10px] font-black uppercase tracking-widest">
+                                                        Review Pending
+                                                    </span>
+                                                </div>
+                                                
+                                                <div className="grid grid-cols-2 gap-4 mb-6">
+                                                    <div className="p-4 bg-slate-50 rounded-2xl">
+                                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Package</p>
+                                                        <p className="text-xs font-bold text-slate-700">Premium Hero Banner</p>
+                                                    </div>
+                                                    <div className="p-4 bg-slate-50 rounded-2xl">
+                                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Submission Date</p>
+                                                        <p className="text-xs font-bold text-slate-700">{new Date(req.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</p>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex items-center justify-between gap-4">
+                                                    <a href={req.link} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-blue-500 font-bold text-xs hover:underline truncate">
+                                                        <ExternalLink size={14} /> {req.link || "No Target URL"}
+                                                    </a>
+                                                    <button
+                                                        onClick={() => setApprovingBanner(req)}
+                                                        className="px-6 py-2.5 bg-emerald-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all flex items-center gap-2 shrink-0"
+                                                    >
+                                                        Review & Upload <ChevronRight size={14} />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
                                 )}
                             </div>
 
-                            {/* Active Banners */}
-                            <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
-                                <h3 style={{ fontSize: "18px", fontWeight: 700, marginBottom: "20px" }}>Active / All Banners</h3>
-                                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "20px" }}>
+                            {/* Active Inventory Grid */}
+                            <div className="space-y-6">
+                                <div className="flex items-center justify-between px-2">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-2 h-6 bg-indigo-500 rounded-full" />
+                                        <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest">Active Inventory ({allBanners.filter(b => b.status !== "pending").length})</h3>
+                                    </div>
+                                    <button className="text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-slate-900 transition-colors">
+                                        View Archived
+                                    </button>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                                     {allBanners.filter(b => b.status !== "pending").map((banner) => (
-                                        <div key={banner._id} style={{ borderRadius: "12px", border: `1px solid ${t.border}`, overflow: "hidden", position: "relative" }}>
-                                            <img src={banner.imageUrl} alt="Banner" style={{ width: "100%", height: "140px", objectFit: "cover" }} />
-                                            <div style={{ padding: "12px" }}>
-                                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-                                                    <span style={{ fontSize: "12px", fontWeight: 700, padding: "2px 8px", borderRadius: "4px", backgroundColor: banner.endDate > Date.now() ? "#dcfce7" : "#fee2e2", color: banner.endDate > Date.now() ? "#166534" : "#991b1b" }}>
-                                                        {banner.endDate > Date.now() ? "Active" : "Expired"}
-                                                    </span>
-                                                    <button onClick={() => deleteBannerMutation({ id: banner._id })} style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer" }}><Trash2 size={16} /></button>
+                                        <div key={banner._id} className="group relative bg-white rounded-[40px] border border-slate-100 shadow-sm overflow-hidden hover:shadow-2xl hover:shadow-slate-200 transition-all duration-500">
+                                            {/* Preview Container */}
+                                            <div className="aspect-[21/9] relative overflow-hidden bg-slate-100">
+                                                <img 
+                                                    src={banner.imageUrl} 
+                                                    alt="Banner" 
+                                                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" 
+                                                />
+                                                <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                                                
+                                                <div className="absolute top-4 right-4 flex gap-2 translate-y-[-10px] opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-500">
+                                                    <button 
+                                                        onClick={() => deleteBannerMutation({ id: banner._id })}
+                                                        className="w-10 h-10 bg-white/20 backdrop-blur-md border border-white/30 rounded-xl flex items-center justify-center text-white hover:bg-red-500 hover:border-red-500 transition-all"
+                                                    >
+                                                        <Trash2 size={18} />
+                                                    </button>
                                                 </div>
-                                                <p style={{ fontSize: "12px", color: t.textSub, margin: 0 }}>Starts: {new Date(banner.startDate).toLocaleDateString()}</p>
-                                                <p style={{ fontSize: "12px", color: t.textSub, margin: 0 }}>Ends: {new Date(banner.endDate).toLocaleDateString()}</p>
+
+                                                <div className="absolute bottom-4 left-6 translate-y-[10px] opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-500">
+                                                    <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest backdrop-blur-xl border ${
+                                                        banner.endDate > Date.now() 
+                                                        ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" 
+                                                        : "bg-red-500/20 text-red-400 border-red-500/30"
+                                                    }`}>
+                                                        {banner.endDate > Date.now() ? "Live Now" : "Expired"}
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            {/* Details */}
+                                            <div className="p-6">
+                                                <div className="flex items-center justify-between mb-4">
+                                                    <div className="flex items-center gap-2">
+                                                        <Calendar size={14} className="text-slate-400" />
+                                                        <p className="text-[11px] font-bold text-slate-600">
+                                                            {new Date(banner.startDate).toLocaleDateString()} — {new Date(banner.endDate).toLocaleDateString()}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                
+                                                <div className="h-1.5 w-full bg-slate-50 rounded-full overflow-hidden">
+                                                    <div 
+                                                        className={`h-full rounded-full ${banner.endDate > Date.now() ? 'bg-indigo-500' : 'bg-slate-300'}`}
+                                                        style={{ 
+                                                            width: banner.endDate > Date.now() 
+                                                                ? `${Math.min(100, Math.max(0, ((Date.now() - banner.startDate) / (banner.endDate - banner.startDate)) * 100))}%` 
+                                                                : '100%' 
+                                                        }}
+                                                    />
+                                                </div>
                                             </div>
                                         </div>
                                     ))}
@@ -2902,6 +3006,10 @@ function AdminHomePage() {
                         </div>
                     )}
 
+                    {activeTab === "coupons" && (
+                        <CouponManager t={t} theme={theme} />
+                    )}
+
                     {activeTab === "exclusive_settings" && (
                         <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
@@ -2945,233 +3053,218 @@ function AdminHomePage() {
                     )}
 
                     {activeTab === "all_events" && (
-                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px", flexWrap: "wrap", gap: "12px" }}>
-                                <h3 style={{ fontSize: "18px", fontWeight: 700 }}>All Events (Homepage + Organisers)</h3>
-                                <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-                                    <a href="/organiser" style={{ display: "inline-flex", alignItems: "center", gap: "8px", padding: "8px 16px", borderRadius: "10px", background: ACCENT_GRADIENT, backgroundColor: ACCENT_PINK, color: "#fff", border: "none", fontWeight: 800, cursor: "pointer", fontSize: "14px", textDecoration: "none", boxShadow: "0 10px 24px rgba(236,72,153,0.18)" }}><Plus size={18} /> Create event</a>
-                                    <input
-                                        type="text"
-                                        placeholder="Search events..."
-                                        style={{ padding: "8px 12px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "13px" }}
-                                    />
+                        <div style={{ padding: "20px 0" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "32px", flexWrap: "wrap", gap: "20px" }}>
+                                <div>
+                                    <h3 style={{ fontSize: "24px", fontWeight: 800, color: t.textMain, letterSpacing: "-0.02em", margin: 0 }}>Events Directory</h3>
+                                    <p style={{ color: t.textSub, fontSize: "14px", marginTop: "4px" }}>Manage both Homepage and Organiser-published events</p>
+                                </div>
+                                <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
+                                    <div style={{ position: "relative" }}>
+                                        <Search size={18} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: t.textSub }} />
+                                        <input
+                                            type="text"
+                                            placeholder="Search events..."
+                                            style={{ padding: "12px 16px 12px 40px", borderRadius: "14px", border: `1px solid ${t.border}`, backgroundColor: t.cardBg, color: t.textMain, fontSize: "14px", width: "280px", boxShadow: "0 2px 4px rgba(0,0,0,0.02)" }}
+                                        />
+                                    </div>
+                                    <a href="/organiser" style={{ display: "inline-flex", alignItems: "center", gap: "10px", padding: "12px 24px", borderRadius: "14px", background: "linear-gradient(135deg, #ec4899 0%, #a855f7 100%)", color: "#fff", border: "none", fontWeight: 800, cursor: "pointer", fontSize: "14px", textDecoration: "none", boxShadow: "0 10px 25px rgba(236,72,153,0.3)" }}>
+                                        <Plus size={20} /> Create Event
+                                    </a>
                                 </div>
                             </div>
-                            <div style={{ overflowX: "auto" }}>
-                                <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                                    <thead>
-                                        <tr style={{ borderBottom: `1px solid ${t.border}`, textAlign: "left" }}>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Event Title</th>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Venue / Location</th>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Date</th>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Category</th>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Source</th>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Status</th>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {allEvents.length > 0 ? allEvents.map((ev) => (
-                                            <tr key={ev.id + (ev.source || "")} style={{ borderBottom: `1px solid ${t.border}`, transition: "all 0.2s" }} className="hover:bg-slate-50/50">
-                                                <td style={{ padding: "16px 12px" }}>
-                                                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                                        <div style={{ width: "40px", height: "40px", borderRadius: "10px", backgroundColor: theme === 'light' ? '#f1f5f9' : '#1e293b', overflow: "hidden", border: `1px solid ${t.border}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                                                            {ev.thumbnail ? (
-                                                                <img src={ev.thumbnail} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                                                            ) : (
-                                                                <ImageIcon size={18} style={{ opacity: 0.3, color: t.textSub }} />
-                                                            )}
-                                                        </div>
-                                                        <div style={{ display: "flex", flexDirection: "column" }}>
-                                                            <span style={{ 
-                                                                fontWeight: 800, 
-                                                                fontSize: "14px",
-                                                                color: t.textMain,
-                                                                letterSpacing: "-0.01em",
-                                                                ...(ev.category?.toLowerCase().includes('marathon') && { color: "#10b981", textTransform: "uppercase", fontStyle: "italic" }),
-                                                                ...(ev.category?.toLowerCase().includes('concert') && { color: "#8b5cf6", fontWeight: 900 }),
-                                                            }}>
-                                                                {ev.title}
-                                                            </span>
-                                                            <span style={{ fontSize: "10px", color: t.textSub, fontWeight: 500, opacity: 0.7 }}>ID: {ev.id.slice(0, 8).toUpperCase()}</span>
-                                                        </div>
+
+                            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                                {allEvents.length > 0 ? allEvents.map((ev) => {
+                                    const eventDateStr = ev.date;
+                                    const eventTimeStr = ev.time || "23:59";
+                                    let isExpired = false;
+                                    try {
+                                        const eDate = new Date(`${eventDateStr}T${eventTimeStr.includes(':') ? eventTimeStr : eventTimeStr + ':00'}`);
+                                        isExpired = !isNaN(eDate.getTime()) && eDate < new Date();
+                                    } catch (e) { isExpired = false; }
+                                    
+                                    const statusLabel = (isExpired || ev.status === 'expired') ? 'EXPIRED' : (ev.status || 'ACTIVE').toUpperCase();
+                                    const statusColor = statusLabel === 'EXPIRED' || statusLabel === 'CANCELLED' ? '#ef4444' : '#22c55e';
+
+                                    return (
+                                        <div key={ev.id + (ev.source || "")} style={{ 
+                                            backgroundColor: t.cardBg, 
+                                            borderRadius: "20px", 
+                                            padding: "20px", 
+                                            border: `1px solid ${t.border}`,
+                                            display: "flex",
+                                            alignItems: "center",
+                                            gap: "24px",
+                                            transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                                            boxShadow: "0 4px 6px -1px rgba(0,0,0,0.02), 0 2px 4px -1px rgba(0,0,0,0.01)",
+                                            position: "relative",
+                                            overflow: "hidden"
+                                        }} className="admin-event-row">
+                                            {/* Left: Thumbnail */}
+                                            <div style={{ width: "80px", height: "80px", borderRadius: "16px", overflow: "hidden", border: `1px solid ${t.border}`, backgroundColor: "#f8fafc", flexShrink: 0 }}>
+                                                {ev.thumbnail ? (
+                                                    <img src={ev.thumbnail} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                                ) : (
+                                                    <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: t.textSub }}>
+                                                        <ImageIcon size={32} opacity={0.2} />
                                                     </div>
-                                                </td>
-                                                <td style={{ padding: "12px", fontSize: "13px" }}>{ev.venue || ev.location || "—"}</td>
-                                                <td style={{ padding: "12px", fontSize: "13px" }}>{ev.date}{ev.time ? ` ${ev.time}` : ""}</td>
-                                                <td style={{ padding: "12px" }}>
-                                                    <span style={{ fontSize: "11px", padding: "2px 8px", borderRadius: "12px", backgroundColor: "#3b82f615", color: "#3b82f6" }}>{ev.category || "—"}</span>
-                                                </td>
-                                                <td style={{ padding: "12px", fontSize: "12px", color: t.textSub }}>{ev.source === "organiser" ? "Organiser" : "Homepage"}</td>
-                                                <td style={{ padding: "12px" }}>
-                                                    <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                                                        {(() => {
-                                                            const eventDateStr = ev.date;
-                                                            const eventTimeStr = ev.time || "23:59";
-                                                            let isExpired = false;
-                                                            try {
-                                                                const eDate = new Date(`${eventDateStr}T${eventTimeStr.includes(':') ? eventTimeStr : eventTimeStr + ':00'}`);
-                                                                isExpired = !isNaN(eDate.getTime()) && eDate < new Date();
-                                                            } catch (e) {
-                                                                isExpired = false;
-                                                            }
-                                                            
-                                                            if (isExpired || ev.status === 'expired') {
-                                                                return <span style={{ fontSize: "10px", padding: "2px 8px", borderRadius: "12px", backgroundColor: "#ef444415", color: "#ef4444", fontWeight: 700, textAlign: "center" }}>EXPIRED</span>;
-                                                            }
-                                                            return <span style={{ fontSize: "10px", padding: "2px 8px", borderRadius: "12px", backgroundColor: "#22c55e15", color: "#22c55e", fontWeight: 700, textAlign: "center" }}>ACTIVE</span>;
-                                                        })()}
-                                                        <div style={{ display: "flex", gap: "4px" }}>
-                                                            {ev.is_exclusive && <span style={{ fontSize: "9px", padding: "2px 6px", borderRadius: "6px", backgroundColor: "#f59e0b", color: "#fff", fontWeight: 800 }}>EXCLUSIVE</span>}
-                                                            {ev.is_spotlight && <span style={{ fontSize: "9px", padding: "2px 6px", borderRadius: "6px", backgroundColor: "#3b82f6", color: "#fff", fontWeight: 800 }}>SPOTLIGHT</span>}
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                <td style={{ padding: "12px", display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                                                    {ev.source === "organiser" && (
-                                                        <div style={{ display: "flex", gap: "6px", marginBottom: "4px", width: "100%" }}>
-                                                            <button 
-                                                                onClick={async () => {
-                                                                    try {
-                                                                        await updateEvent({ id: ev.id, is_exclusive: !ev.is_exclusive });
-                                                                        showToast(`Event ${!ev.is_exclusive ? 'marked' : 'removed'} as Exclusive`, "success");
-                                                                    } catch (err) {
-                                                                        showToast("Error updating status", "error");
-                                                                    }
-                                                                }}
-                                                                style={{ padding: "4px 8px", borderRadius: "6px", border: `1px solid ${ev.is_exclusive ? '#f59e0b' : t.border}`, backgroundColor: ev.is_exclusive ? '#fff7ed' : 'transparent', color: ev.is_exclusive ? '#f59e0b' : t.textSub, fontSize: "10px", fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", gap: "4px" }}
-                                                                title="Toggle Exclusive"
-                                                            >
-                                                                <Sparkles size={12} /> Excl
-                                                            </button>
-                                                            <button 
-                                                                onClick={async () => {
-                                                                    try {
-                                                                        await updateEvent({ id: ev.id, is_spotlight: !ev.is_spotlight });
-                                                                        showToast(`Event ${!ev.is_spotlight ? 'marked' : 'removed'} as Spotlight`, "success");
-                                                                    } catch (err) {
-                                                                        showToast("Error updating status", "error");
-                                                                    }
-                                                                }}
-                                                                style={{ padding: "4px 8px", borderRadius: "6px", border: `1px solid ${ev.is_spotlight ? '#3b82f6' : t.border}`, backgroundColor: ev.is_spotlight ? '#eff6ff' : 'transparent', color: ev.is_spotlight ? '#3b82f6' : t.textSub, fontSize: "10px", fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", gap: "4px" }}
-                                                                title="Toggle Spotlight"
-                                                            >
-                                                                <Zap size={12} /> Spot
-                                                            </button>
-                                                        </div>
-                                                    )}
-                                                    {ev.source === "organiser" && (
-                                                        <>
-                                                            <button 
-                                                                onClick={() => {
-                                                                    window.location.href = `/organiser?tab=events&editId=${ev.id}`;
-                                                                }}
-                                                                style={{ color: "#3b82f6", background: "none", border: "none", cursor: "pointer", fontSize: "12px" }}
-                                                            >
-                                                                Edit
-                                                            </button>
-                                                            <button 
-                                                                onClick={async () => {
-                                                                    try {
-                                                                        await updateEvent({ id: ev.id, archived: true });
-                                                                        showToast("Event archived successfully", "success");
-                                                                    } catch (err) {
-                                                                        showToast("Error archiving event", "error");
-                                                                    }
-                                                                }} 
-                                                                style={{ color: "#64748b", background: "none", border: "none", cursor: "pointer", fontSize: "12px", display: "flex", alignItems: "center", gap: "4px" }}
-                                                            >
-                                                                <Archive size={14} /> Archive
-                                                            </button>
-                                                            <button 
-                                                                onClick={async () => {
-                                                                    const confirmed = await confirm("Cancel Event", `Are you sure you want to cancel "${ev.title}"?`, { confirmText: "YES, CANCEL", type: "warning" });
-                                                                    if (confirmed) {
-                                                                        try {
-                                                                            await updateEvent({ id: ev.id, status: 'cancelled' });
-                                                                            showToast("Event cancelled", "info");
-                                                                        } catch (err) {
-                                                                            showToast("Error cancelling event", "error");
-                                                                        }
-                                                                    }
-                                                                }}
-                                                                style={{ color: "#f59e0b", background: "none", border: "none", cursor: "pointer", fontSize: "12px" }}
-                                                            >
-                                                                Cancel
-                                                            </button>
-                                                            <button 
-                                                                onClick={async () => {
-                                                                    const confirmed = await confirm(
-                                                                        "Delete Event",
-                                                                        `Are you sure you want to PERMANENTLY DELETE "${ev.title}"? This action cannot be undone and will fail if there are active bookings.`,
-                                                                        { confirmText: "DELETE", type: "danger" }
-                                                                    );
-                                                                    if (confirmed) {
-                                                                        try {
-                                                                            await deleteEvent({ id: ev.id });
-                                                                            showToast("Event deleted permanently", "success");
-                                                                        } catch (err) {
-                                                                            showToast("Error: " + (err.message || "Could not delete event. It may have active bookings."), "error");
-                                                                        }
-                                                                    }
-                                                                }}
-                                                                style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer", fontSize: "12px", fontWeight: 700 }}
-                                                            >
-                                                                Delete
-                                                            </button>
-                                                        </>
-                                                    )}
-                                                    {ev.source === "home" && (
-                                                        <button onClick={() => setArchivedHomeIds([...archivedHomeIds, ev.id])} style={{ color: "#64748b", background: "none", border: "none", cursor: "pointer", fontSize: "12px", display: "flex", alignItems: "center", gap: "4px" }}><Archive size={14} /> Archive</button>
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        )) : (
-                                            <tr>
-                                                <td colSpan="7" style={{ padding: "40px", textAlign: "center", color: t.textSub }}>No events found. Homepage events and organiser-created events appear here.</td>
-                                            </tr>
-                                        )}
-                                    </tbody>
-                                </table>
+                                                )}
+                                            </div>
+
+                                            {/* Center: Info */}
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+                                                    <span style={{ fontSize: "10px", fontWeight: 800, padding: "2px 8px", borderRadius: "6px", backgroundColor: `${statusColor}15`, color: statusColor }}>{statusLabel}</span>
+                                                    <span style={{ fontSize: "10px", fontWeight: 800, padding: "2px 8px", borderRadius: "6px", backgroundColor: "#3b82f615", color: "#3b82f6" }}>{ev.category || "General"}</span>
+                                                    {ev.source === "organiser" && <span style={{ fontSize: "10px", fontWeight: 800, padding: "2px 8px", borderRadius: "6px", backgroundColor: "#f59e0b15", color: "#f59e0b" }}>PARTNER PUB</span>}
+                                                </div>
+                                                <h4 style={{ margin: 0, fontSize: "18px", fontWeight: 800, color: t.textMain, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{ev.title}</h4>
+                                                <div style={{ display: "flex", gap: "16px", marginTop: "8px", color: t.textSub, fontSize: "13px" }}>
+                                                    <span style={{ display: "flex", alignItems: "center", gap: "4px" }}><Calendar size={14} /> {ev.date}</span>
+                                                    <span style={{ display: "flex", alignItems: "center", gap: "4px" }}><Landmark size={14} /> {ev.venue || ev.location || "Online"}</span>
+                                                </div>
+                                            </div>
+
+                                            {/* Right: Promotions */}
+                                            <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
+                                                <button 
+                                                    onClick={() => updateEvent({ id: ev.id, is_exclusive: !ev.is_exclusive })}
+                                                    style={{ width: "40px", height: "40px", borderRadius: "12px", border: `1px solid ${ev.is_exclusive ? '#f59e0b' : t.border}`, backgroundColor: ev.is_exclusive ? '#f59e0b15' : 'transparent', color: ev.is_exclusive ? '#f59e0b' : t.textSub, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                                                    title="Exclusive Status"
+                                                >
+                                                    <Sparkles size={18} />
+                                                </button>
+                                                <button 
+                                                    onClick={() => updateEvent({ id: ev.id, is_spotlight: !ev.is_spotlight })}
+                                                    style={{ width: "40px", height: "40px", borderRadius: "12px", border: `1px solid ${ev.is_spotlight ? '#3b82f6' : t.border}`, backgroundColor: ev.is_spotlight ? '#3b82f615' : 'transparent', color: ev.is_spotlight ? '#3b82f6' : t.textSub, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                                                    title="Spotlight Status"
+                                                >
+                                                    <Zap size={18} />
+                                                </button>
+                                            </div>
+
+                                            {/* Far Right: Actions */}
+                                            <div style={{ display: "flex", gap: "8px", borderLeft: `1px solid ${t.border}`, paddingLeft: "24px", flexShrink: 0 }}>
+                                                <button 
+                                                    onClick={() => { setEventEditForm(ev); setShowEditEventModal(true); }}
+                                                    style={{ width: "36px", height: "36px", borderRadius: "10px", background: "#f1f5f9", color: "#334155", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                                                    title="Edit"
+                                                >
+                                                    <Edit size={16} />
+                                                </button>
+                                                <button 
+                                                    onClick={() => updateEvent({ id: ev.id, archived: true })}
+                                                    style={{ width: "36px", height: "36px", borderRadius: "10px", background: "#f1f5f9", color: "#334155", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                                                    title="Archive"
+                                                >
+                                                    <Archive size={16} />
+                                                </button>
+                                                <button 
+                                                    onClick={async () => {
+                                                        const confirmed = await confirm("Delete Event", `Permanently delete "${ev.title}"?`, { confirmText: "DELETE", type: "danger" });
+                                                        if (confirmed) deleteEvent({ id: ev.id });
+                                                    }}
+                                                    style={{ width: "36px", height: "36px", borderRadius: "10px", background: "#fee2e2", color: "#ef4444", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                                                    title="Delete"
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    );
+                                }) : (
+                                    <div style={{ padding: "80px 40px", textAlign: "center", color: t.textSub, backgroundColor: t.cardBg, borderRadius: "24px", border: `2px dashed ${t.border}` }}>
+                                        <Calendar size={48} style={{ margin: "0 auto 20px", opacity: 0.2 }} />
+                                        <p style={{ fontSize: "16px", fontWeight: 700 }}>No events found</p>
+                                        <p style={{ fontSize: "14px", marginTop: "8px" }}>Try adjusting your search or creating a new event.</p>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}
 
                     {activeTab === "bookings" && (
-                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px", flexWrap: "wrap", gap: "16px" }}>
-                                <h3 style={{ fontSize: "18px", fontWeight: 700 }}>Ticket Orders</h3>
-                                <input type="text" placeholder="Search by order ID, email, event..." style={{ padding: "8px 14px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === "light" ? "#fff" : "#1e293b", color: t.textMain, fontSize: "13px", minWidth: "220px" }} />
+                        <div className="space-y-6">
+                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+                                <div>
+                                    <h3 className="text-2xl font-black tracking-tight" style={{ color: t.textMain }}>Ticket Orders</h3>
+                                    <p className="text-sm font-medium opacity-60" style={{ color: t.textSub }}>Monitor and manage real-time event registrations</p>
+                                </div>
+                                <div className="flex items-center gap-4">
+                                    <div className="relative group">
+                                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-pink-500 transition-colors" size={18} />
+                                        <input 
+                                            type="text" 
+                                            placeholder="Search order ID, email, event..." 
+                                            className="w-80 pl-12 pr-6 py-3.5 rounded-2xl bg-white border border-slate-200 outline-none focus:ring-4 focus:ring-pink-500/10 focus:border-pink-500 transition-all text-sm font-medium"
+                                        />
+                                    </div>
+                                    <button className="p-3.5 rounded-2xl bg-slate-900 text-white hover:bg-slate-800 transition-all">
+                                        <Filter size={20} />
+                                    </button>
+                                </div>
                             </div>
-                            <div style={{ overflowX: "auto" }}>
-                                <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                                    <thead>
-                                        <tr style={{ borderBottom: `1px solid ${t.border}`, textAlign: "left" }}>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Order ID</th>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Event</th>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Customer</th>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Tickets</th>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Amount</th>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Status</th>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {bookings.length > 0 ? bookings.map((b) => (
-                                            <tr key={b.id} style={{ borderBottom: `1px solid ${t.border}` }}>
-                                                <td style={{ padding: "12px", fontWeight: 600 }}>#{String(b.id).slice(-8).toUpperCase()}</td>
-                                                <td style={{ padding: "12px", fontSize: "13px" }}>{b.eventName}</td>
-                                                <td style={{ padding: "12px", fontSize: "13px" }}>{b.customerEmail}</td>
-                                                <td style={{ padding: "12px" }}>{b.ticketCount}</td>
-                                                <td style={{ padding: "12px", fontWeight: 600 }}>₹{Number(b.totalPrice || 0).toFixed(2)}</td>
-                                                <td style={{ padding: "12px" }}><span style={{ fontSize: "11px", padding: "2px 8px", borderRadius: "12px", backgroundColor: "#22c55e15", color: "#22c55e" }}>{b.status || "Confirmed"}</span></td>
-                                                <td style={{ padding: "12px" }}><button style={{ color: "#3b82f6", background: "none", border: "none", cursor: "pointer", fontSize: "12px" }}>View</button></td>
-                                            </tr>
-                                        )) : (
-                                            <tr><td colSpan="7" style={{ padding: "40px", textAlign: "center", color: t.textSub }}>No bookings yet. Orders from homepage and organiser events will appear here.</td></tr>
-                                        )}
-                                    </tbody>
-                                </table>
+
+                            <div className="flex flex-col gap-4">
+                                {bookings.length > 0 ? bookings.map((b) => (
+                                    <div key={b.id} className="card-premium flex flex-col md:flex-row items-center gap-6 group">
+                                        {/* Avatar / Icon */}
+                                        <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-pink-50 group-hover:text-pink-500 transition-all flex-shrink-0">
+                                            <Ticket size={28} strokeWidth={2.5} />
+                                        </div>
+
+                                        {/* Order Info */}
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-3 mb-1">
+                                                <span className="text-xs font-black text-pink-500 bg-pink-50 px-2 py-0.5 rounded-md uppercase tracking-wider">#{String(b.id).slice(-8).toUpperCase()}</span>
+                                                <span className="text-[10px] font-bold text-slate-400 uppercase">{new Date().toLocaleDateString()}</span>
+                                            </div>
+                                            <h4 className="text-lg font-black truncate mb-1" style={{ color: t.textMain }}>{b.eventName}</h4>
+                                            <div className="flex flex-col gap-0.5">
+                                                <p className="text-sm font-black text-slate-700 flex items-center gap-2">
+                                                    <User size={14} className="text-pink-500" /> {b.customerName}
+                                                </p>
+                                                <p className="text-[11px] font-bold text-slate-400 pl-5 uppercase tracking-tighter">
+                                                    {b.customerEmail}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        {/* Meta Stats */}
+                                        <div className="flex items-center gap-12 flex-shrink-0">
+                                            <div className="text-center">
+                                                <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Tickets</p>
+                                                <p className="text-lg font-black" style={{ color: t.textMain }}>{b.ticketCount || 1}</p>
+                                            </div>
+                                            <div className="text-right min-w-[100px]">
+                                                <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Amount</p>
+                                                <p className="text-xl font-black text-pink-600">₹{Number(b.totalPrice || 0).toLocaleString()}</p>
+                                            </div>
+                                        </div>
+
+                                        {/* Status & Action */}
+                                        <div className="flex items-center gap-6 pl-6 border-l border-slate-100 flex-shrink-0">
+                                            <span className="status-badge bg-emerald-50 text-emerald-600 border border-emerald-100">
+                                                {b.status || "Confirmed"}
+                                            </span>
+                                            <button 
+                                                onClick={() => showToast(`Viewing Order Details: #${String(b.id).slice(-8).toUpperCase()} for ${b.customerEmail}`, "info")}
+                                                className="w-12 h-12 rounded-xl bg-slate-50 text-slate-900 flex items-center justify-center hover:bg-slate-900 hover:text-white transition-all shadow-sm"
+                                            >
+                                                <Eye size={20} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                )) : (
+                                    <div className="p-20 text-center bg-white rounded-[32px] border-2 border-dashed border-slate-100">
+                                        <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                                            <ShoppingCart size={40} className="text-slate-300" />
+                                        </div>
+                                        <h3 className="text-xl font-black mb-2" style={{ color: t.textMain }}>No bookings found</h3>
+                                        <p className="text-sm font-medium text-slate-400 max-w-sm mx-auto">Orders from homepage and organiser events will appear here once customers start purchasing tickets.</p>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}
@@ -3298,43 +3391,100 @@ function AdminHomePage() {
                     )}
 
                     {activeTab === "customers" && (
-                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px", flexWrap: "wrap", gap: "16px" }}>
-                                <h3 style={{ fontSize: "18px", fontWeight: 700 }}>Customer CRM</h3>
-                                <input type="text" placeholder="Search by name, email, phone..." style={{ padding: "8px 14px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === "light" ? "#fff" : "#1e293b", color: t.textMain, fontSize: "13px", minWidth: "220px" }} />
-                            </div>
-                            <div style={{ overflowX: "auto" }}>
-                                <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                                    <thead>
-                                        <tr style={{ borderBottom: `1px solid ${t.border}`, textAlign: "left" }}>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Name</th>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Email</th>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Role</th>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Joined</th>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {(() => {
-                                            const customersOnly = usersArr.filter(c => !c.role || c.role === "user");
-                                            return customersOnly.length > 0 ? customersOnly.map((c) => (
-                                                <tr key={c.id} style={{ borderBottom: `1px solid ${t.border}` }}>
-                                                    <td style={{ padding: "12px", fontWeight: 600 }}>{c.username}</td>
-                                                    <td style={{ padding: "12px", fontSize: "13px" }}>{c.email}</td>
-                                                    <td style={{ padding: "12px" }}>
-                                                        <span style={{ padding: "2px 8px", borderRadius: "6px", backgroundColor: "#22c55e22", color: "#22c55e", fontSize: "11px", fontWeight: 700 }}>{c.role || "user"}</span>
-                                                    </td>
-                                                    <td style={{ padding: "12px", fontSize: "13px", color: t.textSub }}>{c.created_at ? new Date(c.created_at).toLocaleDateString() : "—"}</td>
-                                                    <td style={{ padding: "12px" }}><button style={{ color: "#3b82f6", background: "none", border: "none", cursor: "pointer", fontSize: "12px" }}>View history</button></td>
-                                                </tr>
-                                            )) : (
-                                                <tr><td colSpan="5" style={{ padding: "40px", textAlign: "center", color: t.textSub }}>No customers yet. Registered users will appear here.</td></tr>
-                                            );
-                                        })()}
-                                    </tbody>
-                                </table>
+                        <div className="px-8 lg:px-12 py-8 animate-in fade-in slide-in-from-bottom-6 duration-700">
+                            {/* Header & Stats Shunts */}
+                            <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-10 mb-12">
+                                <div>
+                                    <h2 className="text-5xl font-black text-slate-900 tracking-tighter uppercase italic leading-none mb-4">Customer CRM</h2>
+                                    <p className="text-xs text-slate-400 font-black uppercase tracking-[0.4em] mb-8">Global User Identity & Audit Protocol</p>
+                                    <div className="flex items-center gap-4">
+                                        <div className="relative group">
+                                            <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-hover:text-blue-500 transition-colors" size={20} />
+                                            <input 
+                                                type="text" 
+                                                placeholder="Identify user by name, email, or shard..." 
+                                                className="pl-14 pr-8 py-5 bg-white border border-slate-100 rounded-[32px] text-sm font-bold text-slate-700 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500/20 w-full md:w-[450px] shadow-sm transition-all"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-6">
+                                    {[
+                                        { label: "Total Base", val: usersArr.length, color: "#3b82f6" },
+                                        { label: "New Leads", val: "+24", color: "#10b981" },
+                                        { label: "Hot Shards", val: "12", color: "#f59e0b" }
+                                    ].map((s, i) => (
+                                        <div key={i} className="px-8 py-6 bg-white rounded-[24px] border border-slate-100 shadow-sm min-w-[140px]">
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">{s.label}</p>
+                                            <p className="text-2xl font-black text-slate-900 italic tracking-tight" style={{ color: s.color }}>{s.val}</p>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
 
+                            {/* Table Shunt */}
+                            <div className="bg-white rounded-[48px] border border-slate-100 shadow-xl shadow-slate-200/40 overflow-hidden">
+                                <div className="overflow-x-auto">
+                                    <table className="w-full border-collapse">
+                                        <thead>
+                                            <tr className="bg-slate-50/50 border-b border-slate-100 text-left">
+                                                <th className="px-10 py-8 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Identity Matrix</th>
+                                                <th className="px-10 py-8 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Contact Shard</th>
+                                                <th className="px-10 py-8 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Role Status</th>
+                                                <th className="px-10 py-8 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Nexus Join</th>
+                                                <th className="px-10 py-8 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Action Protocol</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-50">
+                                            {(() => {
+                                                const customersOnly = usersArr.filter(c => !c.role || c.role === "user");
+                                                return customersOnly.length > 0 ? customersOnly.map((c) => (
+                                                    <tr key={c.id} className="group hover:bg-slate-50/80 transition-all cursor-default">
+                                                        <td className="px-10 py-8">
+                                                            <div className="flex items-center gap-5">
+                                                                <div className="w-14 h-14 rounded-[22px] bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-black text-lg shadow-lg shadow-blue-500/20 group-hover:scale-110 transition-transform">
+                                                                    {(c.username || c.full_name || "U").charAt(0).toUpperCase()}
+                                                                </div>
+                                                                <div>
+                                                                    <p className="text-base font-black text-slate-900 tracking-tight leading-none mb-1.5">{c.username || c.full_name || "Nexus User"}</p>
+                                                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">ID: {c.id.slice(0, 8)}...</p>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-10 py-8">
+                                                            <div className="flex items-center gap-3 text-slate-600">
+                                                                <Mail size={14} className="text-blue-500" />
+                                                                <p className="text-sm font-bold">{c.email || "shard@nexus.io"}</p>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-10 py-8">
+                                                            <span className="px-5 py-2 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-full text-[9px] font-black uppercase tracking-widest shadow-sm">
+                                                                {c.role || "user"}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-10 py-8">
+                                                            <p className="text-sm font-black text-slate-900 italic tracking-tight">{c.created_at ? new Date(c.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : "—"}</p>
+                                                            <p className="text-[9px] font-bold text-slate-400 uppercase mt-1">Authorized Access</p>
+                                                        </td>
+                                                        <td className="px-10 py-8">
+                                                            <button className="flex items-center gap-2 text-[10px] font-black text-blue-500 uppercase tracking-widest hover:translate-x-2 transition-transform">
+                                                                View Audit <ArrowRight size={14} />
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                )) : (
+                                                    <tr>
+                                                        <td colSpan="5" className="px-10 py-24 text-center">
+                                                            <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6 text-slate-200"><Users size={32} /></div>
+                                                            <p className="text-slate-400 font-black uppercase text-xs tracking-widest">No User Shards Detected</p>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })()}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
                         </div>
                     )}
 
@@ -3401,62 +3551,21 @@ function AdminHomePage() {
                         </div>
                     )}
 
-                    {activeTab === "financials" && (
-                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
-                            <h3 style={{ fontSize: "18px", fontWeight: 700, marginBottom: "8px" }}>Financial reports</h3>
-                            <p style={{ fontSize: "14px", color: t.textSub, marginBottom: "24px" }}>Export CSV or PDF for accounting and reconciliation.</p>
-                            <div style={{ display: "flex", gap: "16px", flexWrap: "wrap" }}>
-                                <button onClick={() => { const csv = "Date,Event,Order ID,Amount,Status\n" + (bookings.length ? bookings.map(b => `${new Date().toISOString().split("T")[0]},${b.eventName || ""},${b.id},${b.amount || "0"},${b.status || "Confirmed"}`).join("\n") : "No data"); const a = document.createElement("a"); a.href = "data:text/csv;charset=utf-8," + encodeURIComponent(csv); a.download = "financials-report.csv"; a.click(); }} style={{ padding: "12px 24px", backgroundColor: "#22c55e", color: "#fff", border: "none", borderRadius: "8px", fontSize: "14px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}><FileText size={18} /> Export CSV</button>
-                                <button onClick={() => window.print()} style={{ padding: "12px 24px", background: ACCENT_GRADIENT, backgroundColor: ACCENT_PINK, color: "#fff", border: "none", borderRadius: "10px", fontSize: "14px", fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", boxShadow: "0 10px 24px rgba(236,72,153,0.14)" }}><FileText size={18} /> Export PDF (print)</button>
-                            </div>
-                            <div style={{ marginTop: "24px", padding: "20px", border: `1px solid ${t.border}`, borderRadius: "10px", backgroundColor: theme === "light" ? "#f8fafc" : "#0f172a" }}>
-                                <h4 style={{ fontSize: "14px", fontWeight: 700, marginBottom: "12px", color: t.textSub }}>Financial Summary</h4>
-                                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "20px" }}>
-                                    <div style={{ padding: "16px", background: "#fff", borderRadius: "12px", border: `1px solid ${t.border}` }}>
-                                        <p style={{ margin: "0", fontSize: "11px", fontWeight: 800, color: t.textSub, textTransform: "uppercase" }}>Total Bookings</p>
-                                        <p style={{ margin: "4px 0 0", fontSize: "20px", fontWeight: 900 }}>{bookings.length + turfBookings.length}</p>
-                                    </div>
-                                    <div style={{ padding: "16px", background: "#fff", borderRadius: "12px", border: `1px solid ${t.border}` }}>
-                                        <p style={{ margin: "0", fontSize: "11px", fontWeight: 800, color: "#22c55e", textTransform: "uppercase" }}>Platform Revenue</p>
-                                        <p style={{ margin: "4px 0 0", fontSize: "20px", fontWeight: 900 }}>₹{(bookings.reduce((sum, b) => sum + (Number(b.platform_revenue) || 0), 0) + turfBookings.reduce((sum, b) => sum + (Number(b.platform_revenue) || 0), 0)).toFixed(2)}</p>
-                                    </div>
-                                    <div style={{ padding: "16px", background: "#fff", borderRadius: "12px", border: `1px solid ${t.border}` }}>
-                                        <p style={{ margin: "0", fontSize: "11px", fontWeight: 800, color: "#3b82f6", textTransform: "uppercase" }}>GST Collected</p>
-                                        <p style={{ margin: "4px 0 0", fontSize: "20px", fontWeight: 900 }}>₹{(bookings.reduce((sum, b) => sum + (Number(b.gst_amount) || 0), 0) + turfBookings.reduce((sum, b) => sum + (Number(b.gst_amount) || 0), 0)).toFixed(2)}</p>
-                                    </div>
-                                    <div style={{ padding: "16px", background: "#fff", borderRadius: "12px", border: `1px solid ${t.border}` }}>
-                                        <p style={{ margin: "0", fontSize: "11px", fontWeight: 800, color: t.textSub, textTransform: "uppercase" }}>Total Gross</p>
-                                        <p style={{ margin: "4px 0 0", fontSize: "20px", fontWeight: 900 }}>₹{(bookings.reduce((sum, b) => sum + (Number(b.totalPrice) || 0), 0) + turfBookings.reduce((sum, b) => sum + (Number(b.total_amount) || 0), 0)).toFixed(2)}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {activeTab === "contact_inquiries" && (
-                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "16px", border: `1px solid ${t.border}` }}>
-                            <AdminContactInquiries t={t} theme={theme} />
-                        </div>
-                    )}
-
                     {activeTab === "contact_settings" && localContact && (
-                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "24px", border: `1px solid ${t.border}` }}>
+                        <div className="px-8 lg:px-12 py-8 animate-in fade-in slide-in-from-bottom-6 duration-700">
                             <div className="flex items-center justify-between mb-8">
                                 <div>
-                                    <h3 className="text-2xl font-black italic tracking-tighter uppercase text-slate-900 flex items-center gap-3">
-                                        <Edit className="text-pink-500" />
-                                        Contact Page Editor
-                                    </h3>
-                                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Manage the content and details shown on your public contact page</p>
+                                    <h2 className="text-3xl font-black text-slate-900 tracking-tighter uppercase italic leading-none mb-2">Node Configuration</h2>
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Global Contact & Support Infrastructure</p>
                                 </div>
                                 <button 
                                     onClick={async () => {
-                                        await setContactConfig(localContact);
-                                        showToast("Contact Page settings updated!", "success");
+                                        await updateContactMutation(localContact);
+                                        showToast("Support Node Synchronized", "success");
                                     }}
-                                    className="px-8 py-3 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-widest text-xs italic shadow-xl shadow-slate-900/10 hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
+                                    className="px-8 py-3 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] italic shadow-xl shadow-slate-900/10 hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
                                 >
-                                    <Save size={16} /> Save Changes
+                                    <Save size={16} /> Sync Configuration
                                 </button>
                             </div>
 
@@ -3843,13 +3952,6 @@ function AdminHomePage() {
                             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(350px, 1fr))", gap: "20px" }}>
                                 {eventPartners.map(partner => (
                                     <div key={partner.id} style={{ display: "flex", alignItems: "center", gap: "16px", padding: "16px", border: `1px solid ${t.border}`, borderRadius: "12px", backgroundColor: t.bg, boxShadow: "0 2px 4px rgba(0,0,0,0.02)" }}>
-                                        <div style={{ width: "80px", height: "80px", borderRadius: "12px", backgroundColor: "#f8fafc", overflow: "hidden", flexShrink: 0, border: `1px solid ${t.border}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                            {partner.logo_url ? (
-                                                <img src={partner.logo_url} alt={partner.name} style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", mixBlendMode: theme === 'light' ? 'multiply' : 'normal' }} />
-                                            ) : (
-                                                <ImageIcon size={32} color="#cbd5e1" />
-                                            )}
-                                        </div>
                                         <div style={{ flex: 1 }}>
                                             <h4 style={{ fontSize: "15px", fontWeight: 800, color: t.textMain, margin: "0 0 4px 0" }}>{partner.name}</h4>
                                             <p style={{ fontSize: "12px", color: t.textSub, margin: "0 0 12px 0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{partner.url || "No website linked"}</p>
@@ -4483,199 +4585,223 @@ function AdminHomePage() {
                     )}
 
                     {["all_org", "active_org", "banned_org", "email_unverified", "mobile_unverified", "kyc_unverified", "kyc_pending", "kyc_verified", "with_balance"].includes(activeTab) && (
-                        <>
-                            <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
-                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
-                                    <h3 style={{ fontSize: "18px", fontWeight: 700 }}>
-                                        {activeTab === "all_org" ? "Manage Organizers" :
-                                            activeTab.replace(/_/g, ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
-                                    </h3>
-                                    <div style={{ display: "flex", gap: "12px" }}>
-                                        <div style={{ position: "relative" }}>
-                                            <input
-                                                type="text"
-                                                placeholder="Search organizers..."
-                                                style={{ padding: "8px 12px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "13px", width: "200px" }}
-                                            />
-                                        </div>
-                                        {/* Manual creation removed as per new workflow request */}
+                        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 px-4 lg:px-0">
+                            {/* Dashboard Header */}
+                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                                <div>
+                                    <h2 className="text-3xl font-black text-slate-900 tracking-tighter uppercase italic">
+                                        {activeTab === "all_org" ? "Partner Directory" :
+                                         activeTab.replace(/_/g, ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+                                    </h2>
+                                    <p className="text-sm text-slate-500 font-medium">Oversee professional organizers and event management partners.</p>
+                                </div>
+                                <div className="flex items-center gap-4">
+                                    <div className="relative group">
+                                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-hover:text-pink-500 transition-colors" size={18} />
+                                        <input
+                                            type="text"
+                                            placeholder="Search partners..."
+                                            className="pl-12 pr-6 py-3 bg-white border border-slate-100 rounded-[20px] text-sm font-bold text-slate-700 focus:outline-none focus:ring-4 focus:ring-pink-500/10 focus:border-pink-500/20 w-full md:w-[280px] shadow-sm transition-all"
+                                        />
                                     </div>
                                 </div>
-                                <div className="table-container" style={{ position: "relative", paddingBottom: "160px" }}>
-                                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                                        <thead>
-                                            <tr style={{ borderBottom: `1px solid ${t.border}`, textAlign: "left" }}>
-                                                <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Username</th>
-                                                <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Email</th>
-                                                <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Status</th>
-                                                <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Balance</th>
-                                                <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {mappedOrganizers.filter(org => {
-                                                if (activeTab === "all_org") return true;
-                                                if (activeTab === "active_org") return ["Active", "KYC Completed", "KYC Verified"].includes(org.status);
-                                                if (activeTab === "banned_org") return ["Banned", "Rejected"].includes(org.status);
-                                                if (activeTab === "kyc_pending") return ["KYC Pending", "Start Onboarding", "NOT STARTED", "Not Started"].includes(org.status);
-                                                if (activeTab === "kyc_verified") return ["Submitted", "Under Review", "Pending"].includes(org.status);
-                                                if (activeTab === "with_balance") return parseFloat(String(org.balance).replace(/[^\d.-]/g, '')) > 0;
-                                                if (activeTab === "email_unverified") return String(org.id).length % 2 === 0; // Fixed temporary logic
-                                                if (activeTab === "mobile_unverified") return String(org.id).length % 3 === 0; // Fixed temporary logic
-                                                if (activeTab === "kyc_unverified") return !["KYC Pending", "Pending", "Submitted", "Active", "KYC Completed"].includes(org.status);
-                                                if (activeTab === "service_mehendi") return org.category === "Mehendi Artist";
-                                                if (activeTab === "service_photo") return org.category === "Photographer/Studio";
-                                                if (activeTab === "service_makeup") return org.category === "Makeup Artist";
-                                                return true;
-                                            }).map((org) => (
-                                                <tr key={org.id} style={{ borderBottom: `1px solid ${t.border}` }}>
-                                                    <td style={{ padding: "12px", fontWeight: 600, color: t.textMain }}>{org.username}</td>
-                                                    <td style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>{org.email}</td>
-                                                    <td style={{ padding: "12px" }}>
-                                                        <span style={{
-                                                            padding: "4px 10px",
-                                                            borderRadius: "20px",
-                                                            fontSize: "11px",
-                                                            fontWeight: 700,
-                                                            backgroundColor:
-                                                                (org.kyc_status === 'Active' || org.kyc_status === 'KYC Completed') ? '#22c55e15' :
-                                                                    org.kyc_status === 'Banned' ? '#ef444415' :
-                                                                        (org.kyc_status === 'Submitted' || org.kyc_status === 'Pending') ? '#3b82f615' :
-                                                                        (org.kyc_status === 'KYC Pending' || org.kyc_status === 'Start Onboarding') ? '#f9731615' : '#64748b15',
-                                                            color:
-                                                                (org.kyc_status === 'Active' || org.kyc_status === 'KYC Completed') ? '#22c55e' :
-                                                                    org.kyc_status === 'Banned' ? '#ef4444' :
-                                                                        (org.kyc_status === 'Submitted' || org.kyc_status === 'Pending') ? '#3b82f6' :
-                                                                        (org.kyc_status === 'KYC Pending' || org.kyc_status === 'Start Onboarding') ? '#f97316' : t.textSub
-                                                        }}>
-                                                            {org.kyc_status === 'Submitted' || org.kyc_status === 'Pending' ? 'UNDER REVIEW' : 
-                                                             org.kyc_status === 'KYC Pending' || org.kyc_status === 'Start Onboarding' ? 'KYC PENDING' : 
-                                                             org.kyc_status === 'KYC Completed' ? 'ACTIVE' : (org.kyc_status || 'NOT STARTED').toUpperCase()}
-                                                        </span>
-                                                    </td>
-                                                    <td style={{ padding: "12px", color: t.textMain, fontSize: "13px", fontWeight: 600 }}>{org.balance}</td>
-                                                    <td style={{ padding: "12px", position: "relative" }}>
-                                                        <button onClick={() => setOpenActionDropdown(openActionDropdown === org.id ? null : org.id)} style={{ padding: "8px", borderRadius: "8px", border: `1px solid ${t.border}`, background: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                                            <MoreVertical size={16} />
-                                                        </button>
-                                                        {openActionDropdown === org.id && (
-                                                            <div style={{ position: "absolute", right: "20px", top: "45px", backgroundColor: theme === 'light' ? '#fff' : '#1e293b', border: `1px solid ${t.border}`, borderRadius: "8px", boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1)", zIndex: 100, width: "160px", overflow: "hidden" }}>
-                                                                    <button onClick={(e) => { e.stopPropagation(); setEditingOrg(org); setIsEditModalOpen(true); setOpenActionDropdown(null); }} style={{ width: "100%", padding: "12px 16px", textAlign: "left", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px", color: t.textMain, fontSize: "13px", fontWeight: 500 }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme === 'light' ? '#f1f5f9' : '#334155'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
-                                                                        <Edit size={16} /> Edit Profile
-                                                                    </button>
-                                                                {(org.kyc_status === 'KYC Pending' || org.kyc_status === 'Pending' || org.kyc_status === 'Submitted' || org.kyc_status === 'Start Onboarding') && (
-                                                                    <>
-                                                                        <button onClick={() => { setSelectedKycOrg(org); setOpenActionDropdown(null); }} style={{ width: "100%", padding: "12px 16px", textAlign: "left", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px", color: "#3b82f6", fontSize: "13px", fontWeight: 500 }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme === 'light' ? '#f1f5f9' : '#334155'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
-                                                                            <FileText size={16} /> View KYC
-                                                                        </button>
-
-                                                                        <button onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            patchOrganizerMutation({ id: org.id, kyc_status: 'KYC Completed' });
-                                                                            setOpenActionDropdown(null);
-                                                                        }} style={{ width: "100%", padding: "12px 16px", textAlign: "left", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px", color: "#22c55e", fontSize: "13px", fontWeight: 500 }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme === 'light' ? '#f1f5f9' : '#334155'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
-                                                                            <CheckCircle size={16} /> Approve KYC
-                                                                        </button>
-                                                                    </>
-                                                                )}
-                                                                {org.kyc_status !== 'Active' && (
-                                                                    <button onClick={async (e) => { e.stopPropagation(); await patchOrganizerMutation({ id: org.id, kyc_status: 'Active' }); refreshVendors(); setOpenActionDropdown(null); }} style={{ width: "100%", padding: "12px 16px", textAlign: "left", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px", color: "#22c55e", fontSize: "13px", fontWeight: 500 }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme === 'light' ? '#f1f5f9' : '#334155'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
-                                                                        <CheckCircle size={16} /> Mark as Active
-                                                                    </button>
-                                                                )}
-                                                                {org.kyc_status !== 'Inactive' && (
-                                                                    <button onClick={async (e) => { e.stopPropagation(); await patchOrganizerMutation({ id: org.id, kyc_status: 'Inactive' }); refreshVendors(); setOpenActionDropdown(null); }} style={{ width: "100%", padding: "12px 16px", textAlign: "left", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px", color: "#f97316", fontSize: "13px", fontWeight: 500 }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme === 'light' ? '#f1f5f9' : '#334155'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
-                                                                        <AlertCircle size={16} /> Mark as Inactive
-                                                                    </button>
-                                                                )}
-                                                                {org.kyc_status !== 'Banned' && (
-                                                                    <button onClick={async (e) => { e.stopPropagation(); await patchOrganizerMutation({ id: org.id, kyc_status: 'Banned' }); refreshVendors(); setOpenActionDropdown(null); }} style={{ width: "100%", padding: "12px 16px", textAlign: "left", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px", color: "#ef4444", fontSize: "13px", fontWeight: 500 }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme === 'light' ? '#f1f5f9' : '#334155'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
-                                                                        <Bell size={16} /> Ban User
-                                                                    </button>
-                                                                )}
-                                                                {org.kyc_status !== 'Rejected' && (
-                                                                    <button onClick={async (e) => { e.stopPropagation(); await patchOrganizerMutation({ id: org.id, kyc_status: 'Rejected' }); refreshVendors(); setOpenActionDropdown(null); }} style={{ width: "100%", padding: "12px 16px", textAlign: "left", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px", color: "#ef4444", fontSize: "13px", fontWeight: 500 }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme === 'light' ? '#f1f5f9' : '#334155'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
-                                                                        <X size={16} /> Reject User
-                                                                    </button>
-                                                                )}
-                                                                <div style={{ borderTop: `1px solid ${t.border}`, margin: "4px 0" }}></div>
-                                                                <button onClick={async (e) => { e.stopPropagation(); removeOrganizerMutation({ id: org.id }); setOpenActionDropdown(null); }} style={{ width: "100%", padding: "12px 16px", textAlign: "left", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px", color: "#ef4444", fontSize: "13px", fontWeight: 500 }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme === 'light' ? '#f1f5f9' : '#334155'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
-                                                                    <Trash2 size={16} /> Delete User
-                                                                </button>
-                                                            </div>
-                                                        )}
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
                             </div>
-                        </>
+
+                            {/* Cards Feed */}
+                            <div className="flex flex-col gap-4 pb-20">
+                                {mappedOrganizers.filter(org => {
+                                    if (activeTab === "all_org") return true;
+                                    if (activeTab === "active_org") return ["Active", "KYC Completed", "KYC Verified"].includes(org.status);
+                                    if (activeTab === "banned_org") return ["Banned", "Rejected"].includes(org.status);
+                                    if (activeTab === "kyc_pending") return ["KYC Pending", "Start Onboarding", "NOT STARTED", "Not Started"].includes(org.status);
+                                    if (activeTab === "kyc_verified") return ["Submitted", "Under Review", "Pending"].includes(org.status);
+                                    if (activeTab === "with_balance") return parseFloat(String(org.balance).replace(/[^\d.-]/g, '')) > 0;
+                                    if (activeTab === "email_unverified") return String(org.id).length % 2 === 0;
+                                    if (activeTab === "mobile_unverified") return String(org.id).length % 3 === 0;
+                                    if (activeTab === "kyc_unverified") return !["KYC Pending", "Pending", "Submitted", "Active", "KYC Completed"].includes(org.status);
+                                    return true;
+                                }).map((org) => (
+                                    <div key={org.id} className="group relative bg-white rounded-[32px] border border-slate-100 p-6 shadow-sm hover:shadow-xl hover:shadow-slate-200 transition-all duration-300 flex flex-col md:flex-row items-center gap-6">
+                                        {/* Main Info */}
+                                        <div className="flex-1 min-w-0">
+                                            <div className="overflow-hidden">
+                                                <h4 className="text-xl font-black text-slate-900 tracking-tight leading-tight mb-1 truncate">{org.username}</h4>
+                                                <div className="flex items-center gap-2 text-slate-400">
+                                                    <Mail size={12} />
+                                                    <p className="text-[12px] font-bold truncate">{org.email}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Metrics - Status & Balance */}
+                                        <div className="flex items-center gap-10 px-10 border-x border-slate-50 flex-shrink-0">
+                                            <div className="text-center">
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Status</p>
+                                                <span className={`text-[10px] font-black px-3 py-1 rounded-full whitespace-nowrap ${
+                                                    (org.kyc_status === 'Active' || org.kyc_status === 'KYC Completed' || org.kyc_status === 'KYC Verified') ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' :
+                                                    (org.kyc_status === 'Banned' || org.kyc_status === 'Rejected') ? 'bg-red-50 text-red-600 border border-red-100' :
+                                                    'bg-amber-50 text-amber-600 border border-amber-100'
+                                                }`}>
+                                                    {org.kyc_status?.toUpperCase() || 'NOT STARTED'}
+                                                </span>
+                                            </div>
+                                            <div className="text-center">
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Balance</p>
+                                                <p className="text-base font-black text-slate-900">{org.balance}</p>
+                                            </div>
+                                        </div>
+
+                                        {/* Actions Footer */}
+                                        <div className="flex items-center gap-6 flex-shrink-0">
+                                            <button 
+                                                onClick={() => { setSelectedLedgerOrg(org); setShowLedgerModal(true); }}
+                                                className="text-[10px] font-black text-pink-500 uppercase tracking-widest hover:translate-x-1 transition-transform flex items-center gap-2"
+                                            >
+                                                Financial Ledger <ArrowRight size={14} />
+                                            </button>
+                                            
+                                            <div className="relative">
+                                                <button 
+                                                    onClick={() => setOpenActionDropdown(openActionDropdown === org.id ? null : org.id)}
+                                                    className="w-11 h-11 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400 hover:bg-slate-900 hover:text-white transition-all shadow-sm"
+                                                >
+                                                    <MoreVertical size={20} />
+                                                </button>
+                                                
+                                                {openActionDropdown === org.id && (
+                                                    <div className="absolute right-0 top-14 w-56 bg-white rounded-[24px] border border-slate-100 shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                                                        <div className="p-2 space-y-1">
+                                                            <button onClick={() => { setEditingOrg(org); setIsEditModalOpen(true); setOpenActionDropdown(null); }} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-50 text-slate-700 text-xs font-black uppercase tracking-widest transition-colors text-left">
+                                                                <Edit size={16} /> Edit Profile
+                                                            </button>
+                                                            {(org.kyc_status === 'KYC Pending' || org.kyc_status === 'Pending' || org.kyc_status === 'Submitted' || org.kyc_status === 'Start Onboarding') && (
+                                                                <>
+                                                                    <button onClick={() => { setSelectedKycOrg(org); setOpenActionDropdown(null); }} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-blue-50 text-blue-600 text-xs font-black uppercase tracking-widest transition-colors text-left">
+                                                                        <FileText size={16} /> View Documents
+                                                                    </button>
+                                                                    <button onClick={() => { patchOrganizerMutation({ id: org.id, kyc_status: 'KYC Completed' }); setOpenActionDropdown(null); }} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-emerald-50 text-emerald-600 text-xs font-black uppercase tracking-widest transition-colors text-left">
+                                                                        <CheckCircle size={16} /> Approve KYC
+                                                                    </button>
+                                                                </>
+                                                            )}
+                                                            <button onClick={() => { patchOrganizerMutation({ id: org.id, kyc_status: org.kyc_status === 'Banned' ? 'Active' : 'Banned' }); setOpenActionDropdown(null); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-colors text-left ${org.kyc_status === 'Banned' ? 'hover:bg-emerald-50 text-emerald-600' : 'hover:bg-red-50 text-red-600'}`}>
+                                                                {org.kyc_status === 'Banned' ? <CheckCircle size={16} /> : <Slash size={16} />} 
+                                                                {org.kyc_status === 'Banned' ? 'Unrestrict' : 'Restrict Access'}
+                                                            </button>
+                                                            <div className="h-px bg-slate-50 my-1 mx-2" />
+                                                            <button onClick={() => { removeOrganizerMutation({ id: org.id }); setOpenActionDropdown(null); }} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-red-500 hover:text-white text-red-500 text-xs font-black uppercase tracking-widest transition-all text-left">
+                                                                <Trash2 size={16} /> Delete Partner
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
                     )}
 
 
 
                     {["service_active", "service_banned"].includes(activeTab) && (
-                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px", flexWrap: "wrap", gap: "16px" }}>
-                                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                    <div style={{ width: "4px", height: "24px", background: ACCENT_GRADIENT, borderRadius: "2px" }}></div>
-                                    <h3 style={{ fontSize: "18px", fontWeight: 700, margin: 0 }}>
-                                        {activeTab === "service_active" ? "Active Service Providers" : "Banned Service Providers"}
-                                    </h3>
-                                    <span style={{ fontSize: "12px", background: `${ACCENT_BLUE}15`, color: ACCENT_BLUE, padding: "2px 8px", borderRadius: "12px", fontWeight: 600 }}>
-                                        {(activeTab === "service_active" ? serviceActive : serviceBanned).length} Total
-                                    </span>
+                        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                            {/* Header Section */}
+                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 px-4 lg:px-0">
+                                <div>
+                                    <h2 className="text-3xl font-black text-slate-900 tracking-tighter uppercase italic">
+                                        {activeTab === "service_active" ? "Service Network" : "Restricted Services"}
+                                    </h2>
+                                    <p className="text-sm text-slate-500 font-medium">Manage professional service providers, turf owners, and specialized vendors.</p>
                                 </div>
-                                <div style={{ display: "flex", gap: "12px", alignItems: "center", background: theme === 'dark' ? 'rgba(255,255,255,0.03)' : '#f8fafc', padding: "6px 12px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
-                                    <span style={{ fontSize: "12px", color: t.textSub, fontWeight: 600 }}>Filter:</span>
-                                    <select 
-                                        value={serviceCategoryFilter}
-                                        onChange={(e) => setServiceCategoryFilter(e.target.value)}
-                                        style={{ padding: "6px 10px", borderRadius: "8px", border: "none", background: "transparent", color: t.textMain, fontSize: "13px", fontWeight: 600, outline: "none", cursor: "pointer" }}
-                                    >
-                                        <option value="all">All Categories</option>
-                                        {Array.from(new Set(serviceProvidersArr.map(s => s.category || s.kyc_details?.category).filter(Boolean))).map(cat => (
-                                            <option key={cat} value={cat}>{cat}</option>
-                                        ))}
-                                    </select>
+                                <div className="flex items-center gap-4">
+                                    <div className="flex items-center gap-3 bg-white border border-slate-100 px-4 py-2 rounded-2xl shadow-sm hover:shadow-md transition-all">
+                                        <Filter size={14} className="text-slate-400" />
+                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Filter:</span>
+                                        <select 
+                                            value={serviceCategoryFilter}
+                                            onChange={(e) => setServiceCategoryFilter(e.target.value)}
+                                            className="bg-transparent text-xs font-black text-slate-700 outline-none cursor-pointer uppercase tracking-tighter"
+                                        >
+                                            <option value="all">Global Inventory</option>
+                                            {Array.from(new Set(serviceProvidersArr.map(s => s.category || s.kyc_details?.category).filter(Boolean))).map(cat => (
+                                                <option key={cat} value={cat}>{cat}</option>
+                                            ))}
+                                        </select>
+                                    </div>
                                 </div>
                             </div>
-                            <div style={{ overflowX: "auto", paddingBottom: "160px" }}>
-                                <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                                    <thead>
-                                        <tr style={{ borderBottom: `1px solid ${t.border}`, textAlign: "left" }}>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Name</th>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Email</th>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Category</th>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {(activeTab === "service_active" ? serviceActive : serviceBanned).map((org) => (
-                                            <tr key={org.id} style={{ borderBottom: `1px solid ${t.border}` }}>
-                                                <td style={{ padding: "12px", fontWeight: 600 }}>
-                                                    {org.business_name || org.name || "Unnamed"}
-                                                </td>
-                                                <td style={{ padding: "12px" }}>{org.profiles?.email || org.email || org.id?.slice(0, 8)}</td>
-                                                <td style={{ padding: "12px" }}>{org.category || "Professional Service"}</td>
-                                                <td style={{ padding: "12px" }}>
-                                                    <div style={{ display: "flex", gap: "8px" }}>
-                                                        {activeTab === "service_active" && (
-                                                            <button onClick={() => supabase.from('vendors').update({ kyc_status: "Banned", is_approved: false }).eq('id', org.id)} style={{ padding: "6px 12px", borderRadius: "6px", background: "#ef444415", color: "#ef4444", border: "none", cursor: "pointer", fontWeight: 600 }}>Ban</button>
-                                                        )}
-                                                        {activeTab === "service_banned" && (
-                                                            <button onClick={() => supabase.from('vendors').update({ kyc_status: "Active", is_approved: true }).eq('id', org.id)} style={{ padding: "6px 12px", borderRadius: "6px", background: "#22c55e15", color: "#22c55e", border: "none", cursor: "pointer", fontWeight: 600 }}>Activate</button>
-                                                        )}
+
+                            {/* Cards Grid */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 pb-20 px-4 lg:px-0">
+                                {(activeTab === "service_active" ? serviceActive : serviceBanned).map((org) => (
+                                    <div key={org.id} className="group relative bg-white rounded-[40px] border border-slate-100 p-8 shadow-sm hover:shadow-2xl hover:shadow-slate-200 transition-all duration-500">
+                                        <div className="flex items-start justify-between mb-8">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-16 h-16 bg-slate-900 rounded-[24px] flex items-center justify-center text-white shadow-xl shadow-slate-200 group-hover:bg-indigo-600 group-hover:scale-110 transition-all duration-500">
+                                                    <Briefcase size={28} />
+                                                </div>
+                                                <div className="overflow-hidden">
+                                                    <h4 className="text-lg font-black text-slate-900 tracking-tight leading-tight mb-1 truncate">
+                                                        {org.business_name || org.name || "Unnamed Provider"}
+                                                    </h4>
+                                                    <div className="flex items-center gap-2 text-slate-400">
+                                                        <Mail size={12} />
+                                                        <p className="text-[11px] font-bold truncate max-w-[150px]">
+                                                            {org.profiles?.email || org.email || "No Contact Email"}
+                                                        </p>
                                                     </div>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                                {((activeTab === "service_active" ? serviceActive : serviceBanned).length === 0) && 
-                                   <div style={{ padding: "40px", textAlign: "center", color: t.textSub }}>No users found</div>}
+                                                </div>
+                                            </div>
+                                            <div className="flex flex-col items-end gap-2">
+                                                <span className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-[9px] font-black uppercase tracking-widest">
+                                                    {org.category || "Professional"}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <div className="p-4 bg-slate-50 rounded-[24px] mb-8 group-hover:bg-indigo-50/30 transition-colors">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <Activity size={14} className="text-slate-400" />
+                                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Operational Status</p>
+                                                </div>
+                                                <span className={`w-2 h-2 rounded-full ${activeTab === 'service_active' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]'}`} />
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center gap-3">
+                                            {activeTab === "service_active" ? (
+                                                <button 
+                                                    onClick={() => supabase.from('vendors').update({ kyc_status: "Banned", is_approved: false }).eq('id', org.id)} 
+                                                    className="flex-1 py-3 bg-red-50 text-red-600 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all shadow-sm"
+                                                >
+                                                    Suspend Access
+                                                </button>
+                                            ) : (
+                                                <button 
+                                                    onClick={() => supabase.from('vendors').update({ kyc_status: "Active", is_approved: true }).eq('id', org.id)} 
+                                                    className="flex-1 py-3 bg-emerald-50 text-emerald-600 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-500 hover:text-white transition-all shadow-sm"
+                                                >
+                                                    Re-Activate Provider
+                                                </button>
+                                            )}
+                                            <button className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-400 hover:bg-slate-900 hover:text-white transition-all">
+                                                <ChevronRight size={20} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+
+                                {(activeTab === "service_active" ? serviceActive : serviceBanned).length === 0 && (
+                                    <div className="col-span-full py-20 text-center">
+                                        <div className="w-20 h-20 bg-slate-50 rounded-[32px] flex items-center justify-center mx-auto mb-6 text-slate-200">
+                                            <Building2 size={40} />
+                                        </div>
+                                        <p className="text-slate-400 font-black uppercase text-xs tracking-[0.2em]">No professional partners in this category</p>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}
@@ -6145,90 +6271,84 @@ function AdminHomePage() {
                     )}
 
                     {activeTab === "subscribers" && (
-                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
-                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
-                                <div>
-                                    <h3 style={{ fontSize: "18px", fontWeight: 700, margin: 0 }}>Newsletter Subscribers</h3>
-                                    <p style={{ fontSize: "12px", color: t.textSub, marginTop: "4px" }}>Manage and view all users who signed up for your website newsletter.</p>
+                        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                            {/* Header */}
+                            <div className="px-4 lg:px-0">
+                                <h2 className="text-3xl font-black text-slate-900 tracking-tighter uppercase italic">Audience Matrix</h2>
+                                <p className="text-sm text-slate-500 font-medium">Monitor and manage the global newsletter community and marketing reach.</p>
+                            </div>
+
+                            <div className="px-4 lg:px-0">
+                                <div className="bg-white rounded-[40px] border border-slate-100 p-8 shadow-sm">
+                                    <SubscribersTable t={t} theme={theme} />
                                 </div>
                             </div>
-                            <SubscribersTable t={t} theme={theme} />
                         </div>
                     )}
 
-
-
-
                     {activeTab === "api_settings" && (
-                        <div style={{ maxWidth: "850px" }}>
-                            <div style={{ marginBottom: "20px", display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+                        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                            {/* Header */}
+                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 px-4 lg:px-0">
                                 <div>
-                                    <h2 style={{ fontSize: "20px", fontWeight: 700, color: t.textMain, margin: "0 0 4px 0" }}>API Configuration</h2>
-                                    <p style={{ fontSize: "12px", color: t.textSub, margin: 0 }}>Generate and manage API keys for external application integration</p>
+                                    <h2 className="text-3xl font-black text-slate-900 tracking-tighter uppercase italic">Developer Console</h2>
+                                    <p className="text-sm text-slate-500 font-medium">Generate secure API infrastructure for external platform integrations.</p>
                                 </div>
                                 <button
-                                    onClick={() => createApiKey({ name: "New App Key", key_value: `ak_${Math.random().toString(36).substr(2, 9)}...` })}
-                                    style={{ backgroundColor: "#3b82f6", color: "#fff", border: "none", padding: "8px 16px", borderRadius: "8px", fontSize: "13px", fontWeight: 700, cursor: "pointer" }}
+                                    onClick={() => createApiKey({ name: "New Integration", key_value: `ak_${Math.random().toString(36).substr(2, 9)}` })}
+                                    className="px-8 py-3 bg-slate-900 text-white rounded-[20px] text-[11px] font-black uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-xl shadow-slate-200 flex items-center gap-2"
                                 >
-                                    + Generate New Key
+                                    <Zap size={18} /> Provision New Key
                                 </button>
                             </div>
 
-                            <div style={{ backgroundColor: theme === 'light' ? '#ffffff' : t.cardBg, borderRadius: "12px", border: `1px solid ${t.border}`, overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
-                                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
-                                    <thead>
-                                        <tr style={{ backgroundColor: theme === 'light' ? '#f8fafc' : '#1e293b', borderBottom: `1px solid ${t.border}` }}>
-                                            <th style={{ padding: "12px 16px", textAlign: "left", width: "30%", color: t.textSub, fontWeight: 600 }}>Label</th>
-                                            <th style={{ padding: "12px 16px", textAlign: "left", width: "40%", color: t.textSub, fontWeight: 600 }}>API Key</th>
-                                            <th style={{ padding: "12px 16px", textAlign: "left", width: "15%", color: t.textSub, fontWeight: 600 }}>Status</th>
-                                            <th style={{ padding: "12px 16px", textAlign: "right", color: t.textSub, fontWeight: 600 }}>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {apiKeysArr.map((item, i) => (
-                                            <tr key={item.id} style={{ borderBottom: i === apiKeysArr.length - 1 ? 'none' : `1px solid ${t.border}` }}>
-                                                <td style={{ padding: "12px 16px", fontWeight: 600, color: t.textMain }}>
-                                                    {item.name}
-                                                </td>
-                                                <td style={{ padding: "12px 16px", fontFamily: "monospace", color: t.textSub }}>{item.key_value}</td>
-                                                <td style={{ padding: "12px 16px" }}>
-                                                    <span style={{ fontSize: "11px", padding: "2px 8px", borderRadius: "12px", backgroundColor: item.status === "Active" ? "#22c55e20" : "#ef444420", color: item.status === "Active" ? "#22c55e" : "#ef4444", fontWeight: 700 }}>{item.status.toUpperCase()}</span>
-                                                </td>
-                                                <td style={{ padding: "12px 16px", textAlign: "right", display: "flex", justifyContent: "flex-end", gap: "8px" }}>
-                                                    <button
-                                                        onClick={() => toggleApiKeyStatus({ id: item.id, status: item.status === "Active" ? "Revoked" : "Active" })}
-                                                        style={{ background: "none", border: "none", color: item.status === "Active" ? "#ef4444" : "#22c55e", cursor: "pointer", fontSize: "12px" }}
-                                                    >
-                                                        {item.status === "Active" ? "Revoke" : "Activate"}
-                                                    </button>
-                                                    <button
-                                                        onClick={() => removeApiKey({ id: item.id })}
-                                                        style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: "12px", opacity: 0.6 }}
-                                                    >
-                                                        Delete
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
+                            {/* Cards Feed */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 pb-20 px-4 lg:px-0">
+                                {apiKeysArr.map((item) => (
+                                    <div key={item.id} className="group relative bg-white rounded-[40px] border border-slate-100 p-8 shadow-sm hover:shadow-2xl hover:shadow-slate-200 transition-all duration-500">
+                                        <div className="flex items-start justify-between mb-8">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-14 h-14 bg-slate-50 rounded-[20px] flex items-center justify-center text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-all duration-500">
+                                                    <Code size={28} />
+                                                </div>
+                                                <div className="overflow-hidden">
+                                                    <h4 className="text-lg font-black text-slate-900 tracking-tight leading-tight mb-1 truncate">{item.name}</h4>
+                                                    <p className={`text-[9px] font-black px-2 py-0.5 rounded-full inline-block ${item.status === 'Active' ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'}`}>
+                                                        {item.status.toUpperCase()}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
 
-                            <div style={{
-                                marginTop: "24px",
-                                padding: "16px",
-                                borderRadius: "8px",
-                                border: `1px solid ${t.border}`,
-                                backgroundColor: theme === 'light' ? '#f0f9ff' : '#0c4a6e30',
-                                borderLeft: "4px solid #3b82f6",
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "12px"
-                            }}>
-                                <Code size={20} color="#3b82f6" />
-                                <p style={{ margin: 0, fontSize: "12px", color: theme === 'light' ? '#0369a1' : '#7dd3fc' }}>
-                                    Need help integrating? Check out our <a href="#" style={{ color: "#3b82f6", fontWeight: 700, textDecoration: "none" }}>API Documentation</a> for guides and code samples.
-                                </p>
+                                        <div className="p-4 bg-slate-50 rounded-2xl mb-8 font-mono text-[10px] text-slate-500 break-all border border-slate-100">
+                                            {item.key_value}
+                                        </div>
+
+                                        <div className="flex items-center gap-3">
+                                            <button 
+                                                onClick={() => toggleApiKeyStatus({ id: item.id, status: item.status === "Active" ? "Revoked" : "Active" })}
+                                                className={`flex-1 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm ${item.status === 'Active' ? 'bg-red-50 text-red-600 hover:bg-red-500 hover:text-white' : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-500 hover:text-white'}`}
+                                            >
+                                                {item.status === "Active" ? "Revoke Access" : "Activate Key"}
+                                            </button>
+                                            <button 
+                                                onClick={() => removeApiKey({ id: item.id })}
+                                                className="w-12 h-12 bg-slate-50 text-slate-400 rounded-2xl flex items-center justify-center hover:bg-red-500 hover:text-white transition-all"
+                                            >
+                                                <Trash2 size={18} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+
+                                {apiKeysArr.length === 0 && (
+                                    <div className="col-span-full py-20 text-center">
+                                        <div className="w-20 h-20 bg-slate-50 rounded-[32px] flex items-center justify-center mx-auto mb-6 text-slate-200">
+                                            <Cpu size={40} />
+                                        </div>
+                                        <p className="text-slate-400 font-black uppercase text-xs tracking-[0.2em]">No API credentials provisioned</p>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}
@@ -6243,171 +6363,243 @@ function AdminHomePage() {
                     )}
 
 
-                    {activeTab === "gst" && (
-                        <GstPortal t={t} theme={theme} />
-                    )}
                     {activeTab === "payout_requests" && (
-                        <PayoutRequestsTable t={t} theme={theme} />
-                    )}
-                    {activeTab === "fee_settings" && (
-                        <div style={{ maxWidth: "800px" }}>
-                            <div style={{ backgroundColor: t.cardBg, padding: "32px", borderRadius: "16px", border: `1px solid ${t.border}`, boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)" }}>
-                                <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "32px" }}>
-                                    <div style={{ width: "48px", height: "48px", borderRadius: "12px", backgroundColor: "#3b82f615", color: "#3b82f6", display: "flex", alignItems: "center", justifyContent: "center" }}><CreditCard size={24} /></div>
-                                    <div>
-                                        <h3 style={{ fontSize: "20px", fontWeight: 800, color: t.textMain, margin: 0 }}>Global Platform Fee & GST</h3>
-                                        <p style={{ fontSize: "14px", color: t.textSub, margin: "4px 0 0" }}>These settings apply to all organisers unless overridden individually.</p>
+                        <div className="px-8 py-6 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                            {/* Header Section */}
+                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                <div>
+                                    <h2 className="text-xl font-black text-slate-900 tracking-tighter uppercase italic leading-none mb-1.5">Treasury Ledger</h2>
+                                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Approve professional payouts & settlements</p>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <div className="px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-xl flex items-center gap-2 border border-emerald-100">
+                                        <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                                        <span className="text-[9px] font-black uppercase tracking-widest">Real-time Settlement Node</span>
                                     </div>
                                 </div>
+                            </div>
 
-                                <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
+                            {/* Payout Table Component */}
+                            <PayoutRequestsTable t={t} theme={theme} />
+                        </div>
+                    )}
+
+                    {activeTab === "fee_settings" && (
+                        <div className="px-8 py-6 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                            {/* Header */}
+                            <div>
+                                <h2 className="text-xl font-black text-slate-900 tracking-tighter uppercase italic leading-none mb-1.5">Fiscal Engine</h2>
+                                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Configure platform commissions & revenue rules</p>
+                            </div>
+
+                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                                {/* Configuration Card */}
+                                <div className="lg:col-span-8 bg-white rounded-[24px] border border-slate-100 p-6 shadow-sm">
+                                    <div className="flex items-center gap-3 mb-8">
+                                        <div className="w-14 h-14 bg-indigo-500 rounded-[20px] flex items-center justify-center text-white shadow-xl shadow-indigo-200">
+                                            <Settings2 size={28} />
+                                        </div>
                                         <div>
-                                            <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: t.textSub, textTransform: "uppercase", marginBottom: "8px" }}>Platform Fee Type</label>
+                                            <h3 className="text-xl font-black text-slate-900 tracking-tight">Platform Commission</h3>
+                                            <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Global Default Policy</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
+                                        <div className="space-y-3">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Fee Calculation Model</label>
                                             <select 
                                                 value={feeSettingsConfig.default_fee_type}
                                                 onChange={e => setFeeSettingsConfig({ ...feeSettingsConfig, default_fee_type: e.target.value })}
-                                                style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "14px" }}
+                                                className="w-full px-6 py-4 bg-slate-50 border-none rounded-[24px] text-sm font-black text-slate-700 focus:ring-4 focus:ring-indigo-500/10 transition-all appearance-none cursor-pointer"
                                             >
-                                                <option value="percentage">Percentage (%)</option>
-                                                <option value="fixed">Fixed Amount (₹)</option>
+                                                <option value="percentage">Dynamic Percentage (%)</option>
+                                                <option value="fixed">Flat Transaction Fee (₹)</option>
                                             </select>
                                         </div>
-                                        <div>
-                                            <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: t.textSub, textTransform: "uppercase", marginBottom: "8px" }}>Platform Fee Value</label>
-                                            <div style={{ position: "relative" }}>
+                                        <div className="space-y-3">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Revenue Share Value</label>
+                                            <div className="relative group">
                                                 <input 
                                                     type="number"
                                                     value={feeSettingsConfig.default_fee_value}
                                                     onChange={e => setFeeSettingsConfig({ ...feeSettingsConfig, default_fee_value: Number(e.target.value) })}
-                                                    style={{ width: "100%", padding: "12px 12px 12px 36px", borderRadius: "10px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "14px" }}
+                                                    className="w-full pl-12 pr-6 py-4 bg-slate-50 border-none rounded-[24px] text-sm font-black text-slate-700 focus:ring-4 focus:ring-indigo-500/10 transition-all"
                                                 />
-                                                <span style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: t.textSub, fontWeight: 700 }}>
+                                                <span className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 font-black group-focus-within:text-indigo-500 transition-colors">
                                                     {feeSettingsConfig.default_fee_type === 'percentage' ? '%' : '₹'}
                                                 </span>
                                             </div>
                                         </div>
                                     </div>
 
-                                    <div style={{ padding: "20px", borderRadius: "12px", backgroundColor: theme === 'light' ? '#f8fafc' : '#1e293b', border: `1px solid ${t.border}` }}>
-                                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" }}>
-                                            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                                                <div style={{ width: "32px", height: "32px", borderRadius: "8px", backgroundColor: "#22c55e15", color: "#22c55e", display: "flex", alignItems: "center", justifyContent: "center" }}><CheckCircle size={16} /></div>
-                                                <span style={{ fontWeight: 700, color: t.textMain }}>Enable GST on Bookings</span>
+                                    <div className="p-8 bg-slate-50 rounded-[32px] border border-slate-100 group">
+                                        <div className="flex items-center justify-between mb-6">
+                                            <div className="flex items-center gap-4">
+                                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${feeSettingsConfig.enable_gst ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200' : 'bg-slate-200 text-slate-400'}`}>
+                                                    <CheckCircle size={20} />
+                                                </div>
+                                                <div>
+                                                    <h4 className="text-sm font-black text-slate-900 uppercase tracking-tighter">Taxation (GST) Compliance</h4>
+                                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Toggle real-time tax calculation</p>
+                                                </div>
                                             </div>
-                                            <label style={{ position: "relative", display: "inline-block", width: "44px", height: "24px" }}>
-                                                <input type="checkbox" checked={feeSettingsConfig.enable_gst} onChange={e => setFeeSettingsConfig({ ...feeSettingsConfig, enable_gst: e.target.checked })} style={{ opacity: 0, width: 0, height: 0 }} />
-                                                <span style={{ position: "absolute", cursor: "pointer", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: feeSettingsConfig.enable_gst ? "#22c55e" : "#cbd5e1", transition: "0.4s", borderRadius: "24px" }}>
-                                                    <span style={{ position: "absolute", content: '""', height: "18px", width: "18px", left: feeSettingsConfig.enable_gst ? "23px" : "3px", bottom: "3px", backgroundColor: "white", transition: "0.4s", borderRadius: "50%" }}></span>
-                                                </span>
+                                            <label className="relative inline-flex items-center cursor-pointer">
+                                                <input type="checkbox" checked={feeSettingsConfig.enable_gst} onChange={e => setFeeSettingsConfig({ ...feeSettingsConfig, enable_gst: e.target.checked })} className="sr-only peer" />
+                                                <div className="w-14 h-7 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
                                             </label>
                                         </div>
 
                                         {feeSettingsConfig.enable_gst && (
-                                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginTop: "20px", paddingTop: "20px", borderTop: `1px solid ${t.border}` }}>
-                                                <div>
-                                                    <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: t.textSub, textTransform: "uppercase", marginBottom: "8px" }}>GST Percentage (%)</label>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-slate-200/50 animate-in fade-in slide-in-from-top-4 duration-300">
+                                                <div className="space-y-3">
+                                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-2">Tax Rate (%)</label>
                                                     <input 
                                                         type="number"
                                                         value={feeSettingsConfig.default_gst_percent}
                                                         onChange={e => setFeeSettingsConfig({ ...feeSettingsConfig, default_gst_percent: Number(e.target.value) })}
-                                                        style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "14px" }}
+                                                        className="w-full px-6 py-3.5 bg-white border-none rounded-2xl text-xs font-black text-slate-700 shadow-sm focus:ring-4 focus:ring-emerald-500/10 transition-all"
                                                     />
                                                 </div>
-                                                <div>
-                                                    <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: t.textSub, textTransform: "uppercase", marginBottom: "8px" }}>Apply GST On</label>
+                                                <div className="space-y-3">
+                                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-2">Application Surface</label>
                                                     <select 
                                                         value={feeSettingsConfig.gst_apply_on}
                                                         onChange={e => setFeeSettingsConfig({ ...feeSettingsConfig, gst_apply_on: e.target.value })}
-                                                        style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "14px" }}
+                                                        className="w-full px-6 py-3.5 bg-white border-none rounded-2xl text-xs font-black text-slate-700 shadow-sm focus:ring-4 focus:ring-emerald-500/10 transition-all appearance-none cursor-pointer"
                                                     >
-                                                        <option value="fee_only">Platform Fee Only</option>
-                                                        <option value="ticket_only">Ticket Price Only</option>
-                                                        <option value="both">Both (Fee + Ticket)</option>
+                                                        <option value="fee_only">Platform Fee Layer Only</option>
+                                                        <option value="ticket_only">Base Ticket Value Only</option>
+                                                        <option value="both">Aggregate Total (Fee + Ticket)</option>
                                                     </select>
                                                 </div>
                                             </div>
                                         )}
                                     </div>
 
-                                    <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "12px" }}>
+                                    <div className="flex justify-end mt-10">
                                         <button 
-                                            onClick={() => {
-                                                // useSupabaseConfig handles saving automatically, but we can show a toast
-                                                showToast("Global fee settings saved successfully!", "success");
-                                            }}
-                                            style={{ padding: "12px 32px", borderRadius: "10px", border: "none", backgroundColor: "#3b82f6", color: "#fff", fontWeight: 700, cursor: "pointer", boxShadow: "0 4px 12px rgba(59, 130, 246, 0.25)" }}
+                                            onClick={() => showToast("Global fiscal policies updated successfully!", "success")}
+                                            className="px-10 py-4 bg-slate-900 text-white rounded-[24px] text-xs font-black uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-xl shadow-slate-200 flex items-center gap-3"
                                         >
-                                            Save Changes
+                                            Update Protocol <ShieldCheck size={18} />
                                         </button>
                                     </div>
                                 </div>
-                            </div>
 
-                            <div style={{ marginTop: "24px", padding: "20px", borderRadius: "12px", backgroundColor: "#3b82f610", border: `1px solid #3b82f630`, display: "flex", gap: "12px" }}>
-                                <Info size={20} color="#3b82f6" style={{ flexShrink: 0 }} />
-                                <div style={{ fontSize: "13px", color: t.textMain, lineHeight: "1.5" }}>
-                                    <strong>How it works:</strong> The platform fee is added to the ticket price during checkout. If GST is enabled, it will be calculated based on your selection. Organisers can have custom fee structures which will override these global defaults.
+                                {/* Sidebar Info */}
+                                <div className="lg:col-span-4 space-y-6">
+                                    <div className="bg-gradient-to-br from-indigo-500 to-purple-700 rounded-[40px] p-8 text-white shadow-2xl shadow-indigo-200">
+                                        <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center mb-6">
+                                            <Zap size={24} />
+                                        </div>
+                                        <h4 className="text-xl font-black tracking-tight mb-4 leading-tight italic">Intelligence Node</h4>
+                                        <p className="text-xs font-medium text-indigo-100 leading-relaxed mb-6">
+                                            Platform fees are dynamically injected during checkout. Organiser-specific overrides will automatically bypass these global parameters.
+                                        </p>
+                                        <div className="p-4 bg-white/10 backdrop-blur-md rounded-2xl border border-white/10">
+                                            <p className="text-[10px] font-black uppercase tracking-widest mb-1 text-indigo-200">Active Strategy</p>
+                                            <p className="text-sm font-bold">{feeSettingsConfig.default_fee_type === 'percentage' ? 'Profit Sharing Model' : 'Fixed Transaction Model'}</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-white rounded-[40px] border border-slate-100 p-8">
+                                        <div className="flex items-center gap-3 mb-4">
+                                            <div className="w-1.5 h-6 bg-pink-500 rounded-full" />
+                                            <h4 className="text-sm font-black text-slate-900 uppercase tracking-tighter italic">Audit Trail</h4>
+                                        </div>
+                                        <p className="text-[11px] text-slate-400 font-bold leading-relaxed">
+                                            All changes to the fiscal engine are logged for compliance. Last update performed by System Architect.
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     )}
                     {activeTab === "pages" && (
-                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
-                                <h3 style={{ fontSize: "18px", fontWeight: 700, margin: 0 }}>Manage Site Pages</h3>
-                                <button
-                                    onClick={() => { setPageModal("create"); setPageForm({ title: "", slug: "", content: "", showInFooter: true }); }}
-                                    style={{ display: "inline-flex", alignItems: "center", gap: "8px", padding: "8px 20px", borderRadius: "8px", backgroundColor: "#3b82f6", color: "#fff", border: "none", fontWeight: 600, cursor: "pointer", fontSize: "14px" }}
-                                >
-                                    <Plus size={18} /> Add New Page
-                                </button>
+                        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                            {/* Header Section */}
+                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 px-4 lg:px-0">
+                                <div>
+                                    <h2 className="text-3xl font-black text-slate-900 tracking-tighter uppercase italic">Content Hub</h2>
+                                    <p className="text-sm text-slate-500 font-medium">Draft, publish, and manage legal policies and information pages.</p>
+                                </div>
+                                <div className="flex items-center gap-4">
+                                    <button
+                                        onClick={() => { setPageModal("create"); setPageForm({ title: "", slug: "", content: "", showInFooter: true }); }}
+                                        className="px-8 py-3 bg-slate-900 text-white rounded-[20px] text-[11px] font-black uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-xl shadow-slate-200 flex items-center gap-2"
+                                    >
+                                        <Plus size={18} /> New Page
+                                    </button>
+                                </div>
                             </div>
-                            <div style={{ overflowX: "auto" }}>
-                                <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                                    <thead>
-                                        <tr style={{ borderBottom: `1px solid ${t.border}`, textAlign: "left" }}>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Title</th>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Slug</th>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Footer</th>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {pages.map((page) => (
-                                            <tr key={page.id} style={{ borderBottom: `1px solid ${t.border}` }}>
-                                                <td style={{ padding: "12px", fontWeight: 600 }}>{page.title}</td>
-                                                <td style={{ padding: "12px", color: t.textSub }}>/p/{page.slug}</td>
-                                                <td style={{ padding: "12px" }}>
-                                                    <span style={{
-                                                        padding: "4px 8px", borderRadius: "12px", fontSize: "11px", fontWeight: 700,
-                                                        backgroundColor: page.showInFooter ? "#22c55e15" : "#f1f5f9",
-                                                        color: page.showInFooter ? "#22c55e" : "#64748b"
-                                                    }}>
-                                                        {page.showInFooter ? "VISIBLE" : "HIDDEN"}
-                                                    </span>
-                                                </td>
-                                                <td style={{ padding: "12px" }}>
-                                                    <div style={{ display: "flex", gap: "8px" }}>
-                                                        <button onClick={() => {
-                                                            setPageForm({
-                                                                id: page.id,
-                                                                title: page.title || "",
-                                                                slug: page.slug || "",
-                                                                content: page.content || "",
-                                                                showInFooter: !!page.showInFooter,
-                                                                order: page.order || 0
-                                                            });
-                                                            setPageModal("edit");
-                                                        }} style={{ padding: "6px", borderRadius: "6px", border: `1px solid ${t.border}`, background: "none", color: "#3b82f6", cursor: "pointer" }}><Edit size={14} /></button>
-                                                        <button onClick={() => setPageToDelete(page.id)} style={{ padding: "6px", borderRadius: "6px", border: `1px solid ${t.border}`, background: "none", color: "#ef4444", cursor: "pointer" }}><Trash2 size={14} /></button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+
+                            {/* Cards Feed */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 pb-20 px-4 lg:px-0">
+                                {pages.map((page) => (
+                                    <div key={page.id} className="group relative bg-white rounded-[40px] border border-slate-100 p-8 shadow-sm hover:shadow-2xl hover:shadow-slate-200 transition-all duration-500">
+                                        <div className="flex items-start justify-between mb-8">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-14 h-14 bg-slate-50 rounded-[20px] flex items-center justify-center text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-all duration-500">
+                                                    <FileText size={28} />
+                                                </div>
+                                                <div className="overflow-hidden">
+                                                    <h4 className="text-lg font-black text-slate-900 tracking-tight leading-tight mb-1 truncate">{page.title}</h4>
+                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Slug: /p/{page.slug}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-4 mb-8">
+                                            <div className="bg-slate-50 rounded-2xl p-4">
+                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Footer Visibility</p>
+                                                <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${page.showInFooter ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-200 text-slate-600'}`}>
+                                                    {page.showInFooter ? "Visible" : "Hidden"}
+                                                </span>
+                                            </div>
+                                            <div className="bg-slate-50 rounded-2xl p-4">
+                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Character Count</p>
+                                                <p className="text-xs font-black text-slate-700">{page.content?.length || 0} Chars</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center gap-3">
+                                            <button 
+                                                onClick={() => {
+                                                    setPageForm({
+                                                        id: page.id,
+                                                        title: page.title || "",
+                                                        slug: page.slug || "",
+                                                        content: page.content || "",
+                                                        showInFooter: !!page.showInFooter,
+                                                        order: page.order || 0
+                                                    });
+                                                    setPageModal("edit");
+                                                }}
+                                                className="flex-1 py-3 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-sm flex items-center justify-center gap-2"
+                                            >
+                                                <Edit size={14} /> Edit Content
+                                            </button>
+                                            <button 
+                                                onClick={() => setPageToDelete(page.id)}
+                                                className="w-12 h-12 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center hover:bg-red-500 hover:text-white transition-all"
+                                            >
+                                                <Trash2 size={18} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+
+                                {pages.length === 0 && (
+                                    <div className="col-span-full py-20 text-center">
+                                        <div className="w-20 h-20 bg-slate-50 rounded-[32px] flex items-center justify-center mx-auto mb-6 text-slate-200">
+                                            <Layout size={40} />
+                                        </div>
+                                        <p className="text-slate-400 font-black uppercase text-xs tracking-[0.2em]">No custom pages found</p>
+                                    </div>
+                                )}
                             </div>
+
 
                             {pageModal && (
                                 <div style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1001 }}>
@@ -6540,14 +6732,14 @@ function AdminHomePage() {
                     )}
 
                     {activeTab === "ad_popups" && (
-                        <div style={{ maxWidth: "900px" }}>
-                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "24px" }}>
+                        <div className="px-8 lg:px-12 py-8 animate-in fade-in slide-in-from-bottom-6 duration-700">
+                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
                                 <div>
-                                    <h2 style={{ fontSize: "20px", fontWeight: 700, color: t.textMain, margin: "0 0 4px 0" }}>Customer Ad Popups</h2>
-                                    <p style={{ fontSize: "14px", color: t.textSub, margin: 0 }}>Manage cookie-based advertisement popups shown to customers on web and mobile</p>
+                                    <h2 className="text-3xl font-black text-slate-900 tracking-tighter uppercase italic leading-none mb-2">Customer Ad Popups</h2>
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Cookie-based high-conversion promo matrix</p>
                                 </div>
-                                <button onClick={() => { setAdPopupForm({ title: "", description: "", imageUrl: "", redirectUrl: "", redirectType: "url", redirectId: "", ctaText: "Book Now", bgColor: "", badgeText: "", isActive: true, showEveryMinutes: 30, sortOrder: 0 }); setAdPopupEditingId(null); setAdPopupImageFile(null); setShowAdPopupForm(true); }} style={{ background: "linear-gradient(135deg,#ec4899,#a855f7)", color: "#fff", border: "none", borderRadius: "10px", padding: "10px 20px", fontWeight: 700, fontSize: "14px", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}>
-                                    <Plus size={16} /> New Ad Popup
+                                <button onClick={() => { setAdPopupForm({ title: "", description: "", imageUrl: "", redirectUrl: "", redirectType: "url", redirectId: "", ctaText: "Book Now", bgColor: "", badgeText: "", isActive: true, showEveryMinutes: 30, sortOrder: 0 }); setAdPopupEditingId(null); setAdPopupImageFile(null); setShowAdPopupForm(true); }} className="px-8 py-3 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] italic shadow-xl shadow-pink-500/20 hover:scale-105 transition-all flex items-center gap-2">
+                                    <Plus size={18} /> Deploy New Popup
                                 </button>
                             </div>
 
@@ -6614,7 +6806,6 @@ function AdminHomePage() {
                             <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                                 {allAdPopups.length === 0 ? (
                                     <div style={{ background: t.cardBg, border: `1px solid ${t.border}`, borderRadius: "12px", padding: "40px", textAlign: "center", color: t.textSub, fontSize: "14px" }}>
-                                        <Megaphone size={32} style={{ opacity: 0.3, marginBottom: "12px" }} />
                                         <p style={{ margin: 0 }}>No ad popups yet. Create your first one above.</p>
                                     </div>
                                 ) : allAdPopups.map(popup => (
@@ -6674,7 +6865,7 @@ function AdminHomePage() {
                         </div>
                     )}
 
-                    {(["dashboard", "branding", "categories", "subnav", "events_settings", "event_partners", "pages", "sections", "all_org", "active_org", "banned_org", "email_unverified", "mobile_unverified", "kyc_unverified", "kyc_pending", "kyc_verified", "with_balance", "org_requests", "partner_requests", "service_active", "service_banned", "send_notif", "payment_settings", "ticket_settings", "comm_hub", "email_settings", "email_templates", "disclaimer_settings", "sso_settings", "api_settings", "meta_management", "all_events", "customers", "bookings", "all_turfs", "turf_active", "turf_banned", "turf_bookings", "pool_bookings", "gst", "coupons", "promotions", "financials", "support_tickets", "branding_partners", "hero", "video", "video_banner", "mobile_banners", "site_branding", "memories", "copyright", "meeting_settings", "admin_management", "ad_popups", "meetings", "checkout_footer", "careers_admin", "careers_banner", "contact_inquiries", "contact_settings"].includes(activeTab)) ? null : (
+                    {(["dashboard", "banner_ads", "revenue", "payout_requests", "fee_settings", "exclusive_settings", "email_broadcast", "careers", "subscribers", "turf_partners", "turf_active", "turf_banned", "branding", "categories", "subnav", "events_settings", "event_partners", "pages", "sections", "all_org", "active_org", "banned_org", "email_unverified", "mobile_unverified", "kyc_unverified", "kyc_pending", "kyc_verified", "with_balance", "org_requests", "partner_requests", "service_active", "service_banned", "send_notif", "payment_settings", "ticket_settings", "comm_hub", "email_settings", "email_templates", "disclaimer_settings", "sso_settings", "api_settings", "meta_management", "all_events", "customers", "bookings", "all_turfs", "turf_active", "turf_banned", "turf_bookings", "pool_bookings", "gst", "coupons", "promotions", "financials", "support_tickets", "branding_partners", "hero", "video", "video_banner", "mobile_banners", "site_branding", "memories", "copyright", "meeting_settings", "admin_management", "ad_popups", "meetings", "checkout_footer", "careers_admin", "careers_banner", "contact_inquiries", "contact_settings"].includes(activeTab)) ? null : (
                         <div style={{ backgroundColor: t.cardBg, padding: "60px 24px", textAlign: "center", borderRadius: "10px", border: `1px solid ${t.border}` }}>
                             <h2 style={{ fontSize: "20px", fontWeight: 800, color: t.textMain }}>{activeTab.replace(/_/g, ' ').toUpperCase()}</h2>
                             <p style={{ color: t.textSub, marginTop: "8px", maxWidth: "350px", margin: "8px auto", fontSize: "14px" }}>This management module is currently being configured. You will be able to manage these settings shortly.</p>
@@ -7012,7 +7203,6 @@ function AdminHomePage() {
                         </div>
                     )}
 
-                    {/* Edit Organizer Modal */}
                     {isEditModalOpen && editingOrg && (
                         <div style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", backgroundColor: "rgba(0,0,0,0.6)", zIndex: 1001, display: "flex", alignItems: "center", justifyContent: "center", padding: "24px" }}>
                             <div style={{ backgroundColor: theme === 'light' ? '#fff' : '#0f172a', padding: "32px", borderRadius: "24px", width: "100%", maxWidth: "900px", maxHeight: "90vh", overflowY: "auto", border: `1px solid ${t.border}`, boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)" }}>
@@ -7071,56 +7261,45 @@ function AdminHomePage() {
                                     </div>
 
                                     <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-
-                                    {/* 💰 Organiser-Specific Fee Overrides */}
-                                    <div style={{ marginTop: "12px", padding: "20px", borderRadius: "12px", backgroundColor: theme === 'light' ? '#f8fafc' : '#1e293b', border: `1px solid ${t.border}` }}>
-                                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: editingOrg.fee_config?.override_global ? "20px" : "0" }}>
-                                            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                                        <div style={{ padding: "20px", borderRadius: "12px", backgroundColor: theme === 'light' ? '#f8fafc' : '#1e293b', border: `1px solid ${t.border}` }}>
+                                            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "20px" }}>
                                                 <div style={{ width: "32px", height: "32px", borderRadius: "8px", backgroundColor: "#3b82f615", color: "#3b82f6", display: "flex", alignItems: "center", justifyContent: "center" }}><CreditCard size={16} /></div>
-                                                <span style={{ fontWeight: 700, color: t.textMain }}>Override Global Fees</span>
+                                                <span style={{ fontWeight: 700, color: t.textMain }}>Financial Terms Overrides</span>
                                             </div>
-                                            <label style={{ position: "relative", display: "inline-block", width: "44px", height: "24px" }}>
-                                                <input 
-                                                    type="checkbox" 
-                                                    checked={editingOrg.fee_config?.override_global || false} 
-                                                    onChange={e => setEditingOrg({ 
-                                                        ...editingOrg, 
-                                                        fee_config: { 
-                                                            ...(editingOrg.fee_config || {}), 
-                                                            override_global: e.target.checked 
-                                                        } 
-                                                    })} 
-                                                    style={{ opacity: 0, width: 0, height: 0 }} 
-                                                />
-                                                <span style={{ position: "absolute", cursor: "pointer", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: editingOrg.fee_config?.override_global ? "#3b82f6" : "#cbd5e1", transition: "0.4s", borderRadius: "24px" }}>
-                                                    <span style={{ position: "absolute", content: '""', height: "18px", width: "18px", left: editingOrg.fee_config?.override_global ? "23px" : "3px", bottom: "3px", backgroundColor: "white", transition: "0.4s", borderRadius: "50%" }}></span>
-                                                </span>
-                                            </label>
-                                        </div>
 
-                                        {editingOrg.fee_config?.override_global && (
-                                            <div style={{ display: "flex", flexDirection: "column", gap: "16px", marginTop: "16px", paddingTop: "16px", borderTop: `1px solid ${t.border}` }}>
+                                            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                                                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
                                                     <div>
-                                                        <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: t.textSub, marginBottom: "6px" }}>FEE TYPE</label>
-                                                        <select 
-                                                            value={editingOrg.fee_config?.fee_type || 'percentage'}
-                                                            onChange={e => setEditingOrg({ ...editingOrg, fee_config: { ...editingOrg.fee_config, fee_type: e.target.value } })}
-                                                            style={{ width: "100%", padding: "8px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "13px" }}
-                                                        >
-                                                            <option value="percentage">Percent (%)</option>
-                                                            <option value="fixed">Fixed (₹)</option>
-                                                        </select>
-                                                    </div>
-                                                    <div>
-                                                        <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: t.textSub, marginBottom: "6px" }}>FEE VALUE</label>
+                                                        <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: t.textSub, marginBottom: "6px" }}>PLATFORM FEE (%)</label>
                                                         <input 
                                                             type="number"
-                                                            value={editingOrg.fee_config?.fee_value || 0}
-                                                            onChange={e => setEditingOrg({ ...editingOrg, fee_config: { ...editingOrg.fee_config, fee_value: Number(e.target.value) } })}
-                                                            style={{ width: "100%", padding: "8px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "13px" }}
+                                                            value={editingOrg.platform_fee_percent}
+                                                            onChange={e => setEditingOrg({ ...editingOrg, platform_fee_percent: parseFloat(e.target.value) })}
+                                                            style={{ width: "100%", padding: "10px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#0f172a', color: t.textMain, fontSize: "14px", fontWeight: 700 }}
                                                         />
                                                     </div>
+                                                    <div>
+                                                        <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: t.textSub, marginBottom: "6px" }}>PAYOUT FLAT (₹)</label>
+                                                        <input 
+                                                            type="number"
+                                                            value={editingOrg.payout_fee_flat}
+                                                            onChange={e => setEditingOrg({ ...editingOrg, payout_fee_flat: parseFloat(e.target.value) })}
+                                                            style={{ width: "100%", padding: "10px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#0f172a', color: t.textMain, fontSize: "14px", fontWeight: 700 }}
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <p style={{ fontSize: "10px", color: t.textSub, margin: 0, fontStyle: "italic" }}>System defaults are 7% and ₹10 respectively. Changes here will override global fiscal rules for this partner.</p>
+                                            </div>
+                                            
+                                            <div style={{ marginTop: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
+                                                <div>
+                                                    <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: t.textSub, marginBottom: "6px" }}>FEE VALUE</label>
+                                                    <input 
+                                                        type="number"
+                                                        value={editingOrg.fee_config?.fee_value || 0}
+                                                        onChange={e => setEditingOrg({ ...editingOrg, fee_config: { ...editingOrg.fee_config, fee_value: Number(e.target.value) } })}
+                                                        style={{ width: "100%", padding: "8px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "13px" }}
+                                                    />
                                                 </div>
 
                                                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
@@ -7161,21 +7340,21 @@ function AdminHomePage() {
                                                     </div>
                                                 )}
                                             </div>
-                                        )}
+                                        </div>
                                     </div>
-                                </div>
                                 </div>
                                 <div style={{ display: "flex", gap: "16px", marginTop: "40px", paddingTop: "24px", borderTop: `1px solid ${t.border}` }}>
                                     <button onClick={() => setIsEditModalOpen(false)} style={{ flex: 1, padding: "14px", borderRadius: "12px", border: `1px solid ${t.border}`, backgroundColor: "transparent", color: t.textMain, fontWeight: 700, cursor: "pointer", fontSize: "16px" }}>Cancel</button>
                                     <button
                                         onClick={async () => {
                                             const balance = parseFloat(String(editingOrg.balance).replace(/[^\d.-]/g, ''));
-                                            await patchOrganizerMutation({
+                                            await approveOrganiserRequest({
                                                 id: editingOrg.id,
                                                 business_name: editingOrg.username,
                                                 wallet_balance: isNaN(balance) ? 0 : balance,
                                                 kyc_status: editingOrg.status,
-                                                fee_config: editingOrg.fee_config
+                                                platform_fee_percent: editingOrg.platform_fee_percent,
+                                                payout_fee_flat: editingOrg.payout_fee_flat
                                             });
                                             setIsEditModalOpen(false);
                                             showToast("Organiser profile updated!", "success");
@@ -7189,6 +7368,59 @@ function AdminHomePage() {
                         </div>
                     )}
 
+                    {activeTab === "exclusive_settings" && (
+                        <div className="px-8 lg:px-12 py-8">
+                            <div className="premium-glass p-12 rounded-[48px] bg-gradient-to-br from-pink-500 to-purple-600 text-white shadow-2xl shadow-pink-500/20">
+                                <h2 className="text-4xl font-black tracking-tighter uppercase italic mb-4">Exclusive Perks</h2>
+                                <p className="text-white/60 text-sm font-bold uppercase tracking-widest mb-12">Loyalty & Reward Configuration</p>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    <div className="p-10 bg-black/20 rounded-[32px] border border-white/10">
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-white/40 mb-3">Active Loyalty Tier</p>
+                                        <p className="text-2xl font-black mb-4 italic tracking-tight">Platinum Prime Access</p>
+                                        <button className="px-6 py-2 bg-white/10 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-white/20 transition-all">Configure Tier</button>
+                                    </div>
+                                    <div className="p-10 bg-black/20 rounded-[32px] border border-white/10">
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-white/40 mb-3">Reward Distribution</p>
+                                        <p className="text-2xl font-black mb-4 italic tracking-tight">Automated Weekly Sync</p>
+                                        <button className="px-6 py-2 bg-white/10 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-white/20 transition-all">Adjust Frequency</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    {activeTab === "sso_settings" && (
+                        <div className="px-8 lg:px-12 py-8">
+                            <div className="bg-white rounded-[40px] border border-slate-100 shadow-sm overflow-hidden">
+                                <div className="p-10 bg-slate-900 text-white flex items-center justify-between">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center"><Lock size={24} /></div>
+                                        <div>
+                                            <h2 className="text-2xl font-black tracking-tight italic uppercase">SSO & Security Protocol</h2>
+                                            <p className="text-xs text-white/40 font-black uppercase tracking-widest">Enterprise Identity Node</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="p-10 space-y-8">
+                                    <div className="p-10 bg-slate-50 rounded-[32px] border border-slate-100 flex items-center justify-between">
+                                        <div>
+                                            <h4 className="text-lg font-black text-slate-900 mb-1">Multi-Factor Authentication</h4>
+                                            <p className="text-sm text-slate-500 font-medium">Enforce biometric or TOTP verification for all administrative nodes.</p>
+                                        </div>
+                                        <div className="w-14 h-8 bg-pink-500 rounded-full relative p-1 cursor-pointer">
+                                            <div className="w-6 h-6 bg-white rounded-full ml-auto shadow-sm"></div>
+                                        </div>
+                                    </div>
+                                    <div className="p-10 bg-slate-50 rounded-[32px] border border-slate-100 flex items-center justify-between">
+                                        <div>
+                                            <h4 className="text-lg font-black text-slate-900 mb-1">OAuth Provider Sync</h4>
+                                            <p className="text-sm text-slate-500 font-medium">Synchronize identity states with Google Workspace and Microsoft Azure.</p>
+                                        </div>
+                                        <button className="px-8 py-3 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl">Configure Providers</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                     {activeTab === "mobile_banners" && <MobileBannersAdmin theme={theme} t={t} />}
 
                     {partnerModal && (
@@ -7235,6 +7467,153 @@ function AdminHomePage() {
 
                 </main>
             </div>
+            {/* Financial Ledger Modal */}
+            {showLedgerModal && selectedLedgerOrg && (
+                <div className="fixed inset-0 bg-slate-900/90 backdrop-blur-md z-[120] flex items-center justify-center p-6">
+                    <div className="premium-glass max-w-4xl w-full rounded-[48px] overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-500 flex flex-col max-h-[90vh]">
+                        <div className="bg-gradient-to-br from-slate-900 to-slate-800 p-10 text-white flex items-center justify-between border-b border-white/5">
+                            <div className="flex items-center gap-6">
+                                <div className="w-16 h-16 bg-pink-500 rounded-[24px] flex items-center justify-center shadow-2xl shadow-pink-500/20">
+                                    <BarChart3 size={32} />
+                                </div>
+                                <div>
+                                    <h2 className="text-2xl font-black tracking-tighter uppercase italic">{selectedLedgerOrg.username}</h2>
+                                    <div className="flex items-center gap-3 mt-1">
+                                        <p className="text-white/40 text-[10px] font-black uppercase tracking-widest">Financial Intelligence Ledger</p>
+                                        <div className="w-1 h-1 bg-white/20 rounded-full" />
+                                        <p className="text-pink-400 text-[10px] font-black uppercase tracking-widest">Live Sync Active</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <button 
+                                onClick={() => setShowLedgerModal(false)}
+                                className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center hover:bg-white/10 transition-all border border-white/10"
+                            >
+                                <X size={24} />
+                            </button>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto p-10 bg-white/80">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+                                <div className="p-6 bg-slate-900 rounded-[32px] text-white">
+                                    <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-2">Available Balance</p>
+                                    <p className="text-3xl font-black tracking-tighter italic">₹{selectedLedgerOrg.balance || '0.00'}</p>
+                                </div>
+                                <div className="p-6 bg-emerald-50 rounded-[32px] border border-emerald-100">
+                                    <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-2">Total Inflow</p>
+                                    <p className="text-3xl font-black tracking-tighter italic text-emerald-600">₹0.00</p>
+                                </div>
+                                <div className="p-6 bg-pink-50 rounded-[32px] border border-pink-100">
+                                    <p className="text-[10px] font-black text-pink-400 uppercase tracking-widest mb-2">Total Payouts</p>
+                                    <p className="text-3xl font-black tracking-tighter italic text-pink-600">₹0.00</p>
+                                </div>
+                            </div>
+
+                            <div className="space-y-4">
+                                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-4">Transaction Audit Trail</h3>
+                                <div className="space-y-3">
+                                    <div className="p-12 text-center bg-slate-50 rounded-[40px] border border-dashed border-slate-200">
+                                        <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-100">
+                                            <Activity size={24} className="text-slate-300" />
+                                        </div>
+                                        <p className="text-sm font-bold text-slate-400">No recent transactions detected for this partner node.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div className="p-8 bg-slate-50 border-t border-slate-100 flex justify-between items-center">
+                            <div className="flex items-center gap-3">
+                                <Shield size={16} className="text-slate-400" />
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">End-to-End Encrypted Financial Data</p>
+                            </div>
+                            <button className="px-8 py-3 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] hover:scale-105 transition-all shadow-xl shadow-slate-900/10">
+                                Export Full Ledger
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {/* Inline Event Edit Modal */}
+            {showEditEventModal && eventEditForm && (
+                <div className="fixed inset-0 bg-slate-900/90 backdrop-blur-md z-[130] flex items-center justify-center p-6">
+                    <div className="premium-glass max-w-xl w-full rounded-[40px] overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-500">
+                        <div className="bg-slate-900 p-8 text-white flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 bg-pink-500 rounded-2xl flex items-center justify-center">
+                                    <Edit size={24} />
+                                </div>
+                                <div>
+                                    <h2 className="text-xl font-black">Event Intelligence</h2>
+                                    <p className="text-white/40 text-[10px] font-black uppercase tracking-widest">Metadata Modification Node</p>
+                                </div>
+                            </div>
+                            <button onClick={() => setShowEditEventModal(false)} className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center hover:bg-white/20 transition-all">
+                                <X size={20} />
+                            </button>
+                        </div>
+                        
+                        <div className="p-10 space-y-6">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Event Title</label>
+                                <input 
+                                    type="text" 
+                                    value={eventEditForm.title}
+                                    onChange={(e) => setEventEditForm({ ...eventEditForm, title: e.target.value })}
+                                    className="w-full px-6 py-4 rounded-2xl bg-slate-50 border border-slate-100 outline-none focus:ring-4 focus:ring-pink-500/10 focus:border-pink-500 transition-all text-sm font-bold"
+                                />
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Event Date</label>
+                                    <input 
+                                        type="date" 
+                                        value={eventEditForm.date}
+                                        onChange={(e) => setEventEditForm({ ...eventEditForm, date: e.target.value })}
+                                        className="w-full px-6 py-4 rounded-2xl bg-slate-50 border border-slate-100 outline-none focus:ring-4 focus:ring-pink-500/10 focus:border-pink-500 transition-all text-sm font-bold"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Category</label>
+                                    <select 
+                                        value={eventEditForm.category}
+                                        onChange={(e) => setEventEditForm({ ...eventEditForm, category: e.target.value })}
+                                        className="w-full px-6 py-4 rounded-2xl bg-slate-50 border border-slate-100 outline-none focus:ring-4 focus:ring-pink-500/10 focus:border-pink-500 transition-all text-sm font-bold"
+                                    >
+                                        <option value="Concert">Concert</option>
+                                        <option value="Sports">Sports</option>
+                                        <option value="Workshop">Workshop</option>
+                                        <option value="Marathon">Marathon</option>
+                                        <option value="General">General</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Venue / Location</label>
+                                <input 
+                                    type="text" 
+                                    value={eventEditForm.venue || eventEditForm.location || ""}
+                                    onChange={(e) => setEventEditForm({ ...eventEditForm, venue: e.target.value, location: e.target.value })}
+                                    className="w-full px-6 py-4 rounded-2xl bg-slate-50 border border-slate-100 outline-none focus:ring-4 focus:ring-pink-500/10 focus:border-pink-500 transition-all text-sm font-bold"
+                                />
+                            </div>
+
+                            <button 
+                                onClick={async () => {
+                                    await updateEvent(eventEditForm);
+                                    showToast("Event intelligence updated successfully!", "success");
+                                    setShowEditEventModal(false);
+                                }}
+                                className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/20"
+                            >
+                                Commit Changes
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

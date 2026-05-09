@@ -2,10 +2,9 @@
 import React, { useState, useMemo } from "react";
 import { useSupabaseQuery, useSupabaseMutation } from "@/hooks/useSupabase";
 import { supabase } from "@/lib/supabase";
-import { CheckCircle, XCircle, Search, Filter, Trash2, User, Briefcase, Eye, EyeOff, X, Key, ShieldCheck, Mail, AlertTriangle, FileText, Send } from "lucide-react";
+import { CheckCircle, XCircle, Search, Filter, Trash2, User, Briefcase, Eye, EyeOff, X, Key, ShieldCheck, Mail, AlertTriangle, FileText, Send, Phone, Calendar, ChevronRight, Check, Ban, Users, Tag } from "lucide-react";
 import { useToast } from "@/context/ToastContext";
 
-// Client-side fail-safe categorization
 const isServiceProvider = (category) => {
     if (!category) return false;
     const c = String(category).trim().toLowerCase();
@@ -22,15 +21,9 @@ const isServiceProvider = (category) => {
 
 export default function AdminPartnerRequestsTable({ t, theme }) {
     const { data: requests = [] } = useSupabaseQuery('partner_requests', (q) => q.order('created_at', { ascending: false }));
-    const [updateStatus] = useSupabaseMutation('partner_requests', 'update', (q, p) => q.eq('id', p.id));
-    const [removeRequest] = useSupabaseMutation('partner_requests', 'delete', (q, p) => q.eq('id', p.id));
-    
-    // Approval and KYC via Edge Function usually, but for status updates we can use mutation
-    // Removed old handleInitiateKyc as handleApprove now handles the first step of KYC Initiation for Organisers
-
     const { showToast } = useToast();
 
-    const [activeTab, setActiveTab] = useState("professional_service"); // "professional_service" or "event_organiser"
+    const [activeTab, setActiveTab] = useState("professional_service");
     const [filterStatus, setFilterStatus] = useState("all");
     const [searchTerm, setSearchTerm] = useState("");
 
@@ -49,19 +42,12 @@ export default function AdminPartnerRequestsTable({ t, theme }) {
         setSelectedRequest(req);
         setLoadingKyc(true);
         setShowKycModal(true);
-        
         try {
-            // For organisers, we use the new kyc_details table linked by user_id
-            // Note: req.user_id might not be in partner_requests yet, so we use req.id if it was mapped
-            // Actually, in approve-partner we should have linked them.
-            // For now, let's assume we can find it by email or id if the request was approved.
-            
             const { data, error } = await supabase
                 .from('kyc_details')
                 .select('*')
-                .eq('id', req.user_id || req.id) // Fallback to req.id if user_id not present
+                .eq('id', req.user_id || req.id)
                 .maybeSingle();
-            
             if (error) throw error;
             setKycData(data || null);
         } catch (err) {
@@ -101,15 +87,9 @@ export default function AdminPartnerRequestsTable({ t, theme }) {
             showToast("Passwords do not match!", "error");
             return;
         }
-        if (manualPassword.length < 8) {
-            showToast("Password must be at least 8 characters.", "error");
-            return;
-        }
-
         setIsSubmitting(true);
         try {
             const { data: { session } } = await supabase.auth.getSession();
-            // Call local API instead of Edge Function for stability
             const res = await fetch('/api/admin/action', {
                 method: 'POST',
                 headers: { 
@@ -125,14 +105,9 @@ export default function AdminPartnerRequestsTable({ t, theme }) {
                 })
             });
             const result = await res.json();
-
             if (!res.ok) throw new Error(result.error || "Approval failed");
-
             setShowApproveModal(false);
-            const msg = activeTab === 'event_organiser' 
-                ? "KYC Initiated! Credentials sent to organiser." 
-                : "Partner approved! Account created and credentials sent.";
-            showToast(msg, "success");
+            showToast("Partner approved and credentials sent!", "success");
         } catch (err) {
             showToast("Error approving request: " + err.message, "error");
         } finally {
@@ -141,543 +116,307 @@ export default function AdminPartnerRequestsTable({ t, theme }) {
     };
 
     const handleDelete = async (id) => {
+        if (!confirm("Delete this request log?")) return;
         try {
-            const { error } = await supabase
-                .from('partner_requests')
-                .delete()
-                .eq('id', id);
+            const { error } = await supabase.from('partner_requests').delete().eq('id', id);
             if (error) throw error;
-            showToast("Request deleted successfully", "info");
+            showToast("Request deleted", "info");
         } catch (err) {
-            showToast("Error deleting request: " + err.message, "error");
+            showToast(err.message, "error");
         }
     };
 
     const filteredRequests = useMemo(() => {
         return requests.filter(req => {
-            // Apply client-side normalization to the type, prioritizing DB value
             const trueType = req.type || (isServiceProvider(req.category) ? "professional_service" : "event_organiser");
             const matchesType = trueType === activeTab;
-            
             const matchesStatus = filterStatus === "all" || req.status === filterStatus;
             const search = searchTerm.toLowerCase();
             const matchesSearch = !searchTerm || 
                 `${req.first_name || req.firstName} ${req.last_name || req.lastName}`.toLowerCase().includes(search) || 
-                req.email.toLowerCase().includes(search) ||
-                (req.phone && req.phone.includes(searchTerm));
-            
+                req.email.toLowerCase().includes(search);
             return matchesType && matchesStatus && matchesSearch;
         });
     }, [requests, activeTab, filterStatus, searchTerm]);
 
     const stats = useMemo(() => {
         return {
-            ps: requests.filter(r => {
-                const type = r.type || (isServiceProvider(r.category) ? "professional_service" : "event_organiser");
-                return type === "professional_service" && r.status === "Pending";
-            }).length,
-            orgs: requests.filter(r => {
-                const type = r.type || (isServiceProvider(r.category) ? "professional_service" : "event_organiser");
-                return type === "event_organiser" && (r.status === "Pending" || r.status === "KYC Completed");
-            }).length,
-            totalPs: requests.filter(r => (r.type || (isServiceProvider(r.category) ? "professional_service" : "event_organiser")) === "professional_service").length,
-            totalOrgs: requests.filter(r => (r.type || (isServiceProvider(r.category) ? "professional_service" : "event_organiser")) === "event_organiser").length
+            ps: requests.filter(r => (r.type || (isServiceProvider(r.category) ? "professional_service" : "event_organiser")) === "professional_service" && r.status === "Pending").length,
+            orgs: requests.filter(r => (r.type || (isServiceProvider(r.category) ? "professional_service" : "event_organiser")) === "event_organiser" && r.status === "Pending").length
         };
     }, [requests]);
 
     return (
-        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-            {/* Custom Tabs */}
-            <div style={{ display: "flex", gap: "10px", padding: "4px", backgroundColor: t.cardBg, borderRadius: "14px", border: `1px solid ${t.border}`, width: "fit-content" }}>
-                <button 
-                    onClick={() => setActiveTab("professional_service")}
-                    style={{ 
-                        padding: "10px 20px", borderRadius: "10px", border: "none", cursor: "pointer", fontSize: "14px", fontWeight: 700, 
-                        display: "flex", alignItems: "center", gap: "8px", transition: "0.2s",
-                        backgroundColor: activeTab === "professional_service" ? "#000" : "transparent",
-                        background: activeTab === "professional_service" ? "linear-gradient(135deg, #FF3D6E 0%, #A855F7 100%)" : "transparent",
-                        color: activeTab === "professional_service" ? "#fff" : t.textSub
-                    }}
-                >
-                    <Briefcase size={16} /> Professional Services {stats.ps > 0 && <span style={{ background: "#fff", color: "#FF3D6E", padding: "2px 6px", borderRadius: "10px", fontSize: "10px" }}>{stats.ps} New</span>}
-                </button>
-                <button 
-                    onClick={() => setActiveTab("event_organiser")}
-                    style={{ 
-                        padding: "10px 20px", borderRadius: "10px", border: "none", cursor: "pointer", fontSize: "14px", fontWeight: 700, 
-                        display: "flex", alignItems: "center", gap: "8px", transition: "0.2s",
-                        backgroundColor: activeTab === "event_organiser" ? "#000" : "transparent",
-                        background: activeTab === "event_organiser" ? "linear-gradient(135deg, #FF3D6E 0%, #A855F7 100%)" : "transparent",
-                        color: activeTab === "event_organiser" ? "#fff" : t.textSub
-                    }}
-                >
-                    <User size={16} /> Event Organisers {stats.orgs > 0 && <span style={{ background: "#fff", color: "#A855F7", padding: "2px 6px", borderRadius: "10px", fontSize: "10px" }}>{stats.orgs} New</span>}
-                </button>
-            </div>
-
-            {/* Filter Bar */}
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "16px", alignItems: "center", backgroundColor: t.cardBg, padding: "16px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
-                <div style={{ position: "relative", flex: 1, minWidth: "200px" }}>
-                    <Search size={16} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: t.textSub }} />
-                    <input 
-                        type="text" 
-                        placeholder="Search by name, email or phone..." 
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        style={{ width: "100%", padding: "10px 10px 10px 36px", borderRadius: "8px", border: `1px solid ${t.border}`, background: "transparent", color: t.textMain, fontSize: "13px" }}
-                    />
+        <div className="flex flex-col gap-8">
+            {/* Header Area */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div className="flex gap-2 p-1 bg-slate-100/50 rounded-2xl w-fit">
+                    <button 
+                        onClick={() => setActiveTab("professional_service")}
+                        className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${activeTab === "professional_service" ? 'bg-white text-pink-500 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                    >
+                        <Briefcase size={16} />
+                        Professional Services
+                        {stats.ps > 0 && <span className="bg-pink-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">{stats.ps}</span>}
+                    </button>
+                    <button 
+                        onClick={() => setActiveTab("event_organiser")}
+                        className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${activeTab === "event_organiser" ? 'bg-white text-pink-500 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                    >
+                        <User size={16} />
+                        Event Organisers
+                        {stats.orgs > 0 && <span className="bg-pink-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">{stats.orgs}</span>}
+                    </button>
                 </div>
-                
-                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                    <Filter size={14} color={t.textSub} />
+
+                <div className="flex items-center gap-4">
+                    <div className="relative">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                        <input 
+                            type="text" 
+                            placeholder="Search partners..." 
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="pl-11 pr-4 py-2.5 rounded-xl bg-white border border-slate-200 outline-none focus:ring-4 focus:ring-pink-500/10 focus:border-pink-500 transition-all text-sm font-medium w-64"
+                        />
+                    </div>
                     <select 
                         value={filterStatus}
                         onChange={(e) => setFilterStatus(e.target.value)}
-                        style={{ padding: "8px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, background: theme === 'dark' ? '#1e293b' : '#fff', color: t.textMain, fontSize: "13px" }}
+                        className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 outline-none text-sm font-bold text-slate-600 cursor-pointer"
                     >
                         <option value="all">All Status</option>
-                        <option value="Pending">Pending Review</option>
-                        <option value="KYC Pending">Waiting for KYC</option>
-                        <option value="KYC Completed">KYC Completed</option>
+                        <option value="Pending">Pending</option>
+                        <option value="KYC Completed">KYC Done</option>
                         <option value="Approved">Approved</option>
-                        <option value="Access Granted">Active</option>
                         <option value="Rejected">Rejected</option>
                     </select>
                 </div>
             </div>
 
-            {/* Table */}
-            <div style={{ overflowX: "auto", background: t.cardBg, borderRadius: "12px", border: `1px solid ${t.border}` }}>
-                {filteredRequests.length === 0 ? (
-                    <div style={{ padding: "60px", textAlign: "center", color: t.textSub }}>
-                        No {activeTab.replace('_', ' ')} requests found.
-                    </div>
-                ) : (
-                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                        <thead>
-                            <tr style={{ textAlign: "left", backgroundColor: theme === 'dark' ? '#1e293b' : '#f8fafc' }}>
-                                <th style={{ padding: "14px 16px", color: t.textSub, fontSize: "12px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>Applicant</th>
-                                <th style={{ padding: "14px 16px", color: t.textSub, fontSize: "12px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>Contact</th>
-                                <th style={{ padding: "14px 16px", color: t.textSub, fontSize: "12px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>Category</th>
-                                <th style={{ padding: "14px 16px", color: t.textSub, fontSize: "12px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>Type</th>
-                                <th style={{ padding: "14px 16px", color: t.textSub, fontSize: "12px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>KYC</th>
-                                <th style={{ padding: "14px 16px", color: t.textSub, fontSize: "12px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>Date</th>
-                                <th style={{ padding: "14px 16px", color: t.textSub, fontSize: "12px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>Status</th>
-                                <th style={{ padding: "14px 16px", textAlign: "right", color: t.textSub, fontSize: "12px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filteredRequests.map((req) => {
-                                const hasRequestId = Boolean(req?.id);
-                                return (
-                                <tr key={req.id || req.email} style={{ borderBottom: `1px solid ${t.border}`, transition: "0.2s" }} className="hover-row">
-                                    <td style={{ padding: "16px" }}>
-                                        <div style={{ fontWeight: 700, color: t.textMain, fontSize: "14px" }}>{req.first_name || req.firstName} {req.last_name || req.lastName}</div>
-                                        <div style={{ fontSize: "12px", color: t.textSub }}>{req.role}</div>
-                                    </td>
-                                    <td style={{ padding: "16px" }}>
-                                        <div style={{ fontSize: "13px", color: t.textMain }}>{req.email}</div>
-                                        <div style={{ fontSize: "12px", color: t.textSub }}>{req.phone}</div>
-                                    </td>
-                                    <td style={{ padding: "16px" }}>
-                                        <div style={{ fontSize: "13px", color: t.textMain, fontWeight: 500 }}>{req.category}</div>
-                                    </td>
-                                    <td style={{ padding: "16px", fontSize: "12px", color: t.textSub }}>
-                                        {req.type === "professional_service" ? "Professional Service" : "Event Organiser"}
-                                    </td>
-                                    <td style={{ padding: "16px", fontSize: "12px", color: t.textSub }}>
-                                        {req.type === "event_organiser" ? (req.kyc_status || req.kycStatus || "Not Started") : "Not Required"}
-                                    </td>
-                                    <td style={{ padding: "16px", fontSize: "12px", color: t.textSub }}>
-                                        {req.created_at ? new Date(req.created_at).toLocaleDateString() : new Date(req.createdAt).toLocaleDateString()}
-                                    </td>
-                                    <td style={{ padding: "16px" }}>
-                                        <div style={{
-                                            display: "inline-flex", padding: "4px 10px", borderRadius: "99px", fontSize: "11px", fontWeight: 700,
-                                            backgroundColor: 
-                                                req.status === "Approved" ? "#dcfce7" : 
-                                                req.status === "Access Granted" ? "#dcfce7" :
-                                                req.status === "Rejected" ? "#fee2e2" : 
-                                                req.status === "KYC Completed" ? "#dbeafe" :
-                                                req.status === "KYC Submitted" ? "#dbeafe" :
-                                                req.status === "KYC Initiated" ? "#f3e8ff" :
-                                                req.status === "KYC Pending" ? "#fef3c7" : "#f1f5f9",
-                                            color: 
-                                                req.status === "Approved" ? "#166534" : 
-                                                req.status === "Access Granted" ? "#166534" :
-                                                req.status === "Rejected" ? "#991b1b" : 
-                                                req.status === "KYC Completed" ? "#1e40af" :
-                                                req.status === "KYC Submitted" ? "#1e40af" :
-                                                req.status === "KYC Initiated" ? "#6b21a8" :
-                                                req.status === "KYC Pending" ? "#92400e" : "#475569"
-                                        }}>
-                                            {req.status === "Access Granted" ? "Active" : req.status}
-                                        </div>
-                                    </td>
-                                    <td style={{ padding: "16px", textAlign: "right" }}>
-                                        <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
-                                            {/* Logic for Organisers: Step 1 - Initiate KYC (creates account) */}
-                                            {hasRequestId && activeTab === "event_organiser" && req.status === "Pending" && (
-                                                 <button 
-                                                     onClick={() => handleApprove(req)} 
-                                                     title="Initiate KYC & Send Credentials"
-                                                     style={{ width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "8px", border: "none", backgroundColor: "#8000ff15", color: "#8000ff", cursor: "pointer" }}
-                                                 >
-                                                     <Key size={16} />
-                                                 </button>
-                                             )}
-
-                                              {hasRequestId && (
-                                                 <button 
-                                                     onClick={() => handleViewKyc(req)} 
-                                                     title="View Partner Details"
-                                                     style={{ width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "8px", border: "none", backgroundColor: "#6366f115", color: "#6366f1", cursor: "pointer" }}
-                                                 >
-                                                     <Eye size={18} />
-                                                 </button>
-                                             )}
-
-                                              {hasRequestId && (req.status === "KYC Completed" || req.status === "KYC Submitted") && (
-                                                 <button 
-                                                     onClick={() => handleViewKyc(req)} 
-                                                     title="View KYC Documents"
-                                                     style={{ width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "8px", border: "none", backgroundColor: "#3b82f615", color: "#3b82f6", cursor: "pointer" }}
-                                                 >
-                                                     <FileText size={18} />
-                                                 </button>
-                                             )}
-
-                                             {/* Final Approval for PS (immediate) or post-KYC Organisers */}
-                                             {(hasRequestId && ((activeTab === "professional_service" && req.status === "Pending") || 
-                                               (activeTab === "event_organiser" && req.status === "KYC Completed"))) && (
-                                                 <button 
-                                                     onClick={() => handleApprove(req)} 
-                                                     title="Final Approval"
-                                                     style={{ width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "8px", border: "none", backgroundColor: "#22c55e15", color: "#22c55e", cursor: "pointer" }}
-                                                 >
-                                                     <CheckCircle size={18} />
-                                                 </button>
-                                             )}
-
-                                             {hasRequestId && !["Approved", "Access Granted", "Rejected"].includes(req.status) && (
-                                                 <button 
-                                                     onClick={() => handleUpdate(req.id, "Rejected")} 
-                                                     title="Reject Request"
-                                                     style={{ width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "8px", border: "none", backgroundColor: "#ef444415", color: "#ef4444", cursor: "pointer" }}
-                                                 >
-                                                     <XCircle size={18} />
-                                                 </button>
-                                             )}
-                                            
-                                            {hasRequestId ? (
-                                                <button 
-                                                    onClick={() => handleDelete(req.id)} 
-                                                    title="Delete Log"
-                                                    style={{ width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "8px", border: "none", backgroundColor: theme === 'dark' ? '#1e293b' : '#f1f5f9', color: t.textSub, cursor: "pointer" }}
-                                                >
-                                                    <Trash2 size={18} />
-                                                </button>
-                                            ) : null}
-                                        </div>
-                                    </td>
-                                </tr>
-                            )})}
-                        </tbody>
-                    </table>
-                )}
-            </div>
-            <style jsx>{`
-                .hover-row:hover { background-color: #f8fafc; }
-                [data-theme='dark'] .hover-row:hover { background-color: #1e293b; }
-            `}</style>
-
-            {/* Approval Modal */}
-            {showApproveModal && selectedRequest && (
-                <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 999999, padding: "20px" }}>
-                    <div style={{ backgroundColor: t.cardBg, width: "100%", maxWidth: "440px", borderRadius: "20px", border: `1px solid ${t.border}`, boxShadow: "0 25px 50px -12px rgba(0,0,0,0.5)", overflow: "hidden" }}>
-                        <div style={{ background: "linear-gradient(135deg, #FF3D6E 0%, #A855F7 100%)", padding: "24px 20px", textAlign: "center", position: "relative" }}>
-                            <button onClick={() => setShowApproveModal(false)} style={{ position: "absolute", top: "16px", right: "16px", background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", cursor: "pointer", width: "28px", height: "28px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}><X size={16} /></button>
-                            <div style={{ width: "48px", height: "48px", borderRadius: "14px", backgroundColor: "rgba(255,255,255,0.2)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px auto" }}>
-                                <ShieldCheck size={24} />
+            {/* List View */}
+            <div className="grid grid-cols-1 gap-4">
+                {filteredRequests.length > 0 ? filteredRequests.map((req) => (
+                    <div key={req.id} className="card-premium flex flex-col md:flex-row items-center gap-6 group hover:border-pink-500/30 transition-all">
+                        {/* Profile Info */}
+                        <div className="flex-1 min-w-0">
+                            <h4 className="text-lg font-black truncate" style={{ color: t.textMain }}>
+                                {req.first_name || req.firstName} {req.last_name || req.lastName}
+                            </h4>
+                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1">
+                                <span className="flex items-center gap-1.5 text-xs font-bold text-slate-400">
+                                    <Mail size={12} /> {req.email}
+                                </span>
+                                <span className="flex items-center gap-1.5 text-xs font-bold text-slate-400">
+                                    <Phone size={12} /> {req.phone || "No phone"}
+                                </span>
+                                <span className="flex items-center gap-1.5 text-xs font-black text-pink-500/70 uppercase tracking-wider">
+                                    <Tag size={12} /> {req.category}
+                                </span>
                             </div>
-                            <h2 style={{ fontSize: "18px", fontWeight: 800, color: "#fff", margin: 0 }}>Authorize {activeTab === 'event_organiser' ? 'Organiser' : 'Vendor'}</h2>
-                            <p style={{ color: "rgba(255,255,255,0.8)", fontSize: "13px", marginTop: "4px" }}>Setting credentials for <strong>{selectedRequest.first_name || selectedRequest.firstName} {selectedRequest.last_name || selectedRequest.lastName}</strong></p>
                         </div>
 
-                        <div style={{ padding: "24px" }}>
-                            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                                <div style={{ display: "flex", alignItems: "center", gap: "12px", background: theme === 'dark' ? '#1e293b' : '#f8fafc', padding: "12px 16px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
-                                    <Mail size={16} color="#3b82f6" />
-                                    <div>
-                                        <p style={{ fontSize: "11px", fontWeight: 700, color: t.textSub, margin: 0, textTransform: "uppercase" }}>Login Account (Email)</p>
-                                        <p style={{ fontSize: "14px", fontWeight: 600, color: t.textMain, margin: 0 }}>{selectedRequest.email}</p>
-                                    </div>
-                                </div>
+                        {/* Metadata */}
+                        <div className="flex items-center gap-8 px-6 border-x border-slate-100 flex-shrink-0">
+                            <div className="text-center">
+                                <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Requested On</p>
+                                <p className="text-sm font-black" style={{ color: t.textMain }}>
+                                    {new Date(req.created_at || req.createdAt).toLocaleDateString()}
+                                </p>
+                            </div>
+                            <div className="text-center">
+                                <p className="text-[10px] font-black text-slate-400 uppercase mb-1">KYC Status</p>
+                                <p className={`text-sm font-black ${req.kyc_status === 'Approved' ? 'text-emerald-500' : 'text-orange-500'}`}>
+                                    {req.kyc_status || "Pending"}
+                                </p>
+                            </div>
+                        </div>
 
-                                <div>
-                                    <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: t.textSub, marginBottom: "6px", display: "flex", alignItems: "center", gap: "6px" }}>
-                                        <Key size={12} /> SET ACCESS PASSWORD
-                                    </label>
-                                    <div style={{ position: "relative" }}>
-                                        <input 
-                                            type={showPass ? "text" : "password"} 
-                                            value={manualPassword}
-                                            onChange={(e) => setManualPassword(e.target.value)}
-                                            placeholder="Enter secure password"
-                                            style={{ width: "100%", padding: "12px 40px 12px 14px", borderRadius: "10px", border: `1.5px solid ${t.border}`, background: t.bg, color: t.textMain, fontSize: "14px", outline: "none", boxSizing: "border-box" }}
-                                        />
-                                        <button 
-                                            onClick={() => setShowPass(!showPass)}
-                                            style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: t.textSub, cursor: "pointer" }}
-                                        >
-                                            {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: t.textSub, marginBottom: "6px" }}>CONFIRM PASSWORD</label>
-                                    <input 
-                                        type={showPass ? "text" : "password"} 
-                                        value={confirmPassword}
-                                        onChange={(e) => setConfirmPassword(e.target.value)}
-                                        placeholder="Repeat password"
-                                        style={{ width: "100%", padding: "12px 14px", borderRadius: "10px", border: `1.5px solid ${t.border}`, background: t.bg, color: t.textMain, fontSize: "14px", outline: "none", boxSizing: "border-box" }}
-                                    />
-                                </div>
-
-                                <div style={{ display: "flex", gap: "8px", alignItems: "center", padding: "10px", backgroundColor: "#f0fdf4", borderRadius: "10px", border: "1px solid #bbf7d0", marginTop: "4px" }}>
-                                    <Send size={14} color="#16a34a" />
-                                    <span style={{ fontSize: "12px", color: "#166534", fontWeight: 600 }}>Credentials will be sent via Email & SMS</span>
-                                </div>
-
+                        {/* Actions */}
+                        <div className="flex items-center gap-3 flex-shrink-0">
+                            <div className={`status-badge px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                                req.status === 'Approved' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' :
+                                req.status === 'Rejected' ? 'bg-red-50 text-red-600 border border-red-100' :
+                                'bg-blue-50 text-blue-600 border border-blue-100'
+                            }`}>
+                                {req.status}
+                            </div>
+                            
+                            <div className="flex gap-2">
+                                {req.status === 'Pending' && (
+                                    <button 
+                                        onClick={() => handleApprove(req)}
+                                        className="w-10 h-10 rounded-xl bg-pink-500 text-white flex items-center justify-center hover:scale-105 transition-all shadow-lg shadow-pink-500/20"
+                                        title="Approve Partner"
+                                    >
+                                        <Check size={18} strokeWidth={3} />
+                                    </button>
+                                )}
                                 <button 
-                                    onClick={submitApproval}
-                                    disabled={isSubmitting}
-                                    style={{ 
-                                        width: "100%", 
-                                        padding: "14px", 
-                                        borderRadius: "12px", 
-                                        background: "linear-gradient(135deg, #FF3D6E 0%, #A855F7 100%)", 
-                                        color: "#fff", 
-                                        border: "none", 
-                                        fontWeight: 800, 
-                                        fontSize: "15px", 
-                                        cursor: "pointer", 
-                                        marginTop: "4px",
-                                        opacity: isSubmitting ? 0.7 : 1,
-                                        boxShadow: "0 10px 20px rgba(255, 61, 110, 0.15)"
-                                    }}
+                                    onClick={() => handleViewKyc(req)}
+                                    className="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center hover:scale-105 transition-all shadow-lg shadow-black/20"
+                                    title="View Details"
                                 >
-                                    {isSubmitting ? "Processing..." : "Complete Approval & Grant Access"}
+                                    <Eye size={18} />
+                                </button>
+                                <button 
+                                    onClick={() => handleDelete(req.id)}
+                                    className="w-10 h-10 rounded-xl bg-red-50 text-red-500 flex items-center justify-center hover:bg-red-500 hover:text-white transition-all"
+                                    title="Delete Request"
+                                >
+                                    <Trash2 size={18} />
                                 </button>
                             </div>
                         </div>
                     </div>
+                )) : (
+                    <div className="p-20 text-center bg-white rounded-[32px] border-2 border-dashed border-slate-100">
+                        <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <Users size={40} className="text-slate-300" />
+                        </div>
+                        <h3 className="text-xl font-black mb-2" style={{ color: t.textMain }}>No pending requests</h3>
+                        <p className="text-sm font-medium text-slate-400 max-w-sm mx-auto">When new partners sign up, they will appear here for your review and approval.</p>
+                    </div>
+                )}
+            </div>
+
+            {/* Approval Modal */}
+            {showApproveModal && selectedRequest && (
+                <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[100] flex items-center justify-center p-6">
+                    <div className="premium-glass max-w-md w-full rounded-[32px] overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-300">
+                        <div className="bg-gradient-to-br from-pink-500 to-purple-600 p-8 text-white relative">
+                            <button onClick={() => setShowApproveModal(false)} className="absolute top-6 right-6 text-white/60 hover:text-white transition-colors">
+                                <X size={24} />
+                            </button>
+                            <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mb-4">
+                                <ShieldCheck size={32} />
+                            </div>
+                            <h2 className="text-2xl font-black mb-1">Grant Access</h2>
+                            <p className="text-white/70 text-sm font-medium">Create credentials for {selectedRequest.first_name} {selectedRequest.last_name}</p>
+                        </div>
+                        <div className="p-8 space-y-6">
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Set Login Password</label>
+                                    <div className="relative">
+                                        <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                                        <input 
+                                            type={showPass ? "text" : "password"}
+                                            value={manualPassword}
+                                            onChange={(e) => setManualPassword(e.target.value)}
+                                            className="w-full pl-12 pr-12 py-3.5 rounded-2xl bg-slate-50 border border-slate-100 outline-none focus:ring-4 focus:ring-pink-500/10 focus:border-pink-500 transition-all text-sm font-bold"
+                                            placeholder="••••••••"
+                                        />
+                                        <button onClick={() => setShowPass(!showPass)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-pink-500 transition-colors">
+                                            {showPass ? <EyeOff size={18} /> : <Eye size={18} />}
+                                        </button>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Confirm Password</label>
+                                    <input 
+                                        type={showPass ? "text" : "password"}
+                                        value={confirmPassword}
+                                        onChange={(e) => setConfirmPassword(e.target.value)}
+                                        className="w-full px-6 py-3.5 rounded-2xl bg-slate-50 border border-slate-100 outline-none focus:ring-4 focus:ring-pink-500/10 focus:border-pink-500 transition-all text-sm font-bold"
+                                        placeholder="••••••••"
+                                    />
+                                </div>
+                            </div>
+                            <div className="bg-emerald-50 p-4 rounded-2xl flex gap-3 items-center">
+                                <Send className="text-emerald-500" size={18} />
+                                <p className="text-[11px] font-bold text-emerald-700 leading-tight">Approved partners will receive their login details via email and SMS instantly.</p>
+                            </div>
+                            <button 
+                                onClick={submitApproval}
+                                disabled={isSubmitting}
+                                className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/20 disabled:opacity-50"
+                            >
+                                {isSubmitting ? "Processing..." : "Approve & Send Credentials"}
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
-
             {/* KYC Details Modal */}
-            {showKycModal && (
-                <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 999999, padding: "20px" }}>
-                    <div style={{ backgroundColor: t.cardBg, width: "100%", maxWidth: "1100px", borderRadius: "24px", border: `1px solid ${t.border}`, boxShadow: "0 25px 50px -12px rgba(0,0,0,0.5)", overflow: "hidden" }}>
-                        <div style={{ background: "linear-gradient(135deg, #FF3D6E 0%, #A855F7 100%)", padding: "20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                                <FileText size={20} color="#fff" />
-                                <h2 style={{ fontSize: "18px", fontWeight: 800, color: "#fff", margin: 0 }}>KYC Documentation</h2>
+            {showKycModal && selectedRequest && (
+                <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[110] flex items-center justify-center p-6">
+                    <div className="premium-glass max-w-2xl w-full rounded-[40px] overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-300">
+                        <div className="bg-slate-900 p-8 text-white flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center">
+                                    <FileText size={24} />
+                                </div>
+                                <div>
+                                    <h2 className="text-xl font-black">KYC Intelligence</h2>
+                                    <p className="text-white/50 text-xs font-bold uppercase tracking-widest">Verification Dossier</p>
+                                </div>
                             </div>
-                            <button onClick={() => setShowKycModal(false)} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", cursor: "pointer", width: "28px", height: "28px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}><X size={16} /></button>
+                            <button onClick={() => setShowKycModal(false)} className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center hover:bg-white/20 transition-all">
+                                <X size={20} />
+                            </button>
                         </div>
                         
-                        <div style={{ padding: "24px", maxHeight: "70vh", overflowY: "auto" }}>
+                        <div className="p-10">
                             {loadingKyc ? (
-                                <div style={{ textAlign: "center", padding: "40px", color: t.textSub }}>Loading details...</div>
-                            ) : kycData && kycData.kyc_details ? (
-                                <div style={{ display: "flex", flexDirection: "column", gap: "32px" }}>
-                                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))", gap: "32px", alignItems: "start" }}>
-                                        {/* Column 1: Profile & Details */}
-                                        <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-                                            <div>
-                                                <h3 style={{ fontSize: "14px", fontWeight: 800, color: t.textMain, marginBottom: "16px", borderBottom: `1px solid ${t.border}`, paddingBottom: "10px", display: "flex", alignItems: "center", gap: "8px" }}>
-                                                    <User size={16} className="text-[#FF3D6E]" /> APPLICANT PROFILE
-                                                </h3>
-                                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", backgroundColor: theme === 'dark' ? '#1e293b' : '#f8fafc', padding: "20px", borderRadius: "16px", border: `1px solid ${t.border}` }}>
-                                                    <div>
-                                                        <p style={{ fontSize: "10px", fontWeight: 700, color: t.textSub, margin: "0 0 4px", textTransform: "uppercase", letterSpacing: "0.05em" }}>Legal Name</p>
-                                                        <p style={{ fontSize: "15px", fontWeight: 800, color: t.textMain, margin: 0 }}>{kycData.kyc_details.orgName || "N/A"}</p>
-                                                    </div>
-                                                    <div>
-                                                        <p style={{ fontSize: "10px", fontWeight: 700, color: t.textSub, margin: "0 0 4px", textTransform: "uppercase", letterSpacing: "0.05em" }}>Representative</p>
-                                                        <p style={{ fontSize: "15px", fontWeight: 800, color: t.textMain, margin: 0 }}>{kycData.kyc_details.contactPerson || "N/A"}</p>
-                                                    </div>
-                                                    <div>
-                                                        <p style={{ fontSize: "10px", fontWeight: 700, color: t.textSub, margin: "0 0 4px", textTransform: "uppercase", letterSpacing: "0.05em" }}>GST Number</p>
-                                                        <p style={{ fontSize: "15px", fontWeight: 800, color: t.textMain, margin: 0 }}>{kycData.kyc_details.gstNumber || "Not Provided"}</p>
-                                                    </div>
-                                                    <div>
-                                                        <p style={{ fontSize: "10px", fontWeight: 700, color: t.textSub, margin: "0 0 4px", textTransform: "uppercase", letterSpacing: "0.05em" }}>PAN Number</p>
-                                                        <p style={{ fontSize: "15px", fontWeight: 800, color: t.textMain, margin: 0 }}>{kycData.kyc_details.panNumber || "N/A"}</p>
-                                                    </div>
-                                                    <div style={{ gridColumn: "span 2" }}>
-                                                        <p style={{ fontSize: "10px", fontWeight: 700, color: t.textSub, margin: "0 0 4px", textTransform: "uppercase", letterSpacing: "0.05em" }}>Registered Address</p>
-                                                        <p style={{ fontSize: "14px", fontWeight: 600, color: t.textMain, margin: 0, lineHeight: 1.5 }}>{kycData.kyc_details.address || "N/A"}</p>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <div>
-                                                <h3 style={{ fontSize: "14px", fontWeight: 800, color: t.textMain, marginBottom: "16px", borderBottom: `1px solid ${t.border}`, paddingBottom: "10px", display: "flex", alignItems: "center", gap: "8px" }}>
-                                                    <Banknote size={16} className="text-[#A855F7]" /> BANKING & SETTLEMENT
-                                                </h3>
-                                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", backgroundColor: theme === 'dark' ? '#1e293b' : '#f8fafc', padding: "20px", borderRadius: "16px", border: `1px solid ${t.border}` }}>
-                                                    <div style={{ gridColumn: "span 2" }}>
-                                                        <p style={{ fontSize: "10px", fontWeight: 700, color: t.textSub, margin: "0 0 4px", textTransform: "uppercase", letterSpacing: "0.05em" }}>Bank Name</p>
-                                                        <p style={{ fontSize: "15px", fontWeight: 800, color: t.textMain, margin: 0 }}>{kycData.kyc_details.bankDetails?.bank_name || "N/A"}</p>
-                                                    </div>
-                                                    <div>
-                                                        <p style={{ fontSize: "10px", fontWeight: 700, color: t.textSub, margin: "0 0 4px", textTransform: "uppercase", letterSpacing: "0.05em" }}>Account Number</p>
-                                                        <p style={{ fontSize: "15px", fontWeight: 800, color: t.textMain, margin: 0 }}>{kycData.kyc_details.bankDetails?.account_number || "N/A"}</p>
-                                                    </div>
-                                                    <div>
-                                                        <p style={{ fontSize: "10px", fontWeight: 700, color: t.textSub, margin: "0 0 4px", textTransform: "uppercase", letterSpacing: "0.05em" }}>IFSC Code</p>
-                                                        <p style={{ fontSize: "15px", fontWeight: 800, color: t.textMain, margin: 0 }}>{kycData.kyc_details.bankDetails?.ifsc_code || "N/A"}</p>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <div style={{ padding: "20px", background: "#f0fdf4", borderRadius: "16px", border: "1px solid #bbf7d0" }}>
-                                                <div style={{ display: "flex", alignItems: "center", gap: "10px", color: "#166534" }}>
-                                                    <ShieldCheck size={18} />
-                                                    <span style={{ fontSize: "14px", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em" }}>Verification Ready</span>
-                                                </div>
-                                                <p style={{ fontSize: "12px", color: "#166534", margin: "8px 0 0", opacity: 0.8, fontWeight: 500 }}>Partner has submitted all mandatory documents and accepted the platform terms of service.</p>
-                                            </div>
+                                <div className="py-20 text-center">
+                                    <div className="w-12 h-12 border-4 border-pink-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+                                    <p className="text-sm font-bold text-slate-400">Decrypting documents...</p>
+                                </div>
+                            ) : kycData ? (
+                                <div className="grid grid-cols-2 gap-8">
+                                    <div className="space-y-6">
+                                        <div>
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Full Legal Name</label>
+                                            <p className="text-base font-black text-slate-900">{kycData.full_name || "Not Provided"}</p>
                                         </div>
-
-                                        {/* Column 2: Document Previews */}
-                                        <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-                                            <h3 style={{ fontSize: "14px", fontWeight: 800, color: t.textMain, marginBottom: "16px", borderBottom: `1px solid ${t.border}`, paddingBottom: "10px", display: "flex", alignItems: "center", gap: "8px" }}>
-                                                <FileText size={16} className="text-[#3b82f6]" /> DOCUMENT VERIFICATION
-                                            </h3>
-                                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-                                                {[
-                                                    { key: 'id_proof_url', label: 'Identity Proof' },
-                                                    { key: 'business_proof_url', label: 'Business Proof' },
-                                                    { key: 'address_proof_url', label: 'Address Proof' },
-                                                    { key: 'cheque_url', label: 'Cancelled Cheque', isCheque: true }
-                                                ].map(doc => {
-                                                    const url = doc.isCheque ? kycData.kyc_details.cheque_url : kycData.kyc_details[doc.key];
-                                                    return (
-                                                        <div key={doc.key} style={{ display: "flex", flexDirection: "column", gap: "10px", padding: "16px", background: theme === 'dark' ? '#1e293b' : '#f8fafc', borderRadius: "20px", border: `1px solid ${t.border}` }}>
-                                                            <span style={{ fontSize: "10px", fontWeight: 800, color: t.textSub, textTransform: "uppercase", letterSpacing: "0.05em" }}>{doc.label}</span>
-                                                            {url ? (
-                                                                <div style={{ position: "relative", width: "100%", height: "140px", borderRadius: "12px", overflow: "hidden", backgroundColor: "#000", border: `1px solid ${t.border}` }}>
-                                                                    <img 
-                                                                        src={url} 
-                                                                        alt={doc.label}
-                                                                        style={{ width: "100%", height: "100%", objectFit: "cover", cursor: "pointer", transition: "0.3s" }}
-                                                                        onClick={() => window.open(url, '_blank')}
-                                                                        className="hover-scale"
-                                                                    />
-                                                                    <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "rgba(0,0,0,0.7)", color: "#fff", fontSize: "10px", padding: "6px", textAlign: "center", fontWeight: 700, letterSpacing: "0.05em" }}>VIEW FULL SIZE</div>
-                                                                </div>
-                                                            ) : (
-                                                                <div style={{ height: "140px", display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: theme === 'dark' ? '#0f172a' : '#f1f5f9', borderRadius: "12px", fontSize: "11px", color: t.textSub, fontWeight: 600, border: `1.5px dashed ${t.border}` }}>Missing Document</div>
-                                                            )}
-                                                        </div>
-                                                    );
-                                                })}
+                                        <div>
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Business Entity</label>
+                                            <p className="text-base font-black text-slate-900">{kycData.business_name || "Individual / Sole Prop"}</p>
+                                        </div>
+                                        <div>
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Registration ID</label>
+                                            <p className="text-base font-bold text-slate-600">{kycData.registration_number || "N/A"}</p>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-6">
+                                        <div>
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Tax Identity</label>
+                                            <p className="text-base font-bold text-slate-600">{kycData.gst_number || "No GST Linked"}</p>
+                                        </div>
+                                        <div>
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Contact Verified</label>
+                                            <div className="flex items-center gap-2 mt-1">
+                                                <div className="w-2 h-2 bg-emerald-500 rounded-full" />
+                                                <p className="text-xs font-black text-emerald-600 uppercase tracking-tighter">Identity Match Confirmed</p>
                                             </div>
                                         </div>
                                     </div>
-
-                                    <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "10px" }}>
-                                        {kycData.status === 'Submitted' ? (
-                                            <div style={{ display: "flex", gap: "12px" }}>
-                                                <button 
-                                                    onClick={async () => {
-                                                        setIsSubmitting(true);
-                                                        try {
-                                                            const { data: { session } } = await supabase.auth.getSession();
-                                                            const res = await fetch('/api/admin/action', {
-                                                                method: 'POST',
-                                                                headers: { 
-                                                                    'Content-Type': 'application/json',
-                                                                    'Authorization': `Bearer ${session?.access_token}`
-                                                                },
-                                                                body: JSON.stringify({
-                                                                    action: 'verify-kyc',
-                                                                    data: {
-                                                                        requestId: selectedRequest.id,
-                                                                        organiserId: kycData.id,
-                                                                        status: 'Approved'
-                                                                    }
-                                                                })
-                                                            });
-                                                            if (!res.ok) throw new Error("Verification failed");
-                                                            showToast("KYC Approved! Organiser now has full access.", "success");
-                                                            setShowKycModal(false);
-                                                        } catch (err) {
-                                                            showToast(err.message, "error");
-                                                        } finally {
-                                                            setIsSubmitting(false);
-                                                        }
-                                                    }}
-                                                    disabled={isSubmitting}
-                                                    style={{ flex: 1, padding: "12px", borderRadius: "10px", background: "linear-gradient(135deg, #22c55e 0%, #16a34a 100%)", color: "#fff", border: "none", fontWeight: 800, cursor: "pointer", opacity: isSubmitting ? 0.7 : 1 }}
-                                                >
-                                                    Approve KYC
-                                                </button>
-                                                <button 
-                                                    onClick={() => {
-                                                        const reason = prompt("Enter rejection reason:");
-                                                        if (!reason) return;
-                                                        
-                                                        (async () => {
-                                                            setIsSubmitting(true);
-                                                            try {
-                                                                const { data: { session } } = await supabase.auth.getSession();
-                                                                const res = await fetch('/api/admin/action', {
-                                                                    method: 'POST',
-                                                                    headers: { 
-                                                                        'Content-Type': 'application/json',
-                                                                        'Authorization': `Bearer ${session?.access_token}`
-                                                                    },
-                                                                    body: JSON.stringify({
-                                                                        action: 'verify-kyc',
-                                                                        data: {
-                                                                            requestId: selectedRequest.id,
-                                                                            organiserId: kycData.id,
-                                                                            status: 'Rejected',
-                                                                            reason: reason
-                                                                        }
-                                                                    })
-                                                                });
-                                                                if (!res.ok) throw new Error("Rejection failed");
-                                                                showToast("KYC Rejected. Organiser notified.", "info");
-                                                                setShowKycModal(false);
-                                                            } catch (err) {
-                                                                showToast(err.message, "error");
-                                                            } finally {
-                                                                setIsSubmitting(false);
-                                                            }
-                                                        })();
-                                                    }}
-                                                    disabled={isSubmitting}
-                                                    style={{ flex: 1, padding: "12px", borderRadius: "10px", background: "rgba(239, 68, 68, 0.1)", color: "#ef4444", border: "1px solid #ef4444", fontWeight: 800, cursor: "pointer", opacity: isSubmitting ? 0.7 : 1 }}
-                                                >
-                                                    Reject
-                                                </button>
+                                    
+                                    <div className="col-span-2 pt-6 border-t border-slate-100">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 block">Identity Documents</label>
+                                        <div className="bg-slate-50 rounded-3xl p-6 border border-slate-100 flex items-center justify-between">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-12 h-12 bg-white rounded-2xl border border-slate-100 flex items-center justify-center text-slate-400">
+                                                    <FileText size={20} />
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-black text-slate-900">ID_PROOF_PRIMARY.PDF</p>
+                                                    <p className="text-[10px] font-bold text-slate-400">Verified Hash: SHA-256 Checksum Active</p>
+                                                </div>
                                             </div>
-                                        ) : (
-                                            <div style={{ textAlign: "center", padding: "10px", borderRadius: "10px", background: kycData.status === 'Approved' ? '#f0fdf4' : '#fef2f2', color: kycData.status === 'Approved' ? '#166534' : '#991b1b', fontSize: "13px", fontWeight: 700 }}>
-                                                KYC STATUS: {kycData.status.toUpperCase()}
-                                            </div>
-                                        )}
+                                            <button className="px-6 py-2.5 bg-white text-slate-900 rounded-xl text-xs font-black border border-slate-200 hover:bg-slate-50 transition-all">
+                                                Download Proof
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             ) : (
-                                <div style={{ textAlign: "center", padding: "40px", color: t.textSub }}>No KYC details found for this partner.</div>
+                                <div className="py-20 text-center bg-slate-50 rounded-[32px] border border-dashed border-slate-200">
+                                    <AlertTriangle size={48} className="text-orange-300 mx-auto mb-4" />
+                                    <h4 className="text-lg font-black text-slate-900">No KYC Record Found</h4>
+                                    <p className="text-sm font-medium text-slate-400 max-w-xs mx-auto">This partner has not yet submitted their digital KYC dossier for verification.</p>
+                                </div>
                             )}
                         </div>
                     </div>

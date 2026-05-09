@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
-import { sendEmail } from '@/lib/emailService';
+import { sendEmail, sendTemplatedEmail } from '@/lib/emailService';
 
 export async function POST(request) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
@@ -40,20 +40,14 @@ export async function POST(request) {
 
       // 4. Dispatch Email
       if (email) {
-        const subject = `${newCode} is your BookMyTicket OTP`;
-        const html = `
-          <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 500px; margin: 20px auto; padding: 40px; text-align: center; border: 1px solid #f1f5f9; border-radius: 32px; background: #fff; box-shadow: 0 20px 40px rgba(0,0,0,0.05);">
-            <h1 style="color: #1e293b; font-size: 28px; font-weight: 900; margin-bottom: 8px; letter-spacing: -1px;">BookMyTicket</h1>
-            <p style="color: #64748b; font-size: 14px; margin-bottom: 30px;">Verification Code</p>
-            <div style="font-size: 42px; font-weight: 900; letter-spacing: 12px; margin: 30px 0; color: #f43f5e; background: #fff1f2; padding: 30px; border-radius: 24px; border: 2px dashed #fecaca;">
-              ${newCode}
-            </div>
-            <p style="color: #94a3b8; font-size: 13px; font-weight: 600;">Valid for ${Math.floor(expirySecs/60)} minutes.</p>
-            <hr style="border: none; border-top: 1px solid #f1f5f9; margin: 30px 0;" />
-            <p style="color: #cbd5e1; font-size: 11px;">Sent via ${fromEmail}</p>
-          </div>
-        `;
-        await sendEmail({ to: email, subject, html });
+        await sendTemplatedEmail({
+          templateIdentifier: 'otp',
+          to: email,
+          variables: {
+            otp: newCode,
+            purpose: purpose || 'signup'
+          }
+        });
       }
 
       return NextResponse.json({ success: true, message: 'Verification code sent successfully.' });

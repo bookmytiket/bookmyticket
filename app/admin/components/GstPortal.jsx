@@ -144,55 +144,55 @@ const GstPortal = ({ t, theme }) => {
                         <div style={{ 
                             background: t.cardBg, 
                             borderRadius: "20px", 
-                            padding: "32px", 
+                            padding: "24px", 
                             border: `1px solid ${t.border}`,
                             boxShadow: "0 10px 15px -3px rgba(0,0,0,0.02)"
                         }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "24px" }}>
-                                <div style={{ padding: "10px", borderRadius: "12px", background: "#3b82f615", color: "#3b82f6" }}>
-                                    <Building2 size={24} />
+                            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "20px" }}>
+                                <div style={{ padding: "8px", borderRadius: "10px", background: "#3b82f615", color: "#3b82f6" }}>
+                                    <Building2 size={20} />
                                 </div>
-                                <h3 style={{ fontSize: "20px", fontWeight: 800, margin: 0 }}>Business Information</h3>
+                                <h3 style={{ fontSize: "16px", fontWeight: 800, margin: 0 }}>Business Information</h3>
                             </div>
 
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
                                 <div style={{ gridColumn: "span 2" }}>
-                                    <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: t.textSub, marginBottom: "8px", textTransform: "uppercase" }}>Legal Business Name</label>
+                                    <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: t.textSub, marginBottom: "6px", textTransform: "uppercase" }}>Legal Business Name</label>
                                     <input 
                                         type="text"
                                         value={formData.businessName}
                                         onChange={(e) => setFormData({...formData, businessName: e.target.value})}
-                                        style={{ width: "100%", padding: "12px 16px", borderRadius: "12px", border: `1px solid ${t.border}`, background: theme === 'dark' ? "#1e293b" : "#fff", color: t.textMain }}
+                                        style={{ width: "100%", padding: "10px 14px", borderRadius: "10px", border: `1px solid ${t.border}`, background: theme === 'dark' ? "#1e293b" : "#fff", color: t.textMain }}
                                         placeholder="e.g. BookMyTicket Services Pvt Ltd"
                                     />
                                 </div>
                                 <div>
-                                    <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: t.textSub, marginBottom: "8px", textTransform: "uppercase" }}>GSTIN Number</label>
+                                    <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: t.textSub, marginBottom: "6px", textTransform: "uppercase" }}>GSTIN Number</label>
                                     <input 
                                         type="text"
                                         value={formData.gstin}
                                         onChange={(e) => setFormData({...formData, gstin: e.target.value})}
-                                        style={{ width: "100%", padding: "12px 16px", borderRadius: "12px", border: `1px solid ${t.border}`, background: theme === 'dark' ? "#1e293b" : "#fff", color: t.textMain }}
+                                        style={{ width: "100%", padding: "10px 14px", borderRadius: "10px", border: `1px solid ${t.border}`, background: theme === 'dark' ? "#1e293b" : "#fff", color: t.textMain }}
                                         placeholder="e.g. 27AAAAA0000A1Z5"
                                     />
                                 </div>
                                 <div>
-                                    <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: t.textSub, marginBottom: "8px", textTransform: "uppercase" }}>Invoice Prefix</label>
+                                    <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: t.textSub, marginBottom: "6px", textTransform: "uppercase" }}>Invoice Prefix</label>
                                     <input 
                                         type="text"
                                         value={formData.invoicePrefix}
                                         onChange={(e) => setFormData({...formData, invoicePrefix: e.target.value})}
-                                        style={{ width: "100%", padding: "12px 16px", borderRadius: "12px", border: `1px solid ${t.border}`, background: theme === 'dark' ? "#1e293b" : "#fff", color: t.textMain }}
+                                        style={{ width: "100%", padding: "10px 14px", borderRadius: "10px", border: `1px solid ${t.border}`, background: theme === 'dark' ? "#1e293b" : "#fff", color: t.textMain }}
                                         placeholder="e.g. BMT-"
                                     />
                                 </div>
                                 <div style={{ gridColumn: "span 2" }}>
-                                    <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: t.textSub, marginBottom: "8px", textTransform: "uppercase" }}>Registered Business Address</label>
+                                    <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: t.textSub, marginBottom: "6px", textTransform: "uppercase" }}>Registered Business Address</label>
                                     <textarea 
-                                        rows={3}
+                                        rows={2}
                                         value={formData.businessAddress}
                                         onChange={(e) => setFormData({...formData, businessAddress: e.target.value})}
-                                        style={{ width: "100%", padding: "12px 16px", borderRadius: "12px", border: `1px solid ${t.border}`, background: theme === 'dark' ? "#1e293b" : "#fff", color: t.textMain, resize: "none" }}
+                                        style={{ width: "100%", padding: "10px 14px", borderRadius: "10px", border: `1px solid ${t.border}`, background: theme === 'dark' ? "#1e293b" : "#fff", color: t.textMain, resize: "none" }}
                                         placeholder="Enter full address as per GST registration"
                                     />
                                 </div>
@@ -203,7 +203,7 @@ const GstPortal = ({ t, theme }) => {
                         <div style={{ 
                             background: t.cardBg, 
                             borderRadius: "20px", 
-                            padding: "32px", 
+                            padding: "24px", 
                             border: `1px solid ${t.border}`
                         }}>
                              <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "24px" }}>

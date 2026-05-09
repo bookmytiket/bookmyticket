@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { sendEmail } from "@/lib/emailService";
+import { sendEmail, sendTemplatedEmail } from "@/lib/emailService";
 
 export async function POST(req) {
   try {
@@ -28,27 +28,13 @@ export async function POST(req) {
     if (dbError) throw dbError;
 
     // 4. Send Email
-    const emailResult = await sendEmail({
+    const emailResult = await sendTemplatedEmail({
+      templateIdentifier: 'otp',
       to: email,
-      subject: "Verification Code for your Job Application",
-      html: `
-        <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: 0 auto; padding: 40px; background-color: #ffffff; border-radius: 24px; border: 1px solid #e2e8f0;">
-          <h2 style="color: #0f172a; font-size: 24px; font-weight: 800; margin-bottom: 24px;">Verify your Email</h2>
-          <p style="color: #64748b; font-size: 16px; line-height: 1.6; margin-bottom: 32px;">
-            Thank you for applying! Please use the following 6-digit code to verify your email address and complete your application.
-          </p>
-          <div style="background-color: #f8fafc; border-radius: 16px; padding: 24px; text-align: center; border: 2px dashed #cbd5e1; margin-bottom: 32px;">
-            <span style="font-size: 32px; font-weight: 900; letter-spacing: 0.5em; color: #f84464;">${otp}</span>
-          </div>
-          <p style="color: #94a3b8; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; text-align: center;">
-            This code will expire in 10 minutes.
-          </p>
-          <hr style="border: none; border-top: 1px solid #f1f5f9; margin: 40px 0;">
-          <p style="color: #cbd5e1; font-size: 12px; text-align: center;">
-            If you didn't request this code, you can safely ignore this email.
-          </p>
-        </div>
-      `
+      variables: {
+        otp,
+        purpose: 'Job Application'
+      }
     });
 
     if (!emailResult.success) throw new Error(emailResult.error);
