@@ -19,7 +19,7 @@ export default function CustomSelect({
     // Normalize options to [{ label, value }]
     const normalizedOptions = options.map(opt => {
         if (typeof opt === 'string') return { label: opt, value: opt };
-        return opt;
+        return { ...opt, label: opt.label, value: opt.value || opt.label };
     });
 
     const filteredOptions = normalizedOptions.filter(opt =>
@@ -45,7 +45,12 @@ export default function CustomSelect({
     };
 
     return (
-        <div className="relative w-full" ref={containerRef}>
+        <div className="relative w-full space-y-3" ref={containerRef}>
+            {label && (
+                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] pl-1">
+                    {label}
+                </label>
+            )}
             {/* Trigger */}
             <div 
                 onClick={() => !isLoading && setIsOpen(!isOpen)}

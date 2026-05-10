@@ -58,30 +58,14 @@ export default function CouponManagement({ user }) {
             setEvents(eventData || []);
 
             // Fetch Coupons
-            // Note: Since 'coupons' table doesn't have an 'organiser_id', 
-            // we might need to filter by those that are applicable to the organiser's events
-            // OR the migration should have included organiser_id.
-            // Looking back at the migration, it didn't have organiser_id.
-            // Let's assume for now organisers can see coupons where they are in applicable_events 
-            // or we might need to update the schema.
-            
-            // Actually, if an organiser creates a coupon, it should be linked to them.
-            // Let's check the migration again. 
-            // It had: CREATE TABLE IF NOT EXISTS public.coupons ( ... applicable_events UUID[] ... );
-            
-            const { data: couponData } = await supabase
+            const { data: couponData, error: couponError } = await supabase
                 .from('coupons')
                 .select('*')
+                .eq('organiser_id', user.id)
                 .order('created_at', { ascending: false });
             
-            // Filter coupons that are either global (null applicable_events) or belong to organiser's events
-            const eventIds = (eventData || []).map(e => e.id);
-            const filteredCoupons = (couponData || []).filter(c => {
-                if (!c.applicable_events || c.applicable_events.length === 0) return true; // Global
-                return c.applicable_events.some(id => eventIds.includes(id));
-            });
-
-            setCoupons(filteredCoupons);
+            if (couponError) throw couponError;
+            setCoupons(couponData || []);
         } catch (err) {
             console.error("Fetch Data Error:", err);
         } finally {
@@ -104,6 +88,7 @@ export default function CouponManagement({ user }) {
                 global_usage_limit: newCoupon.global_usage_limit ? parseInt(newCoupon.global_usage_limit) : null,
                 expiry_date: newCoupon.expiry_date || null,
                 applicable_events: newCoupon.applicable_events.length > 0 ? newCoupon.applicable_events : null,
+                organiser_id: user.id,
                 is_active: true
             };
 

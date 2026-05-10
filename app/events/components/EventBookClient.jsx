@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
     Calendar, MapPin, CheckCircle, ChevronLeft, Ticket, 
@@ -16,6 +16,7 @@ import { useAuth } from '@/components/AuthContext';
 import CalendarModal from '@/components/booking/CalendarModal';
 import PackageSelector from '@/components/booking/PackageSelector';
 import EventMap from './EventMap';
+import VisualSeatPicker from './VisualSeatPicker';
 
 const DEFAULT_IMG = 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200&h=600&fit=crop';
 const ROW_LABELS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
@@ -57,6 +58,14 @@ export default function EventBookClient({ id }) {
     const [selectedDate, setSelectedDate] = useState(null);
     const [selectedPackage, setSelectedPackage] = useState(null);
     const [selectedSeats, setSelectedSeats] = useState([]);
+    const searchParams = useSearchParams();
+
+    useEffect(() => {
+        const catId = searchParams.get('catId');
+        if (catId) {
+            setSelectedCatId(catId);
+        }
+    }, [searchParams]);
 
     const event = useMemo(() => {
         if (!rawEvent) return null;
@@ -109,25 +118,55 @@ export default function EventBookClient({ id }) {
         );
     }, [feeSettingsSystem, organiserData, event?.fee_config]);
 
-    const { data: bookingList } = useSupabaseQuery('bookings', (q) => q.eq('event_id', String(id)), [id]);
-    
+    const [relationalSeats, setRelationalSeats] = useState([]);
+
+    useEffect(() => {
+        if (!id || !isSeating) return;
+        
+        const fetchRelationalData = async () => {
+            // 1. Get Venue Layout
+            const { data: layout } = await supabase.from('venue_layouts').select('id').eq('event_id', id).maybeSingle();
+            if (!layout) return;
+
+            // 2. Get Blocks & Seats
+            const { data: blocksData } = await supabase.from('seat_blocks').select('id, block_name').eq('venue_layout_id', layout.id);
+            if (blocksData?.length > 0) {
+                const blockIds = blocksData.map(b => b.id);
+                const { data: seatsData } = await supabase.from('seats').select('*').in('block_id', blockIds);
+                if (seatsData) setRelationalSeats(seatsData);
+
+                // 3. Subscribe to Realtime Updates
+                const subscription = supabase
+                    .channel(`seats_${id}`)
+                    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'seats' }, (payload) => {
+                        setRelationalSeats(current => 
+                            current.map(s => s.id === payload.new.id ? payload.new : s)
+                        );
+                    })
+                    .subscribe();
+
+                return () => supabase.removeChannel(subscription);
+            }
+        };
+
+        fetchRelationalData();
+    }, [id, isSeating]);
+
     const bookedSeats = useMemo(() => {
-        if (!bookingList) return [];
-        const validStatuses = ["Confirmed", "Pending", "Scanned"];
-        return bookingList
-            .filter(b => validStatuses.includes(b.status))
-            .flatMap(b => b.selected_seats || [])
-            .map(s => s.id);
-    }, [bookingList]);
+        return relationalSeats.filter(s => s.status !== 'available').map(s => {
+            const block = event?.blocks?.find(b => b.id === s.block_id) || { name: 'Unknown' };
+            return `${block.name}-${s.row_name}-${s.seat_number}`;
+        });
+    }, [relationalSeats, event?.blocks]);
 
     const isSeatBooked = (seatId) => bookedSeats.includes(seatId);
 
     const isSeating = useMemo(() => {
         return event &&
-            event.seatingEnabled !== false &&
-            Array.isArray(event.seatCategories) &&
-            event.seatCategories.length > 0 &&
-            Number(event.cols) > 0;
+            (
+                (event.seatingEnabled !== false && Array.isArray(event.seatCategories) && event.seatCategories.length > 0 && Number(event.cols) > 0) ||
+                (Array.isArray(event.blocks) && event.blocks.length > 0)
+            );
     }, [event]);
 
     const totalRows = useMemo(() => {
@@ -143,7 +182,12 @@ export default function EventBookClient({ id }) {
         setSelectedSeats(prev => {
             const idx = prev.findIndex(s => s.id === seatId);
             if (idx >= 0) return prev.filter(s => s.id !== seatId);
-            return [...prev, { id: seatId, catName: cat.name, price: Number(cat.price) || 0, isFree: !!cat.isFree }];
+            return [...prev, { 
+                id: seatId, 
+                catName: cat.name || cat.category_name || cat.title || 'General', 
+                price: Number(cat.price) || 0, 
+                isFree: !!cat.isFree 
+            }];
         });
     };
 
@@ -298,33 +342,58 @@ export default function EventBookClient({ id }) {
                                     exit={{ opacity: 0, y: -20 }}
                                     className="bg-white rounded-[40px] p-8 md:p-12 border border-slate-100 shadow-sm"
                                 >
-                                    <PackageSelector 
-                                        packages={event.ticketTypes || event.dynamic_config?.categories || [
-                                            { id: 'gen', title: 'Ticket', price: ticketPrice, description: 'Standard admission for the event.', features: ['Access to main area', 'General Seating'] }
-                                        ]}
-                                        selectedPackage={selectedPackage}
-                                        onSelect={(p) => {
-                                            setSelectedPackage(p);
-                                            if (!isMarathon) setQuantity(1);
-                                        }}
-                                        type={isMarathon ? "marathon" : "event"}
-                                    />
+                                    {isSeating && event.blocks?.length > 0 ? (
+                                        <div className="space-y-8">
+                                            <div className="flex flex-col items-center text-center space-y-4 mb-8">
+                                                <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter italic leading-none">Architectural Selection</h2>
+                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.3em]">Interactive Venue Interface</p>
+                                            </div>
+                                            <VisualSeatPicker 
+                                                blocks={event.blocks}
+                                                categories={event.dynamic_config?.categories || event.seat_categories || []}
+                                                bookedSeats={bookedSeats}
+                                                selectedSeats={selectedSeats}
+                                                onToggleSeat={toggleSeat}
+                                                backgroundUrl={event.seat_map_background_url}
+                                            />
+                                        </div>
+                                    ) : (
+                                        <PackageSelector 
+                                            packages={event.ticketTypes || event.dynamic_config?.categories || [
+                                                { id: 'gen', title: 'Ticket', price: ticketPrice, description: 'Standard admission for the event.', features: ['Access to main area', 'General Seating'] }
+                                            ]}
+                                            selectedPackage={selectedPackage}
+                                            onSelect={(p) => {
+                                                setSelectedPackage(p);
+                                                if (!isMarathon) setQuantity(1);
+                                            }}
+                                            type={isMarathon ? "marathon" : "event"}
+                                        />
+                                    )}
                                     
-                                    {!isMarathon && selectedPackage && (
+                                    {!isMarathon && (selectedPackage || (isSeating && selectedSeats.length > 0)) && (
                                         <motion.div 
                                             initial={{ opacity: 0, height: 0 }}
                                             animate={{ opacity: 1, height: 'auto' }}
                                             className="mt-12 pt-8 border-t border-slate-100 flex flex-col md:flex-row items-center justify-between gap-8"
                                         >
                                             <div className="flex items-center gap-8">
-                                                <div>
-                                                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-3">Tickets</p>
-                                                    <div className="flex items-center gap-4 bg-slate-50 p-2 rounded-2xl border border-slate-100">
-                                                        <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="w-10 h-10 rounded-xl bg-white flex items-center justify-center font-black shadow-sm">−</button>
-                                                        <span className="text-xl font-black w-12 text-center">{quantity}</span>
-                                                        <button onClick={() => setQuantity(q => q + 1)} className="w-10 h-10 rounded-xl bg-white flex items-center justify-center font-black shadow-sm">+</button>
+                                                {!isSeating && (
+                                                    <div>
+                                                        <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-3">Tickets</p>
+                                                        <div className="flex items-center gap-4 bg-slate-50 p-2 rounded-2xl border border-slate-100">
+                                                            <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="w-10 h-10 rounded-xl bg-white flex items-center justify-center font-black shadow-sm">−</button>
+                                                            <span className="text-xl font-black w-12 text-center">{quantity}</span>
+                                                            <button onClick={() => setQuantity(q => q + 1)} className="w-10 h-10 rounded-xl bg-white flex items-center justify-center font-black shadow-sm">+</button>
+                                                        </div>
                                                     </div>
-                                                </div>
+                                                )}
+                                                {isSeating && (
+                                                    <div>
+                                                        <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-3">Selected</p>
+                                                        <p className="text-xl font-black">{selectedSeats.length} Seat{selectedSeats.length !== 1 ? 's' : ''}</p>
+                                                    </div>
+                                                )}
                                             </div>
                                             <button onClick={handleContinue} className="w-full md:w-auto px-10 py-4 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-[0.2em] text-[11px] shadow-xl">Secure Booking <ArrowRight size={16} /></button>
                                         </motion.div>

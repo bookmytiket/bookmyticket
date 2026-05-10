@@ -7,7 +7,8 @@ import {
     ChevronRight, Info, HeartPulse, GraduationCap, Briefcase, Timer, Target,
     Bike, Award, Utensils, Shirt, Coffee, Car, Smile, Camera, Home, FileText,
     TrendingUp, Trash2, Trash, Zap, Map, Layout, ListTodo, MessageCircle, 
-    Save, Eye, Globe, Lock, Share2, Phone, Mail, Bell, Gift, Scissors, HelpCircle, Ticket, ShieldCheck, Plus, ChevronDown, Wallet, Sparkles, Search
+    Save, Eye, Globe, Lock, Share2, Phone, Mail, Bell, Gift, Scissors, HelpCircle, Ticket, ShieldCheck, Plus, ChevronDown, Wallet, Sparkles, Search,
+    FileCheck2, Tag, Baby, Bath
 } from "lucide-react";
 import CalendarPicker from "./CalendarPicker";
 import TimePicker from "./TimePicker";
@@ -602,13 +603,7 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                                 <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Venue & Map</h2>
                                 <p className="text-[10px] font-bold text-slate-800 uppercase tracking-widest">Where will the magic happen?</p>
                             </div>
-                            <button 
-                                onClick={() => setShowLocationModal(true)}
-                                className="flex items-center gap-2 px-6 py-3 bg-pink-50 text-pink-600 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-pink-600 hover:text-white transition-all shadow-sm border border-pink-100 self-start md:self-auto group"
-                            >
-                                <Search size={14} className="group-hover:scale-125 transition-transform" />
-                                Search Global Location
-                            </button>
+                            {/* Search button removed */}
                         </div>
                     </div>
 
@@ -676,19 +671,19 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                                 }));
                             }}
                         />
-                        {config.country === "India" ? (
+                        {config.countryCode === "IN" ? (
                             <>
                                 <CustomSelect 
                                     label="District"
                                     value={config.district}
-                                    options={dbDistricts.length > 0 ? dbDistricts : getIndianDistricts(config.state)}
+                                    options={Array.from(new Set([...dbDistricts, ...getIndianDistricts(config.state)])).sort()}
                                     isLoading={distLoading}
                                     onChange={(v) => setConfig(prev => ({ ...prev, district: v, city: "", zipCode: "" }))}
                                 />
                                 <CustomSelect 
                                     label="City"
                                     value={config.city}
-                                    options={dbCities.length > 0 ? dbCities : getIndianCities(config.district)}
+                                    options={Array.from(new Set([...dbCities, ...getIndianCities(config.district)])).sort()}
                                     onChange={async (v) => {
                                         setConfig(prev => ({ ...prev, city: v, location: { ...prev.location, city: v }}));
                                         try {
@@ -798,21 +793,28 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                         {[
                             { id: 'Ambulance', label: 'Ambulance', icon: Activity },
-                            { id: 'First Aid', label: 'First Aid', icon: HeartPulse },
-                            { id: 'Certificate', label: 'Certificate', icon: FileText },
-                            { id: 'Medal', label: 'Medal', icon: Award },
-                            { id: 'T-Shirt', label: 'T-Shirt', icon: Shirt },
-                            { id: 'Breakfast', label: 'Breakfast', icon: Coffee },
-                            { id: 'Refreshments', label: 'Refreshments', icon: Utensils },
-                            { id: 'Accommodation', label: 'Accommodation', icon: Home },
-                            { id: 'Parking', label: 'Parking', icon: Car },
-                            { id: 'Safety', label: 'Safety Measures', icon: ShieldCheck },
-                            { id: 'Family', label: 'Family Friendly', icon: Smile },
                             { id: 'Cash Prize', label: 'Cash Prize', icon: DollarSign },
+                            { id: 'Certificate', label: 'Certificate', icon: FileCheck2 },
+                            { id: 'Cycle', label: 'Cycle', icon: Bike },
+                            { id: 'Family Friendly', label: 'Family-Friendly', icon: Users },
+                            { id: 'Fast Check-In', label: 'Fast Check-In', icon: Zap },
+                            { id: 'First Aid', label: 'First Aid', icon: HeartPulse },
+                            { id: 'Accommodation', label: 'Free Accommodation', icon: Home },
+                            { id: 'Breakfast', label: 'Free Breakfast', icon: Coffee },
+                            { id: 'Medal', label: 'Medal', icon: Award },
+                            { id: 'Non Timed BIB', label: 'Non Timed BIB', icon: Tag },
+                            { id: 'Outdoor Event', label: 'Outdoor Event', icon: Globe },
+                            { id: 'Parking FCFS', label: 'Parking Available (FCFS)', icon: Car },
+                            { id: 'Refreshments', label: 'Refreshments', icon: Utensils },
+                            { id: 'Safety Enabled', label: 'Safety measures enabled', icon: ShieldCheck },
+                            { id: 'Selfie Spot', label: 'Selfie Spot', icon: Camera },
+                            { id: 'Shield', label: 'Shield', icon: Shield },
+                            { id: 'Suitable All', label: 'Suitable for all ages', icon: Baby },
                             { id: 'Trophy', label: 'Trophy', icon: Trophy },
-                            { id: 'Bib', label: 'Timing BIB', icon: Target },
-                            { id: 'Selfie', label: 'Selfie Spot', icon: Camera },
-                            { id: 'Washroom', label: 'Washroom', icon: CheckCircle2 }
+                            { id: 'TShirt', label: 'T-Shirt', icon: Shirt },
+                            { id: 'Washroom', label: 'Wash Room', icon: Bath },
+                            { id: 'Valet', label: 'Valet Parking', icon: Car },
+                            { id: 'WiFi', label: 'High-Speed Wifi', icon: Zap }
                         ].map(item => (
                             <button
                                 key={item.id}

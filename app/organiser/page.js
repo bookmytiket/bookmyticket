@@ -21,6 +21,8 @@ import { useConfirm } from "@/context/ConfirmContext";
 import { motion, AnimatePresence } from "framer-motion";
 import SportsEventForm from "./components/SportsEventForm";
 import UniversalEventForm from "./components/UniversalEventForm";
+import PhysicalEventForm from "./components/PhysicalEventForm";
+import VirtualEventForm from "./components/VirtualEventForm";
 import MarathonEventForm from "./components/MarathonEventForm";
 import WalletDashboard from "./components/WalletDashboard";
 import CouponManagement from "./components/CouponManagement";
@@ -1144,7 +1146,7 @@ function OrganiserPanel() {
         { name: "General", color: "#22c55e", rowStart: 5, rowEnd: 6, price: 800 },
     ];
     const getInitialPostEvent = () => ({
-        title: "", category: "Concert", type: "Venue", venue: "", date: "", time: "",
+        title: "", subtitle: "", category: "Concert", type: "Physical Event", venue: "", date: "", time: "",
         dateType: "single", countdownStatus: "active",
         description: "", banner: null, bannerPreview: null,
         galleryImages: [], galleryPreviews: [],
@@ -1173,16 +1175,24 @@ function OrganiserPanel() {
         wifi: false,
         seatingType: "FCFS",
         mandatoryCheckin: true,
-
+        
+        // Sports/Physical specifics
+        parkingDetails: "", entryGate: "", emergencyExit: "",
+        videoTrailerUrl: "",
+        
         // Online Event Specific Fields
         startDate: "", startTime: "", endDate: "", endTime: "",
         dateSlots: [{ date: "", time: "" }],
-        eventStatus: "published", isFeature: "Yes", isExclusive: "No",
+        eventStatus: "published", isFeature: "No", isExclusive: "No",
         ticketLimitType: "unlimited", totalTickets: "",
         price: "", ticketsAreFree: false,
+        blocks: [],
+        categories: [
+            { id: 1, name: "General Admission", price: 500, totalSlots: 100, color: "#6366f1" }
+        ],
 
         // Sports Event Specific Fields
-        sportType: "Marathon",
+        sportType: "Tournament",
         distance: "5K",
         ageCategory: "All ages",
         tShirtSize: "M",
@@ -1486,7 +1496,9 @@ function OrganiserPanel() {
             organiser_id: user?.id,
             title: (postEvent.title || "Untitled Event").trim(),
             category: postEvent.category || undefined,
-            type: postEvent.type || undefined,
+            type: postEvent.type || "Physical Event",
+            event_type: postEvent.type || "Physical Event",
+            subtitle: postEvent.subtitle || undefined,
             date: firstSlot.date || today,
             expiry_date: postEvent.expiryDate || null,
             end_date: postEvent.endDate || null,
@@ -1557,9 +1569,9 @@ function OrganiserPanel() {
                 isFree: !!c.isFree
             })) : undefined,
             date_slots: isMultiple && effectiveSlots.length > 0 ? effectiveSlots.map(s => ({ date: s.date, time: s.time || "" })) : undefined,
-            layout_type: isSeating ? (postEvent.layoutType || "stage") : undefined,
-            seat_map_background_url: postEvent.layoutType === "block" ? postEvent.seatMapBackgroundUrl : undefined,
-            blocks: postEvent.layoutType === "block" ? postEvent.blocks?.map(b => ({
+            layout_type: (postEvent.blocks?.length > 0) ? "block" : (postEvent.layoutType || "stage"),
+            seat_map_background_url: postEvent.seatMapBackgroundUrl || undefined,
+            blocks: postEvent.blocks?.length > 0 ? postEvent.blocks?.map(b => ({
                 id: b.id, name: b.name, x: Number(b.x), y: Number(b.y), width: Number(b.width), height: Number(b.height), rows: Number(b.rows), cols: Number(b.cols), category: String(b.category), color: String(b.color),
                 rowNaming: b.rowNaming || 'alphabetic',
                 startNumber: Number(b.startNumber) || 1,
@@ -1567,15 +1579,59 @@ function OrganiserPanel() {
             })) : undefined,
             // Advanced Details
             age_limit: postEvent.ageLimit || "All ages",
+            age_restriction: postEvent.ageLimit || "All ages",
             language: postEvent.language || "English",
             duration: postEvent.duration || "2-3 Hours",
             safety_measures: !!postEvent.safetyMeasures,
             seating_type: postEvent.seatingType || "FCFS",
             mandatory_checkin: !!postEvent.mandatoryCheckin,
             gallery: postEvent.galleryPreviews || [],
+            gallery_images: postEvent.galleryPreviews || [],
+            parking_details: postEvent.parkingDetails || undefined,
+            entry_gate: postEvent.entryGate || undefined,
+            emergency_exit: postEvent.emergencyExit || undefined,
+            video_trailer_url: postEvent.videoTrailerUrl || undefined,
+            sport_type: postEvent.sportType || undefined,
             dynamic_config: {
                 ...(postEvent.dynamic_config || {}),
-                marathonCategories: postEvent.marathonCategories || []
+                marathonCategories: postEvent.marathonCategories || [],
+                virtualConfig: isOnline ? {
+                    chatEnabled: !!postEvent.chatEnabled,
+                    recordingEnabled: !!postEvent.recordingEnabled,
+                    qaEnabled: !!postEvent.qaEnabled,
+                    hdEnabled: !!postEvent.hdEnabled,
+                    allowMic: !!postEvent.allowMic,
+                    allowVideo: !!postEvent.allowVideo,
+                    allowScreen: !!postEvent.allowScreen,
+                    meetingPassword: postEvent.meetingPassword || "",
+                    visibility: postEvent.visibility || "public"
+                } : undefined,
+                amenities: {
+                    ambulance: !!postEvent.ambulance,
+                    cash_prize: !!postEvent.cash_prize,
+                    trophy: !!postEvent.trophy,
+                    medal: !!postEvent.medal,
+                    certificate: !!postEvent.certificate,
+                    tshirt: !!postEvent.tshirt,
+                    bib: !!postEvent.bib,
+                    breakfast: !!postEvent.breakfast,
+                    refreshments: !!postEvent.refreshments,
+                    first_aid: !!postEvent.first_aid,
+                    washroom: !!postEvent.washroom,
+                    parking: !!postEvent.parking,
+                    security: !!postEvent.security,
+                    physio: !!postEvent.physio,
+                    baggage: !!postEvent.baggage,
+                    photography: !!postEvent.photography,
+                    wifi: !!postEvent.wifi,
+                    charging: !!postEvent.charging,
+                    water: !!postEvent.water,
+                    vip_lounge: !!postEvent.vip_lounge,
+                    smoking_zone: !!postEvent.smoking_zone,
+                    kids_area: !!postEvent.kids_area,
+                    wheelchair: !!postEvent.wheelchair,
+                    lost_found: !!postEvent.lost_found
+                }
             },
             seo_title: postEvent.dynamic_config?.seo?.title || undefined,
             seo_description: postEvent.dynamic_config?.seo?.description || undefined,
@@ -1589,7 +1645,65 @@ function OrganiserPanel() {
         if (editingEvent) {
             const { organiser_id, ...updatePayload } = payload;
             updateEventMutation({ id: editingEvent.id, ...updatePayload })
-                .then(() => {
+                .then(async () => {
+                    // Relational Seating Logic
+                    if (isSeating && postEvent.blocks?.length > 0) {
+                        try {
+                            const { data: layout, error: lError } = await supabase
+                                .from('venue_layouts')
+                                .insert({
+                                    event_id: editingEvent.id,
+                                    layout_name: postEvent.title,
+                                    image_url: postEvent.seatMapBackgroundUrl,
+                                    layout_type: postEvent.layoutType || 'stadium'
+                                })
+                                .select()
+                                .single();
+
+                            if (layout) {
+                                for (const b of postEvent.blocks) {
+                                    const { data: block, error: bError } = await supabase
+                                        .from('seat_blocks')
+                                        .insert({
+                                            venue_layout_id: layout.id,
+                                            block_name: b.name,
+                                            block_type: b.category,
+                                            color_code: b.color,
+                                            base_price: categories.find(c => c.name === b.category)?.price || 0,
+                                            x_pos: b.x,
+                                            y_pos: b.y,
+                                            width: b.width,
+                                            height: b.height,
+                                            rows_count: b.rows,
+                                            cols_count: b.cols
+                                        })
+                                        .select()
+                                        .single();
+                                    
+                                    if (block) {
+                                        const seatsBatch = [];
+                                        for (let r = 0; r < b.rows; r++) {
+                                            for (let c = 0; c < b.cols; c++) {
+                                                const rowLabel = b.rowNaming === 'alphabetic' ? String.fromCharCode(65 + r) : (Number(b.startNumber || 1) + r);
+                                                const colLabel = b.numberingDirection === 'ltr' ? (c + 1) : (b.cols - c);
+                                                seatsBatch.push({
+                                                    block_id: block.id,
+                                                    row_name: String(rowLabel),
+                                                    seat_number: String(colLabel),
+                                                    status: 'available'
+                                                });
+                                            }
+                                        }
+                                        if (seatsBatch.length > 0) {
+                                            await supabase.from('seats').insert(seatsBatch);
+                                        }
+                                    }
+                                }
+                            }
+                        } catch (err) {
+                            console.error("Seating sync failed:", err);
+                        }
+                    }
                     setPostEvent(getInitialPostEvent());
                     setEditingEvent(null);
                     setAddEventStep("select_type");
@@ -1604,8 +1718,57 @@ function OrganiserPanel() {
                 });
         } else {
             createEventMutation(payload)
-                .then(async (result) => {
-                    const eventId = result.data?.[0]?.id || result.id;
+                .then(async (newEvent) => {
+                    // Relational Seating Logic for New Event
+                    if (isSeating && postEvent.blocks?.length > 0 && newEvent?.id) {
+                        try {
+                            const { data: layout } = await supabase
+                                .from('venue_layouts')
+                                .insert({
+                                    event_id: newEvent.id,
+                                    layout_name: postEvent.title,
+                                    image_url: postEvent.seatMapBackgroundUrl,
+                                    layout_type: postEvent.layoutType || 'stadium'
+                                })
+                                .select()
+                                .single();
+
+                            if (layout) {
+                                for (const b of postEvent.blocks) {
+                                    const { data: block } = await supabase
+                                        .from('seat_blocks')
+                                        .insert({
+                                            venue_layout_id: layout.id,
+                                            block_name: b.name,
+                                            block_type: b.category,
+                                            color_code: b.color,
+                                            base_price: categories.find(c => c.name === b.category)?.price || 0,
+                                            x_pos: b.x, y_pos: b.y, width: b.width, height: b.height,
+                                            rows_count: b.rows, cols_count: b.cols
+                                        })
+                                        .select().single();
+                                    
+                                    if (block) {
+                                        const seatsBatch = [];
+                                        for (let r = 0; r < b.rows; r++) {
+                                            for (let c = 0; c < b.cols; c++) {
+                                                const rowLabel = b.rowNaming === 'alphabetic' ? String.fromCharCode(65 + r) : (Number(b.startNumber || 1) + r);
+                                                const colLabel = b.numberingDirection === 'ltr' ? (c + 1) : (b.cols - c);
+                                                seatsBatch.push({
+                                                    block_id: block.id,
+                                                    row_name: String(rowLabel),
+                                                    seat_number: String(colLabel),
+                                                    status: 'available'
+                                                });
+                                            }
+                                        }
+                                        if (seatsBatch.length > 0) await supabase.from('seats').insert(seatsBatch);
+                                    }
+                                }
+                            }
+                        } catch (err) { console.error("New event seating sync failed:", err); }
+                    }
+                    const eventId = newEvent.data?.[0]?.id || newEvent.id;
                     if (isOnline) {
                         try {
                             await createMeetingForEvent({
@@ -3251,58 +3414,58 @@ function OrganiserPanel() {
                     );
                 }
                 case "post_event":
-                    // Step 1: Choose Online or Venue
+                    // Step 1: Choose Category (Physical, Virtual, Sports)
                     if (addEventStep === "select_type") {
                         return (
-                            <div className="flex flex-col items-center justify-center min-h-[60vh] p-8    ">
-                                <div className="text-center mb-12 space-y-3">
-                                    <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-pink-50 border border-pink-100 text-[10px] font-bold uppercase tracking-widest text-pink-500 mb-2">
-                                        <Sparkles size={12} /> Format Selection
+                            <div className="flex flex-col items-center justify-center min-h-[60vh] p-8 animate-in fade-in zoom-in duration-500">
+                                <div className="text-center mb-12 space-y-4">
+                                    <div className="inline-flex items-center gap-2 px-6 py-2 rounded-full bg-pink-50/50 border border-pink-100 text-[10px] font-black uppercase tracking-[0.2em] text-pink-600 mb-2">
+                                        <Sparkles size={14} /> Intelligence Matrix
                                     </div>
-                                    <h2 className="text-4xl font-bold text-slate-900 tracking-tight uppercase">Create New Experience</h2>
-                                    <p className="text-slate-600 font-bold uppercase tracking-widest text-xs h-[10px]">Select the delivery format for your upcoming event</p>
+                                    <h2 className="text-5xl font-black text-slate-900 tracking-tighter uppercase italic leading-none">Initialize Creation</h2>
+                                    <p className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">Select the architectural framework for your experience</p>
                                 </div>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full max-w-5xl">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full max-w-6xl">
                                     <button
-                                        onClick={() => { setPostEvent(pe => ({ ...pe, type: "Online" })); setAddEventStep("form"); }}
-                                        className="group relative bg-white border border-slate-100 rounded-[2.5rem] p-12 flex flex-col items-center gap-8 cursor-pointer overflow-hidden transition-all  hover:shadow-2xl hover:shadow-pink-500/20 hover:border-pink-200 hover:-translate-y-2"
+                                        onClick={() => { setPostEvent(pe => ({ ...pe, type: "Physical Event" })); setAddEventStep("form"); }}
+                                        className="group relative bg-white border border-slate-100 rounded-[3rem] p-12 flex flex-col items-center gap-8 cursor-pointer overflow-hidden transition-all duration-500 hover:shadow-[0_40px_80px_-20px_rgba(236,72,153,0.15)] hover:border-pink-200 hover:-translate-y-2"
                                     >
-                                        <div className="absolute inset-0 bg-gradient-to-br from-pink-500/5 to-purple-600/5 opacity-0 group-hover:opacity-100 transition-opacity " />
-                                        <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-emerald-400 to-green-500 flex items-center justify-center shadow-lg shadow-green-500/30 group-hover:scale-110 transition-transform ">
-                                            <CloudUpload size={48} className="text-white" strokeWidth={1.5} />
+                                        <div className="absolute inset-0 bg-gradient-to-br from-pink-500/5 to-purple-600/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                        <div className="w-24 h-24 rounded-[2rem] bg-gradient-to-br from-orange-400 to-rose-600 flex items-center justify-center shadow-2xl shadow-rose-500/30 group-hover:scale-110 group-hover:rotate-6 transition-all duration-500">
+                                            <MapPin size={48} className="text-white" strokeWidth={1.5} />
                                         </div>
-                                        <div className="text-center space-y-2 z-10">
-                                            <span className="block text-xl font-bold text-slate-900 tracking-tight uppercase group-hover:text-pink-600 transition-colors">Digital Broadcast</span>
-                                            <span className="block text-[10px] font-bold text-slate-600 uppercase tracking-widest">Global Access Event</span>
+                                        <div className="text-center space-y-3 z-10">
+                                            <span className="block text-2xl font-black text-slate-900 tracking-tighter uppercase italic group-hover:text-pink-600 transition-colors">Physical Event</span>
+                                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest leading-relaxed">Venue-based offline events & gatherings</p>
                                         </div>
                                     </button>
                                     <button
-                                        onClick={() => { setPostEvent(pe => ({ ...pe, type: "Venue" })); setAddEventStep("form"); }}
-                                        className="group relative bg-white border border-slate-100 rounded-[2.5rem] p-12 flex flex-col items-center gap-8 cursor-pointer overflow-hidden transition-all  hover:shadow-2xl hover:shadow-orange-500/20 hover:border-orange-200 hover:-translate-y-2"
+                                        onClick={() => { setPostEvent(pe => ({ ...pe, type: "Virtual Event" })); setAddEventStep("form"); }}
+                                        className="group relative bg-white border border-slate-100 rounded-[3rem] p-12 flex flex-col items-center gap-8 cursor-pointer overflow-hidden transition-all duration-500 hover:shadow-[0_40px_80px_-20px_rgba(59,130,246,0.15)] hover:border-blue-200 hover:-translate-y-2"
                                     >
-                                        <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 to-red-600/5 opacity-0 group-hover:opacity-100 transition-opacity " />
-                                        <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center shadow-lg shadow-orange-500/30 group-hover:scale-110 transition-transform ">
-                                            <MapPin size={48} className="text-white" strokeWidth={1.5} />
+                                        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-indigo-600/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                        <div className="w-24 h-24 rounded-[2rem] bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center shadow-2xl shadow-blue-500/30 group-hover:scale-110 group-hover:-rotate-6 transition-all duration-500">
+                                            <CloudUpload size={48} className="text-white" strokeWidth={1.5} />
                                         </div>
-                                        <div className="text-center space-y-2 z-10">
-                                            <span className="block text-xl font-bold text-slate-900 tracking-tight uppercase group-hover:text-orange-600 transition-colors">Physical Venue</span>
-                                            <span className="block text-[10px] font-bold text-slate-600 uppercase tracking-widest">In-person Gathering</span>
+                                        <div className="text-center space-y-3 z-10">
+                                            <span className="block text-2xl font-black text-slate-900 tracking-tighter uppercase italic group-hover:text-blue-600 transition-colors">Virtual Event</span>
+                                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest leading-relaxed">Online webinar, streaming & workshops</p>
                                         </div>
                                     </button>
                                     <button
                                         onClick={() => {
-                                            setPostEvent(pe => ({ ...pe, type: "Sports", category: "Sports", seatingEnabled: false }));
+                                            setPostEvent(pe => ({ ...pe, type: "Sports Event", category: "Sports", seatingEnabled: false }));
                                             setAddEventStep("sports_type");
                                         }}
-                                        className="group relative bg-white border border-slate-100 rounded-[2.5rem] p-12 flex flex-col items-center gap-8 cursor-pointer overflow-hidden transition-all  hover:shadow-2xl hover:shadow-blue-500/20 hover:border-blue-200 hover:-translate-y-2"
+                                        className="group relative bg-white border border-slate-100 rounded-[3rem] p-12 flex flex-col items-center gap-8 cursor-pointer overflow-hidden transition-all duration-500 hover:shadow-[0_40px_80px_-20px_rgba(139,92,246,0.15)] hover:border-purple-200 hover:-translate-y-2"
                                     >
-                                        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-indigo-600/5 opacity-0 group-hover:opacity-100 transition-opacity " />
-                                        <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-blue-400 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/30 group-hover:scale-110 transition-transform ">
+                                        <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-pink-600/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                        <div className="w-24 h-24 rounded-[2rem] bg-gradient-to-br from-purple-500 to-indigo-700 flex items-center justify-center shadow-2xl shadow-purple-500/30 group-hover:scale-110 group-hover:rotate-12 transition-all duration-500">
                                             <Trophy size={48} className="text-white" strokeWidth={1.5} />
                                         </div>
-                                        <div className="text-center space-y-2 z-10">
-                                            <span className="block text-xl font-bold text-slate-900 tracking-tight uppercase group-hover:text-blue-600 transition-colors">Sports Event</span>
-                                            <span className="block text-[10px] font-bold text-slate-600 uppercase tracking-widest">Athletics, Turf, Competitions</span>
+                                        <div className="text-center space-y-3 z-10">
+                                            <span className="block text-2xl font-black text-slate-900 tracking-tighter uppercase italic group-hover:text-purple-600 transition-colors">Sports Event</span>
+                                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest leading-relaxed">Marathon, Cricket, Football & Turf</p>
                                         </div>
                                     </button>
                                 </div>
@@ -3312,57 +3475,92 @@ function OrganiserPanel() {
 
                     if (addEventStep === "sports_type") {
                         const sportsTypes = [
-                            { id: "Marathon", label: "Marathon", sub: "Running & Athletics", icon: Activity, color: "from-blue-400 to-indigo-600" },
-                            { id: "Tournament", label: "Tournament", sub: "Competitions & Leagues", icon: Trophy, color: "from-orange-400 to-red-600" },
-                            { id: "Coaching", label: "Coaching Session", sub: "Training & Sessions", icon: Target, color: "from-purple-400 to-pink-600" },
+                            { id: "Marathon", label: "Marathon", sub: "Running & Athletics", icon: Activity, color: "from-blue-500 to-indigo-600" },
+                            { id: "Tournament", label: "Tournament", sub: "Competitions & Leagues", icon: Trophy, color: "from-orange-500 to-red-600" },
+                            { id: "Coaching", label: "Coaching Session", sub: "Training & Sessions", icon: Target, color: "from-purple-500 to-pink-600" },
+                            { id: "E-Sports", label: "E-Sports", sub: "Digital Competition", icon: Monitor, color: "from-indigo-600 to-purple-700" },
                         ];
 
                         return (
-                            <div className="flex flex-col items-center justify-center min-h-[60vh] p-8    ">
-                                <div className="text-center mb-12 space-y-3">
-                                    <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-50 border border-blue-100 text-[10px] font-bold uppercase tracking-widest text-blue-500 mb-2">
-                                        <Trophy size={12} /> Sports Configuration
+                            <div className="flex flex-col items-center justify-center min-h-[60vh] p-8 animate-in fade-in zoom-in duration-500">
+                                <div className="text-center mb-16 space-y-4">
+                                    <div className="inline-flex items-center gap-2 px-6 py-2 rounded-full bg-blue-50/50 border border-blue-100 text-[10px] font-black uppercase tracking-[0.2em] text-blue-600 mb-2">
+                                        <Trophy size={14} /> Athletics Module
                                     </div>
-                                    <h2 className="text-4xl font-bold text-slate-900 tracking-tight uppercase">Select Sport Type</h2>
-                                    <p className="text-slate-600 font-bold uppercase tracking-widest text-xs h-[10px]">What kind of sports event are you organizing?</p>
+                                    <h2 className="text-5xl font-black text-slate-900 tracking-tighter uppercase italic leading-none">Sports Category</h2>
+                                    <p className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">Define the discipline for your sporting event</p>
                                 </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 w-full max-w-6xl">
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 w-full max-w-7xl">
                                     {sportsTypes.map((st) => (
                                         <button
                                             key={st.id}
                                             onClick={() => {
                                                 if (st.id === "Marathon") {
                                                     setActiveTab("marathon_publish");
-                                                    setAddEventStep("select_type"); // Reset for next time
+                                                    setAddEventStep("select_type"); 
                                                 } else {
                                                     setPostEvent(pe => ({ ...pe, sportType: st.id }));
                                                     setAddEventStep("form");
                                                 }
                                             }}
-                                            className="group relative bg-white border border-slate-100 rounded-[2rem] p-8 flex flex-col items-center gap-6 cursor-pointer overflow-hidden transition-all  hover:shadow-2xl hover:border-blue-200 hover:-translate-y-2"
+                                            className="group relative bg-white border border-slate-100 rounded-[2.5rem] p-10 flex flex-col items-center gap-6 cursor-pointer overflow-hidden transition-all duration-500 hover:shadow-2xl hover:-translate-y-2"
                                         >
-                                            <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${st.color} flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform `}>
-                                                <st.icon size={32} className="text-white" strokeWidth={1.5} />
+                                            <div className={`absolute inset-0 bg-gradient-to-br ${st.color} opacity-0 group-hover:opacity-5 transition-opacity`} />
+                                            <div className={`w-20 h-20 rounded-3xl bg-gradient-to-br ${st.color} flex items-center justify-center shadow-xl group-hover:scale-110 group-hover:rotate-6 transition-all duration-500`}>
+                                                <st.icon size={36} className="text-white" strokeWidth={1.5} />
                                             </div>
-                                            <div className="text-center space-y-1">
-                                                <span className="block text-lg font-bold text-slate-900 tracking-tight uppercase">{st.label}</span>
-                                                <span className="block text-[9px] font-bold text-slate-600 uppercase tracking-widest">{st.sub}</span>
+                                            <div className="text-center space-y-2 z-10">
+                                                <span className="block text-xl font-black text-slate-900 tracking-tighter uppercase italic group-hover:text-blue-600 transition-colors">{st.label}</span>
+                                                <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest leading-relaxed">{st.sub}</p>
                                             </div>
                                         </button>
                                     ))}
                                 </div>
-                                <button
+                                <button 
                                     onClick={() => setAddEventStep("select_type")}
-                                    className="mt-12 flex items-center gap-2 text-slate-600 hover:text-slate-900 font-bold uppercase tracking-widest text-[10px] transition-colors"
+                                    className="mt-16 flex items-center gap-2 text-slate-400 hover:text-slate-900 font-black uppercase tracking-widest text-[10px] transition-colors"
                                 >
-                                    <ArrowLeft size={14} /> Back to Formats
+                                    <ArrowLeft size={14} /> Back to Frameworks
                                 </button>
                             </div>
                         );
                     }
-
-                    // Step 4: Universal Dynamic Form (Used for Marathon and custom events)
-                    if (postEvent.type === "Dynamic") {
+                    // Step 2: Form Dispatcher
+                    if (addEventStep === "form") {
+                        if (postEvent.type === "Physical Event") {
+                            return (
+                                <PhysicalEventForm 
+                                    postEvent={postEvent}
+                                    setPostEvent={setPostEvent}
+                                    onCancel={() => { setPostEvent(getInitialPostEvent()); setAddEventStep("select_type"); }}
+                                    onPublish={publishSeatEvent}
+                                    isEditing={!!editingEvent}
+                                />
+                            );
+                        }
+                        if (postEvent.type === "Virtual Event") {
+                            return (
+                                <VirtualEventForm 
+                                    postEvent={postEvent}
+                                    setPostEvent={setPostEvent}
+                                    onCancel={() => { setPostEvent(getInitialPostEvent()); setAddEventStep("select_type"); }}
+                                    onPublish={publishSeatEvent}
+                                    isEditing={!!editingEvent}
+                                />
+                            );
+                        }
+                        if (postEvent.type === "Sports Event" || postEvent.type === "Sports") {
+                            return (
+                                <SportsEventForm 
+                                    postEvent={postEvent}
+                                    setPostEvent={setPostEvent}
+                                    onCancel={() => { setPostEvent(getInitialPostEvent()); setAddEventStep("select_type"); }}
+                                    onPublish={publishSeatEvent}
+                                    isEditing={!!editingEvent}
+                                />
+                            );
+                        }
+                        // Fallback to Universal for Dynamic/Other
                         return (
                             <UniversalEventForm
                                 postEvent={postEvent}
@@ -3373,846 +3571,8 @@ function OrganiserPanel() {
                             />
                         );
                     }
-
-                    // Step 3: Sports Form (Other sports)
-                    if (postEvent.type === "Sports") {
-                        return (
-                            <SportsEventForm
-                                postEvent={postEvent}
-                                setPostEvent={setPostEvent}
-                                onCancel={() => { setPostEvent(getInitialPostEvent()); setAddEventStep("select_type"); }}
-                                onPublish={publishSeatEvent}
-                                isEditing={!!editingEvent}
-                            />
-                        );
-                    }
-
-                    // Step 2: Online Form
-                    if (postEvent.type === "Online") {
-                        return (
-                            <div className="bg-white p-8 md:p-12 rounded-[2.5rem] border border-slate-100 shadow-2xl shadow-slate-200/40 w-full    ">
-                                <input type="file" ref={thumbnailInputRef} accept="image/*" onChange={handleBannerChange} className="hidden" />
-                                <input type="file" ref={galleryInputRef} accept="image/*" multiple onChange={handleGalleryChange} className="hidden" />
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-                                    {/* Thumbnail Image */}
-                                    <div>
-                                        <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-widest mb-3 pl-1">Cover Image*</label>
-                                        <div className="group relative border-2 border-dashed border-slate-200 rounded-3xl p-6 bg-slate-50 flex flex-col md:flex-row items-center gap-6 hover:bg-pink-50 hover:border-pink-300 transition-all cursor-pointer overflow-hidden min-h-[140px]" onClick={() => thumbnailInputRef.current?.click()}>
-                                            <div className="w-28 h-20 rounded-2xl overflow-hidden bg-white shadow-sm flex-shrink-0 relative z-10 flex items-center justify-center">
-                                                {postEvent.bannerPreview ? (
-                                                    <img src={postEvent.bannerPreview} alt="Thumbnail" className="w-full h-full object-cover" />
-                                                ) : <ImageIcon size={28} className="text-slate-500" />}
-                                            </div>
-                                            <div className="flex flex-col gap-1 z-10 text-center md:text-left">
-                                                <span className="text-[11px] font-bold uppercase tracking-widest group-hover:text-pink-600 transition-colors text-slate-700">Upload Banner</span>
-                                                <span className="text-[9px] font-bold uppercase tracking-widest text-slate-600">1920x1080px (16:9)</span>
-                                            </div>
-                                            <div className="absolute inset-0 bg-gradient-to-r from-pink-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                        </div>
-                                    </div>
-                                    {/* Gallery Images Snippet */}
-                                    <div>
-                                        <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px", color: t.textSub }}>Gallery Images</label>
-                                        <div onClick={() => galleryInputRef.current?.click()} style={{ border: `1px dashed ${t.border}`, borderRadius: "8px", padding: "12px", backgroundColor: t.bg, cursor: "pointer", minHeight: "100px", display: "flex", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
-                                            {(postEvent.galleryPreviews || []).slice(0, 3).map((src, idx) => (
-                                                <img key={idx} src={src} alt="G" style={{ width: "40px", height: "40px", objectFit: "cover", borderRadius: "4px" }} />
-                                            ))}
-                                            <div style={{ width: "40px", height: "40px", borderRadius: "4px", border: `1px dashed ${t.border}`, display: "flex", alignItems: "center", justifyContent: "center", color: t.textSub }}><Plus size={16} /></div>
-                                            <p style={{ fontSize: "11px", color: t.textSub, margin: 0, marginLeft: "auto" }}>1170x570</p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="form-grid-5">
-                                    {renderToggle("Date Type*", "dateType", [{ label: "Single", value: "single" }, { label: "Multiple", value: "multiple" }])}
-                                    {renderToggle("Countdown*", "countdownStatus", [{ label: "Active", value: "active" }, { label: "Inactive", value: "inactive" }])}
-                                    {renderSelect("Status*", "eventStatus", [{ label: "Published", value: "published" }, { label: "Draft", value: "draft" }])}
-                                    {renderSelect("Is Feature*", "isFeature", [{ label: "Yes", value: "Yes" }, { label: "No", value: "No" }])}
-                                    {renderSelect("Exclusive*", "isExclusive", [{ label: "Yes", value: "Yes" }, { label: "No", value: "No" }])}
-                                </div>
-
-                                {postEvent.dateType === "single" ? (
-                                    <div className="form-grid-4">
-                                        {renderInput("Start Date*", "startDate", "date")}
-                                        {renderInput("Start Time*", "startTime", "time")}
-                                        {renderInput("End Date*", "endDate", "date")}
-                                        {renderInput("End Time*", "endTime", "time")}
-                                    </div>
-                                ) : (
-                                    <div style={{ marginBottom: "24px", padding: "24px", border: `2px dashed ${t.border}`, borderRadius: "2rem", backgroundColor: t.cardBg + '50' }}>
-                                        <div className="flex items-center justify-between mb-6">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-500">
-                                                    <Calendar size={20} />
-                                                </div>
-                                                <div>
-                                                    <h4 className="text-lg font-bold text-slate-900 uppercase tracking-tight">Multiple Date/Time Slots</h4>
-                                                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-600">Schedule recurring or multi-day online sessions</p>
-                                                </div>
-                                            </div>
-                                            <button
-                                                type="button"
-                                                onClick={() => setPostEvent(prev => ({ ...prev, dateSlots: [...(prev.dateSlots || []), { date: "", time: "" }] }))}
-                                                className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-blue-600 bg-blue-50 hover:bg-blue-100 px-5 py-3 rounded-xl transition-all border border-blue-200/50 shadow-sm"
-                                            >
-                                                <Plus size={14} /> Add New Slot
-                                            </button>
-                                        </div>
-                                        <div className="space-y-4">
-                                            {(postEvent.dateSlots || []).length === 0 ? (
-                                                <div className="py-12 flex flex-col items-center justify-center text-slate-600 gap-3">
-                                                    <div className="w-16 h-16 rounded-3xl bg-slate-50 flex items-center justify-center border border-slate-100 shadow-inner">
-                                                        <Clock size={32} className="opacity-20" />
-                                                    </div>
-                                                    <p className="text-[11px] font-bold uppercase tracking-widest">No slots added yet.</p>
-                                                </div>
-                                            ) : (postEvent.dateSlots || []).map((slot, idx) => (
-                                                <div key={idx} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-6 items-center bg-white p-5 rounded-3xl border border-slate-100 shadow-sm group hover:border-blue-200 transition-all">
-                                                    <div className="space-y-2">
-                                                        <label className="block text-[9px] font-bold text-slate-600 uppercase tracking-widest pl-1">Slot Date</label>
-                                                        <CalendarPicker
-                                                            value={slot.date}
-                                                            onChange={val => {
-                                                                const ns = [...postEvent.dateSlots]; ns[idx].date = val;
-                                                                setPostEvent(prev => ({ ...prev, dateSlots: ns }));
-                                                            }}
-                                                        />
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <label className="block text-[9px] font-bold text-slate-600 uppercase tracking-widest pl-1">Slot Time</label>
-                                                        <TimePicker
-                                                            value={slot.time}
-                                                            onChange={val => {
-                                                                const ns = [...postEvent.dateSlots]; ns[idx].time = val;
-                                                                setPostEvent(prev => ({ ...prev, dateSlots: ns }));
-                                                            }}
-                                                        />
-                                                    </div>
-                                                    <div className="pt-6">
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => setPostEvent(prev => ({ ...prev, dateSlots: prev.dateSlots.filter((_, i) => i !== idx) }))}
-                                                            className="w-11 h-11 flex items-center justify-center text-red-400 hover:text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-all border border-red-100/50"
-                                                        >
-                                                            <Trash2 size={18} />
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-
-                                <div className="form-grid-4" style={{ alignItems: "end" }}>
-                                    {renderToggle("Tickets*", "ticketLimitType", [{ label: "Unlimited", value: "unlimited" }, { label: "Limited", value: "limited" }])}
-                                    <div style={{ marginBottom: "20px" }}>
-                                        <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px", color: t.textSub }}>Price (INR) *</label>
-                                        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                                            <input type="number" value={postEvent.price || ""} onChange={(e) => setPostEvent(prev => ({ ...prev, price: e.target.value }))} disabled={postEvent.ticketsAreFree} style={{ flex: 1, padding: "8px 12px", borderRadius: "4px", border: `1px solid ${t.border}`, backgroundColor: postEvent.ticketsAreFree ? "#f1f5f9" : t.bg, color: t.textMain, fontSize: "13px" }} />
-                                            <label style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "12px", color: t.textMain, cursor: "pointer", whiteSpace: "nowrap" }}>
-                                                <input type="checkbox" checked={postEvent.ticketsAreFree} onChange={e => setPostEvent(prev => ({ ...prev, ticketsAreFree: e.target.checked, price: e.target.checked ? "0" : prev.price }))} /> Free
-                                            </label>
-                                        </div>
-                                    </div>
-                                    {renderToggle("Early Bird*", "earlyBirdDiscount", [{ label: "Off", value: "disable" }, { label: "On", value: "enable" }])}
-                                </div>
-
-                                <div className="form-grid-2" style={{ marginBottom: "16px", alignItems: "start" }}>
-                                    <div style={{ flex: 1 }}>
-                                        {renderToggle("Meeting Type*", "meetingType", [
-                                            ...(internalMeetingPortalEnabled ? [{ label: "Platform Meeting", value: "internal" }] : []),
-                                            { label: "External Link", value: "external" }
-                                        ])}
-                                        {!internalMeetingPortalEnabled && (
-                                            <div style={{ marginTop: "4px", padding: "8px", backgroundColor: "#fff7ed", border: "1px solid #ffedd5", borderRadius: "8px", display: "flex", alignItems: "center", gap: "6px" }}>
-                                                <AlertCircle size={14} style={{ color: "#f97316" }} />
-                                                <span style={{ fontSize: "10px", fontWeight: 700, color: "#9a3412", textTransform: "uppercase" }}>Internal Portal Disabled by Admin</span>
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div style={{ flex: 1 }}>
-                                        {postEvent.meetingType === "external" || !internalMeetingPortalEnabled ? (
-                                            renderInput("External Meeting Link*", "externalMeetingUrl", "url", "e.g. https://zoom.us/j/...", true)
-                                        ) : (
-                                            <div style={{ padding: "12px", backgroundColor: "#f8fafc", borderRadius: "10px", border: "1px dashed #e2e8f0", display: "flex", alignItems: "center", gap: "10px", marginTop: "24px" }}>
-                                                <div style={{ width: "8px", height: "8px", borderRadius: "full", backgroundColor: "#22c55e", animation: "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite" }} />
-                                                <span style={{ fontSize: "11px", fontWeight: 700, color: "#334155", textTransform: "uppercase", letterSpacing: "0.5px" }}>Safe Platform Meeting Link will be auto-generated</span>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-
-                                <div className="form-grid-2" style={{ marginTop: "12px" }}>
-                                    {renderInput("Event Title*", "title", "text", "Enter Event Name")}
-                                    {renderSelect("Category*", "category", eventCategoryNames.map(n => ({ label: n, value: n })))}
-                                </div>
-
-                                <div style={{ marginBottom: "16px" }}>
-                                    <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px", color: t.textSub }}>Description*</label>
-                                    <textarea value={postEvent.description} onChange={e => setPostEvent(prev => ({ ...prev, description: e.target.value }))} rows={4} style={{ width: "100%", padding: "12px", border: `1px solid ${t.border}`, borderRadius: "4px", backgroundColor: t.bg, color: t.textMain, fontSize: "13px", resize: "vertical", outline: "none" }} />
-                                </div>
-
-                                {renderInput("Refund Policy*", "refundPolicy", "text", "Policy Details")}
-                                <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px" }}>
-                                    {editingEvent && (
-                                        <button onClick={() => {
-                                            setEditingEvent(null);
-                                            setPostEvent(getInitialPostEvent());
-                                            setAddEventStep("select_type");
-                                            setActiveTab("manage_events");
-                                        }} style={{ padding: "12px 24px", backgroundColor: "transparent", color: t.textMain, border: `1px solid ${t.border}`, borderRadius: "8px", fontSize: "14px", fontWeight: 700, cursor: "pointer" }}>
-                                            Cancel Edit
-                                        </button>
-                                    )}
-                                    <button onClick={publishSeatEvent} style={{ padding: "12px 40px", backgroundColor: "#3b82f6", color: "#fff", border: "none", borderRadius: "10px", fontSize: "14px", fontWeight: 700, cursor: "pointer", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)" }}>
-                                        {editingEvent ? "Update Online Event" : "Post Online Event"}
-                                    </button>
-                                </div>
-                            </div>
-                        );
-                    }
-                    // Step 3: Venue Form
-                    return (
-                        <div className="bg-white p-8 md:p-12 rounded-[2.5rem] border border-slate-100 shadow-2xl shadow-slate-200/40 w-full    ">
-                            <input type="file" ref={thumbnailInputRef} accept="image/*" onChange={handleBannerChange} className="hidden" />
-
-                            <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-8">
-                                {/* Section: Image Details (Media Management) */}
-                                <div className="mb-8 p-8 rounded-[2rem] bg-pink-50/30 border border-pink-100/50">
-                                    <div className="flex items-center justify-between mb-8">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-xl bg-pink-500/10 flex items-center justify-center text-pink-500">
-                                                <ImageIcon size={20} />
-                                            </div>
-                                            <h3 className="text-xl font-bold text-slate-900 tracking-tight uppercase">Image Details</h3>
-                                        </div>
-                                        <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-900 text-[9px] font-bold text-white uppercase tracking-widest">
-                                            <Sparkles size={10} className="text-pink-600" /> Premium Assets
-                                        </div>
-                                    </div>
-
-                                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-8">
-                                        {/* Cover / Banner Upload */}
-                                        <div className="space-y-4">
-                                            <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-widest pl-1">Primary Banner (16:9)</label>
-                                            <div
-                                                className="group relative h-64 rounded-[2.5rem] border-2 border-dashed border-slate-200 bg-white overflow-hidden cursor-pointer hover:border-pink-300 transition-all "
-                                                onClick={() => thumbnailInputRef.current?.click()}
-                                            >
-                                                {postEvent.bannerPreview ? (
-                                                    <div className="relative w-full h-full">
-                                                        <img src={postEvent.bannerPreview} alt="Banner" className="w-full h-full object-cover transition-transform  group-hover:scale-110" />
-                                                        <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                                            <div className="px-6 py-2.5 bg-white rounded-full text-[10px] font-bold uppercase tracking-widest text-slate-900 shadow-xl">Replace Banner</div>
-                                                        </div>
-                                                    </div>
-                                                ) : (
-                                                    <div className="w-full h-full flex flex-col items-center justify-center gap-4 bg-slate-50 transition-colors group-hover:bg-pink-50">
-                                                        <div className="w-16 h-16 rounded-3xl bg-white shadow-xl shadow-slate-200 flex items-center justify-center text-slate-500 group-hover:text-pink-600 group-hover:scale-110 transition-all ">
-                                                            <CloudUpload size={32} />
-                                                        </div>
-                                                        <div className="text-center">
-                                                            <span className="block text-xs font-bold text-slate-900 uppercase tracking-tight italic">Click to Upload Banner</span>
-                                                            <span className="block text-[9px] font-bold text-slate-600 uppercase tracking-widest mt-1">Recommended: 1920x1080px</span>
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        {/* Gallery Management */}
-                                        <div className="space-y-4">
-                                            <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-widest pl-1">Photo Gallery (Max 10)</label>
-                                            <div className="grid grid-cols-3 gap-3">
-                                                {postEvent.galleryPreviews?.map((src, idx) => (
-                                                    <div key={idx} className="group relative aspect-[4/3] rounded-2xl overflow-hidden border border-slate-100 shadow-sm">
-                                                        <img src={src} alt={`Gallery ${idx}`} className="w-full h-full object-cover" />
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                const newPreviews = [...postEvent.galleryPreviews];
-                                                                const newImages = [...postEvent.galleryImages];
-                                                                newPreviews.splice(idx, 1);
-                                                                newImages.splice(idx, 1);
-                                                                setPostEvent(p => ({ ...p, galleryPreviews: newPreviews, galleryImages: newImages }));
-                                                            }}
-                                                            className="absolute top-2 right-2 p-1.5 bg-white/90 backdrop-blur-md rounded-lg text-red-500 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
-                                                        >
-                                                            <Trash2 size={14} />
-                                                        </button>
-                                                    </div>
-                                                ))}
-                                                {(postEvent.galleryPreviews?.length || 0) < 10 && (
-                                                    <div
-                                                        onClick={() => galleryInputRef.current?.click()}
-                                                        className="aspect-[4/3] rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-pink-300 hover:bg-pink-50 transition-all group"
-                                                    >
-                                                        <div className="p-2 bg-white rounded-lg shadow-sm text-slate-500 group-hover:text-pink-500 group-hover:rotate-90 transition-all ">
-                                                            <Plus size={20} />
-                                                        </div>
-                                                        <span className="text-[9px] font-bold text-slate-600 uppercase tracking-tight">Add More</span>
-                                                    </div>
-                                                )}
-                                            </div>
-                                            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-center gap-3">
-                                                <AlertCircle size={16} className="text-slate-600" />
-                                                <p className="text-[9px] font-bold text-slate-700 leading-relaxed uppercase tracking-widest">
-                                                    High resolution images help boost sales by up to 40%. Ensure your photos are clear and well-lit.
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                {/* Basic Info */}
-                                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                                    <div className="form-grid-4">
-                                        {renderToggle("Date Rendering*", "dateType", [{ label: "Single", value: "single" }, { label: "Multiple", value: "multiple" }])}
-                                        {renderSelect("Visibility*", "eventStatus", [{ label: "Published", value: "published" }, { label: "Draft", value: "draft" }])}
-                                        {renderSelect("Featured*", "isFeature", [{ label: "Yes", value: "Yes" }, { label: "No", value: "No" }])}
-                                    </div>
-                                    <div className="form-grid-2">
-                                        {renderSelect("Exclusive*", "isExclusive", [{ label: "Yes", value: "Yes" }, { label: "No", value: "No" }])}
-                                        {renderSelect("Environment*", "environment", [{ label: "Indoor", value: "Indoor" }, { label: "Outdoor", value: "Outdoor" }])}
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Section: Event Information (From Screenshot) */}
-                            <div className="mb-8 p-8 rounded-[2rem] bg-slate-50 border border-slate-100">
-                                <div className="flex items-center gap-3 mb-6">
-                                    <div className="w-10 h-10 rounded-xl bg-pink-500/10 flex items-center justify-center text-pink-500">
-                                        <Info size={20} />
-                                    </div>
-                                    <h3 className="text-xl font-bold text-slate-900 tracking-tight uppercase">Event Information</h3>
-                                </div>
-                                <div className="flex flex-wrap gap-4">
-                                    <div className="flex-1 min-w-[200px] bg-white p-4 rounded-2xl border border-slate-100 flex items-center gap-4">
-                                        <div className="w-12 h-12 rounded-xl bg-slate-50 flex items-center justify-center text-slate-600">
-                                            <Users size={20} />
-                                        </div>
-                                        <div className="flex-1">
-                                            <label className="block text-[9px] font-bold text-slate-600 uppercase tracking-widest mb-1">Age Limit</label>
-                                            <select
-                                                value={postEvent.ageLimit}
-                                                onChange={e => setPostEvent(p => ({ ...p, ageLimit: e.target.value }))}
-                                                className="w-full bg-transparent font-bold text-slate-900 outline-none text-sm"
-                                            >
-                                                <option value="All ages">All ages</option>
-                                                <option value="12+">12+</option>
-                                                <option value="16+">16+</option>
-                                                <option value="18+">18+</option>
-                                                <option value="21+">21+</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <div className="flex-1 min-w-[200px] bg-white p-4 rounded-2xl border border-slate-100 flex items-center gap-4">
-                                        <div className="w-12 h-12 rounded-xl bg-slate-50 flex items-center justify-center text-slate-600">
-                                            <Languages size={20} />
-                                        </div>
-                                        <div className="flex-1">
-                                            <label className="block text-[9px] font-bold text-slate-600 uppercase tracking-widest mb-1">Language</label>
-                                            <select
-                                                value={postEvent.language}
-                                                onChange={e => setPostEvent(p => ({ ...p, language: e.target.value }))}
-                                                className="w-full bg-transparent font-bold text-slate-900 outline-none text-sm"
-                                            >
-                                                <option value="English">English</option>
-                                                <option value="Hindi">Hindi</option>
-                                                <option value="Tamil">Tamil</option>
-                                                <option value="Telugu">Telugu</option>
-                                                <option value="Malayalam">Malayalam</option>
-                                                <option value="Kannada">Kannada</option>
-                                                <option value="Others">Others</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <div className="flex-1 min-w-[200px] bg-white p-4 rounded-2xl border border-slate-100 flex items-center gap-4">
-                                        <div className="w-12 h-12 rounded-xl bg-slate-50 flex items-center justify-center text-slate-600">
-                                            <Clock size={20} />
-                                        </div>
-                                        <div className="flex-1">
-                                            <label className="block text-[9px] font-bold text-slate-600 uppercase tracking-widest mb-1">Duration</label>
-                                            <input
-                                                type="text"
-                                                value={postEvent.duration}
-                                                onChange={e => setPostEvent(p => ({ ...p, duration: e.target.value }))}
-                                                placeholder="e.g. 13:00 or 3 Hours"
-                                                className="w-full bg-transparent font-bold text-slate-900 outline-none text-sm"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Section: Venue & Features (From Screenshot) */}
-                            <div className="mb-8 p-8 rounded-[2rem] bg-indigo-50/50 border border-indigo-100/50">
-                                <div className="flex items-center gap-3 mb-6">
-                                    <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-500">
-                                        <Navigation size={20} />
-                                    </div>
-                                    <h3 className="text-xl font-bold text-slate-900 tracking-tight uppercase">Venue & Features</h3>
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div className="bg-white p-5 rounded-3xl border border-indigo-100 flex items-center justify-between">
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-11 h-11 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-500">
-                                                <ShieldCheck size={20} />
-                                            </div>
-                                            <div>
-                                                <span className="block text-[11px] font-bold text-slate-600 uppercase tracking-widest mb-0.5">Safety Control</span>
-                                                <span className="block text-sm font-bold text-slate-900 uppercase">All safety measures enabled</span>
-                                            </div>
-                                        </div>
-                                        <button
-                                            onClick={() => setPostEvent(p => ({ ...p, safetyMeasures: !p.safetyMeasures }))}
-                                            className={`w-12 h-6 rounded-full transition-all  relative ${postEvent.safetyMeasures ? 'bg-indigo-500' : 'bg-slate-200'}`}
-                                        >
-                                            <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform  ${postEvent.safetyMeasures ? 'translate-x-6' : ''}`} />
-                                        </button>
-                                    </div>
-                                    <div className="bg-white p-5 rounded-3xl border border-indigo-100 flex items-center justify-between">
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-11 h-11 rounded-full bg-orange-50 flex items-center justify-center text-orange-500">
-                                                <Armchair size={20} />
-                                            </div>
-                                            <div>
-                                                <span className="block text-[11px] font-bold text-slate-600 uppercase tracking-widest mb-0.5">Seating Arrangement</span>
-                                                <span className="block text-sm font-bold text-slate-900 uppercase">Seating ({postEvent.seatingType})</span>
-                                            </div>
-                                        </div>
-                                        <select
-                                            value={postEvent.seatingType}
-                                            onChange={e => setPostEvent(p => ({ ...p, seatingType: e.target.value }))}
-                                            className="bg-slate-50 text-[10px] font-bold uppercase text-slate-900 p-2 rounded-lg outline-none"
-                                        >
-                                            <option value="FCFS">FCFS</option>
-                                            <option value="Reserved">Reserved</option>
-                                            <option value="Standing">Standing</option>
-                                        </select>
-                                    </div>
-                                    <div className="bg-white p-5 rounded-3xl border border-indigo-100 flex items-center justify-between">
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-11 h-11 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-500">
-                                                <CheckCircle2 size={20} />
-                                            </div>
-                                            <div>
-                                                <span className="block text-[11px] font-bold text-slate-600 uppercase tracking-widest mb-0.5">Reception Mode</span>
-                                                <span className="block text-sm font-bold text-slate-900 uppercase">Mandatory Check-In</span>
-                                            </div>
-                                        </div>
-                                        <button
-                                            onClick={() => setPostEvent(p => ({ ...p, mandatoryCheckin: !p.mandatoryCheckin }))}
-                                            className={`w-12 h-6 rounded-full transition-all  relative ${postEvent.mandatoryCheckin ? 'bg-emerald-500' : 'bg-slate-200'}`}
-                                        >
-                                            <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform  ${postEvent.mandatoryCheckin ? 'translate-x-6' : ''}`} />
-                                        </button>
-                                    </div>
-                                    <div className="bg-white p-5 rounded-3xl border border-indigo-100 flex items-center justify-between">
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-11 h-11 rounded-full bg-blue-50 flex items-center justify-center text-blue-500">
-                                                <Landmark size={20} />
-                                            </div>
-                                            <div>
-                                                <span className="block text-[11px] font-bold text-slate-600 uppercase tracking-widest mb-0.5">Venue Location</span>
-                                                <span className="block text-sm font-bold text-slate-900 uppercase">{postEvent.environment} Event</span>
-                                            </div>
-                                        </div>
-                                        <select
-                                            value={postEvent.environment}
-                                            onChange={e => setPostEvent(p => ({ ...p, environment: e.target.value }))}
-                                            className="bg-slate-50 text-[10px] font-bold uppercase text-slate-900 p-2 rounded-lg outline-none"
-                                        >
-                                            <option value="Indoor">Indoor</option>
-                                            <option value="Outdoor">Outdoor</option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {postEvent.dateType === "single" ? (
-                                <div className="form-grid-4" style={{ marginBottom: "16px" }}>
-                                    {renderInput("Start Date*", "startDate", "date")}
-                                    {renderInput("Start Time*", "startTime", "time")}
-                                    {renderInput("End Date*", "endDate", "date")}
-                                    {renderInput("End Time*", "endTime", "time")}
-                                </div>
-                            ) : (
-                                <div style={{ marginBottom: "24px", padding: "24px", border: `2px dashed ${t.border}`, borderRadius: "2rem", backgroundColor: t.cardBg + '50' }}>
-                                    <div className="flex items-center justify-between mb-6">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-500">
-                                                <Calendar size={20} />
-                                            </div>
-                                            <div>
-                                                <h4 className="text-lg font-bold text-slate-900 uppercase tracking-tight">Multiple Date/Time Slots</h4>
-                                                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-600">Schedule recurring or multi-day sessions</p>
-                                            </div>
-                                        </div>
-                                        <button
-                                            type="button"
-                                            onClick={() => setPostEvent(prev => ({ ...prev, dateSlots: [...(prev.dateSlots || []), { date: "", time: "" }] }))}
-                                            className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-blue-600 bg-blue-50 hover:bg-blue-100 px-5 py-3 rounded-xl transition-all border border-blue-200/50 shadow-sm"
-                                        >
-                                            <Plus size={14} /> Add New Slot
-                                        </button>
-                                    </div>
-                                    <div className="space-y-4">
-                                        {(postEvent.dateSlots || []).length === 0 ? (
-                                            <div className="py-12 flex flex-col items-center justify-center text-slate-600 gap-3">
-                                                <div className="w-16 h-16 rounded-3xl bg-slate-50 flex items-center justify-center border border-slate-100 shadow-inner">
-                                                    <Clock size={32} className="opacity-20" />
-                                                </div>
-                                                <p className="text-[11px] font-bold uppercase tracking-widest">No slots added yet. Start by adding your first schedule.</p>
-                                            </div>
-                                        ) : (postEvent.dateSlots || []).map((slot, idx) => (
-                                            <div key={idx} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-6 items-center bg-white p-5 rounded-3xl border border-slate-100 shadow-sm group hover:border-blue-200 transition-all">
-                                                <div className="space-y-2">
-                                                    <label className="block text-[9px] font-bold text-slate-600 uppercase tracking-widest pl-1">Slot Date</label>
-                                                    <CalendarPicker
-                                                        value={slot.date}
-                                                        onChange={val => {
-                                                            const ns = [...postEvent.dateSlots]; ns[idx].date = val;
-                                                            setPostEvent(prev => ({ ...prev, dateSlots: ns }));
-                                                        }}
-                                                    />
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <label className="block text-[9px] font-bold text-slate-600 uppercase tracking-widest pl-1">Slot Time</label>
-                                                    <TimePicker
-                                                        value={slot.time}
-                                                        onChange={val => {
-                                                            const ns = [...postEvent.dateSlots]; ns[idx].time = val;
-                                                            setPostEvent(prev => ({ ...prev, dateSlots: ns }));
-                                                        }}
-                                                    />
-                                                </div>
-                                                <div className="pt-6">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setPostEvent(prev => ({ ...prev, dateSlots: prev.dateSlots.filter((_, i) => i !== idx) }))}
-                                                        className="w-11 h-11 flex items-center justify-center text-red-400 hover:text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-all border border-red-100/50"
-                                                    >
-                                                        <Trash2 size={18} />
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-
-                            <div className="form-grid-2">
-                                {renderInput("Event Title*", "title", "text", "Name of the event")}
-                                {renderSelect("Category*", "category", eventCategoryNames.map(n => ({ label: n, value: n })))}
-                            </div>
-
-                            {/* Section: Venue & Map (Modernized) */}
-                            <div className="mb-8 p-8 rounded-[2.5rem] bg-indigo-50/30 border border-indigo-100/50">
-                                <div className="flex items-center gap-5 mb-8">
-                                    <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-500">
-                                        <MapPin size={24} />
-                                    </div>
-                                    <div>
-                                        <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Venue & Map</h2>
-                                        <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Where will the magic happen?</p>
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 mb-8">
-                                    <div className="md:col-span-2">
-                                        <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-widest pl-1 mb-2">Venue Name / Building*</label>
-                                        <input 
-                                            type="text"
-                                            value={postEvent.venue || ""}
-                                            onChange={(e) => setPostEvent(prev => ({ ...prev, venue: e.target.value }))}
-                                            className="w-full bg-white border border-slate-200 text-slate-900 text-sm font-semibold px-6 py-4 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-sm transition-all"
-                                            placeholder="e.g. Nehru Stadium"
-                                        />
-                                    </div>
-                                    <div className="md:col-span-2">
-                                        <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-widest pl-1 mb-2">Full Address*</label>
-                                        <input 
-                                            type="text"
-                                            value={postEvent.address || ""}
-                                            onChange={(e) => setPostEvent(prev => ({ ...prev, address: e.target.value }))}
-                                            className="w-full bg-white border border-slate-200 text-slate-900 text-sm font-semibold px-6 py-4 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-sm transition-all"
-                                            placeholder="Building, Street, Area"
-                                        />
-                                    </div>
-                                    
-                                    {renderSelect("Country", "country", COUNTRIES)}
-                                    {renderSelect("State / Province", "state", statesOfSelectedCountry)}
-                                    {postEvent.country === "India" ? (
-                                        <>
-                                            {renderSelect("District", "district", districtsOfSelectedState)}
-                                            {renderSelect("City", "city", citiesOfSelectedDistrict)}
-                                        </>
-                                    ) : (
-                                        renderSelect("City", "city", citiesOfSelectedState)
-                                    )}
-
-                                    <div className="md:col-span-1">
-                                        <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-widest pl-1 mb-2">Pincode / Zip Code</label>
-                                        <input 
-                                            type="text"
-                                            value={postEvent.zipCode || ""}
-                                            onChange={(e) => setPostEvent(prev => ({ ...prev, zipCode: e.target.value }))}
-                                            className="w-full bg-white border border-slate-200 text-slate-900 text-sm font-semibold px-6 py-4 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-sm transition-all"
-                                            placeholder="Auto-fills on City selection"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="space-y-6 pt-6 border-t border-slate-100">
-                                    <div className="flex items-center justify-between">
-                                        <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-widest pl-1">Venue Location (Pin on Map)</label>
-                                        <button 
-                                            type="button"
-                                            onClick={() => {
-                                                if (navigator.geolocation) {
-                                                    setIsGeoLoading(true);
-                                                    navigator.geolocation.getCurrentPosition(async (pos) => {
-                                                        const lat = pos.coords.latitude;
-                                                        const lng = pos.coords.longitude;
-                                                        try {
-                                                            const geocoded = await reverseGeocode(lat, lng);
-                                                            if (geocoded) {
-                                                                setPostEvent(prev => ({ 
-                                                                    ...prev, 
-                                                                    latitude: lat, 
-                                                                    longitude: lng,
-                                                                    address: geocoded.fullAddress || prev.address,
-                                                                    country: geocoded.country || prev.country,
-                                                                    state: geocoded.state || prev.state,
-                                                                    district: geocoded.district || prev.district,
-                                                                    city: geocoded.city || prev.city,
-                                                                    zipCode: geocoded.pincode || prev.zipCode
-                                                                }));
-                                                                showToast("Location Detected & Fields Autofilled!", "success");
-                                                            } else {
-                                                                setPostEvent(prev => ({ ...prev, latitude: lat, longitude: lng }));
-                                                                showToast("GPS Set. Geocoding failed.", "warning");
-                                                            }
-                                                        } catch (err) {
-                                                            setPostEvent(prev => ({ ...prev, latitude: lat, longitude: lng }));
-                                                            showToast("GPS Set. Geocoding failed.", "warning");
-                                                        } finally {
-                                                            setIsGeoLoading(false);
-                                                        }
-                                                    }, (err) => {
-                                                        showToast("GPS Access Denied: " + err.message, "error");
-                                                        setIsGeoLoading(false);
-                                                    }, { enableHighAccuracy: true, timeout: 10000 });
-                                                }
-                                            }}
-                                            className="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 text-[9px] font-black uppercase tracking-widest rounded-xl border border-indigo-100 hover:bg-indigo-600 hover:text-white transition-all disabled:opacity-50"
-                                            disabled={isGeoLoading}
-                                        >
-                                            {isGeoLoading ? <Activity size={14} className="animate-spin" /> : <Target size={14} />} 
-                                            {isGeoLoading ? "Detecting..." : "Detect Current Location"}
-                                        </button>
-                                    </div>
-                                    
-                                    {/* Address Search */}
-                                    <div className="relative group">
-                                        <input 
-                                            type="text"
-                                            placeholder="Search venue or address to center map..."
-                                            className="w-full bg-white border border-slate-200 text-slate-900 text-sm font-semibold px-6 py-4 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-sm transition-all placeholder:text-slate-600"
-                                            onKeyDown={async (e) => {
-                                                if (e.key === 'Enter') {
-                                                    e.preventDefault();
-                                                    const query = e.target.value;
-                                                    if (!query) return;
-                                                    try {
-                                                        const geo = await geocode(query, postEvent.countryCode);
-                                                        if (geo) {
-                                                            setPostEvent(prev => ({ 
-                                                                ...prev, 
-                                                                address: geo.fullAddress || prev.address,
-                                                                country: geo.country || prev.country,
-                                                                state: geo.state || prev.state,
-                                                                city: geo.city || prev.city,
-                                                                zipCode: geo.pincode || prev.zipCode,
-                                                                latitude: geo.lat, 
-                                                                longitude: geo.lng 
-                                                            }));
-                                                        }
-                                                    } catch (err) {
-                                                        console.error("Geocoding error:", err);
-                                                    }
-                                                }
-                                            }}
-                                        />
-                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[9px] font-bold text-slate-600 uppercase tracking-widest opacity-0 group-focus-within:opacity-100 transition-opacity">Press Enter to Search</div>
-                                    </div>
-
-                                    <div className="h-[350px] rounded-[2.5rem] overflow-hidden border-2 border-slate-100 shadow-2xl relative">
-                                        <GoogleInlineMap 
-                                            lat={postEvent.latitude} 
-                                            lng={postEvent.longitude}
-                                            onLocationSelect={async (lat, lng) => {
-                                                setPostEvent(prev => ({ ...prev, latitude: lat, longitude: lng }));
-                                                // Auto-Geocode on pin move
-                                                try {
-                                                    const geocoded = await reverseGeocode(lat, lng);
-                                                    if (geocoded) {
-                                                        setPostEvent(prev => ({
-                                                            ...prev,
-                                                            country: geocoded.country || prev.country,
-                                                            state: geocoded.state || prev.state,
-                                                            district: geocoded.district || prev.district,
-                                                            city: geocoded.city || prev.city,
-                                                            zipCode: geocoded.pincode || prev.zipCode,
-                                                            address: geocoded.fullAddress || prev.address
-                                                        }));
-                                                    }
-                                                } catch (err) {
-                                                    console.error("Auto-geocoding error:", err);
-                                                }
-                                            }}
-                                        />
-                                        <div className="absolute bottom-4 left-4 right-4 bg-white/90 backdrop-blur-md p-3 rounded-2xl border border-slate-100 shadow-lg flex items-center gap-3 z-[100]">
-                                            <div className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center text-white shrink-0">
-                                                <MapPin size={16} />
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest leading-none mb-1">Current Selection</p>
-                                                <p className="text-[10px] font-bold text-slate-900 truncate">
-                                                    {(Number(postEvent.latitude) || 11.0168).toFixed(4)}, {(Number(postEvent.longitude) || 76.9558).toFixed(4)}
-                                                </p>
-                                            </div>
-                                            <div className="text-[8px] font-black text-indigo-500 uppercase tracking-widest bg-indigo-50 px-2 py-1 rounded-md">Live</div>
-                                        </div>
-                                    </div>
-                                    <p className="text-[9px] font-bold text-slate-600 uppercase tracking-widest text-center italic">Pin location on map for automatic directions on the booking page.</p>
-                                </div>
-                            </div>
-
-
-
-                            <div className="bg-white p-8 md:p-12 rounded-[2.5rem] border border-slate-100 shadow-2xl shadow-slate-200/40 w-full     mb-8">
-                                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 border-b border-slate-100 pb-6 gap-4">
-                                    <div>
-                                        <h4 className="text-2xl font-bold text-slate-700 tracking-tight uppercase">Ticketing & Seating</h4>
-                                        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-600 mt-1">Configure event capacity and layout</p>
-                                    </div>
-                                    <div className="w-full md:w-64">
-                                        {renderToggle("", "seatingEnabled", [{ label: "Seats Map", value: true }, { label: "Standard", value: false }])}
-                                    </div>
-                                </div>
-
-                                {postEvent.seatingEnabled !== false ? (
-                                    <div className="space-y-8">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 bg-slate-50 p-8 rounded-3xl border border-slate-100 shadow-inner">
-                                            {renderInput("Seats per Row*", "cols", "number", "e.g. 10")}
-                                            {renderSelect("Seat Map Layout*", "layoutType", [
-                                                { label: "Stage-Based", value: "stage" },
-                                                { label: "Ground-Based", value: "ground" },
-                                                { label: "Rate-Based", value: "rate" },
-                                                { label: "Block / Image Based", value: "block" }
-                                            ])}
-                                            <div className="col-span-full flex items-center gap-2 text-[10px] font-bold text-pink-500 bg-pink-50 p-4 rounded-xl border border-pink-100">
-                                                <Info size={14} /> Total Rows are automatically calculated based on categories below.
-                                            </div>
-                                        </div>
-
-                                        <div className="bg-white rounded-3xl border border-slate-100 p-8 shadow-sm">
-                                            <div className="flex items-center justify-between mb-8">
-                                                <p className="text-[11px] font-bold tracking-widest text-slate-700 uppercase">Seating Categories (VIP, GOLD, SILVER)</p>
-                                                <button type="button" onClick={() => setPostEvent(prev => ({ ...prev, categories: [...(prev.categories || []), { name: "Bronze", price: 200, rows: 2, isFree: false }] }))} className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-pink-600 bg-pink-50 hover:bg-pink-100 px-4 py-2.5 rounded-xl transition-all border border-pink-200/50 shadow-sm">
-                                                    <Plus size={14} /> Add Category
-                                                </button>
-                                            </div>
-
-                                            <div className="flex flex-col gap-4">
-                                                {(postEvent.categories || []).map((cat, idx) => (
-                                                    <div key={idx} className="grid grid-cols-1 md:grid-cols-[2fr_1fr_1.5fr_auto] gap-4 items-center bg-slate-50 p-5 rounded-2xl border border-slate-100 shadow-inner">
-                                                        <input value={cat.name} onChange={e => {
-                                                            const nc = [...postEvent.categories]; nc[idx].name = e.target.value;
-                                                            setPostEvent(prev => ({ ...prev, categories: nc }));
-                                                        }} placeholder="Category Name" className="w-full bg-white border border-slate-200 text-slate-900 text-xs font-bold px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-300 transition-all placeholder:text-slate-500 placeholder:font-medium shadow-sm" />
-
-                                                        <input type="number" value={cat.rows} onChange={e => {
-                                                            const nc = [...postEvent.categories]; nc[idx].rows = e.target.value;
-                                                            setPostEvent(prev => ({ ...prev, categories: nc }));
-                                                        }} placeholder="Rows" className="w-full bg-white border border-slate-200 text-slate-900 text-xs font-bold px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-300 transition-all placeholder:text-slate-500 placeholder:font-medium shadow-sm" />
-
-                                                        <div className="flex bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm focus-within:ring-2 focus-within:ring-pink-500/20 focus-within:border-pink-300 transition-all">
-                                                            <input type="number" value={cat.price} disabled={cat.isFree} onChange={e => {
-                                                                const nc = [...postEvent.categories]; nc[idx].price = e.target.value;
-                                                                setPostEvent(prev => ({ ...prev, categories: nc }));
-                                                            }} placeholder="Price (₹)" className="w-full bg-transparent text-slate-900 text-xs font-bold px-4 py-3 focus:outline-none placeholder:text-slate-500 placeholder:font-medium disabled:opacity-50" />
-                                                            <label className="flex items-center gap-2 px-4 bg-slate-50 border-l border-slate-200 text-[10px] font-bold uppercase text-slate-700 cursor-pointer hover:bg-slate-100 transition-colors">
-                                                                <input type="checkbox" checked={cat.isFree} className="rounded text-pink-500 focus:ring-pink-500 w-3.5 h-3.5 cursor-pointer" onChange={e => {
-                                                                    const nc = [...postEvent.categories]; nc[idx].isFree = e.target.checked;
-                                                                    if (e.target.checked) nc[idx].price = 0;
-                                                                    setPostEvent(prev => ({ ...prev, categories: nc }));
-                                                                }} />Free
-                                                            </label>
-                                                        </div>
-
-                                                        <button type="button" onClick={() => setPostEvent(prev => ({ ...prev, categories: prev.categories.filter((_, i) => i !== idx) }))} className="p-3 text-red-500 hover:text-red-700 bg-white hover:bg-red-50 border border-slate-200 hover:border-red-200 rounded-xl shadow-sm transition-all cursor-pointer">
-                                                            <Trash2 size={16} />
-                                                        </button>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-
-                                        {postEvent.layoutType === "block" ? (
-                                            <div className="mt-8 pt-6 border-t border-slate-100">
-                                                <BlockMapDesigner postEvent={postEvent} setPostEvent={setPostEvent} />
-                                            </div>
-                                        ) : (
-                                            <div className="mt-8 pt-6 border-t border-slate-100">
-                                                <div className="flex justify-between items-center mb-6 pl-2">
-                                                    <p className="text-[12px] font-bold text-slate-800 uppercase tracking-widest">Live Map Preview</p>
-                                                    <span className="text-[9px] text-pink-600 font-bold bg-pink-100/50 border border-pink-200 px-3 py-1 rounded-full uppercase tracking-widest flex items-center gap-1.5 shadow-sm"><Sparkles size={10} /> Real-time Sync</span>
-                                                </div>
-                                                {renderSeatVisualization(postEvent, true)}
-                                            </div>
-                                        )}
-                                    </div>
-                                ) : (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 bg-slate-50 p-8 rounded-3xl border border-slate-100 shadow-inner">
-                                        {renderInput("Total Capacity*", "normalTicketCapacity", "number", "e.g. 500")}
-                                        <div className="mb-6">
-                                            <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-widest mb-3 pl-1">Ticket Price (₹)*</label>
-                                            <div className="flex bg-white border border-slate-100 rounded-2xl overflow-hidden shadow-sm focus-within:ring-2 focus-within:ring-pink-500/20 focus-within:border-pink-300 transition-all">
-                                                <input type="number" value={postEvent.normalTicketPrice || ""} onChange={(e) => setPostEvent(prev => ({ ...prev, normalTicketPrice: e.target.value }))} disabled={postEvent.ticketsAreFree} placeholder="e.g. 499" className="w-full bg-transparent text-slate-900 text-sm font-semibold px-4 py-3 focus:outline-none placeholder:text-slate-500 disabled:bg-slate-50 disabled:text-slate-600" />
-                                                <label className="flex items-center gap-2 px-6 bg-slate-50 border-l border-slate-200 text-[10px] font-bold uppercase text-slate-700 cursor-pointer hover:bg-slate-100 transition-colors">
-                                                    <input type="checkbox" checked={postEvent.ticketsAreFree} className="rounded text-pink-500 focus:ring-pink-500 w-4 h-4 cursor-pointer" onChange={e => setPostEvent(prev => ({ ...prev, ticketsAreFree: e.target.checked, normalTicketPrice: e.target.checked ? "0" : prev.normalTicketPrice }))} /> Free
-                                                </label>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="bg-white p-8 md:p-12 rounded-[2.5rem] border border-slate-100 shadow-2xl shadow-slate-200/40 w-full     mb-8">
-                                <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-widest mb-4 pl-1">Event Description*</label>
-                                <textarea value={postEvent.description} onChange={e => setPostEvent(prev => ({ ...prev, description: e.target.value }))} rows={5} placeholder="Describe the highlights, rules, and vibe of the event..." className="w-full bg-slate-50 border border-slate-100 text-slate-900 text-sm font-medium px-6 py-5 rounded-3xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-300 transition-all placeholder:text-slate-500 shadow-inner resize-y leading-relaxed" />
-                            </div>
-
-                            <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px", marginTop: "24px" }}>
-                                {editingEvent && (
-                                    <button onClick={() => {
-                                        setEditingEvent(null);
-                                        setPostEvent(getInitialPostEvent());
-                                        setAddEventStep("select_type");
-                                        setActiveTab("manage_events");
-                                    }} style={{ padding: "12px 24px", backgroundColor: "transparent", color: "#64748b", border: "1px solid #e2e8f0", borderRadius: "10px", fontSize: "14px", fontWeight: 700, cursor: "pointer" }}>
-                                        Cancel Edit
-                                    </button>
-                                )}
-                                <button onClick={publishSeatEvent} style={{ padding: "12px 48px", background: ACCENT_GRADIENT, backgroundColor: ACCENT_PINK, color: "#fff", border: "none", borderRadius: "10px", fontSize: "15px", fontWeight: 900, cursor: "pointer", boxShadow: "0 14px 28px rgba(236,72,153,0.22)" }}>
-                                    {editingEvent ? "Update Venue Event" : "Publish Event"}
-                                </button>
-                            </div>
-                        </div>
-                    );
+                    return null;
+                    return null;
                 case "seat_map":
                     return (
                         <div style={{ backgroundColor: t.cardBg, padding: "32px", borderRadius: "20px", border: `1px solid ${t.border}` }}>
@@ -4406,8 +3766,36 @@ function OrganiserPanel() {
                             <div style={{ backgroundColor: t.cardBg, padding: "32px", borderRadius: "16px", border: `1px solid ${t.border}`, boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)" }}>
                                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "32px" }}>
                                     <h3 style={{ fontSize: "24px", fontWeight: 800, color: t.textMain, margin: 0 }}>Online & Virtual Events</h3>
-                                    <div style={{ padding: "8px 16px", borderRadius: "8px", backgroundColor: "#22c55e15", border: "1px solid #22c55e30", fontSize: "14px", fontWeight: 700, color: "#22c55e" }}>
-                                        Total: {onlineEvents.length}
+                                    <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                                        <button 
+                                            onClick={() => {
+                                                setEditingEvent(null);
+                                                setPostEvent(getInitialPostEvent());
+                                                setAddEventStep("select_type");
+                                                setActiveTab("post_event");
+                                            }}
+                                            style={{
+                                                padding: "10px 24px",
+                                                borderRadius: "12px",
+                                                backgroundColor: ACCENT_PINK,
+                                                color: "white",
+                                                fontSize: "13px",
+                                                fontWeight: 800,
+                                                textTransform: "uppercase",
+                                                letterSpacing: "0.05em",
+                                                border: "none",
+                                                cursor: "pointer",
+                                                display: "flex",
+                                                alignItems: "center",
+                                                gap: "8px",
+                                                boxShadow: `0 10px 20px -5px ${ACCENT_PINK}40`
+                                            }}
+                                        >
+                                            <Plus size={16} strokeWidth={3} /> Create Online Event
+                                        </button>
+                                        <div style={{ padding: "8px 16px", borderRadius: "8px", backgroundColor: "#22c55e15", border: "1px solid #22c55e30", fontSize: "14px", fontWeight: 700, color: "#22c55e" }}>
+                                            Total: {onlineEvents.length}
+                                        </div>
                                     </div>
                                 </div>
                                 <div style={{ overflowX: "auto" }}>
@@ -5828,7 +5216,17 @@ function OrganiserPanel() {
                                 </button>
                                 {sidebarOpen.eventManagement && (
                                     <div style={{ marginBottom: "8px" }}>
-                                        <button onClick={() => setActiveTab("post_event")} className={`sidebar-dropdown-item ${activeTab === "post_event" ? "active" : ""}`}>Post Event</button>
+                                        <button 
+                                            onClick={() => {
+                                                setEditingEvent(null);
+                                                setPostEvent(getInitialPostEvent());
+                                                setAddEventStep("select_type");
+                                                setActiveTab("post_event");
+                                            }} 
+                                            className={`sidebar-dropdown-item ${activeTab === "post_event" ? "active" : ""}`}
+                                        >
+                                            Create Event
+                                        </button>
                                         <button onClick={() => setActiveTab("manage_events")} className={`sidebar-dropdown-item ${activeTab === "manage_events" ? "active" : ""}`}>Manage Events</button>
                                         <button onClick={() => setActiveTab("venue_events")} className={`sidebar-dropdown-item ${activeTab === "venue_events" ? "active" : ""}`}>Venue Events</button>
                                         <button onClick={() => setActiveTab("online_events")} className={`sidebar-dropdown-item ${activeTab === "online_events" ? "active" : ""}`}>Online Events</button>

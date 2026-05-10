@@ -269,58 +269,7 @@ export default function LeafletMapPicker({
 
   return (
     <div className="relative w-full h-full group/map">
-      {/* ── Floating Search ── */}
-      {showAutocomplete && (
-        <div className="absolute top-4 left-4 right-4 z-[1000] max-w-lg mx-auto">
-          <div className="bg-white/90 backdrop-blur-xl border border-white/20 shadow-2xl rounded-2xl overflow-hidden transition-all focus-within:ring-2 focus-within:ring-[#f84464]/20">
-            <div className="flex items-center gap-3 px-4 py-3.5">
-              <Search size={18} className="text-slate-400" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search exact event venue..."
-                className="flex-1 bg-transparent border-none outline-none text-sm font-bold text-slate-800 placeholder-slate-400"
-              />
-              {searchLoading && <Loader2 size={16} className="animate-spin text-[#f84464]" />}
-              {searchQuery && (
-                <button onClick={() => { setSearchQuery(""); setSuggestions([]); }} className="text-slate-300 hover:text-slate-600">
-                  <X size={16} />
-                </button>
-              )}
-            </div>
-
-            <AnimatePresence>
-              {showSuggestions && suggestions.length > 0 && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  className="border-t border-slate-100 max-h-64 overflow-y-auto"
-                >
-                  {suggestions.map((s, i) => (
-                    <button
-                      key={i}
-                      onClick={() => {
-                        setSearchQuery(s.display);
-                        setShowSuggestions(false);
-                        fetchAddress(s.lat, s.lng);
-                      }}
-                      className="w-full flex items-start gap-3 px-5 py-3.5 text-left hover:bg-slate-50 transition-colors"
-                    >
-                      <MapPin size={14} className="text-[#f84464] mt-1 shrink-0" />
-                      <div>
-                        <p className="text-sm font-bold text-slate-900">{s.name}</p>
-                        <p className="text-[10px] text-slate-400 font-bold uppercase truncate">{s.display}</p>
-                      </div>
-                    </button>
-                  ))}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        </div>
-      )}
+      {/* Search box removed */}
 
       {/* ── Controls ── */}
       <div className="absolute right-4 top-24 z-[1000] flex flex-col gap-2">

@@ -33,7 +33,7 @@ export const INDIAN_STATES = [
 
 export const INDIAN_DISTRICTS = {
     "tamil-nadu": [
-        "chennai", "coimbatore", "madurai", "salem", "trichy", "tiruppur", "erode", "vellore", "thoothukudi", "tirunelveli"
+        "ariyalur", "chengalpattu", "chennai", "coimbatore", "cuddalore", "dharmapuri", "dindigul", "erode", "kallakurichi", "kancheepuram", "kanyakumari", "karur", "krishnagiri", "madurai", "mayiladuthurai", "nagapattinam", "namakkal", "nilgiris", "perambalur", "pudukkottai", "ramanathapuram", "ranipet", "salem", "sivaganga", "tenkasi", "thanjavur", "theni", "thoothukudi", "tiruchirappalli", "tirunelveli", "tirupathur", "tiruppur", "tiruvallur", "tiruvannamalai", "tiruvarur", "vellore", "viluppuram", "virudhunagar"
     ],
     "karnataka": [
         "bangalore", "mysore", "hubli", "mangalore", "belgaum", "gulbarga", "davanagere", "bellary"
