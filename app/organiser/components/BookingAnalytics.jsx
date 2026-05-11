@@ -70,12 +70,32 @@ export default function BookingAnalytics({ events = [], bookings = [], theme = '
     const dashboardRef = useRef(null);
     const [selectedEventId, setSelectedEventId] = useState('all');
     const [isExporting, setIsExporting] = useState(false);
+    const [activeTab, setActiveTab] = useState('insights'); // 'insights' or 'report'
 
     const stats = useMemo(() => {
         const filteredBookings = bookings.filter(b => {
             const matchesEvent = selectedEventId === 'all' || String(b.event_id) === String(selectedEventId);
             const statusOk = ["Confirmed", "Scanned", "Pending"].includes(b.status);
             return matchesEvent && statusOk;
+        });
+
+        // Detailed Report Data Extraction
+        const detailedReport = filteredBookings.map(b => {
+            const details = b.customer_details || {};
+            // Extract common marathon/event fields with fallbacks
+            return {
+                id: b.id,
+                date: new Date(b.created_at).toLocaleDateString(),
+                firstName: details.firstName || details.name?.split(' ')[0] || 'N/A',
+                lastName: details.lastName || details.name?.split(' ').slice(1).join(' ') || 'N/A',
+                email: details.email || b.user_email || 'N/A',
+                phone: details.phone || details.contact || details.mobile || 'N/A',
+                km: details.km || details.distance || details.category || 'N/A',
+                tshirtSize: details.tshirtSize || details.tshirt || details.size || 'N/A',
+                gender: details.gender || 'N/A',
+                status: b.status,
+                amount: Number(b.total_price || b.total_amount || 0)
+            };
         });
 
         const totalRevenue = filteredBookings.reduce((sum, b) => sum + (Number(b.partner_total || b.total_price || b.total_amount) || 0), 0);
@@ -119,6 +139,26 @@ export default function BookingAnalytics({ events = [], bookings = [], theme = '
 
         const eventData = Object.values(eventPerfMap).sort((a, b) => b.revenue - a.revenue).slice(0, 5);
 
+        // Registration Insights Analysis
+        const regFieldCounts = {};
+        filteredBookings.forEach(b => {
+            const details = b.customer_details || {};
+            Object.entries(details).forEach(([key, value]) => {
+                // Ignore standard fields
+                if (['name', 'email', 'phone', 'identifier', 'userId', 'id', 'user_id', 'created_at'].includes(key.toLowerCase())) return;
+                if (!value) return;
+                
+                const label = key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ');
+                if (!regFieldCounts[label]) regFieldCounts[label] = {};
+                regFieldCounts[label][value] = (regFieldCounts[label][value] || 0) + 1;
+            });
+        });
+
+        const regInsights = Object.entries(regFieldCounts).map(([field, values]) => ({
+            field,
+            data: Object.entries(values).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value)
+        }));
+
         return {
             totalRevenue,
             totalGross,
@@ -127,6 +167,8 @@ export default function BookingAnalytics({ events = [], bookings = [], theme = '
             activeEventsCount,
             salesTrendData,
             eventData,
+            regInsights,
+            detailedReport,
             totalBookings: filteredBookings.length,
             averageOrderValue: totalRevenue / (filteredBookings.length || 1),
             ticketsPerBooking: totalTickets / (filteredBookings.length || 1)
@@ -154,16 +196,20 @@ export default function BookingAnalytics({ events = [], bookings = [], theme = '
     };
 
     const handleExportCSV = () => {
-        const headers = ["Date", "Event", "Tickets", "Amount", "Status"];
-        const rows = bookings
-            .filter(b => selectedEventId === 'all' || String(b.event_id) === String(selectedEventId))
-            .map(b => [
-                new Date(b.created_at).toLocaleDateString(),
-                events.find(e => String(e.id) === String(b.event_id))?.title || 'Unknown',
-                b.ticket_count,
-                b.total_price,
-                b.status
-            ]);
+        const headers = ["Order ID", "Date", "First Name", "Last Name", "Email ID", "Contact Number", "KM/Category", "Tshirt Size", "Gender", "Payment Status", "Amount"];
+        const rows = stats.detailedReport.map(r => [
+            r.id,
+            r.date,
+            r.firstName,
+            r.lastName,
+            r.email,
+            `"${r.phone}"`, // Quote phone to prevent Excel truncation
+            r.km,
+            r.tshirtSize,
+            r.gender,
+            r.status,
+            r.amount
+        ]);
 
         const csvContent = "data:text/csv;charset=utf-8," 
             + headers.join(",") + "\n"
@@ -172,59 +218,97 @@ export default function BookingAnalytics({ events = [], bookings = [], theme = '
         const encodedUri = encodeURI(csvContent);
         const link = document.createElement("a");
         link.href = encodedUri;
-        link.download = `bookings-report-${selectedEventId}.csv`;
+        link.download = `registration-report-${Date.now()}.csv`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
     };
 
     const handleExportPDF = () => {
-        const doc = new jsPDF();
+        const doc = new jsPDF('landscape'); // Landscape for more columns
         doc.setFontSize(22);
         doc.setTextColor(59, 130, 246);
-        doc.text("Booking Analytics Summary", 20, 25);
+        doc.text("Registration Detailed Report", 20, 20);
         
         doc.setFontSize(10);
         doc.setTextColor(100, 116, 139);
-        doc.text(`Generated for: ${selectedEventId === 'all' ? 'All Events' : events.find(e => String(e.id) === String(selectedEventId))?.title}`, 20, 35);
-        doc.text(`Date: ${new Date().toLocaleString()}`, 20, 42);
+        doc.text(`Event: ${selectedEventId === 'all' ? 'All Events' : events.find(e => String(e.id) === String(selectedEventId))?.title}`, 20, 30);
+        doc.text(`Generated: ${new Date().toLocaleString()}`, 20, 37);
 
         doc.autoTable({
-            startY: 50,
-            head: [['Metric', 'Overall Value']],
-            body: [
-                ['Total Revenue', `₹${stats.totalRevenue.toLocaleString()}`],
-                ['Tickets Sold', stats.totalTickets.toLocaleString()],
-                ['Active Events', stats.activeEventsCount.toString()],
-                ['Average Order Value', `₹${stats.averageOrderValue.toFixed(2)}`],
-            ],
-            theme: 'grid',
-            headStyles: { fillColor: [59, 130, 246] }
+            startY: 45,
+            head: [["ID", "Name", "Email", "Phone", "KM", "Size", "Gender", "Status"]],
+            body: stats.detailedReport.map(r => [
+                r.id.slice(-6).toUpperCase(),
+                `${r.firstName} ${r.lastName}`,
+                r.email,
+                r.phone,
+                r.km,
+                r.tshirtSize,
+                r.gender,
+                r.status
+            ]),
+            theme: 'striped',
+            headStyles: { fillColor: [59, 130, 246], fontSize: 9 },
+            styles: { fontSize: 8 },
+            margin: { left: 10, right: 10 }
         });
 
-        doc.setFontSize(14);
-        doc.setTextColor(30, 41, 59);
-        doc.text("Top Performance by Event", 20, doc.lastAutoTable.finalY + 15);
+        doc.save(`registrations-${Date.now()}.pdf`);
+    };
 
-        doc.autoTable({
-            startY: doc.lastAutoTable.finalY + 20,
-            head: [['Event Name', 'Tickets', 'Revenue']],
-            body: stats.eventData.map(e => [e.name, e.tickets, `₹${e.revenue.toLocaleString()}`]),
-        });
-
-        doc.save(`analytics-report-${Date.now()}.pdf`);
+    const t = {
+        cardBg: isDark ? 'rgba(30, 41, 59, 0.4)' : '#fff',
+        border: isDark ? '#334155' : '#f1f5f9',
+        textMain: isDark ? '#f8fafc' : '#1e293b',
+        textSub: isDark ? '#94a3b8' : '#64748b',
+        accent: '#3b82f6'
     };
 
     return (
         <div ref={dashboardRef} style={{ padding: '2px', fontFamily: "'Inter', sans-serif" }}>
-            <div className="no-export" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px', flexWrap: 'wrap', gap: '20px' }}>
+            <div className="no-export" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px', flexWrap: 'wrap', gap: '20px' }}>
                 <div>
-                    <h2 style={{ fontSize: '28px', fontWeight: 900, color: isDark ? '#f8fafc' : '#0f172a', marginBottom: '8px', letterSpacing: '-1.0px' }}>
+                    <h2 style={{ fontSize: '28px', fontWeight: 900, color: t.textMain, marginBottom: '8px', letterSpacing: '-1.0px' }}>
                         Performance Outlook
                     </h2>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981' }} />
-                        <span style={{ fontSize: '14px', fontWeight: 600, color: isDark ? '#94a3b8' : '#64748b' }}>Live data stream active</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ display: 'flex', background: isDark ? '#1e293b' : '#f1f5f9', padding: '4px', borderRadius: '12px', gap: '4px' }}>
+                            <button 
+                                onClick={() => setActiveTab('insights')}
+                                style={{ 
+                                    padding: '6px 16px', 
+                                    borderRadius: '8px', 
+                                    fontSize: '12px', 
+                                    fontWeight: 800, 
+                                    cursor: 'pointer', 
+                                    border: 'none',
+                                    transition: '0.2s',
+                                    background: activeTab === 'insights' ? (isDark ? '#3b82f6' : '#fff') : 'transparent',
+                                    color: activeTab === 'insights' ? (isDark ? '#fff' : '#3b82f6') : t.textSub,
+                                    boxShadow: activeTab === 'insights' && !isDark ? '0 4px 6px -1px rgba(0,0,0,0.1)' : 'none'
+                                }}
+                            >
+                                <Activity size={14} style={{ marginRight: '6px', verticalAlign: 'middle' }} /> Visual Insights
+                            </button>
+                            <button 
+                                onClick={() => setActiveTab('report')}
+                                style={{ 
+                                    padding: '6px 16px', 
+                                    borderRadius: '8px', 
+                                    fontSize: '12px', 
+                                    fontWeight: 800, 
+                                    cursor: 'pointer', 
+                                    border: 'none',
+                                    transition: '0.2s',
+                                    background: activeTab === 'report' ? (isDark ? '#3b82f6' : '#fff') : 'transparent',
+                                    color: activeTab === 'report' ? (isDark ? '#fff' : '#3b82f6') : t.textSub,
+                                    boxShadow: activeTab === 'report' && !isDark ? '0 4px 6px -1px rgba(0,0,0,0.1)' : 'none'
+                                }}
+                            >
+                                <Calendar size={14} style={{ marginRight: '6px', verticalAlign: 'middle' }} /> Detailed Report
+                            </button>
+                        </div>
                     </div>
                 </div>
                 
@@ -234,7 +318,7 @@ export default function BookingAnalytics({ events = [], bookings = [], theme = '
                         background: isDark ? 'rgba(30, 41, 59, 0.5)' : '#fff', 
                         padding: '6px', 
                         borderRadius: '16px', 
-                        border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`,
+                        border: `1px solid ${t.border}`,
                         alignItems: 'center',
                         boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
                     }}>
@@ -247,7 +331,7 @@ export default function BookingAnalytics({ events = [], bookings = [], theme = '
                                 border: 'none', 
                                 fontSize: '14px', 
                                 fontWeight: 700, 
-                                color: isDark ? '#f8fafc' : '#1e293b',
+                                color: t.textMain,
                                 outline: 'none',
                                 padding: '8px 12px',
                                 cursor: 'pointer',
@@ -261,8 +345,7 @@ export default function BookingAnalytics({ events = [], bookings = [], theme = '
 
                     <div style={{ display: 'flex', gap: '10px' }}>
                         <button 
-                            onClick={handleExportPNG}
-                            disabled={isExporting}
+                            onClick={handleExportCSV}
                             style={{ 
                                 display: 'flex', 
                                 alignItems: 'center', 
@@ -270,15 +353,14 @@ export default function BookingAnalytics({ events = [], bookings = [], theme = '
                                 padding: '12px 20px', 
                                 background: isDark ? '#1e293b' : '#fff', 
                                 color: isDark ? '#f8fafc' : '#1e293b', 
-                                border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`,
+                                border: `1px solid ${t.border}`,
                                 borderRadius: '16px',
                                 fontSize: '13px',
                                 fontWeight: 800,
-                                cursor: 'pointer',
-                                transition: 'all 0.2s'
+                                cursor: 'pointer'
                             }}
                         >
-                            {isExporting ? 'Generating...' : <><ImageIcon size={18} /> Snapshot</>}
+                            <Download size={18} /> Excel (CSV)
                         </button>
                         <button 
                             onClick={handleExportPDF}
@@ -294,8 +376,7 @@ export default function BookingAnalytics({ events = [], bookings = [], theme = '
                                 fontSize: '13px',
                                 fontWeight: 800,
                                 cursor: 'pointer',
-                                boxShadow: '0 10px 20px -5px rgba(59, 130, 246, 0.4)',
-                                transition: 'all 0.2s'
+                                boxShadow: '0 10px 20px -5px rgba(59, 130, 246, 0.4)'
                             }}
                         >
                             <Download size={18} /> Export PDF
@@ -304,234 +385,175 @@ export default function BookingAnalytics({ events = [], bookings = [], theme = '
                 </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px', marginBottom: '40px' }}>
-                <MetricCard 
-                    title="Partner Net Yield" 
-                    value={`₹${stats.totalRevenue.toLocaleString()}`} 
-                    icon={DollarSign} 
-                    trend="up" 
-                    trendValue="12.5%" 
-                    color="#3b82f6"
-                    isDark={isDark}
-                />
-                <MetricCard 
-                    title="Extra Yield (2%)" 
-                    value={`₹${stats.totalBonus.toLocaleString()}`} 
-                    color="#10b981"
-                    isDark={isDark}
-                />
-                <MetricCard 
-                    title="Gross User Paid" 
-                    value={`₹${stats.totalGross.toLocaleString()}`} 
-                    icon={Activity} 
-                    color="#8b5cf6"
-                    isDark={isDark}
-                />
-                <MetricCard 
-                    title="Active Campaigns" 
-                    value={stats.activeEventsCount} 
-                    icon={Calendar} 
-                    color="#ec4899"
-                    isDark={isDark}
-                />
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(450px, 1fr))', gap: '32px', marginBottom: '32px' }}>
-                <motion.div 
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    style={{ 
-                        background: isDark ? 'rgba(30, 41, 59, 0.4)' : '#fff',
-                        padding: '32px',
-                        borderRadius: '32px',
-                        border: `1px solid ${isDark ? '#334155' : '#f1f5f9'}`,
-                        height: '450px',
-                        boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)'
-                    }}
-                >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
-                        <div>
-                            <h3 style={{ fontSize: '18px', fontWeight: 900, color: isDark ? '#f8fafc' : '#1e293b', marginBottom: '4px' }}>Revenue velocity</h3>
-                            <p style={{ fontSize: '13px', color: isDark ? '#94a3b8' : '#64748b' }}>Daily revenue generation (30d window)</p>
+            <AnimatePresence mode="wait">
+                {activeTab === 'insights' ? (
+                    <motion.div 
+                        key="insights"
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: 20 }}
+                    >
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px', marginBottom: '40px' }}>
+                            <MetricCard title="Partner Net Yield" value={`₹${stats.totalRevenue.toLocaleString()}`} icon={DollarSign} trend="up" trendValue="12.5%" color="#3b82f6" isDark={isDark} />
+                            <MetricCard title="Extra Yield (2%)" value={`₹${stats.totalBonus.toLocaleString()}`} icon={Zap} color="#10b981" isDark={isDark} />
+                            <MetricCard title="Gross User Paid" value={`₹${stats.totalGross.toLocaleString()}`} icon={Activity} color="#8b5cf6" isDark={isDark} />
+                            <MetricCard title="Active Campaigns" value={stats.activeEventsCount} icon={Calendar} color="#ec4899" isDark={isDark} />
                         </div>
-                        <Activity size={24} style={{ color: '#3b82f6' }} />
-                    </div>
 
-                    <ResponsiveContainer width="100%" height="80%">
-                        <AreaChart data={stats.salesTrendData}>
-                            <defs>
-                                <linearGradient id="revenueFill" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
-                                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                                </linearGradient>
-                            </defs>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? '#334155' : '#f1f5f9'} />
-                            <XAxis 
-                                dataKey="date" 
-                                axisLine={false} 
-                                tickLine={false} 
-                                tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 600 }}
-                                minTickGap={30}
-                            />
-                            <YAxis 
-                                axisLine={false} 
-                                tickLine={false} 
-                                tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 600 }}
-                                tickFormatter={(val) => `₹${val >= 1000 ? val/1000 + 'k' : val}`}
-                            />
-                            <Tooltip 
-                                contentStyle={{ 
-                                    background: isDark ? '#0f172a' : '#fff', 
-                                    border: 'none',
-                                    borderRadius: '16px',
-                                    boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
-                                    padding: '12px 16px'
-                                }}
-                                itemStyle={{ color: '#3b82f6', fontWeight: 800, fontSize: '14px' }}
-                                labelStyle={{ color: '#94a3b8', fontWeight: 600, fontSize: '11px', marginBottom: '4px' }}
-                            />
-                            <Area 
-                                type="monotone" 
-                                dataKey="revenue" 
-                                stroke="#3b82f6" 
-                                strokeWidth={4} 
-                                fillOpacity={1} 
-                                fill="url(#revenueFill)" 
-                                animationDuration={2000}
-                            />
-                        </AreaChart>
-                    </ResponsiveContainer>
-                </motion.div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(450px, 1fr))', gap: '32px', marginBottom: '32px' }}>
+                            <div style={{ background: t.cardBg, padding: '32px', borderRadius: '32px', border: `1px solid ${t.border}`, height: '450px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
+                                    <div>
+                                        <h3 style={{ fontSize: '18px', fontWeight: 900, color: t.textMain, marginBottom: '4px' }}>Revenue velocity</h3>
+                                        <p style={{ fontSize: '13px', color: t.textSub }}>Daily revenue generation (30d window)</p>
+                                    </div>
+                                    <Activity size={24} style={{ color: '#3b82f6' }} />
+                                </div>
+                                <ResponsiveContainer width="100%" height="80%">
+                                    <AreaChart data={stats.salesTrendData}>
+                                        <defs>
+                                            <linearGradient id="revenueFill" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                                                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                                            </linearGradient>
+                                        </defs>
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={t.border} />
+                                        <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 600 }} minTickGap={30} />
+                                        <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 600 }} tickFormatter={(val) => `₹${val >= 1000 ? val/1000 + 'k' : val}`} />
+                                        <Tooltip contentStyle={{ background: isDark ? '#0f172a' : '#fff', border: 'none', borderRadius: '16px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)', padding: '12px 16px' }} itemStyle={{ color: '#3b82f6', fontWeight: 800, fontSize: '14px' }} />
+                                        <Area type="monotone" dataKey="revenue" stroke="#3b82f6" strokeWidth={4} fillOpacity={1} fill="url(#revenueFill)" animationDuration={2000} />
+                                    </AreaChart>
+                                </ResponsiveContainer>
+                            </div>
 
-                <motion.div 
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    style={{ 
-                        background: isDark ? 'rgba(30, 41, 59, 0.4)' : '#fff',
-                        padding: '32px',
-                        borderRadius: '32px',
-                        border: `1px solid ${isDark ? '#334155' : '#f1f5f9'}`,
-                        height: '450px',
-                        boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)'
-                    }}
-                >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
-                        <div>
-                            <h3 style={{ fontSize: '18px', fontWeight: 900, color: isDark ? '#f8fafc' : '#1e293b', marginBottom: '4px' }}>Top Performing</h3>
-                            <p style={{ fontSize: '13px', color: isDark ? '#94a3b8' : '#64748b' }}>Revenue comparison by top 5 events</p>
+                            <div style={{ background: t.cardBg, padding: '32px', borderRadius: '32px', border: `1px solid ${t.border}`, height: '450px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
+                                    <div>
+                                        <h3 style={{ fontSize: '18px', fontWeight: 900, color: t.textMain, marginBottom: '4px' }}>Top Performing</h3>
+                                        <p style={{ fontSize: '13px', color: t.textSub }}>Revenue comparison by top 5 events</p>
+                                    </div>
+                                    <BarChart3 size={24} style={{ color: '#8b5cf6' }} />
+                                </div>
+                                <ResponsiveContainer width="100%" height="80%">
+                                    <BarChart data={stats.eventData} layout="vertical" margin={{ left: 20 }}>
+                                        <XAxis type="number" hide />
+                                        <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} width={120} tick={{ fill: t.textMain, fontSize: 12, fontWeight: 800 }} />
+                                        <Tooltip cursor={{ fill: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)' }} contentStyle={{ background: isDark ? '#0f172a' : '#fff', border: 'none', borderRadius: '16px', padding: '12px' }} />
+                                        <Bar dataKey="revenue" radius={[0, 20, 20, 0]} barSize={24} animationDuration={1500}>
+                                            {stats.eventData.map((entry, index) => (
+                                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} fillOpacity={0.8} />
+                                            ))}
+                                        </Bar>
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
                         </div>
-                        <BarChart3 size={24} style={{ color: '#8b5cf6' }} />
-                    </div>
 
-                    <ResponsiveContainer width="100%" height="80%">
-                        <BarChart data={stats.eventData} layout="vertical" margin={{ left: 20 }}>
-                            <XAxis type="number" hide />
-                            <YAxis 
-                                dataKey="name" 
-                                type="category" 
-                                axisLine={false} 
-                                tickLine={false} 
-                                width={120}
-                                tick={{ fill: isDark ? '#f8fafc' : '#1e293b', fontSize: 12, fontWeight: 800 }}
-                            />
-                            <Tooltip 
-                                cursor={{ fill: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)' }}
-                                contentStyle={{ 
-                                    background: isDark ? '#0f172a' : '#fff', 
-                                    border: 'none',
-                                    borderRadius: '16px',
-                                    padding: '12px'
-                                }}
-                            />
-                            <Bar dataKey="revenue" radius={[0, 20, 20, 0]} barSize={24} animationDuration={1500}>
-                                {stats.eventData.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} fillOpacity={0.8} />
-                                ))}
-                            </Bar>
-                        </BarChart>
-                    </ResponsiveContainer>
-                </motion.div>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '32px' }}>
-                 <div style={{ 
-                    background: isDark ? 'rgba(30, 41, 59, 0.4)' : '#fff',
-                    padding: '32px',
-                    borderRadius: '32px',
-                    border: `1px solid ${isDark ? '#334155' : '#f1f5f9'}`,
-                }}>
-                    <h4 style={{ fontSize: '16px', fontWeight: 900, color: isDark ? '#f8fafc' : '#1e293b', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <PieIcon size={20} className="text-pink-500" /> Market share
-                    </h4>
-                    <div style={{ height: '240px', position: 'relative' }}>
-                        <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                                <Pie
-                                    data={stats.eventData}
-                                    innerRadius={70}
-                                    outerRadius={95}
-                                    paddingAngle={8}
-                                    dataKey="tickets"
-                                    stroke="none"
-                                >
-                                    {stats.eventData.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        {stats.regInsights && stats.regInsights.length > 0 && (
+                            <div style={{ marginTop: '48px' }}>
+                                <h3 style={{ fontSize: '20px', fontWeight: 900, color: t.textMain, marginBottom: '24px' }}>Registration Insights</h3>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px' }}>
+                                    {stats.regInsights.map((insight, idx) => (
+                                        <div key={idx} style={{ background: t.cardBg, padding: '28px', borderRadius: '28px', border: `1px solid ${t.border}` }}>
+                                            <h4 style={{ fontSize: '12px', fontWeight: 800, color: t.textSub, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '20px' }}>{insight.field}</h4>
+                                            <div style={{ height: '200px' }}>
+                                                <ResponsiveContainer width="100%" height="100%">
+                                                    <BarChart data={insight.data}>
+                                                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 700 }} />
+                                                        <YAxis hide />
+                                                        <Tooltip contentStyle={{ background: isDark ? '#0f172a' : '#fff', border: 'none', borderRadius: '16px' }} />
+                                                        <Bar dataKey="value" radius={[8, 8, 0, 0]} barSize={32}>
+                                                            {insight.data.map((entry, index) => (
+                                                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} fillOpacity={0.8} />
+                                                            ))}
+                                                        </Bar>
+                                                    </BarChart>
+                                                </ResponsiveContainer>
+                                            </div>
+                                        </div>
                                     ))}
-                                </Pie>
-                                <Tooltip />
-                            </PieChart>
-                        </ResponsiveContainer>
-                        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
-                            <div style={{ fontSize: '24px', fontWeight: 900, color: isDark ? '#f8fafc' : '#0f172a' }}>{stats.totalTickets}</div>
-                            <div style={{ fontSize: '10px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase' }}>Sold</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div style={{ 
-                    background: isDark ? 'rgba(30, 41, 59, 0.4)' : '#fff',
-                    padding: '32px',
-                    borderRadius: '32px',
-                    border: `1px solid ${isDark ? '#334155' : '#f1f5f9'}`,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'space-between'
-                }}>
-                    <div>
-                        <h4 style={{ fontSize: '16px', fontWeight: 900, color: isDark ? '#f8fafc' : '#1e293b', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <Activity size={20} className="text-emerald-500" /> Operational Efficiency
-                        </h4>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '12px', borderBottom: `1px solid ${isDark ? '#334155' : '#f1f5f9'}` }}>
-                                <span style={{ fontSize: '14px', fontWeight: 600, color: isDark ? '#94a3b8' : '#64748b' }}>Rev. Per Booking</span>
-                                <span style={{ fontSize: '16px', fontWeight: 900, color: isDark ? '#f8fafc' : '#1e293b' }}>₹{stats.averageOrderValue.toFixed(0)}</span>
+                                </div>
                             </div>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '12px', borderBottom: `1px solid ${isDark ? '#334155' : '#f1f5f9'}` }}>
-                                <span style={{ fontSize: '14px', fontWeight: 600, color: isDark ? '#94a3b8' : '#64748b' }}>Cart Density</span>
-                                <span style={{ fontSize: '16px', fontWeight: 900, color: isDark ? '#f8fafc' : '#1e293b' }}>{stats.ticketsPerBooking.toFixed(1)} <span style={{ fontSize: '11px', fontWeight: 600, color: '#94a3b8' }}>tkt/ord</span></span>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div style={{ 
-                        marginTop: '32px', 
-                        padding: '20px', 
-                        borderRadius: '24px', 
-                        background: 'linear-gradient(to right, rgba(59, 130, 246, 0.05), rgba(139, 92, 246, 0.05))', 
-                        border: '1px dashed rgba(59, 130, 246, 0.2)' 
-                    }}>
-                        <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-                            <Zap size={22} style={{ color: '#f59e0b', marginTop: '2px' }} />
+                        )}
+                    </motion.div>
+                ) : (
+                    <motion.div 
+                        key="report"
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -20 }}
+                        style={{ background: t.cardBg, borderRadius: '32px', border: `1px solid ${t.border}`, overflow: 'hidden' }}
+                    >
+                        <div style={{ padding: '32px', borderBottom: `1px solid ${t.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <div>
-                                <p style={{ fontSize: '13px', fontWeight: 900, color: isDark ? '#f8fafc' : '#0f172a', margin: '0 0 6px 0', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Growth Signal</p>
-                                <p style={{ fontSize: '12px', color: isDark ? '#94a3b8' : '#64748b', margin: 0, lineHeight: 1.6 }}>
-                                    Your peak interaction occurs at **8 PM**. Schedule your campaign announcements 30 minutes before this window for maximum conversion.
-                                </p>
+                                <h3 style={{ fontSize: '20px', fontWeight: 900, color: t.textMain, margin: 0 }}>Detailed Registration Manifest</h3>
+                                <p style={{ fontSize: '13px', color: t.textSub, margin: '4px 0 0' }}>Comprehensive list of all participant registrations and metadata</p>
+                            </div>
+                            <div style={{ fontSize: '14px', fontWeight: 800, color: '#3b82f6', background: '#3b82f615', padding: '8px 16px', borderRadius: '12px' }}>
+                                {stats.detailedReport.length} Total Records
                             </div>
                         </div>
-                    </div>
-                </div>
-            </div>
+                        
+                        <div style={{ overflowX: 'auto' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                                <thead>
+                                    <tr style={{ backgroundColor: isDark ? 'rgba(30, 41, 59, 0.6)' : '#f8fafc' }}>
+                                        <th style={{ padding: '16px 24px', fontSize: '12px', fontWeight: 800, color: t.textSub, textTransform: 'uppercase' }}>Participant</th>
+                                        <th style={{ padding: '16px 24px', fontSize: '12px', fontWeight: 800, color: t.textSub, textTransform: 'uppercase' }}>Contact info</th>
+                                        <th style={{ padding: '16px 24px', fontSize: '12px', fontWeight: 800, color: t.textSub, textTransform: 'uppercase' }}>Details</th>
+                                        <th style={{ padding: '16px 24px', fontSize: '12px', fontWeight: 800, color: t.textSub, textTransform: 'uppercase' }}>Category/KM</th>
+                                        <th style={{ padding: '16px 24px', fontSize: '12px', fontWeight: 800, color: t.textSub, textTransform: 'uppercase' }}>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {stats.detailedReport.map((row, i) => (
+                                        <tr key={i} style={{ borderBottom: `1px solid ${t.border}`, transition: '0.2s' }}>
+                                            <td style={{ padding: '20px 24px' }}>
+                                                <div style={{ fontSize: '14px', fontWeight: 800, color: t.textMain }}>{row.firstName} {row.lastName}</div>
+                                                <div style={{ fontSize: '11px', color: t.textSub, marginTop: '2px' }}>Order: {row.id.slice(-8).toUpperCase()}</div>
+                                            </td>
+                                            <td style={{ padding: '20px 24px' }}>
+                                                <div style={{ fontSize: '13px', fontWeight: 600, color: t.textMain }}>{row.email}</div>
+                                                <div style={{ fontSize: '12px', color: t.textSub, marginTop: '2px' }}>{row.phone}</div>
+                                            </td>
+                                            <td style={{ padding: '20px 24px' }}>
+                                                <div style={{ display: 'flex', gap: '8px' }}>
+                                                    <span style={{ fontSize: '11px', fontWeight: 800, color: '#8b5cf6', background: '#8b5cf615', padding: '4px 8px', borderRadius: '6px' }}>Size: {row.tshirtSize}</span>
+                                                    <span style={{ fontSize: '11px', fontWeight: 800, color: '#ec4899', background: '#ec489915', padding: '4px 8px', borderRadius: '6px' }}>{row.gender}</span>
+                                                </div>
+                                            </td>
+                                            <td style={{ padding: '20px 24px' }}>
+                                                <div style={{ fontSize: '14px', fontWeight: 800, color: '#3b82f6' }}>{row.km}</div>
+                                                <div style={{ fontSize: '11px', color: t.textSub, marginTop: '2px' }}>{row.date}</div>
+                                            </td>
+                                            <td style={{ padding: '20px 24px' }}>
+                                                <span style={{ 
+                                                    fontSize: '11px', 
+                                                    fontWeight: 900, 
+                                                    padding: '6px 12px', 
+                                                    borderRadius: '100px',
+                                                    background: row.status === 'Confirmed' ? '#dcfce7' : '#fee2e2',
+                                                    color: row.status === 'Confirmed' ? '#16a34a' : '#ef4444',
+                                                    textTransform: 'uppercase',
+                                                    letterSpacing: '0.5px'
+                                                }}>
+                                                    {row.status}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                            {stats.detailedReport.length === 0 && (
+                                <div style={{ padding: '80px', textAlign: 'center', color: t.textSub }}>
+                                    <Users size={48} style={{ marginBottom: '16px', opacity: 0.3 }} />
+                                    <p style={{ fontSize: '16px', fontWeight: 700 }}>No registration data found for this selection</p>
+                                </div>
+                            )}
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }

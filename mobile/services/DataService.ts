@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase';
  * Unified Data Service to ensure consistent data fetching and structures
  * between web and mobile.
  */
-export const DataService = {
+const DataService = {
   /**
    * Fetches all active events with consistent filtering and ordering.
    */
@@ -130,7 +130,7 @@ export const DataService = {
 /**
  * Shared Auth Service
  */
-export const AuthService = {
+const AuthService = {
   async signIn(email: string, otp: string) {
     return await supabase.auth.verifyOtp({ email, token: otp, type: 'email' });
   },
@@ -147,7 +147,7 @@ export const AuthService = {
 /**
  * Shared Booking Service
  */
-export const BookingService = {
+const BookingService = {
   async createBooking(bookingData: any) {
     const { data, error } = await supabase.from('bookings').insert(bookingData).select().single();
     if (error) throw error;
@@ -159,3 +159,6 @@ export const BookingService = {
     return data;
   }
 };
+
+export { DataService, AuthService, BookingService };
+export default DataService;

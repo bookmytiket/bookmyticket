@@ -353,9 +353,9 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
                 longitude: Number(eventData.map_location.lng),
                 address: eventData.map_location.address,
                 description: eventData.description,
-                end_date: eventData.event_end_date,
-                end_time: eventData.event_end_time,
-                expiry_date: eventData.expiry_date,
+                end_date: eventData.event_end_date || null,
+                end_time: eventData.event_end_time || null,
+                expiry_date: eventData.expiry_date || null,
                 price: categories.length > 0 ? Math.min(...categories.map(c => Number(c.price) || 0)) : 0,
                 dynamic_config: {
                     // Simplified categories for booking sidebar price display
@@ -369,7 +369,11 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
                         gender_category: c.gender_category || 'All',
                         slots_total: Number(c.slots_total) || 100
                     })),
-                    registrationForm: customFields.map(f => ({
+                    form_fields: customFields.map(f => ({
+                        ...f,
+                        options: Array.isArray(f.options) ? f.options.filter(Boolean) : f.options
+                    })),
+                    registrationForm: customFields.map(f => ({ // keep for legacy backwards compatibility
                         ...f,
                         options: Array.isArray(f.options) ? f.options.filter(Boolean) : f.options
                     })),
@@ -502,6 +506,29 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
                         marathon_id 
                     }))
                 );
+            }
+
+            // 6. Sync Registration Fields
+            try {
+                // Delete existing active fields to replace them
+                await supabase.from('registration_fields').delete().eq('event_id', marathon_id);
+                if (customFields.length > 0) {
+                    await supabase.from('registration_fields').insert(
+                        customFields.map((f, i) => ({
+                            event_id: marathon_id,
+                            field_key: f.label.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, ''),
+                            label: f.label,
+                            field_type: f.type || 'text',
+                            options: Array.isArray(f.options) ? f.options.filter(Boolean) : (f.options ? f.options.split(',').map(s => s.trim()) : null),
+                            is_required: !!f.required,
+                            sort_order: i,
+                            is_active: true
+                        }))
+                    );
+                }
+            } catch (regErr) {
+                console.warn("[MarathonForm] Registration fields sync error:", regErr.message);
+                // Safe to ignore if table doesn't exist yet
             }
 
             showToast(`Marathon ${newStatus === 'Published' ? 'Published' : 'Saved'}!`, "success");

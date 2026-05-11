@@ -39,7 +39,7 @@ import {
 } from 'lucide-react-native';
 import { getFeeBreakdown, resolveFeeSettings } from '@/lib/feeBreakdown';
 import VisualSeatPicker from '@/components/VisualSeatPicker';
-import DataService from '@/services/DataService';
+import { DataService } from '../../services/DataService';
 
 export default function BookEventScreen() {
   const colorScheme = useColorScheme() ?? 'light';
@@ -236,11 +236,27 @@ export default function BookEventScreen() {
   };
 
   useEffect(() => {
-    if (id) {
-        DataService.getVenueLayouts(id).then(data => {
-            setVenueLayouts(data || []);
-        });
-    }
+    const fetchLayouts = async () => {
+        if (!id) return;
+        try {
+            // Safety check for DataService availability
+            if (DataService && typeof DataService.getVenueLayouts === 'function') {
+                const data = await DataService.getVenueLayouts(id);
+                setVenueLayouts(data || []);
+            } else {
+                console.warn('DataService.getVenueLayouts is not available in book.tsx');
+                // Fallback: try to fetch directly if service is missing
+                const { data, error } = await supabase
+                    .from('venue_layouts')
+                    .select('*, seat_blocks(*)')
+                    .eq('event_id', id);
+                if (!error && data) setVenueLayouts(data);
+            }
+        } catch (err) {
+            console.error('Error fetching venue layouts in book.tsx:', err);
+        }
+    };
+    fetchLayouts();
   }, [id]);
   const dynamicConfig = safeParse(event?.dynamic_config) || {};
   const ticketsData = safeParse(event?.tickets);

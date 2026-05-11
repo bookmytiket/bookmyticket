@@ -446,6 +446,7 @@ function OrganiserPanel() {
     // Stages: mfa, kyc_docs, kyc_form, pending, approved
     const [currentStage, setCurrentStage] = useState("loading");
     const [activeTab, setActiveTab] = useState("dashboard");
+    const [viewingBookingDetails, setViewingBookingDetails] = useState(null);
     const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
     const [currentDate, setCurrentDate] = useState(new Date());
     const [selectedDate, setSelectedDate] = useState(new Date());
@@ -1501,8 +1502,8 @@ function OrganiserPanel() {
             subtitle: postEvent.subtitle || undefined,
             date: firstSlot.date || today,
             expiry_date: postEvent.expiryDate || null,
-            end_date: postEvent.endDate || null,
-            end_time: postEvent.endTime || null,
+            end_date: postEvent.endDate || postEvent.end_date || null,
+            end_time: postEvent.endTime || postEvent.end_time || null,
             time: firstSlot.time || "TBA",
             img: imgUrl,
             banner_preview: typeof postEvent.bannerPreview === "string" ? postEvent.bannerPreview : undefined,
@@ -1595,6 +1596,7 @@ function OrganiserPanel() {
             dynamic_config: {
                 ...(postEvent.dynamic_config || {}),
                 marathonCategories: postEvent.marathonCategories || [],
+                form_fields: postEvent.dynamic_config?.form_fields || (postEvent.dynamic_config || {}).form_fields || [],
                 virtualConfig: isOnline ? {
                     chatEnabled: !!postEvent.chatEnabled,
                     recordingEnabled: !!postEvent.recordingEnabled,
@@ -3929,6 +3931,7 @@ function OrganiserPanel() {
                                                     <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Tickets</th>
                                                     <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Amount</th>
                                                     <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Status</th>
+                                                    <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Details</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -3945,16 +3948,36 @@ function OrganiserPanel() {
                                                         <td style={{ padding: "20px 16px", fontSize: "14px", fontWeight: 700 }}>{b.ticket_count || b.ticketCount}</td>
                                                         <td style={{ padding: "20px 16px", fontSize: "15px", fontWeight: 800, color: "#22c55e" }}>₹{(b.total_price || b.totalPrice || 0).toLocaleString()}</td>
                                                         <td style={{ padding: "20px 16px", borderRadius: "0 12px 12px 0" }}>
-                                                            <span style={{
-                                                                padding: "6px 14px",
-                                                                borderRadius: "100px",
-                                                                fontSize: "11px",
-                                                                fontWeight: 800,
-                                                                backgroundColor: b.status === "Confirmed" ? "#22c55e20" : b.status === "Scanned" ? "#22c55e20" : b.status === "Pending" ? "#f59e0b20" : "#ef444420",
-                                                                color: b.status === "Confirmed" ? "#22c55e" : b.status === "Scanned" ? "#22c55e" : b.status === "Pending" ? "#f59e0b" : "#ef4444"
-                                                            }}>
-                                                                {b.status === "Scanned" ? "CHECKED IN" : (b.status ? b.status.toUpperCase() : "UNKNOWN")}
-                                                            </span>
+                                                            <div style={{ display: 'flex', gap: '8px' }}>
+                                                                <span style={{
+                                                                    padding: "6px 14px",
+                                                                    borderRadius: "100px",
+                                                                    fontSize: "11px",
+                                                                    fontWeight: 800,
+                                                                    backgroundColor: b.status === "Confirmed" ? "#22c55e20" : b.status === "Scanned" ? "#22c55e20" : b.status === "Pending" ? "#f59e0b20" : "#ef444420",
+                                                                    color: b.status === "Confirmed" ? "#22c55e" : b.status === "Scanned" ? "#22c55e" : b.status === "Pending" ? "#f59e0b" : "#ef4444"
+                                                                }}>
+                                                                    {b.status === "Scanned" ? "CHECKED IN" : (b.status ? b.status.toUpperCase() : "UNKNOWN")}
+                                                                </span>
+                                                                <button 
+                                                                    onClick={() => setViewingBookingDetails(b)}
+                                                                    style={{ 
+                                                                        padding: "6px 12px", 
+                                                                        borderRadius: "8px", 
+                                                                        border: `1px solid ${t.border}`, 
+                                                                        background: t.cardBg, 
+                                                                        color: t.textMain, 
+                                                                        fontSize: "10px", 
+                                                                        fontWeight: 800, 
+                                                                        cursor: "pointer",
+                                                                        display: 'flex',
+                                                                        alignItems: 'center',
+                                                                        gap: '4px'
+                                                                    }}
+                                                                >
+                                                                    <Info size={12} /> INFO
+                                                                </button>
+                                                            </div>
                                                         </td>
                                                     </tr>
                                                 ))}
@@ -4216,6 +4239,7 @@ function OrganiserPanel() {
                                                     <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Event</th>
                                                     <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Attendee</th>
                                                     <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Status</th>
+                                                    <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Details</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -4229,10 +4253,18 @@ function OrganiserPanel() {
                                                             <div style={{ fontSize: "14px", fontWeight: 600 }}>{b.user_name || b.userName || b.customer_details?.name || "Guest User"}</div>
                                                             <div style={{ fontSize: "12px", color: t.textSub }}>{b.customer_details?.email || b.customer_email || b.user_id || b.userId}</div>
                                                         </td>
-                                                        <td style={{ padding: "16px", borderRadius: "0 12px 12px 0" }}>
+                                                        <td style={{ padding: "16px" }}>
                                                             <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#22c55e", fontSize: "13px", fontWeight: 700 }}>
                                                                 <CheckCircle size={16} /> Authenticated
                                                             </div>
+                                                        </td>
+                                                        <td style={{ padding: "16px", borderRadius: "0 12px 12px 0" }}>
+                                                            <button 
+                                                                onClick={() => setViewingBookingDetails(b)}
+                                                                style={{ padding: "6px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, background: t.cardBg, color: t.textMain, fontSize: "10px", fontWeight: 800, cursor: "pointer", display: 'flex', alignItems: 'center', gap: '4px' }}
+                                                            >
+                                                                <Info size={12} /> INFO
+                                                            </button>
                                                         </td>
                                                     </tr>
                                                 ))}
@@ -5130,6 +5162,63 @@ function OrganiserPanel() {
                                     style={{ flex: 1, padding: "12px", borderRadius: "10px", backgroundColor: "#3b82f6", color: "#fff", border: "none", fontWeight: 700, cursor: "pointer", opacity: postLoading ? 0.7 : 1, transition: "0.2s" }}
                                 >
                                     {postLoading ? "Saving..." : "Update Account"}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Registration Details Modal */}
+                {viewingBookingDetails && (
+                    <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.8)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1100 }}>
+                        <div style={{ backgroundColor: t.cardBg, padding: "32px", borderRadius: "32px", width: "100%", maxWidth: "550px", border: `1px solid ${t.border}`, boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)", position: 'relative', overflow: 'hidden' }}>
+                            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '6px', background: 'linear-gradient(90deg, #ec4899, #8b5cf6)' }} />
+                            
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "24px" }}>
+                                <div>
+                                    <h3 style={{ fontSize: "22px", fontWeight: 900, color: t.textMain, margin: 0, textTransform: 'uppercase', letterSpacing: '-0.5px' }}>Registration Details</h3>
+                                    <p style={{ fontSize: "12px", color: t.textSub, margin: "4px 0 0", fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px' }}>Order #{viewingBookingDetails.id.slice(-8).toUpperCase()}</p>
+                                </div>
+                                <button onClick={() => setViewingBookingDetails(null)} style={{ width: '40px', height: '40px', borderRadius: '12px', background: t.bg, border: `1px solid ${t.border}`, color: t.textSub, cursor: "pointer", display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={20} /></button>
+                            </div>
+
+                            <div style={{ backgroundColor: t.bg, borderRadius: '20px', padding: '24px', border: `1px solid ${t.border}`, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', maxHeight: '60vh', overflowY: 'auto' }}>
+                                <div style={{ gridColumn: 'span 2', paddingBottom: '12px', borderBottom: `1px dashed ${t.border}` }}>
+                                    <p style={{ margin: 0, fontSize: "10px", fontWeight: 800, color: '#ec4899', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>Event Name</p>
+                                    <p style={{ margin: 0, fontSize: "15px", fontWeight: 800, color: t.textMain }}>{viewingBookingDetails.event_name || viewingBookingDetails.eventName}</p>
+                                </div>
+
+                                {Object.entries(viewingBookingDetails.customer_details || {}).map(([key, value]) => {
+                                    if (!value) return null;
+                                    const label = key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ');
+                                    return (
+                                        <div key={key}>
+                                            <p style={{ margin: 0, fontSize: "10px", fontWeight: 800, color: t.textSub, textTransform: "uppercase", letterSpacing: "1px", marginBottom: "4px" }}>{label}</p>
+                                            <p style={{ margin: 0, fontSize: "14px", fontWeight: 700, color: t.textMain, wordBreak: 'break-word' }}>{String(value)}</p>
+                                        </div>
+                                    );
+                                })}
+
+                                {viewingBookingDetails.selected_seats && viewingBookingDetails.selected_seats.length > 0 && (
+                                    <div style={{ gridColumn: 'span 2', marginTop: '12px', paddingTop: '12px', borderTop: `1px dashed ${t.border}` }}>
+                                        <p style={{ margin: 0, fontSize: "10px", fontWeight: 800, color: t.textSub, textTransform: "uppercase", letterSpacing: "1px", marginBottom: "8px" }}>Selected Seats</p>
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                                            {viewingBookingDetails.selected_seats.map((seat, idx) => (
+                                                <span key={idx} style={{ padding: '4px 10px', backgroundColor: '#ec489915', color: '#ec4899', borderRadius: '8px', fontSize: '11px', fontWeight: 800, border: '1px solid #ec489930' }}>
+                                                    {seat.id} ({seat.catName})
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div style={{ marginTop: "32px" }}>
+                                <button 
+                                    onClick={() => setViewingBookingDetails(null)} 
+                                    style={{ width: "100%", padding: "16px", borderRadius: "16px", backgroundColor: t.textMain, color: t.cardBg, border: "none", fontWeight: 900, fontSize: '13px', textTransform: 'uppercase', letterSpacing: '2px', cursor: "pointer", transition: "0.2s shadow", boxShadow: `0 10px 20px -10px ${t.textMain}60` }}
+                                >
+                                    Close Details
                                 </button>
                             </div>
                         </div>

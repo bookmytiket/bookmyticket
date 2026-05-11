@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView, Dimensions, ActivityIndicator } from 'react-native';
 import { MotiView, AnimatePresence } from 'moti';
 import { supabase } from '@/lib/supabase';
-import { DataService } from '@/services/DataService';
+import { DataService } from '../services/DataService';
 import { ChevronLeft, CheckCircle2, XCircle } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 

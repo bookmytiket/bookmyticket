@@ -303,6 +303,32 @@ export default function CheckoutClient({ id }) {
 
             if (error) throw error;
 
+            // ─── Save structured runner identity to runner_registrations ───
+            try {
+                await fetch('/api/runner-registration', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        eventId:       String(event.id),
+                        bookingId:     booking.id,
+                        userId:        user.id,
+                        identity: {
+                            fullName: regData['Full Name'] || regData.fullName || user.name || '',
+                            email:    regData['Email Address'] || regData.email || user.identifier || user.email || '',
+                            phone:    regData['Phone Number'] || regData.phone || user.phone || '',
+                            dob:      regData['Date of Birth'] || regData.dob || '',
+                            gender:   regData['Gender'] || regData.gender || '',
+                        },
+                        details:       regData,
+                        category:      selectedPackageName || '',
+                        paymentStatus: isFree ? 'paid' : 'pending',
+                    })
+                });
+            } catch (regErr) {
+                console.warn('[runner-registration] Save failed (non-critical):', regErr);
+            }
+            // ─────────────────────────────────────────────────────────────
+
             if (isFree) {
                 setLastBooking({
                     id: booking.id,
