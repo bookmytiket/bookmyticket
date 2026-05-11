@@ -8,7 +8,7 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 export async function POST(request) {
   try {
-    const { name, email, password, organiserId } = await request.json();
+    const { name, email, password, organiserId, mobile, assignedEventId, expiryDate } = await request.json();
 
     if (!supabaseAdmin) {
       return NextResponse.json({ error: 'Supabase Admin client not configured' }, { status: 500 });
@@ -20,7 +20,7 @@ export async function POST(request) {
       email,
       password,
       email_confirm: true,
-      user_metadata: { full_name: name, role: 'staff' }
+      user_metadata: { full_name: name, role: 'staff', assigned_event_id: assignedEventId }
     });
 
     if (authError) {
@@ -36,7 +36,7 @@ export async function POST(request) {
         // Update metadata/password to match the new intent
         await supabaseAdmin.auth.admin.updateUserById(userId, {
             password,
-            user_metadata: { full_name: name, role: 'staff' }
+            user_metadata: { full_name: name, role: 'staff', assigned_event_id: assignedEventId }
         });
       } else {
         throw authError;
@@ -58,8 +58,6 @@ export async function POST(request) {
 
     if (profileError) throw profileError;
 
-    if (profileError) throw profileError;
-
     // 3. Create Staff Entry
     const staffPayload = {
         id: userId,
@@ -67,6 +65,9 @@ export async function POST(request) {
         organiser_id: organiserId,
         name,
         email,
+        mobile,
+        assigned_event_id: assignedEventId,
+        expiry_date: expiryDate,
         role: 'staff',
         is_active: true,
         permissions: []
@@ -115,17 +116,41 @@ export async function PATCH(request) {
 
 export async function PUT(request) {
     try {
-      const { auth_user_id, password } = await request.json();
+      const { id, auth_user_id, password, name, mobile, assignedEventId, expiryDate } = await request.json();
   
       if (!supabaseAdmin) throw new Error('Admin client missing');
   
-      const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(
-        auth_user_id,
-        { password }
-      );
+      // 1. Update Auth User if password or metadata changed
+      const authUpdates = {};
+      if (password) authUpdates.password = password;
+      if (name || assignedEventId) {
+          authUpdates.user_metadata = { 
+              full_name: name, 
+              assigned_event_id: assignedEventId 
+          };
+      }
+
+      if (Object.keys(authUpdates).length > 0) {
+          const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(
+            auth_user_id,
+            authUpdates
+          );
+          if (authError) throw authError;
+      }
   
-      if (authError) throw authError;
-  
+      // 2. Update staff table
+      const { error: dbError } = await supabaseAdmin
+        .from('staff')
+        .update({ 
+            name, 
+            mobile, 
+            assigned_event_id: assignedEventId, 
+            expiry_date: expiryDate 
+        })
+        .eq('id', id);
+
+      if (dbError) throw dbError;
+
       return NextResponse.json({ success: true });
     } catch (error) {
       return NextResponse.json({ error: error.message }, { status: 400 });

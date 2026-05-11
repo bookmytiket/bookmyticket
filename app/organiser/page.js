@@ -589,7 +589,7 @@ function OrganiserPanel() {
     const [supportTicketsList, setSupportTicketsList] = useState([]);
     const [supportTicketForm, setSupportTicketForm] = useState({ email: "", subject: "", description: "", attachmentFileName: "" });
     const [showStaffModal, setShowStaffModal] = useState(false);
-    const [staffFormData, setStaffFormData] = useState({ name: "", email: "", password: "" });
+    const [staffFormData, setStaffFormData] = useState({ name: "", email: "", password: "", mobile: "", assignedEventId: "", expiryDate: "" });
     const [editingStaffId, setEditingStaffId] = useState(null);
     const [postLoading, setPostLoading] = useState(false);
     const [deletingStaffId, setDeletingStaffId] = useState(null);
@@ -4744,7 +4744,7 @@ function OrganiserPanel() {
                                         <p style={{ fontSize: "14px", color: t.textSub, marginTop: "4px" }}>Manage staff access for the mobile scanner application.</p>
                                     </div>
                                     <button
-                                        onClick={() => { setEditingStaffId(null); setStaffFormData({ name: "", email: "", password: "" }); setShowStaffModal(true); }}
+                                        onClick={() => { setEditingStaffId(null); setStaffFormData({ name: "", email: "", password: "", mobile: "", assignedEventId: "", expiryDate: "" }); setShowStaffModal(true); }}
                                         style={{ backgroundColor: "#3b82f6", color: "#fff", padding: "12px 24px", borderRadius: "10px", border: "none", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}
                                     >
                                         <Plus size={20} /> Add Staff
@@ -4765,9 +4765,9 @@ function OrganiserPanel() {
                                             <thead>
                                                 <tr style={{ borderBottom: `1px solid ${t.border}` }}>
                                                     <th style={{ textAlign: "left", padding: "16px", color: t.textSub, fontSize: "13px", fontWeight: 800, textTransform: "uppercase" }}>Staff Member</th>
-                                                    <th style={{ textAlign: "left", padding: "16px", color: t.textSub, fontSize: "13px", fontWeight: 800, textTransform: "uppercase" }}>Username/Email</th>
-                                                    <th style={{ textAlign: "left", padding: "16px", color: t.textSub, fontSize: "13px", fontWeight: 800, textTransform: "uppercase" }}>Password</th>
-                                                    <th style={{ textAlign: "left", padding: "16px", color: t.textSub, fontSize: "13px", fontWeight: 800, textTransform: "uppercase" }}>Created</th>
+                                                    <th style={{ textAlign: "left", padding: "16px", color: t.textSub, fontSize: "13px", fontWeight: 800, textTransform: "uppercase" }}>Contact</th>
+                                                    <th style={{ textAlign: "left", padding: "16px", color: t.textSub, fontSize: "13px", fontWeight: 800, textTransform: "uppercase" }}>Assigned Event</th>
+                                                    <th style={{ textAlign: "left", padding: "16px", color: t.textSub, fontSize: "13px", fontWeight: 800, textTransform: "uppercase" }}>Active</th>
                                                     <th style={{ textAlign: "right", padding: "16px", color: t.textSub, fontSize: "13px", fontWeight: 800, textTransform: "uppercase" }}>Actions</th>
                                                 </tr>
                                             </thead>
@@ -4780,7 +4780,23 @@ function OrganiserPanel() {
                                                                 <span style={{ fontWeight: 700, color: t.textMain }}>{s.name}</span>
                                                             </div>
                                                         </td>
-                                                        <td style={{ padding: "16px", color: t.textMain, fontWeight: 600 }}>{s.email}</td>
+                                                        <td style={{ padding: "16px" }}>
+                                                            <div style={{ fontWeight: 600, color: t.textMain }}>{s.email}</div>
+                                                            <div style={{ fontSize: "11px", color: t.textSub }}>{s.mobile || "No Mobile"}</div>
+                                                        </td>
+                                                        <td style={{ padding: "16px" }}>
+                                                            <div style={{ 
+                                                                display: "inline-block", 
+                                                                padding: "4px 10px", 
+                                                                borderRadius: "6px", 
+                                                                backgroundColor: s.assigned_event_id ? "#3b82f610" : "#f1f5f9",
+                                                                color: s.assigned_event_id ? "#3b82f6" : t.textSub,
+                                                                fontSize: "11px",
+                                                                fontWeight: 700
+                                                            }}>
+                                                                {s.assigned_event_id ? (eventsData.find(e => e.id === s.assigned_event_id)?.title || "Event Assigned") : "Global Access"}
+                                                            </div>
+                                                        </td>
                                                         <td style={{ padding: "16px" }}>
                                                             <div
                                                                 onClick={async () => {
@@ -4800,11 +4816,11 @@ function OrganiserPanel() {
                                                                 <div className={`w-3 h-3 bg-white rounded-full transition-transform  ${s.is_active ? 'translate-x-5' : 'translate-x-0'}`} />
                                                             </div>
                                                         </td>
-                                                        <td style={{ padding: "16px", color: t.textSub, fontSize: "13px" }}>{new Date(s.created_at || s.createdAt).toLocaleDateString()}</td>
+
                                                         <td style={{ padding: "16px", textAlign: "right" }}>
                                                             <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", paddingRight: "8px" }}>
                                                                 <button
-                                                                    onClick={() => { setEditingStaffId(s.id); setStaffFormData({ name: s.name, email: s.email, password: s.password }); setShowStaffModal(true); }}
+                                                                    onClick={() => { setEditingStaffId(s.id); setStaffFormData({ name: s.name, email: s.email, password: s.password, mobile: s.mobile || "", assignedEventId: s.assigned_event_id || "", expiryDate: s.expiry_date || "" }); setShowStaffModal(true); }}
                                                                     style={{ border: "none", background: "#3b82f610", color: "#3b82f6", padding: "10px", borderRadius: "10px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
                                                                     title="Edit Staff"
                                                                 >
@@ -5036,9 +5052,41 @@ function OrganiserPanel() {
                                     />
                                 </div>
                                 <div>
-                                    <label style={{ display: "block", fontSize: "13px", fontWeight: 600, marginBottom: "8px", color: t.textMain }}>Password</label>
+                                    <label style={{ display: "block", fontSize: "13px", fontWeight: 600, marginBottom: "8px", color: t.textMain }}>Mobile Number</label>
                                     <input
-                                        type="text"
+                                        type="tel"
+                                        placeholder="e.g. +91 98765 43210"
+                                        value={staffFormData.mobile}
+                                        onChange={(e) => setStaffFormData(prev => ({ ...prev, mobile: e.target.value }))}
+                                        style={{ width: "100%", padding: "14px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }}
+                                    />
+                                </div>
+                                <div>
+                                    <label style={{ display: "block", fontSize: "13px", fontWeight: 600, marginBottom: "8px", color: t.textMain }}>Assigned Event (Restricted Access)</label>
+                                    <select
+                                        value={staffFormData.assignedEventId}
+                                        onChange={(e) => setStaffFormData(prev => ({ ...prev, assignedEventId: e.target.value }))}
+                                        style={{ width: "100%", padding: "14px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, outline: "none" }}
+                                    >
+                                        <option value="">All Events (Global Scanner)</option>
+                                        {eventsData.map(ev => (
+                                            <option key={ev.id} value={ev.id}>{ev.title}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label style={{ display: "block", fontSize: "13px", fontWeight: 600, marginBottom: "8px", color: t.textMain }}>Access Expiry Date</label>
+                                    <input
+                                        type="date"
+                                        value={staffFormData.expiryDate ? staffFormData.expiryDate.split('T')[0] : ""}
+                                        onChange={(e) => setStaffFormData(prev => ({ ...prev, expiryDate: e.target.value }))}
+                                        style={{ width: "100%", padding: "14px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }}
+                                    />
+                                </div>
+                                <div>
+                                    <label style={{ display: "block", fontSize: "13px", fontWeight: 600, marginBottom: "8px", color: t.textMain }}>Password {editingStaffId && "(Leave blank to keep current)"}</label>
+                                    <input
+                                        type="password"
                                         placeholder="Set access password"
                                         value={staffFormData.password}
                                         onChange={(e) => setStaffFormData(prev => ({ ...prev, password: e.target.value }))}
@@ -5058,7 +5106,7 @@ function OrganiserPanel() {
                                             // Call our custom Admin API
                                             const method = editingStaffId ? 'PUT' : 'POST';
                                             const body = editingStaffId
-                                                ? { auth_user_id: staffAccounts.find(s => s.id === editingStaffId)?.auth_user_id, password: staffFormData.password }
+                                                ? { id: editingStaffId, auth_user_id: staffAccounts.find(s => s.id === editingStaffId)?.auth_user_id, ...staffFormData }
                                                 : { ...staffFormData, organiserId: user.id };
 
                                             const res = await fetch('/api/organiser/staff', {

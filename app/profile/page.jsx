@@ -56,6 +56,8 @@ export default function ProfilePage() {
                 eventLocation: b.events?.venue || b.events?.location || b.events?.address || "Venue",
                 ticketCount: b.ticket_count,
                 totalPrice: b.total_price,
+                eventId: b.event_id,
+                meetingUrl: b.meeting_url,
                 _id: b.id
             }))));
             

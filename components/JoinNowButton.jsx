@@ -14,15 +14,25 @@ import { useRouter } from 'next/navigation';
 export default function JoinNowButton({ eventId, className = "" }) {
     const { user } = useAuth();
     const router = useRouter();
-    const userId = user?.identifier || user?.email;
+    const userId = user?.id; // Use UUID from user object
  
-    const { data: event, loading: loadingEvent } = useSupabaseQuery('events', (q) => q.eq('id', eventId).single(), [eventId]);
-    const { data: booking, loading: loadingBooking } = useSupabaseQuery('bookings', 
-        (q) => userId ? q.eq('user_id', userId).eq('event_id', eventId).in('status', ['Confirmed', 'Paid', 'Scanned']).single() : q.eq('id', '00000000-0000-0000-0000-000000000000'), 
-        [eventId, userId]
+    const isValidId = eventId && typeof eventId === 'string' && eventId.length === 36;
+
+    const { data: event, loading: loadingEvent } = useSupabaseQuery(
+        'events', 
+        (q) => q.eq('id', eventId).single(), 
+        [eventId],
+        { enabled: isValidId }
+    );
+
+    const { data: booking, loading: loadingBooking } = useSupabaseQuery(
+        'bookings', 
+        (q) => userId && isValidId ? q.eq('user_id', userId).eq('event_id', eventId).in('status', ['Confirmed', 'Paid', 'Scanned']).single() : q.eq('id', '00000000-0000-0000-0000-000000000000'), 
+        [eventId, userId],
+        { enabled: !!(userId && isValidId) }
     );
  
-    const loading = loadingEvent || (userId && loadingBooking);
+    const loading = (isValidId && loadingEvent) || (userId && isValidId && loadingBooking);
  
     const access = React.useMemo(() => {
         if (loading) return undefined;
