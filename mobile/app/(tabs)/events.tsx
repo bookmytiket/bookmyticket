@@ -6,8 +6,9 @@ import { useSupabaseQuery } from '@/hooks/useSupabase';
 import * as SecureStore from 'expo-secure-store';
 import EventCard from '@/components/EventCard';
 import { useRouter } from 'expo-router';
-import { Search, X, SlidersHorizontal, ChevronRight } from 'lucide-react-native';
+import { Search, X, SlidersHorizontal, ChevronRight, MapPin } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { CITY_IMAGES, POPULAR_CITIES } from '@/constants/Cities';
 
 const { width } = Dimensions.get('window');
 const CATEGORIES = ['All', 'Music', 'Sports', 'Comedy', 'Workshop', 'Art', 'Food', 'Tech'];
@@ -20,6 +21,7 @@ export default function EventsScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [userLocation, setUserLocation] = useState<string | null>(null);
+  const [selectedCity, setSelectedCity] = useState<string | null>(null);
 
   React.useEffect(() => {
     SecureStore.getItemAsync('userLocation').then(loc => {
@@ -108,7 +110,13 @@ export default function EventsScreen() {
 
     let combined = [...eventList, ...proList];
 
-    if (userLocation) {
+    if (selectedCity) {
+      combined = combined.filter(e => {
+        const dynamicConfig = typeof e.dynamic_config === 'string' ? JSON.parse(e.dynamic_config) : (e.dynamic_config || {});
+        const loc = String(e.venue || e.location || e.city || dynamicConfig.venue?.name || dynamicConfig.basicInfo?.venue || '').toLowerCase();
+        return loc.includes(selectedCity.toLowerCase());
+      });
+    } else if (userLocation) {
       combined = combined.filter(e => {
         const safeParse = (val: any) => {
           if (!val) return null;
@@ -160,7 +168,7 @@ export default function EventsScreen() {
     }
 
     return combined;
-  }, [events, professionals, selectedCategory, searchQuery, userLocation]);
+  }, [events, professionals, selectedCategory, searchQuery, userLocation, selectedCity]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -223,6 +231,39 @@ export default function EventsScreen() {
             );
           })}
         </ScrollView>
+
+        {/* City Filter with Images */}
+        <View style={{ marginTop: 20, marginBottom: 10 }}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: 20, gap: 12 }}
+          >
+            {POPULAR_CITIES.filter(c => c.country === 'India').map((city) => {
+              const isActive = selectedCity === city.name;
+              return (
+                <Pressable
+                  key={city.name}
+                  onPress={() => setSelectedCity(isActive ? null : city.name)}
+                  style={{ alignItems: 'center', gap: 6 }}
+                >
+                  <View style={[
+                    { width: 60, height: 60, borderRadius: 30, overflow: 'hidden', borderWidth: 2, borderColor: isActive ? '#f844a4' : 'transparent', backgroundColor: colors.card },
+                    isActive && { shadowColor: '#f844a4', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 3 }
+                  ]}>
+                    <Image 
+                      source={CITY_IMAGES[city.name] || { uri: `https://picsum.photos/seed/${city.name}/100/100` }}
+                      style={{ width: '100%', height: '100%' }}
+                    />
+                  </View>
+                  <Text style={{ fontSize: 10, fontWeight: isActive ? '800' : '600', color: isActive ? '#f844a4' : colors.muted, textTransform: 'uppercase' }}>
+                    {city.name}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        </View>
       </View>
 
       {/* Grid */}

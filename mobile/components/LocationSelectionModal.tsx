@@ -6,41 +6,11 @@ import { useLocation } from '@/context/LocationContext';
 import * as Location from 'expo-location';
 import { MotiView, AnimatePresence } from 'moti';
 import { LinearGradient } from 'expo-linear-gradient';
+import { CITY_IMAGES, POPULAR_CITIES } from '@/constants/Cities';
 
 const { width, height } = Dimensions.get('window');
  
-const CITY_IMAGES: Record<string, any> = {
-  "Bengaluru": require('../assets/images/cities/bengaluru.png'),
-  "Chennai": require('../assets/images/cities/chennai.png'),
-  "Coimbatore": require('../assets/images/cities/coimbatore.png'),
-  "Hyderabad": require('../assets/images/cities/hyderabad.png'),
-  "Kochi": require('../assets/images/cities/kochi.png'),
-  "Kolkata": require('../assets/images/cities/kolkata.png'),
-  "Delhi": require('../assets/images/cities/delhi.png'),
-  "Mumbai": require('../assets/images/cities/mumbai.png'),
-};
- 
-const POPULAR_CITIES = [
-  // India
-  { name: "Bengaluru", country: "India" },
-  { name: "Chennai", country: "India" },
-  { name: "Coimbatore", country: "India" },
-  { name: "Hyderabad", country: "India" },
-  { name: "Kochi", country: "India" },
-  { name: "Kolkata", country: "India" },
-  { name: "Delhi", country: "India" },
-  { name: "Mumbai", country: "India" },
-  
-  // USA (Fallback to placeholder or add images if needed)
-  { name: "New York", country: "United States" },
-  { name: "Los Angeles", country: "United States" },
-  
-  // UAE
-  { name: "Dubai", country: "UAE" },
-  
-  // Singapore
-  { name: "Singapore", country: "Singapore" },
-];
+
 
 const COUNTRIES = [
   { id: "india", name: "India", flag: "🇮🇳" },
@@ -223,14 +193,10 @@ export default function LocationSelectionModal({ isOpen, onClose }: LocationSele
       >
         {/* Header */}
         <View style={styles.header}>
-          <View style={styles.closeBtnPlaceholder} />
           <View style={styles.headerTitleContainer}>
             <Text style={styles.title}>SELECT YOUR CITY</Text>
             <View style={styles.titleUnderline} />
           </View>
-          <Pressable onPress={onClose} style={styles.closeBtn}>
-            <CloseIcon size={20} color="#f844a4" />
-          </Pressable>
         </View>
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
@@ -437,6 +403,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(248, 68, 164, 0.1)',
     alignSelf: 'center',
     marginTop: Platform.OS === 'ios' ? 40 : 20, // Avoid notch
+    zIndex: 1000,
   },
   header: {
     flexDirection: 'row',

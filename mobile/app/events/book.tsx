@@ -38,6 +38,8 @@ import {
   Star,
 } from 'lucide-react-native';
 import { getFeeBreakdown, resolveFeeSettings } from '@/lib/feeBreakdown';
+import VisualSeatPicker from '@/components/VisualSeatPicker';
+import DataService from '@/services/DataService';
 
 export default function BookEventScreen() {
   const colorScheme = useColorScheme() ?? 'light';
@@ -70,6 +72,9 @@ export default function BookEventScreen() {
   const [selectionField, setSelectionField] = useState<any>(null);
   const [bookingStep, setBookingStep] = useState(1);
   const [dob, setDob] = useState('');
+  const [selectedSeats, setSelectedSeats] = useState<any[]>([]);
+  const [venueLayouts, setVenueLayouts] = useState<any[]>([]);
+  const [selectedBlock, setSelectedBlock] = useState<any>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -229,6 +234,14 @@ export default function BookEventScreen() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (id) {
+        DataService.getVenueLayouts(id).then(data => {
+            setVenueLayouts(data || []);
+        });
+    }
+  }, [id]);
   const dynamicConfig = safeParse(event?.dynamic_config) || {};
   const ticketsData = safeParse(event?.tickets);
   const parsedTickets = (Array.isArray(ticketsData) && ticketsData.length > 0) 
@@ -236,6 +249,7 @@ export default function BookEventScreen() {
     : (dynamicConfig.tickets || dynamicConfig.categories || []);
   const ticketTiers = Array.isArray(parsedTickets) ? parsedTickets : [];
   const isMarathon = event?.type === 'Marathon' || marathonCategories.length > 0;
+  const hasSeatingMap = venueLayouts.length > 0;
   const marathonSteps = [
     { id: 1, title: 'Category', icon: Ticket },
     { id: 2, title: 'Identity', icon: Users },
@@ -273,7 +287,11 @@ export default function BookEventScreen() {
 
   const basePrice = getBasePrice();
   const { subtotal, convenienceFee, gst, total, paymentTotal, discountAmount } = (() => {
-    const base = basePrice * quantity;
+    // If seating map is used, base price is sum of selected seats
+    let base = selectedSeats.length > 0 
+        ? selectedSeats.reduce((acc, s) => acc + (s.price_override || selectedBlock?.base_price || basePrice), 0)
+        : basePrice * quantity;
+    
     if (event?.is_free) return { subtotal: 0, convenienceFee: 0, gst: 0, total: 0, paymentTotal: 0, discountAmount: 0 };
     
     // Calculate discount
@@ -398,6 +416,7 @@ export default function BookEventScreen() {
             ? (selectedAgeGroup.label || `${selectedAgeGroup.minAge || selectedAgeGroup.min}-${selectedAgeGroup.maxAge || selectedAgeGroup.max} Yrs`)
             : (selectedTier?.min_age !== undefined ? `${selectedTier.min_age}-${selectedTier.max_age} Yrs` : null),
           ticket_type: selectedTier?.title || selectedTier?.name || selectedTier?.type || 'General',
+          selected_seats: selectedSeats.map(s => ({ id: s.id, number: s.seat_number, row: s.row_name, block: s.block_id })),
           ...formResponses
         },
       };
@@ -409,6 +428,17 @@ export default function BookEventScreen() {
         .single();
 
       if (error) throw error;
+
+      // Insert seat bookings if applicable
+      if (selectedSeats.length > 0) {
+        const seatBookings = selectedSeats.map(s => ({
+            seat_id: s.id,
+            user_id: user?.id,
+            order_id: data.id,
+            booking_status: (event.is_free || total === 0) ? 'confirmed' : 'pending'
+        }));
+        await supabase.from('seat_bookings').insert(seatBookings);
+      }
 
       if (event.is_free) {
         setSuccess(true);
@@ -691,147 +721,156 @@ export default function BookEventScreen() {
           </RNView>
         </RNView>
 
+        {/* Interactive Seating Map */}
+        {hasSeatingMap && (!isMarathon || bookingStep === 1) && (
+          <VisualSeatPicker 
+            eventId={String(event.id)} 
+            selectedSeats={selectedSeats}
+            onSeatSelect={(seats) => {
+                setSelectedSeats(seats);
+                if (seats.length > 0) setQuantity(seats.length);
+            }}
+          />
+        )}
+
         {/* ─── STEP 1: Category (Marathon) OR single-page category (non-marathon) ─── */}
-        {(!isMarathon || bookingStep === 1) && (
+        {(!isMarathon || bookingStep === 1) && !hasSeatingMap && (
           <>
-
-        {/* Event Map */}
-        {!isMarathon && dynamicConfig?.location?.coordinates?.lat && dynamicConfig?.location?.coordinates?.lng && (
-          <RNView style={{ marginHorizontal: 20, marginBottom: 20, borderRadius: 24, overflow: 'hidden', height: 220, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card }}>
-            <WebView 
-              scrollEnabled={false}
-              geolocationEnabled={true}
-              source={{ html: `
-                <html>
-                  <head>
-                    <meta name="viewport" content="width=device-width, initial-scale=1">
-                    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-                    <style>
-                      body { margin: 0; padding: 0; font-family: -apple-system, system-ui; }
-                      #map { height: 100vh; width: 100vw; }
-                      .locate-btn {
-                        position: absolute; top: 12px; left: 12px; z-index: 1000;
-                        background: white; border: none; border-radius: 12px;
-                        width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
-                        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-                      }
-                      .user-marker {
-                        width: 14px; height: 14px; background: #3b82f6;
-                        border: 3px solid white; border-radius: 50%;
-                        box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
-                      }
-                      .leaflet-container { background: #000 !important; }
-                    </style>
-                  </head>
-                  <body>
-                    <div id="map"></div>
-                    <button class="locate-btn" onclick="locateMe()">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#333" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m12 1-1.5 5h3Z"/><path d="m22 12-5 1.5v-3Z"/><path d="M12 23 13.5 18h-3Z"/><path d="M2 12 7 10.5v3Z"/><circle cx="12" cy="12" r="3"/></svg>
-                    </button>
-                    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-                    <script>
-                      var map = L.map('map', { zoomControl: false }).setView([${dynamicConfig.location.coordinates.lat}, ${dynamicConfig.location.coordinates.lng}], 17);
-                      
-                      // Use Google Satellite for consistency and reliability
-                      L.tileLayer('https://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}', {
-                        maxZoom: 20,
-                        subdomains:['mt0','mt1','mt2','mt3']
-                      }).addTo(map);
-
-                      var markerIcon = L.divIcon({
-                        className: 'custom-div-icon',
-                        html: '<div style="background-color:#f84464;width:14px;height:14px;border-radius:50%;border:3px solid white;box-shadow:0 0 15px rgba(248,68,100,0.8);"></div>',
-                        iconSize: [14, 14],
-                        iconAnchor: [7, 7]
-                      });
-
-                      L.marker([${dynamicConfig.location.coordinates.lat}, ${dynamicConfig.location.coordinates.lng}], { icon: markerIcon }).addTo(map);
-                      
-                      function locateMe() {
-                        if (!navigator.geolocation) return;
-                        navigator.geolocation.getCurrentPosition(function(pos) {
-                          var lat = pos.coords.latitude;
-                          var lng = pos.coords.longitude;
+            {/* Event Map */}
+            {!isMarathon && dynamicConfig?.location?.coordinates?.lat && dynamicConfig?.location?.coordinates?.lng && (
+              <RNView style={{ marginHorizontal: 20, marginBottom: 20, borderRadius: 24, overflow: 'hidden', height: 220, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card }}>
+                <WebView 
+                  scrollEnabled={false}
+                  geolocationEnabled={true}
+                  source={{ html: `
+                    <html>
+                      <head>
+                        <meta name="viewport" content="width=device-width, initial-scale=1">
+                        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+                        <style>
+                          body { margin: 0; padding: 0; font-family: -apple-system, system-ui; }
+                          #map { height: 100vh; width: 100vw; }
+                          .locate-btn {
+                            position: absolute; top: 12px; left: 12px; z-index: 1000;
+                            background: white; border: none; border-radius: 12px;
+                            width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
+                            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                          }
+                          .user-marker {
+                            width: 14px; height: 14px; background: #3b82f6;
+                            border: 3px solid white; border-radius: 50%;
+                            box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+                          }
+                          .leaflet-container { background: #000 !important; }
+                        </style>
+                      </head>
+                      <body>
+                        <div id="map"></div>
+                        <button class="locate-btn" onclick="locateMe()">
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#333" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m12 1-1.5 5h3Z"/><path d="m22 12-5 1.5v-3Z"/><path d="M12 23 13.5 18h-3Z"/><path d="M2 12 7 10.5v3Z"/><circle cx="12" cy="12" r="3"/></svg>
+                        </button>
+                        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+                        <script>
+                          var map = L.map('map', { zoomControl: false }).setView([${dynamicConfig.location.coordinates.lat}, ${dynamicConfig.location.coordinates.lng}], 17);
                           
-                          var userIcon = L.divIcon({
-                            className: 'user-marker-container',
-                            html: '<div class="user-marker"></div>',
+                          // Use Google Satellite for consistency and reliability
+                          L.tileLayer('https://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}', {
+                            maxZoom: 20,
+                            subdomains:['mt0','mt1','mt2','mt3']
+                          }).addTo(map);
+
+                          var markerIcon = L.divIcon({
+                            className: 'custom-div-icon',
+                            html: '<div style="background-color:#f84464;width:14px;height:14px;border-radius:50%;border:3px solid white;box-shadow:0 0 15px rgba(248,68,100,0.8);"></div>',
                             iconSize: [14, 14],
                             iconAnchor: [7, 7]
                           });
-                          
-                          L.marker([lat, lng], { icon: userIcon }).addTo(map);
-                          
-                          var bounds = L.latLngBounds([lat, lng], [${dynamicConfig.location.coordinates.lat}, ${dynamicConfig.location.coordinates.lng}]);
-                          map.fitBounds(bounds, { padding: [50, 50] });
-                        });
-                      }
-                    </script>
-                  </body>
-                </html>
-              `}}
-              style={{ flex: 1 }}
-            />
-            <Pressable 
-              onPress={() => Linking.openURL(`https://www.google.com/maps/dir/?api=1&destination=${dynamicConfig.location.coordinates.lat},${dynamicConfig.location.coordinates.lng}`)}
-              style={{ position: 'absolute', bottom: 12, right: 12, backgroundColor: colors.tint, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, flexDirection: 'row', alignItems: 'center', gap: 6, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 5 }}
-            >
-              <Text style={{ color: '#fff', fontSize: 10, fontWeight: '900' }}>GET DIRECTIONS</Text>
-            </Pressable>
-          </RNView>
-        )}
-          </>
-        )}
-        {(!isMarathon || bookingStep === 1) && (
-          <>
-        {(marathonCategories.length > 0 || ticketTiers.length > 0) && (
-          <RNView style={styles.section}>
-            <RNView style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <Text style={[styles.sectionTitle, { color: colors.text, marginBottom: 0 }]}>Select Category</Text>
-              
-              {marathonCategories.length > 0 && (
-                <RNView style={{ backgroundColor: colors.card, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12, borderWidth: 1, borderColor: colors.border }}>
-                  <Text style={{ fontSize: 10, fontWeight: '900', color: colors.tint }}>{selectedKM} KM</Text>
-                </RNView>
-              )}
-            </RNView>
 
-            {marathonCategories.length > 0 && (
-              <ScrollView 
-                horizontal 
-                showsHorizontalScrollIndicator={false} 
-                contentContainerStyle={{ gap: 8, paddingBottom: 16 }}
-              >
-                {[...new Set(marathonCategories.map(c => Number(c.distance_km)))].sort((a, b) => a - b).map(km => (
-                  <Pressable 
-                    key={km}
-                    onPress={() => {
-                      setSelectedKM(km);
-                      const currentCats = marathonCategories.length > 0 ? marathonCategories : (safeParse(event.dynamic_config)?.marathonCategories || []);
-                      const firstTier = currentCats.find((c: any) => Number(c.distance_km) === km);
-                      if (firstTier) {
-                        setSelectedTier(firstTier);
-                        const rawRates = firstTier.ageRates || firstTier.agePricing || firstTier.age_rates || firstTier.age_pricing || firstTier.pricing || [];
-                        if (Array.isArray(rawRates) && rawRates.length > 0) {
-                          setSelectedAgeGroup(rawRates[0]);
-                        } else {
-                          setSelectedAgeGroup(null);
-                        }
-                      }
-                    }}
-                    style={[
-                      { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 12, borderWidth: 1, borderColor: colors.border },
-                      selectedKM === km && { backgroundColor: colors.tint, borderColor: colors.tint }
-                    ]}
-                  >
-                    <Text style={[
-                      { fontSize: 12, fontWeight: '800', color: colors.muted },
-                      selectedKM === km && { color: '#fff' }
-                    ]}>{km} KM</Text>
-                  </Pressable>
-                ))}
-              </ScrollView>
+                          L.marker([${dynamicConfig.location.coordinates.lat}, ${dynamicConfig.location.coordinates.lng}], { icon: markerIcon }).addTo(map);
+                          
+                          function locateMe() {
+                            if (!navigator.geolocation) return;
+                            navigator.geolocation.getCurrentPosition(function(pos) {
+                              var lat = pos.coords.latitude;
+                              var lng = pos.coords.longitude;
+                              
+                              var userIcon = L.divIcon({
+                                className: 'user-marker-container',
+                                html: '<div class="user-marker"></div>',
+                                iconSize: [14, 14],
+                                iconAnchor: [7, 7]
+                              });
+                              
+                              L.marker([lat, lng], { icon: userIcon }).addTo(map);
+                              
+                              var bounds = L.latLngBounds([lat, lng], [${dynamicConfig.location.coordinates.lat}, ${dynamicConfig.location.coordinates.lng}]);
+                              map.fitBounds(bounds, { padding: [50, 50] });
+                            });
+                          }
+                        </script>
+                      </body>
+                    </html>
+                  `}}
+                  style={{ flex: 1 }}
+                />
+                <Pressable 
+                  onPress={() => Linking.openURL(`https://www.google.com/maps/dir/?api=1&destination=${dynamicConfig.location.coordinates.lat},${dynamicConfig.location.coordinates.lng}`)}
+                  style={{ position: 'absolute', bottom: 12, right: 12, backgroundColor: colors.tint, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, flexDirection: 'row', alignItems: 'center', gap: 6, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 5 }}
+                >
+                  <Text style={{ color: '#fff', fontSize: 10, fontWeight: '900' }}>GET DIRECTIONS</Text>
+                </Pressable>
+              </RNView>
             )}
+
+            {(marathonCategories.length > 0 || ticketTiers.length > 0) && (
+              <RNView style={styles.section}>
+                <RNView style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <Text style={[styles.sectionTitle, { color: colors.text, marginBottom: 0 }]}>Select Category</Text>
+                  
+                  {marathonCategories.length > 0 && (
+                    <RNView style={{ backgroundColor: colors.card, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12, borderWidth: 1, borderColor: colors.border }}>
+                      <Text style={{ fontSize: 10, fontWeight: '900', color: colors.tint }}>{selectedKM} KM</Text>
+                    </RNView>
+                  )}
+                </RNView>
+
+                {marathonCategories.length > 0 && (
+                  <ScrollView 
+                    horizontal 
+                    showsHorizontalScrollIndicator={false} 
+                    contentContainerStyle={{ gap: 8, paddingBottom: 16 }}
+                  >
+                    {[...new Set(marathonCategories.map(c => Number(c.distance_km)))].sort((a, b) => a - b).map(km => (
+                      <Pressable 
+                        key={km}
+                        onPress={() => {
+                          setSelectedKM(km);
+                          const currentCats = marathonCategories.length > 0 ? marathonCategories : (safeParse(event.dynamic_config)?.marathonCategories || []);
+                          const firstTier = currentCats.find((c: any) => Number(c.distance_km) === km);
+                          if (firstTier) {
+                            setSelectedTier(firstTier);
+                            const rawRates = firstTier.ageRates || firstTier.agePricing || firstTier.age_rates || firstTier.age_pricing || firstTier.pricing || [];
+                            if (Array.isArray(rawRates) && rawRates.length > 0) {
+                              setSelectedAgeGroup(rawRates[0]);
+                            } else {
+                              setSelectedAgeGroup(null);
+                            }
+                          }
+                        }}
+                        style={[
+                          { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 12, borderWidth: 1, borderColor: colors.border },
+                          selectedKM === km && { backgroundColor: colors.tint, borderColor: colors.tint }
+                        ]}
+                      >
+                        <Text style={[
+                          { fontSize: 12, fontWeight: '800', color: colors.muted },
+                          selectedKM === km && { color: '#fff' }
+                        ]}>{km} KM</Text>
+                      </Pressable>
+                    ))}
+                  </ScrollView>
+                )}
+
 
             {(marathonCategories.length > 0 
               ? marathonCategories.filter(c => !selectedKM || Number(c.distance_km) === selectedKM)

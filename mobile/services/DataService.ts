@@ -51,6 +51,47 @@ export const DataService = {
   },
 
   /**
+   * Fetches unified services.
+   */
+  async getServices() {
+    const { data, error } = await supabase
+      .from('services')
+      .select('*')
+      .eq('status', 'Published');
+    
+    if (error) throw error;
+    return data;
+  },
+
+  /**
+   * Fetches venue layouts for an event.
+   */
+  async getVenueLayouts(eventId: string) {
+    const { data, error } = await supabase
+      .from('venue_layouts')
+      .select('*, seat_blocks(*)')
+      .eq('event_id', eventId);
+    
+    if (error) throw error;
+    return data;
+  },
+
+  /**
+   * Fetches seats for a specific block.
+   */
+  async getSeats(blockId: string) {
+    const { data, error } = await supabase
+      .from('seats')
+      .select('*')
+      .eq('block_id', blockId)
+      .order('row_name', { ascending: true })
+      .order('seat_number', { ascending: true });
+    
+    if (error) throw error;
+    return data;
+  },
+
+  /**
    * Fetches branding assets (coupons, banners).
    */
   async getBrandingAssets() {

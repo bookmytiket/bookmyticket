@@ -850,22 +850,22 @@ export default function Navbar({ compact = false }) {
             width: '100%'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', flex: 1, paddingLeft: '8px' }}>
-              <Search size={14} color="#f844a4" />
-              <input
-                placeholder="Find events..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && router.push(`/?q=${encodeURIComponent(search)}`)}
-                style={{
-                  border: 'none',
-                  outline: 'none',
-                  background: 'transparent',
-                  padding: '6px 8px',
-                  fontSize: '13px',
-                  width: '100%',
-                  color: scrolled ? '#fff' : '#1e293b'
-                }}
-              />
+                <input
+                  placeholder="Find events..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && router.push(`/?q=${encodeURIComponent(search)}`)}
+                  style={{
+                    border: 'none',
+                    outline: 'none',
+                    background: 'transparent',
+                    padding: '10px 12px',
+                    fontSize: '14px',
+                    width: '100%',
+                    color: scrolled ? '#fff' : '#1e293b',
+                    fontWeight: 500
+                  }}
+                />
             </div>
             <button
               onClick={() => router.push(`/?q=${encodeURIComponent(search)}`)}
@@ -874,10 +874,11 @@ export default function Navbar({ compact = false }) {
                 color: '#fff',
                 border: 'none',
                 borderRadius: '8px',
-                padding: '5px 12px',
-                fontSize: '11px',
-                fontWeight: 700,
-                cursor: 'pointer'
+                padding: '8px 20px',
+                fontSize: '13px',
+                fontWeight: 800,
+                cursor: 'pointer',
+                boxShadow: '0 4px 12px rgba(248, 68, 164, 0.2)'
               }}
             >
               Search

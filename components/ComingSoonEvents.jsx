@@ -168,7 +168,7 @@ export default function ComingSoonEvents({ events = [] }) {
                     </h2>
                 </div>
 
-                <div style={{ position: "relative", height: isMobile ? "580px" : "380px" }}>
+                <div style={{ position: "relative", height: isMobile ? "auto" : "380px", minHeight: isMobile ? "400px" : "380px" }}>
                     <AnimatePresence initial={false} custom={direction} mode="wait">
                         <motion.div
                             key={idx}
@@ -241,7 +241,15 @@ export default function ComingSoonEvents({ events = [] }) {
                                 </div>
 
                                 <div style={{ position: "relative", zIndex: 1 }}>
-                                    <h3 style={{ fontSize: "28px", fontWeight: 900, color: "#111827", margin: "0 0 20px", letterSpacing: "-0.02em", lineHeight: 1.2 }}>{event.title}</h3>
+                                    <h3 style={{ 
+                                        fontSize: isMobile ? "22px" : "28px", 
+                                        fontWeight: 900, 
+                                        color: "#111827", 
+                                        margin: "0 0 20px", 
+                                        letterSpacing: "-0.02em", 
+                                        lineHeight: 1.2,
+                                        paddingRight: isMobile ? "60px" : "0" // Extra space for the badge
+                                    }}>{event.title}</h3>
                                     
                                     <div style={{ display: "flex", gap: "10px", marginBottom: "30px" }}>
                                         <TimerBox value={timeLeft.days} label="Days" />

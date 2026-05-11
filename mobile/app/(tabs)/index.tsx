@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react';
-import { StyleSheet, ScrollView, FlatList, Pressable, Dimensions, TextInput, Platform, View, Text, Image, Alert, Modal, StatusBar, RefreshControl } from 'react-native';
+import { StyleSheet, ScrollView, FlatList, Pressable, Dimensions, TextInput, Platform, View, Text, Image, Alert, Modal, StatusBar, RefreshControl, ActivityIndicator, Linking } from 'react-native';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useSupabaseQuery, useAuth } from '@/hooks/useSupabase';
@@ -9,11 +9,14 @@ import EventCard from '@/components/EventCard';
 import { useRouter } from 'expo-router';
 import { MotiView, MotiText } from 'moti';
 import { MapPin, Search, Menu, Bell, Sparkles, Ticket, Zap, Camera, Hammer, Utensils, Laptop, Rocket, ChevronRight, X as CloseIcon, User, Star } from 'lucide-react-native';
+import { CITY_IMAGES, POPULAR_CITIES } from '@/constants/Cities';
 import { LinearGradient } from 'expo-linear-gradient';
 import LocationSelectionModal from '@/components/LocationSelectionModal';
 import { useLocation } from '@/context/LocationContext';
+import { supabase } from '@/lib/supabase';
 
 const { width } = Dimensions.get('window');
+const SCREEN_WIDTH = width;
 
 const PROMOS = [
   { code: 'NYKAA', text: 'Get ₹250 Off on Nykaa Beauty Products!' },
@@ -233,6 +236,83 @@ export default function HomeScreen() {
     ]);
     setRefreshing(false);
   }, [refreshBanners, refreshCoupons, refreshMemories, refreshEvents, refreshPros, refreshUnified]);
+
+  // City Discovery State
+  const [selectedHomeCity, setSelectedHomeCity] = useState('Bengaluru');
+  const [cityEvents, setCityEvents] = useState<any[]>([]);
+  const [cityLoading, setCityLoading] = useState(false);
+  const cityBannerListRef = useRef<FlatList>(null);
+  const cityListRef = useRef<FlatList>(null);
+  const cityBannerIndexRef = useRef(0);
+
+
+
+  useEffect(() => {
+    fetchCityEvents();
+    // Scroll city list to active city
+    const index = POPULAR_CITIES.findIndex(c => c.name === selectedHomeCity);
+    if (index !== -1) {
+        try {
+            cityListRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0.5 });
+        } catch (error) {}
+    }
+  }, [selectedHomeCity]);
+
+  const fetchCityEvents = async () => {
+    setCityLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('events')
+        .select('*')
+        .ilike('city', `%${selectedHomeCity}%`)
+        .order('created_at', { ascending: false })
+        .limit(5);
+      
+      if (error) throw error;
+      setCityEvents(data || []);
+    } catch (err) {
+      console.error('Error fetching city events:', err);
+    } finally {
+      setCityLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setSelectedHomeCity((prev) => {
+        const currentIndex = POPULAR_CITIES.findIndex(c => c.name === prev);
+        const nextIndex = (currentIndex + 1) % POPULAR_CITIES.length;
+        return POPULAR_CITIES[nextIndex].name;
+      });
+    }, 3000);
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    if (cityEvents.length <= 1) return;
+    const timer = setInterval(() => {
+      cityBannerIndexRef.current = (cityBannerIndexRef.current + 1) % cityEvents.length;
+      try {
+        cityBannerListRef.current?.scrollToIndex({ index: cityBannerIndexRef.current, animated: true });
+      } catch (error) {}
+    }, 4000);
+    return () => clearInterval(timer);
+  }, [cityEvents.length]);
+
+  // Unified Services from Supabase
+  const displayServices = useMemo(() => {
+    if (unifiedServices && unifiedServices.length > 0) {
+      return unifiedServices.map(s => ({
+        name: s.service_name,
+        icon: s.icon || '✨',
+        description: s.description || 'Professional service',
+        color: s.color_code || '#f84464',
+        gradient: s.gradient_colors || ['#f84464', '#c026d3'],
+        image: s.images?.[0] || s.image_url
+      }));
+    }
+    return SERVICES_CATEGORIES;
+  }, [unifiedServices]);
 
   // Notifications Real-time
   const { data: notifications, refresh: refreshNotifications } = useSupabaseQuery('notifications', (q) => q.eq('user_id', user?.id).eq('is_read', false), [user?.id], { realtime: true, enabled: !!user });
@@ -465,15 +545,15 @@ export default function HomeScreen() {
   }, [comingSoonEvents.length]);
 
   useEffect(() => {
-    if (SERVICES_CATEGORIES.length <= 1) return;
+    if (displayServices.length <= 1) return;
     const timer = setInterval(() => {
-      servicesIndexRef.current = (servicesIndexRef.current + 1) % SERVICES_CATEGORIES.length;
+      servicesIndexRef.current = (servicesIndexRef.current + 1) % displayServices.length;
       try {
         servicesListRef.current?.scrollToIndex({ index: servicesIndexRef.current, animated: true });
       } catch (error) {}
     }, 5000);
     return () => clearInterval(timer);
-  }, [SERVICES_CATEGORIES.length]);
+  }, [displayServices.length]);
 
   useEffect(() => {
     const itemsCount = memoriesData && memoriesData.length > 0 ? memoriesData.length : RECENT_MEMORIES.length;
@@ -514,8 +594,9 @@ export default function HomeScreen() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffda00" />
       {/* 1. Custom Header */}
-      <View style={styles.header}>
-        <View style={[styles.headerTopYellow, { backgroundColor: '#ffda00', height: 70, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 0 }]}>
+      {!isLocationModalOpen && (
+        <View style={styles.header}>
+          <View style={[styles.headerTopYellow, { backgroundColor: '#ffda00', height: 70, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 0 }]}>
           {/* 1. Left Section: Logo */}
           <View style={{ position: 'absolute', left: 16, zIndex: 10 }}>
             <Image 
@@ -599,7 +680,8 @@ export default function HomeScreen() {
             )}
           </View>
         </View>
-        </View>
+      </View>
+    )}
 
         {/* 2. Promo Ticker - Landscape Box Style */}
         <View style={{ paddingHorizontal: 20, paddingVertical: 10, backgroundColor: colors.background }}>
@@ -703,7 +785,7 @@ export default function HomeScreen() {
                if (slide.redirect_type === 'event' && slide.redirect_id) {
                  router.push({ pathname: "/events/[id]", params: { id: slide.redirect_id } });
                } else if (slide.redirect_type === 'url' && slide.url) {
-                 // In a real app we might open WebBrowser here, but for now we'll do nothing
+                 Linking.openURL(slide.url).catch(err => console.error("Couldn't load page", err));
                }
             }} 
           />
@@ -1023,16 +1105,19 @@ export default function HomeScreen() {
 
         {/* Professional Services Section */}
         <View style={[styles.section, { marginTop: 10, paddingBottom: 20 }]}>
-          <View style={[styles.sectionHeader, { flexDirection: 'column', alignItems: 'flex-start', gap: 4, marginBottom: 16 }]}>
-            <Text style={[styles.sectionTitle, { color: colors.text, fontSize: 24, letterSpacing: -0.5 }]}>
+          <View style={[styles.sectionHeader, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text, fontSize: 22, letterSpacing: -0.5, flex: 1 }]} numberOfLines={1}>
               Professional <Text style={{ color: '#a855f7' }}>Services</Text>
             </Text>
-            <Text style={{ fontSize: 12, color: colors.muted, fontWeight: '600' }}>Top rated artists and studios for your special occasions</Text>
+            <Pressable onPress={() => router.push('/services')}>
+              <Text style={{ color: colors.tint, fontSize: 13, fontWeight: '800' }}>View all →</Text>
+            </Pressable>
           </View>
+          <Text style={{ fontSize: 12, color: colors.muted, fontWeight: '600', marginBottom: 16, paddingHorizontal: 0 }}>Top rated artists and studios for your special occasions</Text>
 
           <FlatList
             ref={servicesListRef}
-            data={SERVICES_CATEGORIES}
+            data={displayServices}
             horizontal
             showsHorizontalScrollIndicator={false}
             keyExtractor={(item) => item.name}
@@ -1206,6 +1291,106 @@ export default function HomeScreen() {
           <Pressable style={{ alignSelf: 'center', marginTop: 40, paddingVertical: 12, paddingHorizontal: 28, borderRadius: 30, borderWidth: 1.5, borderColor: '#f97316', flexDirection: 'row', alignItems: 'center', gap: 6 }}>
             <Text style={{ color: '#f97316', fontSize: 14, fontWeight: '800' }}>Explore Full Gallery →</Text>
           </Pressable>
+        </View>
+
+        {/* City Discovery Section (Circular Cities + Auto Banner) */}
+        <View style={{ marginBottom: 40 }}>
+          <View style={{ paddingHorizontal: 20, marginBottom: 20 }}>
+            <Text style={{ fontSize: 20, fontWeight: '900', color: colors.text }}>Explore by <Text style={{ color: '#f844a4' }}>City</Text></Text>
+            <Text style={{ fontSize: 12, color: colors.muted, fontWeight: '600' }}>Events happening in your favorite destinations</Text>
+          </View>
+
+          {/* Circular Cities List */}
+          <FlatList
+            ref={cityListRef}
+            data={POPULAR_CITIES}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: 20, gap: 16 }}
+            getItemLayout={(_, index) => ({
+                length: 80, // 64 (width) + 16 (gap)
+                offset: 80 * index,
+                index,
+            })}
+            onScrollToIndexFailed={(info) => {
+                const wait = new Promise(resolve => setTimeout(resolve, 500));
+                wait.then(() => {
+                    cityListRef.current?.scrollToIndex({ index: info.index, animated: true });
+                });
+            }}
+            renderItem={({ item }) => {
+              const isSelected = selectedHomeCity === item.name;
+              return (
+                <Pressable 
+                  onPress={() => setSelectedHomeCity(item.name)}
+                  style={{ alignItems: 'center', gap: 8 }}
+                >
+                  <View style={[
+                    { width: 64, height: 64, borderRadius: 32, overflow: 'hidden', backgroundColor: colors.border, borderWidth: 2, borderColor: isSelected ? '#f844a4' : colors.border },
+                    isSelected && { shadowColor: '#f844a4', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4 }
+                  ]}>
+                    <Image 
+                        source={CITY_IMAGES[item.name] || { uri: item.image || `https://picsum.photos/seed/${item.name}/100/100` }} 
+                        style={{ width: '100%', height: '100%' }}
+                        contentFit="cover"
+                        transition={500}
+                    />
+                  </View>
+                  <Text style={{ fontSize: 10, fontWeight: isSelected ? '900' : '700', color: isSelected ? '#f844a4' : colors.text, textTransform: 'uppercase' }}>
+                    {item.name}
+                  </Text>
+                </Pressable>
+              );
+            }}
+          />
+
+          {/* Auto-scrolling City Banner */}
+          <View style={{ marginTop: 30 }}>
+            {cityLoading ? (
+              <View style={{ height: 200, justifyContent: 'center', alignItems: 'center' }}>
+                <ActivityIndicator color="#f844a4" />
+              </View>
+            ) : cityEvents.length > 0 ? (
+              <FlatList
+                ref={cityBannerListRef}
+                data={cityEvents}
+                horizontal
+                pagingEnabled
+                showsHorizontalScrollIndicator={false}
+                keyExtractor={(item) => item.id.toString()}
+                renderItem={({ item }) => (
+                  <Pressable 
+                    onPress={() => router.push({ pathname: "/events/[id]", params: { id: item.id } })}
+                    style={{ width: SCREEN_WIDTH, paddingHorizontal: 20 }}
+                  >
+                    <View style={{ borderRadius: 24, overflow: 'hidden', height: 200, position: 'relative' }}>
+                      <Image source={{ uri: item.image_url || item.img }} style={StyleSheet.absoluteFill} contentFit="cover" />
+                      <LinearGradient
+                        colors={['transparent', 'rgba(0,0,0,0.8)']}
+                        style={StyleSheet.absoluteFill}
+                      />
+                      <View style={{ position: 'absolute', bottom: 20, left: 20, right: 20 }}>
+                        <View style={{ backgroundColor: 'rgba(248, 68, 164, 0.9)', alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, marginBottom: 8 }}>
+                          <Text style={{ color: '#fff', fontSize: 10, fontWeight: '900' }}>{item.category?.toUpperCase() || 'EVENT'}</Text>
+                        </View>
+                        <Text style={{ color: '#fff', fontSize: 20, fontWeight: '900', marginBottom: 4 }} numberOfLines={1}>{item.title || item.name}</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <MapPin size={12} color="#fff" />
+                          <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12, fontWeight: '600' }}>{item.city}</Text>
+                        </View>
+                      </View>
+                    </View>
+                  </Pressable>
+                )}
+              />
+            ) : (
+              <View style={{ height: 200, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.card, marginHorizontal: 20, borderRadius: 24, borderStyle: 'dashed', borderWidth: 1, borderColor: colors.border }}>
+                <MapPin size={32} color={colors.muted} style={{ marginBottom: 10 }} />
+                <Text style={{ color: colors.muted, fontWeight: '700' }}>No events in {selectedHomeCity} yet</Text>
+                <Text style={{ color: colors.muted, fontSize: 10 }}>Check back later or try another city</Text>
+              </View>
+            )}
+          </View>
         </View>
 
         <View style={{ height: 100 }} />
