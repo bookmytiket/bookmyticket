@@ -6,6 +6,7 @@ import { MapPin, Calendar, Star, Clock } from 'lucide-react-native';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { MotiView } from 'moti';
+import LikeButton, { LikeButtonRef } from './LikeButton';
 
 interface EventCardProps {
   event: any;
@@ -30,6 +31,21 @@ export default function EventCard({ event, onPress }: EventCardProps) {
   const rawDate = event.start_date || event.date || dynamicConfig.date || dynamicConfig.basicInfo?.date || dynamicConfig.basicInfo?.expiryDate;
   const rawTime = event.time || event.start_time || dynamicConfig.time || dynamicConfig.basicInfo?.time;
 
+  const lastTap = React.useRef(0);
+  const likeRef = React.useRef<LikeButtonRef>(null);
+
+  const handleDoubleTap = () => {
+    const now = Date.now();
+    const DOUBLE_PRESS_DELAY = 300;
+    if (lastTap.current && (now - lastTap.current) < DOUBLE_PRESS_DELAY) {
+      if (likeRef.current) {
+        likeRef.current.toggleLike();
+      }
+    } else {
+      lastTap.current = now;
+    }
+  };
+
   return (
     <MotiView
       from={{ opacity: 0, translateY: 20 }}
@@ -45,12 +61,14 @@ export default function EventCard({ event, onPress }: EventCardProps) {
         ]}
       >
         <View style={styles.imageContainer}>
-          <Image
-            source={{ uri: event.image_url || event.img || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=500&h=660&fit=crop" }}
-            style={styles.image}
-            contentFit="cover"
-            transition={1000}
-          />
+          <Pressable onPress={handleDoubleTap} style={{ flex: 1 }}>
+            <Image
+              source={{ uri: event.image_url || event.img || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=500&h=660&fit=crop" }}
+              style={styles.image}
+              contentFit="cover"
+              transition={1000}
+            />
+          </Pressable>
           
           {event.featured && (
             <LinearGradient
@@ -63,6 +81,15 @@ export default function EventCard({ event, onPress }: EventCardProps) {
               <Text style={styles.featuredText}>TOP</Text>
             </LinearGradient>
           )}
+
+          <View style={styles.likeButtonContainer}>
+            <LikeButton 
+              ref={likeRef}
+              itemId={event.id} 
+              type={event.business_name ? 'service' : 'event'} 
+              size={18}
+            />
+          </View>
         </View>
 
         <View style={styles.content}>
@@ -205,5 +232,11 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: '700',
     textTransform: 'uppercase',
+  },
+  likeButtonContainer: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    zIndex: 10,
   }
 });

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Video } from "lucide-react";
 import { isVirtualEvent, isFreeEvent } from "@/app/utils/eventUtils";
 import { getEventPath } from "@/app/utils/seo";
+import LikeButton from "@/components/LikeButton";
 
 export default function FeaturedEvents({ events }) {
     const [isMobile, setIsMobile] = useState(false);
@@ -120,6 +121,14 @@ export default function FeaturedEvents({ events }) {
                                         alt={event.title}
                                         style={{ width: "100%", height: "100%", objectFit: "cover" }}
                                     />
+                                    <div style={{ position: "absolute", top: "10px", right: "10px", zIndex: 20 }}>
+                                        <LikeButton 
+                                            itemId={event.id} 
+                                            type="event" 
+                                            size={16} 
+                                            showCount={true} 
+                                        />
+                                    </div>
                                 </div>
 
                                 <div style={{ padding: "10px", display: "flex", flexDirection: "column", flex: 1 }}>

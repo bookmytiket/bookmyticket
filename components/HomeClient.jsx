@@ -232,10 +232,10 @@ function HomeClient() {
     }
   }, [metaSettings]);
 
-  const { data: supabaseEventsRaw } = useSupabaseQuery('events', (q) => q, []);
+  const { data: supabaseEventsRaw } = useSupabaseQuery('events', (q) => q, [], { refreshOn: ['event_like_counts'] });
   const supabaseEvents = useMemo(() => supabaseEventsRaw || EMPTY_ARRAY, [supabaseEventsRaw]);
 
-  const { data: serviceProvidersRaw } = useSupabaseQuery('service_providers', (q) => q.eq('status', 'active'), []);
+  const { data: serviceProvidersRaw } = useSupabaseQuery('service_providers', (q) => q.eq('status', 'active'), [], { refreshOn: ['service_like_counts'] });
 
   const filteredServices = useMemo(() => {
     if (!serviceProvidersRaw) return [];

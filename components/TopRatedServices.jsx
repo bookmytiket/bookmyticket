@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Star, MapPin, ExternalLink, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
+import LikeButton from "@/components/LikeButton";
 
 const TopRatedServices = ({ professionals = [] }) => {
     if (!professionals || professionals.length === 0) return null;
@@ -72,6 +73,13 @@ const TopRatedServices = ({ professionals = [] }) => {
                                         style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
                                         alt={pro.business_name}
                                     />
+                                    <div style={{ position: 'absolute', top: '12px', right: '12px', zIndex: 20 }}>
+                                        <LikeButton 
+                                            itemId={pro.id} 
+                                            type="service" 
+                                            size={16} 
+                                        />
+                                    </div>
                                     <div style={{ position: 'absolute', top: '12px', left: '12px', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', color: '#fff', fontSize: '10px', fontWeight: 800, padding: '4px 12px', borderRadius: '20px', textTransform: 'uppercase' }}>
                                         {pro.category}
                                     </div>

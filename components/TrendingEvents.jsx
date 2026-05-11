@@ -2,6 +2,7 @@
 import { useRef, useState, useMemo } from "react";
 import Link from "next/link";
 import { isFreeEvent } from "@/app/utils/eventUtils";
+import LikeButton from "@/components/LikeButton";
 
 function EventCard({ event }) {
     return (
@@ -28,6 +29,13 @@ function EventCard({ event }) {
                         alt={event.title}
                         style={{ width: "100%", height: "100%", objectFit: "cover" }}
                     />
+                    <div style={{ position: "absolute", top: "10px", right: "10px", zIndex: 20 }}>
+                        <LikeButton 
+                            itemId={event.id} 
+                            type="event" 
+                            size={14} 
+                        />
+                    </div>
                 </div>
                 <div style={{ padding: "10px", flex: 1, display: 'flex', flexDirection: 'column' }}>
                     <div style={{ display: "flex", alignItems: "flex-start", gap: "4px", marginBottom: "6px" }}>

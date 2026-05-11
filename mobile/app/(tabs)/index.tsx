@@ -206,14 +206,14 @@ export default function HomeScreen() {
     'events',
     (q) => q.order('created_at', { ascending: false }),
     [],
-    { realtime: true }
+    { realtime: true, refreshOn: ['event_like_counts'] }
   );
 
   const { data: professionals, refresh: refreshPros } = useSupabaseQuery(
     'service_providers',
     (q) => q.ilike('status', 'active'),
     [],
-    { realtime: true }
+    { realtime: true, refreshOn: ['service_like_counts'] }
   );
 
   const { data: unifiedServices, refresh: refreshUnified } = useSupabaseQuery(

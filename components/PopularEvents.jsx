@@ -2,6 +2,7 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { isFreeEvent } from "@/app/utils/eventUtils";
+import LikeButton from "@/components/LikeButton";
 
 function PopularCard({ event }) {
     return (
@@ -33,9 +34,12 @@ function PopularCard({ event }) {
                         }}>
                             {event.title}
                         </h3>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="#1d9bf0" style={{ flexShrink: 0, marginTop: "2px" }}>
-                            <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm-1.1 14.5l-4.2-4.2 1.4-1.4 2.8 2.8 6.1-6.1 1.4 1.4-7.5 7.5z" />
-                        </svg>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <LikeButton itemId={event.id} type="event" size={14} />
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="#1d9bf0" style={{ flexShrink: 0, marginTop: "2px" }}>
+                                <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm-1.1 14.5l-4.2-4.2 1.4-1.4 2.8 2.8 6.1-6.1 1.4 1.4-7.5 7.5z" />
+                            </svg>
+                        </div>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: "4px", marginBottom: "4px" }}>
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>

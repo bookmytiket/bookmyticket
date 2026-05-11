@@ -35,14 +35,14 @@ export default function EventsScreen() {
     'events',
     (q) => q.order('created_at', { ascending: false }),
     [],
-    { realtime: true }
+    { realtime: true, refreshOn: ['event_like_counts'] }
   );
 
   const { data: professionals, loading: prosLoading, refresh: refreshPros } = useSupabaseQuery(
     'service_providers',
     (q) => q.eq('status', 'active'),
     [],
-    { realtime: true }
+    { realtime: true, refreshOn: ['service_like_counts'] }
   );
 
   const loading = eventsLoading || prosLoading;

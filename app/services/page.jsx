@@ -23,7 +23,7 @@ export default function ServicesPage() {
       return q.or(`category.ilike.%${category}%,category.ilike.%${search}%`);
     }
     return q;
-  }, [category]);
+  }, [category], { refreshOn: ['service_like_counts'] });
 
   // Fetch all active turfs
   const { data: turfsRaw = [], loading: turfsLoading } = useSupabaseQuery('turfs', (q) => q.eq('status', 'active'), []);

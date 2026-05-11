@@ -107,30 +107,36 @@ export function useSupabaseQuery(table, queryFn = (q) => q, deps = [], options =
     setLoading(true);
     fetchData();
 
-    let subscription = null;
-    if (realtime && table && supabase) {
-      const channelId = Math.random().toString(36).substring(2, 11);
-      subscription = supabase
-        .channel(`${table}_changes_${channelId}`)
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: table },
-          () => {
-            fetchData();
-          }
-        )
-        .subscribe();
+    const subscriptions = [];
+    
+    if (realtime && supabase) {
+      const tablesToListen = [table, ...(options.refreshOn || [])].filter(Boolean);
+      
+      tablesToListen.forEach(tableName => {
+        const channelId = Math.random().toString(36).substring(2, 11);
+        const sub = supabase
+          .channel(`${tableName}_changes_${channelId}`)
+          .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: tableName },
+            () => {
+              fetchData();
+            }
+          )
+          .subscribe();
+        subscriptions.push(sub);
+      });
     }
 
     return () => {
       isMounted.current = false;
       if (fetchTimeoutRef.current) clearTimeout(fetchTimeoutRef.current);
-      if (subscription && supabase) {
-        supabase.removeChannel(subscription);
-      }
+      subscriptions.forEach(sub => {
+        if (sub && supabase) supabase.removeChannel(sub);
+      });
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [table, JSON.stringify(deps), realtime]);
+  }, [table, JSON.stringify(deps), realtime, JSON.stringify(options.refreshOn)]);
 
   return { data, loading, error, refresh: () => fetchData() };
 }
