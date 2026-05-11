@@ -54,7 +54,7 @@ export default function RequireAuth({ children, allowedRoles }) {
     }
 
     // KYC CHECK FOR ORGANISERS: If not approved, must complete onboarding (Admins/Super Admins bypass this)
-    const isAdmin = user.role === "admin" || user.role === "super_admin";
+    const isAdmin = user.role === "admin" || user.role === "super_admin" || user.role === "system_admin";
     const kycStatus = (user.kyc_status || "").toLowerCase();
     const isKycApproved = [
       "approved", "active", "kyc completed", "kyc verified", "verified", "completed", "live", "pending", "submitted", "kyc_verified", "kyc_completed"

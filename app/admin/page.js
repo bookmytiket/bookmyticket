@@ -17,6 +17,7 @@ import CareersBannerSettings from "@/app/admin/components/CareersBannerSettings"
 import AdminContactInquiries from "@/app/admin/components/AdminContactInquiries";
 import RevenueDashboard from "@/app/admin/components/RevenueDashboard";
 import GstAuditDashboard from "@/app/admin/components/GstAuditDashboard";
+import SubscriptionPackagesAdmin from "@/app/admin/components/SubscriptionPackagesAdmin";
 
 
 import { MoreVertical, Zap, Briefcase, LayoutDashboard, Settings, Video, Image as ImageIcon, Sparkles, CheckCircle, Ticket, Users, Menu, Bell, Save, X, Plus, Trash2, Mail, Lock, CreditCard, Code, Globe, Shield, FileText, Megaphone, Tag, LayoutGrid, Calendar, ShoppingCart, UserCircle, Gift, Send, BarChart3, Archive, MessageCircle, Upload, Edit, Search, AlertCircle, ChevronDown, ChevronRight, LogOut, Activity, RefreshCw, AlertTriangle, Info, Smartphone, MessageSquare, Landmark, Ban, Sun, Moon, Filter, Building2, Cpu, ExternalLink, Eye, Layout, Settings2, ShieldCheck, Slash, ArrowRight, User, Phone } from "lucide-react";
@@ -878,7 +879,7 @@ function AdminHomePage() {
     const router = useRouter();
 
     useEffect(() => {
-        if (!loading && (!user || (user.role !== "admin" && user.role !== "super_admin"))) {
+        if (!loading && (!user || (user.role !== "admin" && user.role !== "super_admin" && user.role !== "system_admin"))) {
             router.push("/signin?redirect=/admin");
         }
     }, [user, loading, router]);
@@ -2250,6 +2251,7 @@ function AdminHomePage() {
                                 <NavLink id="revenue" label="Revenue Ledger" icon={BarChart3} active={activeTab === "revenue"} onClick={() => setActiveTab("revenue")} />
                                 <NavLink id="financials" label="Fiscal Analytics" icon={Activity} active={activeTab === "financials"} onClick={() => setActiveTab("financials")} />
                                 <NavLink id="payout_requests" label="Payouts" icon={CreditCard} active={activeTab === "payout_requests"} onClick={() => setActiveTab("payout_requests")} />
+                                <NavLink id="subscriptions" label="Staff Subscriptions" icon={Zap} active={activeTab === "subscriptions"} onClick={() => setActiveTab("subscriptions")} />
                                 <NavLink id="gst" label="Tax Audits" icon={FileText} active={activeTab === "gst"} onClick={() => setActiveTab("gst")} />
 
                                 <GroupTitle title="Reports" />
@@ -2558,9 +2560,14 @@ function AdminHomePage() {
                             </div>
                         </div>
                     )}
-                    {activeTab === "gst" && (
+                     {activeTab === "gst" && (
                         <div className="px-8 py-8">
                             <GstPortal t={t} theme={theme} />
+                        </div>
+                    )}
+                    {activeTab === "subscriptions" && (
+                        <div className="px-8 py-8">
+                            <SubscriptionPackagesAdmin t={t} theme={theme} />
                         </div>
                     )}
                     {activeTab === "subscribers" && (
@@ -3491,10 +3498,6 @@ function AdminHomePage() {
                                 </div>
                             </div>
                         </div>
-                    )}
-
-                    {activeTab === "coupons" && (
-                        <CouponManager t={t} theme={theme} />
                     )}
 
                     {activeTab === "promotions" && (

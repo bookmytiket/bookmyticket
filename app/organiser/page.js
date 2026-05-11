@@ -25,6 +25,7 @@ import PhysicalEventForm from "./components/PhysicalEventForm";
 import VirtualEventForm from "./components/VirtualEventForm";
 import MarathonEventForm from "./components/MarathonEventForm";
 import WalletDashboard from "./components/WalletDashboard";
+import SubscriptionManager from "./components/SubscriptionManager";
 import CouponManagement from "./components/CouponManagement";
 import GoogleInlineMap from "./components/GoogleInlineMap";
 import { reverseGeocode, geocode } from "@/lib/googleMaps";
@@ -317,8 +318,8 @@ function KYCLocationStep({ t, theme, kycFormData, setKycFormData, kycErrors, set
             setIsGeoLoading(true);
             const geocoded = await reverseGeocode(kycFormData.lat, kycFormData.lng);
             if (geocoded.fullAddress) {
-                setKycFormData(prev => ({ 
-                    ...prev, 
+                setKycFormData(prev => ({
+                    ...prev,
                     address: geocoded.fullAddress,
                     country: geocoded.country,
                     countryCode: geocoded.countryCode,
@@ -424,7 +425,7 @@ function OrganiserPanel() {
                 router.push("/signin?redirect=" + encodeURIComponent(window.location.pathname + window.location.search));
             } else if (user.role === "staff") {
                 router.push("/pwa-scan");
-            } else if (user.role !== "organiser" && user.role !== "admin" && user.role !== "super_admin") {
+            } else if (user.role !== "organiser" && user.role !== "admin" && user.role !== "super_admin" && user.role !== "system_admin") {
                 // If a regular user tries to access organiser panel, redirect to profile
                 console.log("OrganiserPanel: unauthorized role", user.role, "- redirecting to profile");
                 router.push("/profile");
@@ -473,7 +474,11 @@ function OrganiserPanel() {
         [user?.id]
     );
 
-    const { data: supportTicketsData = [] } = useSupabaseQuery("support_tickets");
+    const { data: supportTicketsData = [], refresh: refreshTickets } = useSupabaseQuery(
+        "support_tickets",
+        q => q.eq("user_id", user?.id).order('created_at', { ascending: false }),
+        [user?.id]
+    );
 
     useEffect(() => {
         if (!supportTicketsData) return;
@@ -508,10 +513,14 @@ function OrganiserPanel() {
     const { data: eventsData = [], refresh: refreshEvents } = useSupabaseQuery(
         "events",
         (q) => {
+            const orgId = organiserData?.id || user?.id;
             if (user?.role === "admin" || user?.role === "super_admin") {
-                return q.select('*').order('created_at', { ascending: false });
+                // Admins should still see their own events if they are also acting as an organiser
+                // But typically they want to see everything. If they want to see "ONLY" their own, 
+                // we should filter by their ID unless they are in an admin-specific view.
+                return q.select('*').eq("organiser_id", orgId).eq("status", "published").order('created_at', { ascending: false });
             }
-            return q.select('*').eq("organiser_id", organiserData?.id || user?.id).order('created_at', { ascending: false });
+            return q.select('*').eq("organiser_id", orgId).eq("status", "published").order('created_at', { ascending: false });
         },
         [organiserData?.id, user?.id, user?.role]
     );
@@ -529,6 +538,104 @@ function OrganiserPanel() {
         [user?.id]
     );
 
+    const { data: staffPackages = [] } = useSupabaseQuery("staff_packages", q => q.order('package_price', { ascending: true }));
+    const { data: organiserSub, refresh: refreshSub } = useSupabaseQuery(
+        "organiser_subscriptions",
+        (q) => q.eq("organiser_id", user?.id).eq("subscription_status", "active").maybeSingle(),
+        [user?.id]
+    );
+
+    const currentPackage = useMemo(() => {
+        if (!organiserSub) return staffPackages.find(p => p.package_name === "Free Plan") || { staff_limit: 3, package_name: "Free Plan" };
+        return staffPackages.find(p => p.id === organiserSub.package_id) || { staff_limit: 3, package_name: "Free Plan" };
+    }, [organiserSub, staffPackages]);
+
+    const staffLimitReached = staffAccounts.length >= (currentPackage.staff_limit || 3);
+
+    const { data: paymentGateways = [] } = useSupabaseQuery("payment_gateways", q => q.eq("is_enabled", true));
+
+    const handleUpgrade = async (pkg) => {
+        setUpgradingPackage(pkg.id);
+        try {
+            // Load Razorpay
+            const loadRazorpay = () => {
+                return new Promise((resolve) => {
+                    const script = document.createElement("script");
+                    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+                    script.onload = () => resolve(true);
+                    script.onerror = () => resolve(false);
+                    document.body.appendChild(script);
+                });
+            };
+
+            const isLoaded = await loadRazorpay();
+            if (!isLoaded) throw new Error("Razorpay SDK failed to load.");
+
+            // Create Order
+            const res = await fetch("/api/razorpay/create-order", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    id: pkg.id,
+                    amount: pkg.package_price,
+                    type: "subscription"
+                })
+            });
+            const order = await res.json();
+            if (order.error) throw new Error(order.error);
+
+            const rzpKey = paymentGateways.find(g => g.name === "Razorpay")?.config?.keyId || "rzp_live_SkQ5MQO9dB5LuI";
+
+            const options = {
+                key: rzpKey,
+                amount: order.amount,
+                currency: order.currency,
+                name: "BookMyTicket",
+                description: `Upgrade to ${pkg.package_name}`,
+                image: "/logo.png",
+                order_id: order.id,
+                handler: async function (response) {
+                    try {
+                        const verifyRes = await fetch("/api/razorpay/verify", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                razorpay_order_id: response.razorpay_order_id,
+                                razorpay_payment_id: response.razorpay_payment_id,
+                                razorpay_signature: response.razorpay_signature,
+                                id: pkg.id,
+                                type: "subscription",
+                                organiserId: user.id
+                            })
+                        });
+                        const verifyResult = await verifyRes.json();
+                        if (verifyResult.success) {
+                            showToast("Plan upgraded successfully!", "success");
+                            setShowUpgradeModal(false);
+                            refreshSub();
+                        } else {
+                            throw new Error(verifyResult.error || "Verification failed");
+                        }
+                    } catch (err) {
+                        showToast(err.message, "error");
+                    }
+                },
+                prefill: {
+                    name: user.full_name || "",
+                    email: user.email || ""
+                },
+                theme: { color: "#3b82f6" }
+            };
+
+            const rzp = new window.Razorpay(options);
+            rzp.open();
+        } catch (err) {
+            showToast(err.message, "error");
+        } finally {
+            setUpgradingPackage(null);
+        }
+    };
+
     const { data: systemConfigs = [] } = useSupabaseQuery("system_config", q => q, [], { realtime: false });
 
     useEffect(() => {
@@ -545,22 +652,22 @@ function OrganiserPanel() {
                     setEditingEvent(ev);
                     setActiveTab("marathon_publish");
                 } else {
-                setEditingEvent(ev);
-                setPostEvent({
-                    ...getInitialPostEvent(),
-                    ...ev,
-                    id: ev.id,
-                    bannerPreview: ev.img || ev.banner_preview || ev.bannerPreview,
-                    seatingEnabled: ev.seating_enabled !== false,
-                    isFeature: ev.is_featured ? "Yes" : "No",
-                    isExclusive: ev.is_exclusive ? "Yes" : "No",
-                    endDate: ev.end_date || ev.endDate || "",
-                    endTime: ev.end_time || ev.endTime || "",
-                    expiryDate: ev.expiry_date || ev.expiryDate || "",
-                    eventStatus: ev.status || "published"
-                });
-                setActiveTab("post_event");
-                setAddEventStep("form");
+                    setEditingEvent(ev);
+                    setPostEvent({
+                        ...getInitialPostEvent(),
+                        ...ev,
+                        id: ev.id,
+                        bannerPreview: ev.img || ev.banner_preview || ev.bannerPreview,
+                        seatingEnabled: ev.seating_enabled !== false,
+                        isFeature: ev.is_featured ? "Yes" : "No",
+                        isExclusive: ev.is_exclusive ? "Yes" : "No",
+                        endDate: ev.end_date || ev.endDate || "",
+                        endTime: ev.end_time || ev.endTime || "",
+                        expiryDate: ev.expiry_date || ev.expiryDate || "",
+                        eventStatus: ev.status || "published"
+                    });
+                    setActiveTab("post_event");
+                    setAddEventStep("form");
                 }
             } else {
                 console.warn("OrganiserPanel: editId present but event not found in current dataset.");
@@ -589,6 +696,8 @@ function OrganiserPanel() {
     const [supportTicketsList, setSupportTicketsList] = useState([]);
     const [supportTicketForm, setSupportTicketForm] = useState({ email: "", subject: "", description: "", attachmentFileName: "" });
     const [showStaffModal, setShowStaffModal] = useState(false);
+    const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+    const [upgradingPackage, setUpgradingPackage] = useState(null);
     const [staffFormData, setStaffFormData] = useState({ name: "", email: "", password: "", mobile: "", assignedEventId: "", expiryDate: "" });
     const [editingStaffId, setEditingStaffId] = useState(null);
     const [postLoading, setPostLoading] = useState(false);
@@ -818,10 +927,10 @@ function OrganiserPanel() {
             if (event.type === 'Marathon') {
                 await supabase.from('marathon_events').delete().eq('id', event.id);
             }
-            
+
             // 2. Delete from shadow events table
             await deleteEventMutation({ id: event.id });
-            
+
             showToast("Event deleted successfully", "success");
             refreshEvents();
         } catch (err) {
@@ -843,12 +952,12 @@ function OrganiserPanel() {
             const now = new Date();
             const processed = eventsData.map(e => {
                 let status = e.status || 'published';
-                
+
                 // Use the same logic as publishSeatEvent for consistency
                 const configBasic = e.dynamic_config?.basicInfo || {};
                 const configExpiry = configBasic.expiryDate || e.expiry_date;
                 let dateStr = e.end_date || e.endDate || configBasic.endDate || configExpiry || e.date || e.startDate;
-                
+
                 const isAutoStatus = status === 'published' || status === 'expired';
                 if (isAutoStatus && dateStr) {
                     try {
@@ -960,25 +1069,25 @@ function OrganiserPanel() {
             showToast("Please fill all bank details", "warning");
             return;
         }
-        
+
         setPostLoading(true);
         try {
             const { error } = await supabase
                 .from('organisers')
-                .update({ 
-                    kyc_details: { 
-                        ...organiserData?.kyc_details, 
+                .update({
+                    kyc_details: {
+                        ...organiserData?.kyc_details,
                         bankName: kycFormData.bankName,
                         accountNumber: kycFormData.accountNumber,
                         ifscCode: kycFormData.ifscCode,
                         beneficiaryName: kycFormData.beneficiaryName,
                         accountType: kycFormData.accountType
-                    } 
+                    }
                 })
                 .eq('id', user.id);
-            
+
             if (error) throw error;
-            
+
             await refreshOrganiserData();
             showToast("Settlement account updated successfully!", "success");
             setShowBankUpdateModal(false);
@@ -1046,7 +1155,7 @@ function OrganiserPanel() {
             // Update local state and refresh
             setWallet(prev => ({ ...prev, balance: prev.balance - amount }));
             refreshOrganiserData();
-            
+
             showToast("Payout request submitted and balance debited.", "success");
             setShowPayoutModal(false);
             setPayoutAmount("");
@@ -1176,11 +1285,11 @@ function OrganiserPanel() {
         wifi: false,
         seatingType: "FCFS",
         mandatoryCheckin: true,
-        
+
         // Sports/Physical specifics
         parkingDetails: "", entryGate: "", emergencyExit: "",
         videoTrailerUrl: "",
-        
+
         // Online Event Specific Fields
         startDate: "", startTime: "", endDate: "", endTime: "",
         dateSlots: [{ date: "", time: "" }],
@@ -1232,18 +1341,18 @@ function OrganiserPanel() {
                     const data = await res.json();
                     const addr = data.address || {};
                     let fetchedZip = addr.postcode || addr['addr:postcode'] || addr.postal_code;
-                    
+
                     // Fallback: Extract from display_name if address object is incomplete
                     if (!fetchedZip && data.display_name) {
                         const zipMatch = data.display_name.match(/\b\d{6}\b/);
                         if (zipMatch) fetchedZip = zipMatch[0];
                     }
-                    
+
                     // Don't override zip if user edited it in the last 10 seconds
                     const shouldUpdateZip = fetchedZip && (Date.now() - lastZipEdit > 10000);
 
-                    setPostEvent(prev => ({ 
-                        ...prev, 
+                    setPostEvent(prev => ({
+                        ...prev,
                         address: data.display_name || prev.address,
                         city: addr.city || addr.town || addr.village || addr.suburb || prev.city,
                         zipCode: shouldUpdateZip ? fetchedZip : (prev.zipCode || ""),
@@ -1251,12 +1360,12 @@ function OrganiserPanel() {
                         state: addr.state || prev.state,
                         country: addr.country || prev.country
                     }));
-                    
+
                     if (shouldUpdateZip) showToast(`Address Resolved: ${fetchedZip}`, "success");
                 } catch (err) {
                     console.error("Reverse geocoding error:", err);
                 }
-            }, 1500); 
+            }, 1500);
             return () => clearTimeout(timer);
         }
     }, [postEvent.latitude, postEvent.longitude]);
@@ -1356,7 +1465,7 @@ function OrganiserPanel() {
         });
         return booked;
     }, [events.length]);
-    
+
     const statesOfSelectedCountry = useMemo(() => {
         if (!postEvent.countryCode) return [];
         return State.getStatesOfCountry(postEvent.countryCode).map(s => ({ label: s.name, value: s.name }));
@@ -1466,13 +1575,13 @@ function OrganiserPanel() {
         } else if ((isSeating || postEvent.type === "Dynamic" || postEvent.type === "Sports") && categories.length > 0) {
             const prices = categories.flatMap(c => {
                 if (c.isFree) return [0];
-                
+
                 // Check for age-based pricing inside category
                 const ageRates = c.agePricing || c.ageRates || c.age_pricing || c.age_rates || [];
                 if (Array.isArray(ageRates) && ageRates.length > 0) {
                     return ageRates.map(r => Number(r.price) || 0);
                 }
-                
+
                 return [Number(c.price) || 0];
             });
             finalPrice = prices.length > 0 ? Math.min(...prices) : (Number(postEvent.price || postEvent.normalTicketPrice) || 0);
@@ -1681,7 +1790,7 @@ function OrganiserPanel() {
                                         })
                                         .select()
                                         .single();
-                                    
+
                                     if (block) {
                                         const seatsBatch = [];
                                         for (let r = 0; r < b.rows; r++) {
@@ -1749,7 +1858,7 @@ function OrganiserPanel() {
                                             rows_count: b.rows, cols_count: b.cols
                                         })
                                         .select().single();
-                                    
+
                                     if (block) {
                                         const seatsBatch = [];
                                         for (let r = 0; r < b.rows; r++) {
@@ -2783,7 +2892,7 @@ function OrganiserPanel() {
                         <div key={meeting.id} className="bg-white rounded-[2.5rem] border border-slate-100 p-8 shadow-sm hover:shadow-xl hover:shadow-slate-100 transition-all group">
                             <div className="flex justify-between items-start mb-6">
                                 <div className={`px-4 py-1.5 rounded-full text-[9px] font-bold uppercase tracking-widest ${meeting.status === 'live' ? 'bg-emerald-50 text-emerald-600' :
-                                        meeting.status === 'scheduled' ? 'bg-blue-50 text-blue-600' : 'bg-slate-50 text-slate-700'
+                                    meeting.status === 'scheduled' ? 'bg-blue-50 text-blue-600' : 'bg-slate-50 text-slate-700'
                                     }`}>
                                     {meeting.status}
                                 </div>
@@ -2844,8 +2953,8 @@ function OrganiserPanel() {
                                     type="button"
                                     onClick={() => setPostEvent(prev => ({ ...prev, [field]: opt.value }))}
                                     className={`flex-1 py-2.5 px-4 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all  ${isActive
-                                            ? 'bg-white text-pink-500 shadow-md shadow-slate-200/50 scale-[1.02] border border-slate-100'
-                                            : 'text-slate-600 hover:text-slate-600 hover:bg-slate-100/50 border border-transparent'
+                                        ? 'bg-white text-pink-500 shadow-md shadow-slate-200/50 scale-[1.02] border border-slate-100'
+                                        : 'text-slate-600 hover:text-slate-600 hover:bg-slate-100/50 border border-transparent'
                                         }`}
                                 >
                                     {opt.label}
@@ -2919,8 +3028,8 @@ function OrganiserPanel() {
                                                             <div
                                                                 title={`${seatId} (${cat.name} - ₹${cat.price})`}
                                                                 className={`w-7 h-7 sm:w-8 sm:h-8 rounded-md flex items-center justify-center text-[10px] font-semibold transition-all cursor-pointer shadow-sm ${isBooked
-                                                                        ? "bg-slate-200 text-transparent border-slate-200 shadow-none pointer-events-none"
-                                                                        : "bg-white border hover:bg-green-50"
+                                                                    ? "bg-slate-200 text-transparent border-slate-200 shadow-none pointer-events-none"
+                                                                    : "bg-white border hover:bg-green-50"
                                                                     }`}
                                                                 style={{
                                                                     borderColor: isBooked ? "#e2e8f0" : cat.color,
@@ -3007,7 +3116,7 @@ function OrganiserPanel() {
                         updates.zipCode = "";
                         const countryData = COUNTRIES.find(c => c.label === (typeof val === 'string' ? val : val.label));
                         const code = countryData?.code || "IN";
-                        
+
                         // Approximate center for countries
                         const centers = {
                             "IN": { lat: 20.5937, lng: 78.9629 },
@@ -3067,13 +3176,13 @@ function OrganiserPanel() {
             switch (activeTab) {
                 case "marathon_publish":
                     return (
-                        <MarathonEventForm 
+                        <MarathonEventForm
                             marathonId={editingMarathonId}
                             onCancel={() => {
                                 setEditingMarathonId(null);
                                 setEditingEvent(null);
                                 setActiveTab("dashboard");
-                            }} 
+                            }}
                             onPublish={() => {
                                 setEditingMarathonId(null);
                                 setEditingEvent(null);
@@ -3112,7 +3221,7 @@ function OrganiserPanel() {
 
                             {/* V2 Specialized Publishing Cards */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                                <div 
+                                <div
                                     onClick={() => setActiveTab("marathon_publish")}
                                     className="relative overflow-hidden bg-gradient-to-br from-indigo-600 to-indigo-800 p-8 rounded-[2.5rem] text-white cursor-pointer group hover:shadow-2xl hover:shadow-indigo-500/30 transition-all duration-500"
                                 >
@@ -3131,7 +3240,7 @@ function OrganiserPanel() {
                                     </div>
                                 </div>
 
-                                <div 
+                                <div
                                     onClick={() => setActiveTab("post_event")}
                                     className="relative overflow-hidden bg-gradient-to-br from-pink-500 to-rose-600 p-8 rounded-[2.5rem] text-white cursor-pointer group hover:shadow-2xl hover:shadow-rose-500/30 transition-all duration-500"
                                 >
@@ -3343,7 +3452,7 @@ function OrganiserPanel() {
                                                                                     meetingUrl: ev.meeting_url || ev.meetingUrl,
                                                                                     meetingType: ev.meeting_type || ev.meetingType,
                                                                                     externalMeetingUrl: ev.external_meeting_url || ev.externalMeetingUrl,
-                                                                                    
+
                                                                                     ...(ev.sports_details || {}),
                                                                                     sportType: ev.sports_details?.sport_type || ev.sportType,
                                                                                     ageCategory: ev.sports_details?.age_category || ev.ageCategory,
@@ -3372,8 +3481,8 @@ function OrganiserPanel() {
                                                                                     setEditingEvent(ev);
                                                                                     setActiveTab("marathon_publish");
                                                                                 } else {
-                                                                                setAddEventStep("form");
-                                                                                setActiveTab("post_event");
+                                                                                    setAddEventStep("form");
+                                                                                    setActiveTab("post_event");
                                                                                 }
                                                                             }} style={{ border: `1px solid ${t.border}`, background: t.cardBg, color: "#3b82f6", padding: "8px", borderRadius: "8px", cursor: "pointer" }}>
                                                                                 <Settings size={16} />
@@ -3499,7 +3608,7 @@ function OrganiserPanel() {
                                             onClick={() => {
                                                 if (st.id === "Marathon") {
                                                     setActiveTab("marathon_publish");
-                                                    setAddEventStep("select_type"); 
+                                                    setAddEventStep("select_type");
                                                 } else {
                                                     setPostEvent(pe => ({ ...pe, sportType: st.id }));
                                                     setAddEventStep("form");
@@ -3518,7 +3627,7 @@ function OrganiserPanel() {
                                         </button>
                                     ))}
                                 </div>
-                                <button 
+                                <button
                                     onClick={() => setAddEventStep("select_type")}
                                     className="mt-16 flex items-center gap-2 text-slate-400 hover:text-slate-900 font-black uppercase tracking-widest text-[10px] transition-colors"
                                 >
@@ -3531,7 +3640,7 @@ function OrganiserPanel() {
                     if (addEventStep === "form") {
                         if (postEvent.type === "Physical Event") {
                             return (
-                                <PhysicalEventForm 
+                                <PhysicalEventForm
                                     postEvent={postEvent}
                                     setPostEvent={setPostEvent}
                                     onCancel={() => { setPostEvent(getInitialPostEvent()); setAddEventStep("select_type"); }}
@@ -3542,7 +3651,7 @@ function OrganiserPanel() {
                         }
                         if (postEvent.type === "Virtual Event") {
                             return (
-                                <VirtualEventForm 
+                                <VirtualEventForm
                                     postEvent={postEvent}
                                     setPostEvent={setPostEvent}
                                     onCancel={() => { setPostEvent(getInitialPostEvent()); setAddEventStep("select_type"); }}
@@ -3553,7 +3662,7 @@ function OrganiserPanel() {
                         }
                         if (postEvent.type === "Sports Event" || postEvent.type === "Sports") {
                             return (
-                                <SportsEventForm 
+                                <SportsEventForm
                                     postEvent={postEvent}
                                     setPostEvent={setPostEvent}
                                     onCancel={() => { setPostEvent(getInitialPostEvent()); setAddEventStep("select_type"); }}
@@ -3769,7 +3878,7 @@ function OrganiserPanel() {
                                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "32px" }}>
                                     <h3 style={{ fontSize: "24px", fontWeight: 800, color: t.textMain, margin: 0 }}>Online & Virtual Events</h3>
                                     <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-                                        <button 
+                                        <button
                                             onClick={() => {
                                                 setEditingEvent(null);
                                                 setPostEvent(getInitialPostEvent());
@@ -3959,16 +4068,16 @@ function OrganiserPanel() {
                                                                 }}>
                                                                     {b.status === "Scanned" ? "CHECKED IN" : (b.status ? b.status.toUpperCase() : "UNKNOWN")}
                                                                 </span>
-                                                                <button 
+                                                                <button
                                                                     onClick={() => setViewingBookingDetails(b)}
-                                                                    style={{ 
-                                                                        padding: "6px 12px", 
-                                                                        borderRadius: "8px", 
-                                                                        border: `1px solid ${t.border}`, 
-                                                                        background: t.cardBg, 
-                                                                        color: t.textMain, 
-                                                                        fontSize: "10px", 
-                                                                        fontWeight: 800, 
+                                                                    style={{
+                                                                        padding: "6px 12px",
+                                                                        borderRadius: "8px",
+                                                                        border: `1px solid ${t.border}`,
+                                                                        background: t.cardBg,
+                                                                        color: t.textMain,
+                                                                        fontSize: "10px",
+                                                                        fontWeight: 800,
                                                                         cursor: "pointer",
                                                                         display: 'flex',
                                                                         alignItems: 'center',
@@ -4031,7 +4140,7 @@ function OrganiserPanel() {
                                                 <p style={{ margin: 0, fontSize: "12px", color: t.textSub }}>Account {kycFormData.bankName ? "Linked" : "Not Linked"}</p>
                                             </div>
                                         </div>
-                                        <button 
+                                        <button
                                             onClick={() => setShowBankUpdateModal(true)}
                                             style={{ marginTop: "24px", width: "100%", border: `1px solid ${t.border}`, background: t.cardBg, color: t.textMain, padding: "12px", borderRadius: "10px", fontSize: "13px", fontWeight: 700, cursor: "pointer" }}
                                         >
@@ -4259,7 +4368,7 @@ function OrganiserPanel() {
                                                             </div>
                                                         </td>
                                                         <td style={{ padding: "16px", borderRadius: "0 12px 12px 0" }}>
-                                                            <button 
+                                                            <button
                                                                 onClick={() => setViewingBookingDetails(b)}
                                                                 style={{ padding: "6px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, background: t.cardBg, color: t.textMain, fontSize: "10px", fontWeight: 800, cursor: "pointer", display: 'flex', alignItems: 'center', gap: '4px' }}
                                                             >
@@ -4296,6 +4405,14 @@ function OrganiserPanel() {
                         </div>
                     );
                 }
+                case "subscriptions":
+                    return (
+                        <SubscriptionManager
+                            user={user}
+                            theme={theme}
+                            t={t}
+                        />
+                    );
                 case "support_tickets": {
                     const TICKET_STATUSES = ["Open", "Pending", "On-Hold", "In-Progress", "Resolved", "Closed"];
                     const statusColor = (s) => ({ Open: "#22c55e", Pending: "#7dd3fc", "On-Hold": "#8b5cf6", "In-Progress": "#06b6d4", Resolved: "#22c55e", Closed: "#ef4444" }[s] || "#334155");
@@ -4741,14 +4858,36 @@ function OrganiserPanel() {
                                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "32px" }}>
                                     <div>
                                         <h3 style={{ fontSize: "24px", fontWeight: 800, color: t.textMain, margin: 0 }}>Staff Management</h3>
-                                        <p style={{ fontSize: "14px", color: t.textSub, marginTop: "4px" }}>Manage staff access for the mobile scanner application.</p>
+                                        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "4px" }}>
+                                            <p style={{ fontSize: "14px", color: t.textSub, margin: 0 }}>Manage staff access for the mobile scanner application.</p>
+                                            <div style={{ backgroundColor: "#3b82f610", color: "#3b82f6", padding: "2px 8px", borderRadius: "4px", fontSize: "10px", fontWeight: 800, textTransform: "uppercase" }}>
+                                                {currentPackage.package_name} ({staffAccounts.length}/{currentPackage.staff_limit || 3})
+                                            </div>
+                                        </div>
                                     </div>
-                                    <button
-                                        onClick={() => { setEditingStaffId(null); setStaffFormData({ name: "", email: "", password: "", mobile: "", assignedEventId: "", expiryDate: "" }); setShowStaffModal(true); }}
-                                        style={{ backgroundColor: "#3b82f6", color: "#fff", padding: "12px 24px", borderRadius: "10px", border: "none", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}
-                                    >
-                                        <Plus size={20} /> Add Staff
-                                    </button>
+                                    <div style={{ display: "flex", gap: "12px" }}>
+                                        <button
+                                            onClick={() => setShowUpgradeModal(true)}
+                                            style={{ backgroundColor: "#3b82f610", color: "#3b82f6", padding: "12px 24px", borderRadius: "10px", border: `1px solid #3b82f630`, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}
+                                        >
+                                            <Sparkles size={18} /> Upgrade Plan
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                if (staffLimitReached) {
+                                                    setShowUpgradeModal(true);
+                                                    showToast("Staff limit reached for your current plan", "error");
+                                                    return;
+                                                }
+                                                setEditingStaffId(null);
+                                                setStaffFormData({ name: "", email: "", password: "", mobile: "", assignedEventId: "", expiryDate: "" });
+                                                setShowStaffModal(true);
+                                            }}
+                                            style={{ backgroundColor: staffLimitReached ? "#94a3b8" : "#3b82f6", color: "#fff", padding: "12px 24px", borderRadius: "10px", border: "none", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}
+                                        >
+                                            <Plus size={20} /> Add Staff
+                                        </button>
+                                    </div>
                                 </div>
 
                                 {staffAccounts.length === 0 ? (
@@ -4785,10 +4924,10 @@ function OrganiserPanel() {
                                                             <div style={{ fontSize: "11px", color: t.textSub }}>{s.mobile || "No Mobile"}</div>
                                                         </td>
                                                         <td style={{ padding: "16px" }}>
-                                                            <div style={{ 
-                                                                display: "inline-block", 
-                                                                padding: "4px 10px", 
-                                                                borderRadius: "6px", 
+                                                            <div style={{
+                                                                display: "inline-block",
+                                                                padding: "4px 10px",
+                                                                borderRadius: "6px",
                                                                 backgroundColor: s.assigned_event_id ? "#3b82f610" : "#f1f5f9",
                                                                 color: s.assigned_event_id ? "#3b82f6" : t.textSub,
                                                                 fontSize: "11px",
@@ -5025,72 +5164,74 @@ function OrganiserPanel() {
                 {/* Staff Modal */}
                 {showStaffModal && (
                     <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.8)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }}>
-                        <div style={{ backgroundColor: t.cardBg, padding: "32px", borderRadius: "24px", width: "100%", maxWidth: "480px", border: `1px solid ${t.border}` }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "32px" }}>
-                                <h2 style={{ fontSize: "24px", fontWeight: 800, color: t.textMain }}>{editingStaffId ? "Edit Staff Account" : "Add Staff Account"}</h2>
+                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "24px", width: "100%", maxWidth: "520px", border: `1px solid ${t.border}`, maxHeight: "90vh", overflowY: "auto" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+                                <h2 style={{ fontSize: "20px", fontWeight: 800, color: t.textMain }}>{editingStaffId ? "Edit Staff Account" : "Add Staff Account"}</h2>
                                 <button onClick={() => setShowStaffModal(false)} style={{ background: "none", border: "none", color: t.textSub, cursor: "pointer" }}><X size={24} /></button>
                             </div>
-                            <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-                                <div>
-                                    <label style={{ display: "block", fontSize: "13px", fontWeight: 600, marginBottom: "8px", color: t.textMain }}>Full Name</label>
-                                    <input
-                                        type="text"
-                                        placeholder="Enter staff name"
-                                        value={staffFormData.name}
-                                        onChange={(e) => setStaffFormData(prev => ({ ...prev, name: e.target.value }))}
-                                        style={{ width: "100%", padding: "14px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }}
-                                    />
+                            <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "4px", color: t.textMain }}>Full Name</label>
+                                        <input
+                                            type="text"
+                                            placeholder="Enter staff name"
+                                            value={staffFormData.name}
+                                            onChange={(e) => setStaffFormData(prev => ({ ...prev, name: e.target.value }))}
+                                            style={{ width: "100%", padding: "10px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "14px" }}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "4px", color: t.textMain }}>Username / Email</label>
+                                        <input
+                                            type="text"
+                                            placeholder="e.g. staff_john"
+                                            value={staffFormData.email}
+                                            onChange={(e) => setStaffFormData(prev => ({ ...prev, email: e.target.value }))}
+                                            style={{ width: "100%", padding: "10px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "14px" }}
+                                        />
+                                    </div>
+                                </div>
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "4px", color: t.textMain }}>Mobile Number</label>
+                                        <input
+                                            type="tel"
+                                            placeholder="e.g. +91 987..."
+                                            value={staffFormData.mobile}
+                                            onChange={(e) => setStaffFormData(prev => ({ ...prev, mobile: e.target.value }))}
+                                            style={{ width: "100%", padding: "10px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "14px" }}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "4px", color: t.textMain }}>Access Expiry Date</label>
+                                        <CalendarPicker
+                                            value={staffFormData.expiryDate}
+                                            onChange={(val) => setStaffFormData(prev => ({ ...prev, expiryDate: val }))}
+                                            placeholder="dd/mm/yyyy"
+                                        />
+                                    </div>
                                 </div>
                                 <div>
-                                    <label style={{ display: "block", fontSize: "13px", fontWeight: 600, marginBottom: "8px", color: t.textMain }}>Username / Email</label>
-                                    <input
-                                        type="text"
-                                        placeholder="e.g. staff_john"
-                                        value={staffFormData.email}
-                                        onChange={(e) => setStaffFormData(prev => ({ ...prev, email: e.target.value }))}
-                                        style={{ width: "100%", padding: "14px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }}
-                                    />
-                                </div>
-                                <div>
-                                    <label style={{ display: "block", fontSize: "13px", fontWeight: 600, marginBottom: "8px", color: t.textMain }}>Mobile Number</label>
-                                    <input
-                                        type="tel"
-                                        placeholder="e.g. +91 98765 43210"
-                                        value={staffFormData.mobile}
-                                        onChange={(e) => setStaffFormData(prev => ({ ...prev, mobile: e.target.value }))}
-                                        style={{ width: "100%", padding: "14px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }}
-                                    />
-                                </div>
-                                <div>
-                                    <label style={{ display: "block", fontSize: "13px", fontWeight: 600, marginBottom: "8px", color: t.textMain }}>Assigned Event (Restricted Access)</label>
-                                    <select
+                                    <CustomSelect
+                                        label="Assigned Event (Restricted Access)"
                                         value={staffFormData.assignedEventId}
-                                        onChange={(e) => setStaffFormData(prev => ({ ...prev, assignedEventId: e.target.value }))}
-                                        style={{ width: "100%", padding: "14px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, outline: "none" }}
-                                    >
-                                        <option value="">All Events (Global Scanner)</option>
-                                        {eventsData.map(ev => (
-                                            <option key={ev.id} value={ev.id}>{ev.title}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                                <div>
-                                    <label style={{ display: "block", fontSize: "13px", fontWeight: 600, marginBottom: "8px", color: t.textMain }}>Access Expiry Date</label>
-                                    <input
-                                        type="date"
-                                        value={staffFormData.expiryDate ? staffFormData.expiryDate.split('T')[0] : ""}
-                                        onChange={(e) => setStaffFormData(prev => ({ ...prev, expiryDate: e.target.value }))}
-                                        style={{ width: "100%", padding: "14px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }}
+                                        onChange={(val) => setStaffFormData(prev => ({ ...prev, assignedEventId: val }))}
+                                        placeholder="All Events (Global Scanner)"
+                                        options={[
+                                            { label: "All Events (Global Scanner)", value: "" },
+                                            ...eventsData.map(ev => ({ label: ev.title, value: ev.id }))
+                                        ]}
                                     />
                                 </div>
                                 <div>
-                                    <label style={{ display: "block", fontSize: "13px", fontWeight: 600, marginBottom: "8px", color: t.textMain }}>Password {editingStaffId && "(Leave blank to keep current)"}</label>
+                                    <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "4px", color: t.textMain }}>Password {editingStaffId && "(Leave blank to keep current)"}</label>
                                     <input
                                         type="password"
                                         placeholder="Set access password"
                                         value={staffFormData.password}
                                         onChange={(e) => setStaffFormData(prev => ({ ...prev, password: e.target.value }))}
-                                        style={{ width: "100%", padding: "14px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }}
+                                        style={{ width: "100%", padding: "10px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "14px" }}
                                     />
                                 </div>
                                 <button
@@ -5130,7 +5271,7 @@ function OrganiserPanel() {
                                         }
                                     }}
                                     disabled={postLoading}
-                                    style={{ width: "100%", padding: "16px", borderRadius: "12px", backgroundColor: "#3b82f6", color: "#fff", border: "none", fontWeight: 700, cursor: "pointer", marginTop: "12px", opacity: postLoading ? 0.7 : 1 }}
+                                    style={{ width: "100%", padding: "12px", borderRadius: "12px", backgroundColor: "#3b82f6", color: "#fff", border: "none", fontWeight: 700, cursor: "pointer", marginTop: "4px", opacity: postLoading ? 0.7 : 1 }}
                                 >
                                     {postLoading ? "Processing..." : (editingStaffId ? "Update Password" : "Create Account")}
                                 </button>
@@ -5147,18 +5288,18 @@ function OrganiserPanel() {
                             <p style={{ fontSize: "14px", color: t.textSub, marginBottom: "24px" }}>Enter the amount you wish to withdraw to your linked bank account.</p>
                             <div style={{ position: "relative", marginBottom: "24px" }}>
                                 <span style={{ position: "absolute", left: "16px", top: "50%", transform: "translateY(-50%)", fontWeight: 800, fontSize: "18px", color: t.textMain }}>₹</span>
-                                <input 
-                                    type="number" 
-                                    placeholder="0.00" 
+                                <input
+                                    type="number"
+                                    placeholder="0.00"
                                     value={payoutAmount}
                                     onChange={(e) => setPayoutAmount(e.target.value)}
-                                    style={{ width: "100%", padding: "14px 14px 14px 40px", borderRadius: "12px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "20px", fontWeight: 900 }} 
+                                    style={{ width: "100%", padding: "14px 14px 14px 40px", borderRadius: "12px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "20px", fontWeight: 900 }}
                                 />
                             </div>
                             <div style={{ display: "flex", gap: "12px" }}>
                                 <button onClick={() => setShowPayoutModal(false)} style={{ flex: 1, padding: "12px", borderRadius: "10px", border: `1px solid ${t.border}`, background: "none", color: t.textMain, fontWeight: 700, cursor: "pointer" }}>Cancel</button>
-                                <button 
-                                    onClick={handlePayoutRequest} 
+                                <button
+                                    onClick={handlePayoutRequest}
                                     disabled={postLoading}
                                     style={{ flex: 1, padding: "12px", borderRadius: "10px", backgroundColor: "#3b82f6", color: "#fff", border: "none", fontWeight: 700, cursor: "pointer", opacity: postLoading ? 0.7 : 1 }}
                                 >
@@ -5180,7 +5321,7 @@ function OrganiserPanel() {
                                 </div>
                                 <button onClick={() => setShowBankUpdateModal(false)} style={{ background: "none", border: "none", color: t.textSub, cursor: "pointer" }}><X size={24} /></button>
                             </div>
-                            
+
                             <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                                 <div>
                                     <label style={{ display: "block", fontSize: "12px", color: t.textSub, marginBottom: "6px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>Beneficiary Name</label>
@@ -5204,8 +5345,8 @@ function OrganiserPanel() {
 
                             <div style={{ display: "flex", gap: "12px", marginTop: "32px" }}>
                                 <button onClick={() => setShowBankUpdateModal(false)} style={{ flex: 1, padding: "12px", borderRadius: "10px", border: `1px solid ${t.border}`, background: "none", color: t.textMain, fontWeight: 700, cursor: "pointer" }}>Cancel</button>
-                                <button 
-                                    onClick={handleBankUpdate} 
+                                <button
+                                    onClick={handleBankUpdate}
                                     disabled={postLoading}
                                     style={{ flex: 1, padding: "12px", borderRadius: "10px", backgroundColor: "#3b82f6", color: "#fff", border: "none", fontWeight: 700, cursor: "pointer", opacity: postLoading ? 0.7 : 1, transition: "0.2s" }}
                                 >
@@ -5221,7 +5362,7 @@ function OrganiserPanel() {
                     <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.8)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1100 }}>
                         <div style={{ backgroundColor: t.cardBg, padding: "32px", borderRadius: "32px", width: "100%", maxWidth: "550px", border: `1px solid ${t.border}`, boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)", position: 'relative', overflow: 'hidden' }}>
                             <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '6px', background: 'linear-gradient(90deg, #ec4899, #8b5cf6)' }} />
-                            
+
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "24px" }}>
                                 <div>
                                     <h3 style={{ fontSize: "22px", fontWeight: 900, color: t.textMain, margin: 0, textTransform: 'uppercase', letterSpacing: '-0.5px' }}>Registration Details</h3>
@@ -5262,8 +5403,8 @@ function OrganiserPanel() {
                             </div>
 
                             <div style={{ marginTop: "32px" }}>
-                                <button 
-                                    onClick={() => setViewingBookingDetails(null)} 
+                                <button
+                                    onClick={() => setViewingBookingDetails(null)}
                                     style={{ width: "100%", padding: "16px", borderRadius: "16px", backgroundColor: t.textMain, color: t.cardBg, border: "none", fontWeight: 900, fontSize: '13px', textTransform: 'uppercase', letterSpacing: '2px', cursor: "pointer", transition: "0.2s shadow", boxShadow: `0 10px 20px -10px ${t.textMain}60` }}
                                 >
                                     Close Details
@@ -5353,13 +5494,13 @@ function OrganiserPanel() {
                                 </button>
                                 {sidebarOpen.eventManagement && (
                                     <div style={{ marginBottom: "8px" }}>
-                                        <button 
+                                        <button
                                             onClick={() => {
                                                 setEditingEvent(null);
                                                 setPostEvent(getInitialPostEvent());
                                                 setAddEventStep("select_type");
                                                 setActiveTab("post_event");
-                                            }} 
+                                            }}
                                             className={`sidebar-dropdown-item ${activeTab === "post_event" ? "active" : ""}`}
                                         >
                                             Create Event
@@ -5458,6 +5599,12 @@ function OrganiserPanel() {
                                     <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                                         <UserPlus size={18} />
                                         <span>Staff Management</span>
+                                    </div>
+                                </button>
+                                <button onClick={() => setActiveTab("subscriptions")} className={`sidebar-item ${activeTab === "subscriptions" ? "active" : ""}`}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                        <Zap size={18} />
+                                        <span>Subscriptions</span>
                                     </div>
                                 </button>
                                 <button onClick={() => setActiveTab("edit_profile")} className={`sidebar-item ${activeTab === "edit_profile" ? "active" : ""}`}>
@@ -5734,6 +5881,72 @@ function OrganiserPanel() {
 
     const renderModals = () => (
         <>
+            {showUpgradeModal && (
+                <div style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.8)", backdropFilter: "blur(8px)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
+                    <div style={{ backgroundColor: t.bg, width: "100%", maxWidth: "900px", borderRadius: "24px", overflow: "hidden", border: `1px solid ${t.border}`, boxShadow: "0 25px 50px -12px rgba(0,0,0,0.5)" }}>
+                        <div style={{ padding: "32px", borderBottom: `1px solid ${t.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <div>
+                                <h2 style={{ fontSize: "28px", fontWeight: 800, color: t.textMain, margin: 0, fontStyle: "italic" }}>Upgrade Your <span style={{ color: "#3b82f6" }}>Staff Package</span></h2>
+                                <p style={{ color: t.textSub, margin: "4px 0 0", fontSize: "14px" }}>Select a plan that fits your event's scale</p>
+                            </div>
+                            <button onClick={() => setShowUpgradeModal(false)} style={{ background: "none", border: "none", color: t.textSub, cursor: "pointer" }}><X size={24} /></button>
+                        </div>
+                        <div style={{ padding: "32px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "20px" }}>
+                            {staffPackages.filter(p => p.package_price > 0).map(pkg => (
+                                <div key={pkg.id} style={{
+                                    padding: "24px",
+                                    borderRadius: "20px",
+                                    backgroundColor: t.cardBg,
+                                    border: currentPackage.id === pkg.id ? "2px solid #3b82f6" : `1px solid ${t.border}`,
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    transition: "transform 0.2s"
+                                }}>
+                                    <div style={{ fontSize: "12px", fontWeight: 800, color: "#3b82f6", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "8px" }}>{pkg.package_name}</div>
+                                    <div style={{ fontSize: "32px", fontWeight: 800, color: t.textMain, marginBottom: "16px" }}>₹{pkg.package_price}<span style={{ fontSize: "14px", fontWeight: 400, color: t.textSub }}>/mo</span></div>
+                                    <div style={{ flex: 1, marginBottom: "24px" }}>
+                                        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px", fontSize: "13px", color: t.textMain }}>
+                                            <CheckCircle size={16} color="#10b981" /> {pkg.staff_limit} Staff Accounts
+                                        </div>
+                                        {pkg.features?.offline_scan && (
+                                            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px", fontSize: "13px", color: t.textMain }}>
+                                                <CheckCircle size={16} color="#10b981" /> Offline Validation
+                                            </div>
+                                        )}
+                                        {pkg.features?.multi_gate && (
+                                            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px", fontSize: "13px", color: t.textMain }}>
+                                                <CheckCircle size={16} color="#10b981" /> Multi-Gate Access
+                                            </div>
+                                        )}
+                                        {pkg.features?.analytics && (
+                                            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px", fontSize: "13px", color: t.textMain }}>
+                                                <CheckCircle size={16} color="#10b981" /> Advanced Analytics
+                                            </div>
+                                        )}
+                                    </div>
+                                    <button
+                                        disabled={currentPackage.id === pkg.id || upgradingPackage === pkg.id}
+                                        onClick={() => handleUpgrade(pkg)}
+                                        style={{
+                                            width: "100%",
+                                            padding: "12px",
+                                            borderRadius: "12px",
+                                            border: "none",
+                                            backgroundColor: currentPackage.id === pkg.id ? "#10b981" : "#3b82f6",
+                                            color: "#fff",
+                                            fontWeight: 700,
+                                            cursor: "pointer",
+                                            opacity: upgradingPackage === pkg.id ? 0.7 : 1
+                                        }}
+                                    >
+                                        {currentPackage.id === pkg.id ? "Current Plan" : upgradingPackage === pkg.id ? "Processing..." : "Select Plan"}
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
             {showGstModal && (
                 <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.5)", zIndex: 9999, display: "flex", alignItems: "center", justifyItems: "center", justifyContent: "center", padding: "20px" }}>
                     <div style={{ backgroundColor: "#fff", borderRadius: "8px", maxWidth: "600px", width: "100%", maxHeight: "90vh", display: "flex", flexDirection: "column", boxShadow: "0 10px 25px rgba(0,0,0,0.2)" }}>
@@ -5927,7 +6140,7 @@ function OrganiserPanel() {
     if (loading || isOrgLoading) return renderLoadingView();
 
     // GUARD: If unauthorized role trying to access (should be caught by useEffect, but this prevents blank screen)
-    if (user && user.role !== 'organiser' && user.role !== 'admin' && user.role !== 'staff') {
+    if (user && user.role !== 'organiser' && user.role !== 'admin' && user.role !== 'super_admin' && user.role !== 'system_admin' && user.role !== 'staff') {
         return renderLoadingView(); // Will redirect soon
     }
 
@@ -5953,11 +6166,26 @@ function OrganiserPanel() {
                 </>
             );
         case "pending":
-            return renderRestrictedSidebar(renderPendingView());
+            return (
+                <>
+                    {renderModals()}
+                    {renderRestrictedSidebar(renderPendingView())}
+                </>
+            );
         case "approved":
-            return renderDashboardView();
+            return (
+                <>
+                    {renderModals()}
+                    {renderDashboardView()}
+                </>
+            );
         default:
-            return renderDashboardView();
+            return (
+                <>
+                    {renderModals()}
+                    {renderDashboardView()}
+                </>
+            );
     }
 }
 

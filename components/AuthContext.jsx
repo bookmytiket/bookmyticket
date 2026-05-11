@@ -22,6 +22,10 @@ export function AuthProvider({ children }) {
                 try {
                     const parsed = JSON.parse(cachedUser);
                     setUser(parsed);
+                    // Check device session if staff
+                    if (parsed.role === 'staff') {
+                        checkStaffSession(parsed.id);
+                    }
                     setLoading(false);
                 } catch (e) {
                     console.error("Error parsing cached user:", e);
@@ -116,6 +120,33 @@ export function AuthProvider({ children }) {
         return () => {
             if (inactivityTimer) clearTimeout(inactivityTimer);
             activityEvents.forEach(event => window.removeEventListener(event, resetTimer));
+        };
+    }, [user]);
+    
+    // Real-time Staff Session Monitoring
+    useEffect(() => {
+        if (!user || user.role !== 'staff') return;
+
+        const deviceId = localStorage.getItem("bt_device_id");
+        
+        const channel = supabase
+            .channel('staff_session_monitoring')
+            .on('postgres_changes', {
+                event: 'UPDATE',
+                schema: 'public',
+                table: 'device_sessions',
+                filter: `staff_id=eq.${user.id}`
+            }, (payload) => {
+                if (payload.new.login_status === 'logged_out' && payload.new.device_id === deviceId) {
+                    console.log("Session invalidated from server.");
+                    logout();
+                    alert("You have been logged out because a new login was detected on another device.");
+                }
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
         };
     }, [user]);
 
@@ -293,6 +324,31 @@ export function AuthProvider({ children }) {
         }
     };
 
+    const getDeviceId = () => {
+        let id = localStorage.getItem("bt_device_id");
+        if (!id) {
+            id = 'dev_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+            localStorage.setItem("bt_device_id", id);
+        }
+        return id;
+    };
+
+    const checkStaffSession = async (staffId) => {
+        const deviceId = getDeviceId();
+        const { data: session } = await supabase
+            .from('device_sessions')
+            .select('*')
+            .eq('staff_id', staffId)
+            .eq('login_status', 'active')
+            .maybeSingle();
+
+        if (session && session.device_id !== deviceId) {
+            console.log("Device restriction: Logged in on another device.");
+            logout();
+            alert("Your account has been logged in on another device. This session has been terminated.");
+        }
+    };
+
     const login = async (identifier, password, redirectPath = null, meta = {}) => {
         if (!supabase) return { success: false, error: "System not initialized." };
         setLoading(true);
@@ -305,7 +361,31 @@ export function AuthProvider({ children }) {
             }
             const { data, error } = await supabase.auth.signInWithPassword({ email, password });
             if (error) throw error;
+            
             const userData = await fetchAndSetUser(data.user);
+            
+            // DEVICE RESTRICTION LOGIC
+            if (userData && userData.role === 'staff') {
+                const deviceId = getDeviceId();
+                
+                // 1. Invalidate other active sessions
+                await supabase
+                    .from('device_sessions')
+                    .update({ login_status: 'logged_out' })
+                    .eq('staff_id', userData.id)
+                    .eq('login_status', 'active');
+
+                // 2. Create new active session
+                await supabase.from('device_sessions').insert({
+                    staff_id: userData.id,
+                    device_id: deviceId,
+                    login_status: 'active'
+                });
+
+                // 3. Bind device to staff record
+                await supabase.from('staff').update({ device_id: deviceId }).eq('id', userData.id);
+            }
+
             if (userData) {
                 return { success: true, user: userData };
             }

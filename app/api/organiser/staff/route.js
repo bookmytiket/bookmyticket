@@ -14,6 +14,29 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Supabase Admin client not configured' }, { status: 500 });
     }
 
+    // 0. CHECK STAFF LIMIT
+    // A. Get current staff count
+    const { count: currentStaffCount } = await supabaseAdmin
+      .from('staff')
+      .select('*', { count: 'exact', head: true })
+      .eq('organiser_id', organiserId);
+
+    // B. Get active subscription
+    const { data: subscription } = await supabaseAdmin
+      .from('organiser_subscriptions')
+      .select('package_id, staff_packages(staff_limit)')
+      .eq('organiser_id', organiserId)
+      .eq('payment_status', 'active')
+      .maybeSingle();
+
+    const staffLimit = subscription?.staff_packages?.staff_limit || 3;
+
+    if ((currentStaffCount || 0) >= staffLimit) {
+      return NextResponse.json({ 
+        error: `Staff limit reached (${staffLimit} accounts). Please upgrade your plan to add more staff.` 
+      }, { status: 403 });
+    }
+
     // 1. Create the Auth User
     let userId;
     const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({

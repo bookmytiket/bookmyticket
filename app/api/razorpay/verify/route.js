@@ -10,13 +10,14 @@ const supabaseAdmin = createClient(
 
 export async function POST(request) {
     try {
+        const body = await request.json();
         const { 
             razorpay_order_id, 
             razorpay_payment_id, 
             razorpay_signature,
             id,
             type = "booking" // "booking" for events, "service" for professional services
-        } = await request.json();
+        } = body;
 
         let key_secret = process.env.RAZORPAY_KEY_SECRET;
 
@@ -187,6 +188,45 @@ export async function POST(request) {
                     description: `Earnings from service session ${id}`
                 });
             }
+        } else if (type === "subscription" || type === "staff_subscription") {
+            // 1. Fetch Package details
+            const { data: pkg, error: pkgErr } = await supabaseAdmin
+                .from('staff_packages')
+                .select('*')
+                .eq('id', id)
+                .single();
+            
+            if (pkgErr) throw pkgErr;
+
+            // 2. Fetch Organiser ID from request body
+            const organiserId = body.organiserId;
+
+            // 3. Update/Insert Organiser Subscription
+            const expiryDate = new Date();
+            expiryDate.setMonth(expiryDate.getMonth() + 1); // 1 month plan
+
+            const { error: subErr } = await supabaseAdmin
+                .from('organiser_subscriptions')
+                .upsert({
+                    organiser_id: organiserId,
+                    package_id: id,
+                    subscription_status: 'active',
+                    active_until: expiryDate.toISOString(),
+                    last_payment_id: razorpay_payment_id
+                }, { onConflict: 'organiser_id' });
+
+            if (subErr) throw subErr;
+
+            // 4. Record Subscription Payment log
+            await supabaseAdmin.from('subscription_payments').insert({
+                organiser_id: organiserId,
+                package_id: id,
+                amount: pkg.package_price,
+                gateway: 'Razorpay',
+                gateway_payment_id: razorpay_payment_id,
+                gateway_order_id: razorpay_order_id,
+                payment_status: 'completed'
+            });
         }
 
         return NextResponse.json({ success: true });

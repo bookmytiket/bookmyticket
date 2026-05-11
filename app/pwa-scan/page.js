@@ -42,6 +42,23 @@ function PWAScanContent() {
 
     const assignedEventId = useMemo(() => staffRecord?.assigned_event_id || user?.user_metadata?.assigned_event_id, [staffRecord, user]);
     const expiryDate = useMemo(() => staffRecord?.expiry_date || user?.user_metadata?.expiry_date, [staffRecord, user]);
+    const organiserId = useMemo(() => staffRecord?.organiser_id || user?.id, [staffRecord, user]);
+
+    // Fetch Subscription Features
+    const { data: organiserSub } = useSupabaseQuery(
+        "organiser_subscriptions",
+        (q) => q.eq("organiser_id", organiserId).eq("payment_status", "active").maybeSingle(),
+        [organiserId]
+    );
+
+    const { data: staffPackages = [] } = useSupabaseQuery("staff_packages", q => q);
+    
+    const currentPackage = useMemo(() => {
+        if (!organiserSub) return staffPackages.find(p => p.package_name === "Free Plan") || { features: {} };
+        return staffPackages.find(p => p.id === organiserSub.package_id) || { features: {} };
+    }, [organiserSub, staffPackages]);
+
+    const features = currentPackage.features || {};
 
     useEffect(() => {
         if (expiryDate && new Date(expiryDate) < new Date()) {
@@ -236,14 +253,25 @@ function PWAScanContent() {
                     {["Main Entrance", "VIP Gate", "Marathon Start", "Gate B"].map(g => (
                         <button 
                             key={g}
-                            onClick={() => setGateName(g)}
+                            onClick={() => {
+                                if (!features.multi_gate && g !== "Main Entrance") {
+                                    showToast("Multi-gate access requires a premium plan", "info");
+                                    return;
+                                }
+                                setGateName(g);
+                            }}
                             className={`whitespace-nowrap px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                                gateName === g ? "bg-white text-slate-950" : "bg-white/5 text-slate-500 border border-white/10"
+                                gateName === g ? "bg-white text-slate-950" : (features.multi_gate || g === "Main Entrance" ? "bg-white/5 text-slate-500 border border-white/10" : "bg-white/5 text-slate-800 border border-white/5 cursor-not-allowed opacity-50")
                             }`}
                         >
-                            {g}
+                            {g} {!features.multi_gate && g !== "Main Entrance" && "🔒"}
                         </button>
                     ))}
+                    {features.offline_scan && (
+                        <div className="whitespace-nowrap px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest bg-green-500/10 text-green-500 border border-green-500/20 flex items-center gap-2">
+                            <Zap size={12} /> Offline Ready
+                        </div>
+                    )}
                 </div>
 
                 {/* Scanner Interface */}

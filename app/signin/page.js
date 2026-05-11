@@ -142,10 +142,10 @@ export default function SignInPage() {
         const isVendorPath = destination?.startsWith("/vendor");
 
         const isAuthorized = 
-            (!isAdminPath || role === "admin" || role === "super_admin") &&
-            (!isBrandingPath || role === "branding_partner" || role === "admin" || role === "super_admin") &&
-            (!isOrganiserPath || ["organiser", "staff", "admin", "super_admin"].includes(role)) &&
-            (!isVendorPath || ["vendor", "organiser", "admin", "super_admin"].includes(role));
+            (!isAdminPath || role === "admin" || role === "super_admin" || role === "system_admin") &&
+            (!isBrandingPath || role === "branding_partner" || role === "admin" || role === "super_admin" || role === "system_admin") &&
+            (!isOrganiserPath || ["organiser", "staff", "admin", "super_admin", "system_admin"].includes(role)) &&
+            (!isVendorPath || ["vendor", "organiser", "admin", "super_admin", "system_admin"].includes(role));
 
         // USER SPECIFIC OVERRIDES (MANDATORY)
         // 2. Normal users from events page go to profile
@@ -155,7 +155,7 @@ export default function SignInPage() {
 
         // Apply role-based defaults (ONLY if no specific destination is requested)
         if (isInvalidRedirect) {
-            if (role === 'admin' || role === 'super_admin') {
+            if (role === 'admin' || role === 'super_admin' || role === 'system_admin') {
                 return "/admin";
             } else if (role === 'staff') {
                 return "/pwa-scan";
@@ -167,7 +167,7 @@ export default function SignInPage() {
         }
 
         if (isInvalidRedirect || !isAuthorized) {
-            if (role === 'admin' || role === 'super_admin') {
+            if (role === 'admin' || role === 'super_admin' || role === 'system_admin') {
                 return "/admin";
             } else if (role === 'staff') {
                 return "/pwa-scan";

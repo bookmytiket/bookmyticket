@@ -24,7 +24,7 @@ function AuthCallbackContent() {
             }
             // 3. Role-based defaults for home/profile redirects
             else if (dest === "/" || dest === "/profile") {
-                if (role === "admin" || role === "super_admin") dest = "/admin";
+                if (role === "admin" || role === "super_admin" || role === "system_admin") dest = "/admin";
                 else if (role === "staff") dest = "/pwa-scan";
                 else if (role === "vendor") dest = "/vendor/dashboard";
                 else if (role === "organiser" || role === "organizer") dest = "/organiser";
