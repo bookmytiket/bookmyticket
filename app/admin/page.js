@@ -19,7 +19,7 @@ import RevenueDashboard from "@/app/admin/components/RevenueDashboard";
 import GstAuditDashboard from "@/app/admin/components/GstAuditDashboard";
 
 
-import { MoreVertical, Zap, Briefcase, LayoutDashboard, Settings, Video, Image as ImageIcon, Sparkles, CheckCircle, Ticket, Users, Menu, Bell, Save, X, Plus, Trash2, Mail, Lock, CreditCard, Code, Globe, Shield, FileText, Megaphone, Tag, LayoutGrid, Calendar, ShoppingCart, UserCircle, Gift, Send, BarChart3, Archive, MessageCircle, Upload, Edit, Search, AlertCircle, ChevronDown, ChevronRight, LogOut, Activity, RefreshCw, AlertTriangle, Info, Smartphone, MessageSquare, Landmark, Ban, Sun, Moon, Filter, Building2, Cpu, ExternalLink, Eye, Layout, Settings2, ShieldCheck, Slash, ArrowRight, User } from "lucide-react";
+import { MoreVertical, Zap, Briefcase, LayoutDashboard, Settings, Video, Image as ImageIcon, Sparkles, CheckCircle, Ticket, Users, Menu, Bell, Save, X, Plus, Trash2, Mail, Lock, CreditCard, Code, Globe, Shield, FileText, Megaphone, Tag, LayoutGrid, Calendar, ShoppingCart, UserCircle, Gift, Send, BarChart3, Archive, MessageCircle, Upload, Edit, Search, AlertCircle, ChevronDown, ChevronRight, LogOut, Activity, RefreshCw, AlertTriangle, Info, Smartphone, MessageSquare, Landmark, Ban, Sun, Moon, Filter, Building2, Cpu, ExternalLink, Eye, Layout, Settings2, ShieldCheck, Slash, ArrowRight, User, Phone } from "lucide-react";
 import { HOME_EVENTS, HERO_BANNER_SLIDES } from "@/app/data/homeEvents";
 import { eventMatchesCategory } from "@/app/utils/categoryMatch";
 import { hashPassword } from "@/app/utils/hashPassword";
@@ -907,7 +907,7 @@ function AdminHomePage() {
 
     // Auto-expand sidebar categories based on active tab
     useEffect(() => {
-        const homeTabs = ["hero", "mobile_banners", "video_banner", "site_branding", "events_settings", "event_partners", "memories", "sections", "copyright", "meeting_settings", "maintenance"];
+        const homeTabs = ["hero", "mobile_banners", "video_banner", "site_branding", "events_settings", "event_partners", "memories", "sections", "copyright", "meeting_settings", "maintenance", "checkout_footer", "subnav"];
         const organizerTabs = ["all_org", "active_org", "kyc_verified", "kyc_pending", "banned_org"];
         const serviceTabs = ["all_turfs", "turf_bookings", "pool_bookings", "service_active", "service_banned"];
         const growthTabs = ["promotions", "send_notif", "email_broadcast", "comm_hub"];
@@ -1171,10 +1171,19 @@ function AdminHomePage() {
     const { data: allBrandingKYC = [] } = useSupabaseQuery('brand_kyc');
     const [verifyKYCMutation] = useSupabaseMutation('brand_kyc', 'update', (q, p) => q.eq('id', p.id));
     const { data: siteBrandingArr = [] } = useSupabaseQuery('site_branding', q => q, [], { realtime: false });
+    const [subnavConfig, setSubnavConfig] = useSupabaseConfig("system_config", {
+        key: 'admin_navigation_config',
+        items: [
+            { id: 1, label: "Home", icon: "🏠", order: 0 },
+            { id: 2, label: "Events", icon: "🎫", order: 1 },
+            { id: 3, label: "Services", icon: "🛠️", order: 2 }
+        ]
+    });
+    const subnavItems = subnavConfig.items || [];
     const { data: promotionsArr = [] } = useSupabaseQuery('promotions');
     
     // Structured User Management: Fetch from role-specific tables
-    const { data: vendorsOnly = [], refresh: refreshVendors } = useSupabaseQuery('organisers', (q) => q.select('*, profiles:id(email)'));
+    const { data: vendorsOnly = [], refresh: refreshVendors } = useSupabaseQuery('organisers', (q) => q.select('*, profiles:organisers_id_fkey(email)'));
     
     // Merge for backward compatibility in Admin Panel
     const organisersArr = useMemo(() => {
@@ -1182,12 +1191,12 @@ function AdminHomePage() {
     }, [vendorsOnly]);
 
 
-    const { data: serviceProvidersArr = [] } = useSupabaseQuery('vendors', (q) => q.select('*, profiles:id(email)'));
+    const { data: serviceProvidersArr = [] } = useSupabaseQuery('vendors', (q) => q.select('*, profiles:vendors_id_fkey(email)'));
     const { data: homeSectionsArr = [] } = useSupabaseQuery('home_sections');
     const { data: supportTicketsArr = [] } = useSupabaseQuery('support_tickets');
     const { data: usersArr = [] } = useSupabaseQuery('profiles');
     const { data: adminsArr = [] } = useSupabaseQuery('admins', q => q.select('*, profiles:id (full_name, email, username)'));
-    const { data: allAdPopups = [] } = useSupabaseQuery('ad_popups', q => q.order('sort_order', { ascending: true }), [], { realtime: false });
+    const { data: allAdPopups = [] } = useSupabaseQuery('ad_popups', q => q.order('id', { ascending: true }), [], { realtime: false });
     const { data: eventsArr = [] } = useSupabaseQuery('events', (q) => q.order('created_at', { ascending: false }));
     const { data: bookingsArr = [] } = useSupabaseQuery('bookings', (q) => q.select('*, events(title), profiles(full_name, email)'));
     const { data: apiKeysArr = [] } = useSupabaseQuery('api_keys', q => q, [], { realtime: false });
@@ -1429,25 +1438,15 @@ function AdminHomePage() {
         value: true
     });
 
-    const [contactConfig, setContactConfig] = useSupabaseConfig("system_config", {
-        key: "contact_page_settings",
-        value: {
-            header: { title: "Get in Support", description: "Have a general question for us? We're here to help with any inquiries about our services." },
-            general_support: { email: "support@bookmyticket.net", phone: "+91 90420 29927" },
-            sales_team: { india: "+91 97907 62727", uae: "+971 55 747 2927", singapore: "+60 14-210 7199" },
-            address: { line1: "4th Floor, Ramani's West Gate,", line2: "No: 402C, Viswanathapuram,", line3: "Thudiyalur, Coimbatore, Tamil Nadu", pincode: "641034" },
-            hours: { mon_fri: "9:30 AM - 6:30 PM IST", sat: "9:30 AM - 1:30 PM IST", sun: "We're offline ( Day Off )" },
-            social: { linkedin: "#", instagram: "#", facebook: "#", twitter: "#" }
-        }
-    });
-
+    const { data: contactDataArr = [] } = useSupabaseQuery('contact_settings');
+    const [updateContactSettings] = useSupabaseMutation('contact_settings', 'update', (q, p) => q.eq('id', 1));
     const [localContact, setLocalContact] = useState(null);
 
     useEffect(() => {
-        if (contactConfig && !localContact) {
-            setLocalContact(contactConfig);
+        if (contactDataArr?.[0] && !localContact) {
+            setLocalContact(contactDataArr[0]);
         }
-    }, [contactConfig]);
+    }, [contactDataArr]);
 
     // Bookings (ticket orders) — sync with homepage/organiser events
     const [createPromotion] = useSupabaseMutation('promotions', 'insert');
@@ -2285,6 +2284,7 @@ function AdminHomePage() {
                                 <NavLink id="api_settings" label="API Gateway" icon={Code} active={activeTab === "api_settings"} onClick={() => setActiveTab("api_settings")} />
                                 <NavLink id="meta_management" label="Meta / SEO" icon={Globe} active={activeTab === "meta_management"} onClick={() => setActiveTab("meta_management")} />
                                 <NavLink id="disclaimer_settings" label="Legal Policy" icon={Shield} active={activeTab === "disclaimer_settings"} onClick={() => setActiveTab("disclaimer_settings")} />
+                                <NavLink id="contact_settings" label="Contact Settings" icon={Phone} active={activeTab === "contact_settings"} onClick={() => setActiveTab("contact_settings")} />
                                 <NavLink id="copyright" label="Copyright Info" icon={Archive} active={activeTab === "copyright"} onClick={() => setActiveTab("copyright")} />
                             </>
                         );
@@ -2416,6 +2416,11 @@ function AdminHomePage() {
                                     </div>
                                 ))}
                             </div>
+                        </div>
+                    )}
+                    {activeTab === "contact_inquiries" && (
+                        <div className="px-8 lg:px-12 py-8">
+                            <AdminContactInquiries t={t} theme={theme} />
                         </div>
                     )}
                     {activeTab === "revenue" && (
@@ -3560,7 +3565,7 @@ function AdminHomePage() {
                                 </div>
                                 <button 
                                     onClick={async () => {
-                                        await updateContactMutation(localContact);
+                                        await updateContactSettings(localContact);
                                         showToast("Support Node Synchronized", "success");
                                     }}
                                     className="px-8 py-3 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] italic shadow-xl shadow-slate-900/10 hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
@@ -3578,8 +3583,8 @@ function AdminHomePage() {
                                             <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Page Title</label>
                                             <input 
                                                 type="text" 
-                                                value={localContact.header?.title || ""} 
-                                                onChange={(e) => setLocalContact({...localContact, header: {...localContact.header, title: e.target.value}})}
+                                                value={localContact.header_title || ""} 
+                                                onChange={(e) => setLocalContact({...localContact, header_title: e.target.value})}
                                                 className="w-full p-3 bg-white border border-slate-200 rounded-xl font-bold text-slate-900 text-sm focus:ring-2 focus:ring-pink-500/10"
                                             />
                                         </div>
@@ -3587,8 +3592,8 @@ function AdminHomePage() {
                                             <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Sub-description</label>
                                             <textarea 
                                                 rows={2}
-                                                value={localContact.header?.description || ""} 
-                                                onChange={(e) => setLocalContact({...localContact, header: {...localContact.header, description: e.target.value}})}
+                                                value={localContact.header_description || ""} 
+                                                onChange={(e) => setLocalContact({...localContact, header_description: e.target.value})}
                                                 className="w-full p-3 bg-white border border-slate-200 rounded-xl font-bold text-slate-900 text-sm focus:ring-2 focus:ring-pink-500/10"
                                             />
                                         </div>
@@ -3601,8 +3606,8 @@ function AdminHomePage() {
                                                 <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Support Email</label>
                                                 <input 
                                                     type="email" 
-                                                    value={localContact.general_support?.email || ""} 
-                                                    onChange={(e) => setLocalContact({...localContact, general_support: {...localContact.general_support, email: e.target.value}})}
+                                                    value={localContact.support_email || ""} 
+                                                    onChange={(e) => setLocalContact({...localContact, support_email: e.target.value})}
                                                     className="w-full p-3 bg-white border border-slate-200 rounded-xl font-bold text-slate-900 text-sm focus:ring-2 focus:ring-pink-500/10"
                                                 />
                                             </div>
@@ -3610,8 +3615,8 @@ function AdminHomePage() {
                                                 <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Support Phone</label>
                                                 <input 
                                                     type="text" 
-                                                    value={localContact.general_support?.phone || ""} 
-                                                    onChange={(e) => setLocalContact({...localContact, general_support: {...localContact.general_support, phone: e.target.value}})}
+                                                    value={localContact.support_phone || ""} 
+                                                    onChange={(e) => setLocalContact({...localContact, support_phone: e.target.value})}
                                                     className="w-full p-3 bg-white border border-slate-200 rounded-xl font-bold text-slate-900 text-sm focus:ring-2 focus:ring-pink-500/10"
                                                 />
                                             </div>
@@ -3625,8 +3630,8 @@ function AdminHomePage() {
                                                 <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest">India</label>
                                                 <input 
                                                     type="text" 
-                                                    value={localContact.sales_team?.india || ""} 
-                                                    onChange={(e) => setLocalContact({...localContact, sales_team: {...localContact.sales_team, india: e.target.value}})}
+                                                    value={localContact.sales_india || ""} 
+                                                    onChange={(e) => setLocalContact({...localContact, sales_india: e.target.value})}
                                                     className="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl font-bold text-white text-xs focus:ring-2 focus:ring-pink-500/10"
                                                 />
                                             </div>
@@ -3634,8 +3639,8 @@ function AdminHomePage() {
                                                 <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest">UAE</label>
                                                 <input 
                                                     type="text" 
-                                                    value={localContact.sales_team?.uae || ""} 
-                                                    onChange={(e) => setLocalContact({...localContact, sales_team: {...localContact.sales_team, uae: e.target.value}})}
+                                                    value={localContact.sales_uae || ""} 
+                                                    onChange={(e) => setLocalContact({...localContact, sales_uae: e.target.value})}
                                                     className="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl font-bold text-white text-xs focus:ring-2 focus:ring-pink-500/10"
                                                 />
                                             </div>
@@ -3643,8 +3648,8 @@ function AdminHomePage() {
                                                 <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Singapore</label>
                                                 <input 
                                                     type="text" 
-                                                    value={localContact.sales_team?.singapore || ""} 
-                                                    onChange={(e) => setLocalContact({...localContact, sales_team: {...localContact.sales_team, singapore: e.target.value}})}
+                                                    value={localContact.sales_singapore || ""} 
+                                                    onChange={(e) => setLocalContact({...localContact, sales_singapore: e.target.value})}
                                                     className="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl font-bold text-white text-xs focus:ring-2 focus:ring-pink-500/10"
                                                 />
                                             </div>
@@ -3659,27 +3664,27 @@ function AdminHomePage() {
                                         <div className="space-y-3">
                                             <input 
                                                 type="text" placeholder="Line 1"
-                                                value={localContact.address?.line1 || ""} 
-                                                onChange={(e) => setLocalContact({...localContact, address: {...localContact.address, line1: e.target.value}})}
+                                                value={localContact.address_line1 || ""} 
+                                                onChange={(e) => setLocalContact({...localContact, address_line1: e.target.value})}
                                                 className="w-full p-3 bg-white border border-slate-200 rounded-xl font-bold text-slate-900 text-sm"
                                             />
                                             <input 
                                                 type="text" placeholder="Line 2"
-                                                value={localContact.address?.line2 || ""} 
-                                                onChange={(e) => setLocalContact({...localContact, address: {...localContact.address, line2: e.target.value}})}
+                                                value={localContact.address_line2 || ""} 
+                                                onChange={(e) => setLocalContact({...localContact, address_line2: e.target.value})}
                                                 className="w-full p-3 bg-white border border-slate-200 rounded-xl font-bold text-slate-900 text-sm"
                                             />
                                             <div className="grid grid-cols-3 gap-3">
                                                 <input 
                                                     type="text" placeholder="Line 3"
-                                                    value={localContact.address?.line3 || ""} 
-                                                    onChange={(e) => setLocalContact({...localContact, address: {...localContact.address, line3: e.target.value}})}
+                                                    value={localContact.address_line3 || ""} 
+                                                    onChange={(e) => setLocalContact({...localContact, address_line3: e.target.value})}
                                                     className="col-span-2 w-full p-3 bg-white border border-slate-200 rounded-xl font-bold text-slate-900 text-sm"
                                                 />
                                                 <input 
                                                     type="text" placeholder="PIN"
-                                                    value={localContact.address?.pincode || ""} 
-                                                    onChange={(e) => setLocalContact({...localContact, address: {...localContact.address, pincode: e.target.value}})}
+                                                    value={localContact.address_pincode || ""} 
+                                                    onChange={(e) => setLocalContact({...localContact, address_pincode: e.target.value})}
                                                     className="w-full p-3 bg-white border border-slate-200 rounded-xl font-bold text-slate-900 text-sm"
                                                 />
                                             </div>
@@ -3693,8 +3698,8 @@ function AdminHomePage() {
                                                 <span className="w-24 text-[9px] font-black text-slate-400 uppercase">Mon - Fri</span>
                                                 <input 
                                                     type="text" 
-                                                    value={localContact.hours?.mon_fri || ""} 
-                                                    onChange={(e) => setLocalContact({...localContact, hours: {...localContact.hours, mon_fri: e.target.value}})}
+                                                    value={localContact.hours_mon_fri || ""} 
+                                                    onChange={(e) => setLocalContact({...localContact, hours_mon_fri: e.target.value})}
                                                     className="flex-1 p-3 bg-white border border-orange-100 rounded-xl font-bold text-slate-900 text-sm"
                                                 />
                                             </div>
@@ -3702,8 +3707,8 @@ function AdminHomePage() {
                                                 <span className="w-24 text-[9px] font-black text-slate-400 uppercase">Saturday</span>
                                                 <input 
                                                     type="text" 
-                                                    value={localContact.hours?.sat || ""} 
-                                                    onChange={(e) => setLocalContact({...localContact, hours: {...localContact.hours, sat: e.target.value}})}
+                                                    value={localContact.hours_sat || ""} 
+                                                    onChange={(e) => setLocalContact({...localContact, hours_sat: e.target.value})}
                                                     className="flex-1 p-3 bg-white border border-orange-100 rounded-xl font-bold text-slate-900 text-sm"
                                                 />
                                             </div>
@@ -3711,8 +3716,8 @@ function AdminHomePage() {
                                                 <span className="w-24 text-[9px] font-black text-slate-400 uppercase">Sunday</span>
                                                 <input 
                                                     type="text" 
-                                                    value={localContact.hours?.sun || ""} 
-                                                    onChange={(e) => setLocalContact({...localContact, hours: {...localContact.hours, sun: e.target.value}})}
+                                                    value={localContact.hours_sun || ""} 
+                                                    onChange={(e) => setLocalContact({...localContact, hours_sun: e.target.value})}
                                                     className="flex-1 p-3 bg-white border border-orange-100 rounded-xl font-bold text-slate-900 text-sm"
                                                 />
                                             </div>
@@ -3727,8 +3732,8 @@ function AdminHomePage() {
                                                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest capitalize">{platform}</label>
                                                     <input 
                                                         type="text" 
-                                                        value={localContact.social?.[platform] || ""} 
-                                                        onChange={(e) => setLocalContact({...localContact, social: {...localContact.social, [platform]: e.target.value}})}
+                                                        value={localContact[`social_${platform}`] || ""} 
+                                                        onChange={(e) => setLocalContact({...localContact, [`social_${platform}`]: e.target.value})}
                                                         className="w-full p-3 bg-white border border-slate-200 rounded-xl font-bold text-slate-900 text-sm focus:ring-2 focus:ring-pink-500/10"
                                                     />
                                                 </div>
@@ -4092,24 +4097,27 @@ function AdminHomePage() {
                                 </button>
                             </div>
                             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "16px" }}>
-                                {subnavItems.map((item) => (
+                                {subnavItems.map((item, idx) => (
                                     <div key={item.id} style={{ display: "flex", alignItems: "center", gap: "12px", padding: "12px", border: `1px solid ${t.border}`, borderRadius: "8px" }}>
                                         <span style={{ fontSize: "20px" }}>{item.icon}</span>
                                         <input
                                             type="text"
                                             value={item.label}
                                             onChange={(e) => {
-                                                const newOrder = [...subnavItems];
-                                                newOrder[idx] = { ...item, label: e.target.value };
-                                                // Mutation logic for updating a single item would go here if implemented, or update the whole set
+                                                const newItems = [...subnavItems];
+                                                newItems[idx] = { ...item, label: e.target.value };
+                                                setSubnavConfig({ ...subnavConfig, items: newItems });
                                             }}
                                             style={{ flex: 1, padding: "4px 8px", borderRadius: "4px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "13px" }}
                                         />
-                                        <button onClick={() => setSubnavItems(subnavItems.filter(si => si.id !== item.id))} style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer" }}><Trash2 size={16} /></button>
+                                        <button onClick={() => setSubnavConfig({ ...subnavConfig, items: subnavItems.filter(si => si.id !== item.id) })} style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer" }}><Trash2 size={16} /></button>
                                     </div>
                                 ))}
                                 <button
-                                    onClick={() => addSubnavItemMutation({ label: "New Item", icon: "✨", order: subnavItems.length })}
+                                    onClick={() => setSubnavConfig({ 
+                                        ...subnavConfig, 
+                                        items: [...subnavItems, { id: Date.now(), label: "New Item", icon: "✨", order: subnavItems.length }] 
+                                    })}
                                     style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", padding: "12px", border: `2px dashed ${t.border}`, borderRadius: "8px", background: "none", cursor: "pointer", color: t.textSub }}>
                                     <Plus size={18} /> Add Menu Item
                                 </button>
@@ -4582,6 +4590,10 @@ function AdminHomePage() {
                                 Save Pricing
                             </button>
                         </div>
+                    )}
+
+                    {activeTab === "checkout_footer" && (
+                        <AdminCheckoutFooter theme={theme} t={t} />
                     )}
 
                     {["all_org", "active_org", "banned_org", "email_unverified", "mobile_unverified", "kyc_unverified", "kyc_pending", "kyc_verified", "with_balance"].includes(activeTab) && (

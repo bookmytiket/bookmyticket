@@ -26,8 +26,8 @@ const SOCIALS = [
         d: "M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6zM2 9h4v12H2z M4 6a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"
     },
     {
-        label: "p", viewBox: "0 0 24 24",
-        d: "M12 2C8.1 2 5 5.1 5 9c0 2.7 1.5 5 3.7 6.3-.1.5-.3 1.3-.3 1.9 0 .8.4 1.9.4 1.9s1-.4 1.6-1c.5.1 1.1.2 1.6.2 3.9 0 7-3.1 7-7S15.9 2 12 2z"
+        label: "x", viewBox: "0 0 24 24",
+        d: "M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z"
     },
 ];
 
@@ -44,6 +44,9 @@ export default function Footer() {
     const { data: activeJobs = [] } = useSupabaseQuery('jobs', (q) => q.eq('status', 'open'), []);
     const { data: bannerConfigRaw } = useSupabaseQuery('system_config', (q) => q.eq('key', 'careers_banner_settings'), []);
     
+    const { data: contactDataArr = [] } = useSupabaseQuery('contact_settings');
+    const contactSettings = contactDataArr?.[0] || null;
+
     const bannerConfig = bannerConfigRaw?.[0]?.value || { is_enabled: true };
     const isPortalEnabled = bannerConfig.is_enabled === true || bannerConfig.is_enabled === 'true';
     const hasActiveJobs = activeJobs.length > 0 && isPortalEnabled;
@@ -87,6 +90,13 @@ export default function Footer() {
 
     const allLinks = dynamicPages.length > 0 ? dynamicPages : QUICK_LINKS;
     const quickLinks = allLinks.filter((v, i, a) => a.findIndex(t => (t.title === v.title)) === i);
+
+    const socialLinks = [
+        { key: 'social_facebook', icon: SOCIALS[0] },
+        { key: 'social_instagram', icon: SOCIALS[1] },
+        { key: 'social_linkedin', icon: SOCIALS[2] },
+        { key: 'social_twitter', icon: SOCIALS[3] }
+    ];
 
     return (
         <footer style={{ width: "100%", position: "relative", background: "#000000", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
@@ -219,7 +229,7 @@ export default function Footer() {
                             </div>
                         </div>
                     </div>
-
+ 
                     {/* Quick Links */}
                     <div>
                         <h4 style={{ fontSize: "14px", fontWeight: 800, color: "#ffffff", letterSpacing: "0.1em", marginBottom: "24px", textTransform: "uppercase" }}>
@@ -272,20 +282,21 @@ export default function Footer() {
                             ))}
                         </ul>
                     </div>
-
+ 
                     {/* Contact */}
                     <div>
                         <h4 style={{ fontSize: "14px", fontWeight: 800, color: "#ffffff", letterSpacing: "0.1em", marginBottom: "24px", textTransform: "uppercase" }}>
                             Connect
                         </h4>
                         <p style={{ fontSize: "14px", color: "rgba(255,255,255,0.5)", lineHeight: 1.8 }}>
-                            Coimbatore, Tamil Nadu<br />
-                            India<br /><br />
-                            <a href="mailto:hello@bookmyticket.net" style={{ color: "#ffffff", textDecoration: "none" }}>hello@bookmyticket.net</a>
+                            {contactSettings?.address_line1 || "Coimbatore, Tamil Nadu"}<br />
+                            {contactSettings?.address_line2 || ""}<br />
+                            {contactSettings?.address_line3 || "India"}<br /><br />
+                            <a href={`mailto:${contactSettings?.support_email || "hello@bookmyticket.net"}`} style={{ color: "#ffffff", textDecoration: "none" }}>{contactSettings?.support_email || "hello@bookmyticket.net"}</a>
                         </p>
                     </div>
                 </div>
-
+ 
                     {/* Back to Top Button - Moved to Fixed Position */}
                     <button 
                         onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
@@ -315,7 +326,7 @@ export default function Footer() {
                             <path d="M12 19V5M5 12l7-7 7 7" />
                         </svg>
                     </button>
-
+ 
                 {/* Bottom Bar: Socials & Copyright */}
                 <div style={{ 
                     paddingTop: "20px", 
@@ -327,20 +338,23 @@ export default function Footer() {
                     gap: "15px"
                 }}>
                     <div style={{ display: "flex", gap: "24px" }}>
-                        {SOCIALS.map((s, i) => (
-                            <a key={i} href="#" style={{
-                                color: "rgba(255,255,255,0.6)",
-                                transition: "all 0.2s ease",
-                                textDecoration: "none"
-                            }}
-                                onMouseEnter={e => e.currentTarget.style.color = "#ffffff"}
-                                onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,0.6)"}
-                            >
-                                <svg width="20" height="20" viewBox={s.viewBox} fill="currentColor">
-                                    <path d={s.d} />
-                                </svg>
-                            </a>
-                        ))}
+                        {socialLinks.map((s, i) => {
+                            const url = contactSettings?.[s.key] || "#";
+                            return (
+                                <a key={i} href={url} target={url !== "#" ? "_blank" : "_self"} rel="noopener noreferrer" style={{
+                                    color: "rgba(255,255,255,0.6)",
+                                    transition: "all 0.2s ease",
+                                    textDecoration: "none"
+                                }}
+                                    onMouseEnter={e => e.currentTarget.style.color = "#ffffff"}
+                                    onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,0.6)"}
+                                >
+                                    <svg width="20" height="20" viewBox={s.icon.viewBox} fill="currentColor">
+                                        <path d={s.icon.d} />
+                                    </svg>
+                                </a>
+                            );
+                        })}
                     </div>
 
                     <div style={{ display: "flex", alignItems: "center", gap: "20px", flexWrap: "wrap", justifyContent: "center" }}>

@@ -26,8 +26,18 @@ export default function ContactPage() {
 
     useEffect(() => {
         const fetchConfig = async () => {
-            const { data } = await supabase.from('system_config').select('value').eq('key', 'contact_page_settings').single();
-            if (data?.value) setConfig(data.value);
+            const { data } = await supabase.from('contact_settings').select('*').eq('id', 1).single();
+            if (data) {
+                // Map the flat table structure to the nested object structure the UI expects
+                setConfig({
+                    header: { title: data.header_title, description: data.header_description },
+                    general_support: { email: data.support_email, phone: data.support_phone },
+                    sales_team: { india: data.sales_india, uae: data.sales_uae, singapore: data.sales_singapore },
+                    address: { line1: data.address_line1, line2: data.address_line2, line3: data.address_line3, pincode: data.address_pincode },
+                    hours: { mon_fri: data.hours_mon_fri, sat: data.hours_sat, sun: data.hours_sun },
+                    social: { linkedin: data.social_linkedin, instagram: data.social_instagram, facebook: data.social_facebook, twitter: data.social_twitter }
+                });
+            }
         };
         fetchConfig();
     }, []);
@@ -471,9 +481,12 @@ export default function ContactPage() {
 }
 
 function SocialIcon({ icon, href, color }) {
+    if (!href || href === "#") return null;
     return (
         <a 
             href={href} 
+            target="_blank"
+            rel="noopener noreferrer"
             className={`w-12 h-12 rounded-full flex items-center justify-center text-white transition-all hover:scale-110 hover:rotate-6 shadow-lg ${color}`}
         >
             {icon}
