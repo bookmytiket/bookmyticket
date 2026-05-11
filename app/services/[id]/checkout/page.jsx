@@ -265,7 +265,7 @@ export default function ServiceCheckoutPage() {
     };
 
     return (
-        <main className="min-h-screen bg-[#fafbfc] pt-[40px] md:pt-[60px] pb-24">
+        <main className="min-h-screen bg-[#fafbfc] pt-[40px] md:pt-[60px]">
             <div className="max-w-[1100px] mx-auto px-6 lg:px-8 py-4">
                     
                     {/* Checkout Header */}
@@ -649,6 +649,7 @@ export default function ServiceCheckoutPage() {
             {/* Dynamic Checkout Footer */}
             <CheckoutFooterBar />
             
+            <div className="pb-24"></div>
             <Footer />
         </main>
     );

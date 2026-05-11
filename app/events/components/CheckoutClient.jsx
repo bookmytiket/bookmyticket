@@ -1,4 +1,5 @@
 "use client";
+import Footer from "@/components/Footer";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
@@ -825,6 +826,7 @@ export default function CheckoutClient({ id }) {
                     </div>
                 )}
             </AnimatePresence>
+            <Footer />
         </main>
     );
 }

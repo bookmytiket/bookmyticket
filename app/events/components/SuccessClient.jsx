@@ -1,4 +1,5 @@
 "use client";
+import Footer from "@/components/Footer";
 
 import React, { useEffect, useState } from 'react';
 import { useSupabaseQuery } from '@/hooks/useSupabase';
@@ -72,7 +73,7 @@ export default function SuccessClient({ eventId, bookingId }) {
     }
 
     return (
-        <main className="min-h-screen bg-[#FDFCFB] pt-12 pb-24 px-4">
+        <main className="min-h-screen bg-[#FDFCFB] pt-12 px-4">
             <div className="max-w-4xl mx-auto">
                 {/* Success Header */}
                 <div className="text-center mb-12">
@@ -151,6 +152,8 @@ export default function SuccessClient({ eventId, bookingId }) {
                     </div>
                 </div>
             </div>
+            <div className="pb-24"></div>
+            <Footer />
         </main>
     );
 }

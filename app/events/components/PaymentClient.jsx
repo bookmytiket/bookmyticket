@@ -1,4 +1,5 @@
 "use client";
+import Footer from "@/components/Footer";
 
 import React, { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';

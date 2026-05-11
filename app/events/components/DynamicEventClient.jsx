@@ -1,4 +1,5 @@
 "use client";
+import Footer from "@/components/Footer";
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
@@ -348,7 +349,7 @@ export default function DynamicEventClient({ event }) {
     };
 
     return (
-        <main className={`min-h-screen bg-[#fafbfc] pb-24 ${outfit.className}`}>
+        <main className={`min-h-screen bg-[#fafbfc] ${outfit.className}`}>
             {/* Custom UI Notification */}
             <AnimatePresence>
                 {notification && (
@@ -1054,6 +1055,8 @@ export default function DynamicEventClient({ event }) {
                     </motion.div>
                 )}
             </AnimatePresence>
+            <div className="pb-24"></div>
+            <Footer />
         </main>
     );
 }

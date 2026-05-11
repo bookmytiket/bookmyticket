@@ -1,4 +1,5 @@
 "use client";
+import Footer from "@/components/Footer";
 
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
@@ -690,6 +691,7 @@ export default function EventBookClient({ id }) {
                 }}
                 availableDates={event.dateSlots?.map(s => s.date) || []}
             />
+            <Footer />
         </main>
     );
 }
