@@ -428,14 +428,15 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
                 awareness_text: eventData.awareness_text,
                 description: eventData.description,
                 banner_image: eventData.banner_image,
-                event_date: eventData.event_date,
-                event_time: eventData.event_time,
+                event_date: eventData.event_date || null,
+                event_time: eventData.event_time || null,
                 event_end_date: eventData.event_end_date || null,
                 event_end_time: eventData.event_end_time || null,
                 venue: eventData.venue,
                 city: eventData.city,
                 state: eventData.state,
                 country: eventData.country,
+                district: eventData.district || null,
                 map_location: eventData.map_location,
                 route_map_image: eventData.route_map_image || null,
                 starting_point: eventData.starting_point,
@@ -467,12 +468,11 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
                     // Note: Full data is already safe in dynamic_config JSON.
                     const { error: catInsertError } = await supabase.from('marathon_categories').insert(
                         categories.map(c => ({ 
-                            category_name: c.category_name,
+                            title: c.category_name,
                             distance_km: Number(c.distance_km) || 0,
                             price: Number(c.price) || 0,
-                            slots_total: Number(c.slots_total) || 0,
-                            marathon_id: marathon_id,
-                            event_id: marathon_id 
+                            total_slots: Number(c.slots_total) || 0,
+                            marathon_id: marathon_id
                         }))
                     );
                     if (catInsertError) console.warn("[MarathonForm] Categories table sync failed (likely schema mismatch), but JSON config is safe:", catInsertError.message);

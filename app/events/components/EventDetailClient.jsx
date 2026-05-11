@@ -106,7 +106,7 @@ export default function EventDetailClient({ id }) {
             amenities: rawEvent.dynamic_config?.amenities || DEFAULT_FEATURES,
             isFree: Number(rawEvent.price) === 0,
             description: rawEvent.description || 'Join us for this event. Book your tickets now.',
-            features: Array.isArray(rawEvent.features) && rawEvent.features.length > 0 ? rawEvent.features : DEFAULT_FEATURES,
+            features: (rawEvent.dynamic_config?.amenities?.length > 0 ? rawEvent.dynamic_config.amenities : null) || (rawEvent.dynamic_config?.features?.length > 0 ? rawEvent.dynamic_config.features : null) || (Array.isArray(rawEvent.features) && rawEvent.features.length > 0 ? rawEvent.features : DEFAULT_FEATURES),
             refundPolicy: Array.isArray(rawEvent.refundPolicy) && rawEvent.refundPolicy.length > 0 ? rawEvent.refundPolicy : DEFAULT_REFUND,
             parking: rawEvent.parking || 'Paid Parking Available at the Venue.',
             tags: Array.isArray(rawEvent.tags) && rawEvent.tags.length > 0 ? rawEvent.tags : [rawEvent.category || 'Event'].filter(Boolean),

@@ -63,7 +63,13 @@ export async function GET() {
         const results = [];
 
         // Run column additions
-        const { error: e1 } = await supabaseAdmin.rpc('exec_raw_sql', { sql: MIGRATION_SQL }).catch(() => ({ error: null }));
+        let e1 = null;
+        try {
+            const result = await supabaseAdmin.rpc('exec_raw_sql', { sql: MIGRATION_SQL });
+            e1 = result.error;
+        } catch (e) {
+            e1 = e;
+        }
         
         // Try using Supabase's pg_query if exec_raw_sql doesn't exist
         // Use a series of safe ALTER TABLE calls via individual rpc or raw queries
