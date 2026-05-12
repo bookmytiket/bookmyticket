@@ -217,15 +217,24 @@ export async function POST(request) {
 
             if (subErr) throw subErr;
 
-            // 4. Record Subscription Payment log
+            // 4. Calculate GST for logging
+            const basePrice = pkg.monthly_price || pkg.package_price || 0;
+            const discount = basePrice * ((pkg.discount_percentage || 0) / 100);
+            const priceAfterDiscount = basePrice - discount;
+            const gstAmount = priceAfterDiscount * ((pkg.gst_percentage || 18) / 100);
+
+            // 5. Record Subscription Payment log
             await supabaseAdmin.from('subscription_payments').insert({
                 organiser_id: organiserId,
                 package_id: id,
-                amount: pkg.package_price,
+                paid_amount: priceAfterDiscount + gstAmount,
+                gst_amount: gstAmount,
+                transaction_id: razorpay_payment_id,
                 gateway: 'Razorpay',
                 gateway_payment_id: razorpay_payment_id,
                 gateway_order_id: razorpay_order_id,
-                payment_status: 'completed'
+                payment_status: 'success',
+                description: `Upgrade to ${pkg.package_name}`
             });
         }
 

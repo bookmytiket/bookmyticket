@@ -55,12 +55,19 @@ export default function SubscriptionManager({ user, theme, t }) {
             const isLoaded = await loadRazorpay();
             if (!isLoaded) throw new Error("Razorpay SDK failed to load.");
 
+            // Calculate total with GST
+            const basePrice = pkg.monthly_price || 0;
+            const discount = basePrice * ((pkg.discount_percentage || 0) / 100);
+            const priceAfterDiscount = basePrice - discount;
+            const gst = priceAfterDiscount * ((pkg.gst_percentage || 18) / 100);
+            const finalAmount = Math.round((priceAfterDiscount + gst) * 100) / 100;
+
             const res = await fetch("/api/razorpay/create-order", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     id: pkg.id,
-                    amount: pkg.monthly_price,
+                    amount: finalAmount,
                     type: "subscription",
                     organiserId: user?.id
                 })
@@ -124,9 +131,9 @@ export default function SubscriptionManager({ user, theme, t }) {
     const ACCENT_GRADIENT = `linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)`;
 
     return (
-        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
             {/* Current Status Banner */}
-            <div className="relative overflow-hidden bg-slate-900 rounded-[2.5rem] p-10 text-white border border-white/10 shadow-2xl">
+            <div className="relative overflow-hidden bg-slate-900 rounded-[1.5rem] p-6 text-white border border-white/10 shadow-2xl">
                 <div className="absolute top-0 right-0 w-96 h-96 bg-pink-500/20 blur-[100px] -mr-48 -mt-48" />
                 <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-500/10 blur-[80px] -ml-32 -mb-32" />
                 
@@ -135,7 +142,7 @@ export default function SubscriptionManager({ user, theme, t }) {
                         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 border border-white/10 text-[10px] font-black uppercase tracking-widest text-pink-400">
                             <Zap size={14} fill="currentColor" /> Active Subscription
                         </div>
-                        <h2 className="text-4xl font-black tracking-tight italic uppercase">{currentPackage.package_name}</h2>
+                        <h2 className="text-2xl font-black tracking-tight italic uppercase">{currentPackage.package_name}</h2>
                         <div className="flex flex-wrap gap-6">
                             <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-pink-400">
@@ -143,7 +150,7 @@ export default function SubscriptionManager({ user, theme, t }) {
                                 </div>
                                 <div>
                                     <p className="text-[10px] font-black text-white/40 uppercase tracking-widest">Staff Limit</p>
-                                    <p className="text-lg font-black">{staffCountData.length} / {currentPackage.staff_limit}</p>
+                                    <p className="text-base font-black">{staffCountData.length} / {currentPackage.staff_limit}</p>
                                 </div>
                             </div>
                             {subscription?.active_until && (
@@ -153,7 +160,7 @@ export default function SubscriptionManager({ user, theme, t }) {
                                     </div>
                                     <div>
                                         <p className="text-[10px] font-black text-white/40 uppercase tracking-widest">Valid Until</p>
-                                        <p className="text-lg font-black">{new Date(subscription.active_until).toLocaleDateString()}</p>
+                                        <p className="text-base font-black">{new Date(subscription.active_until).toLocaleDateString()}</p>
                                     </div>
                                 </div>
                             )}
@@ -188,11 +195,11 @@ export default function SubscriptionManager({ user, theme, t }) {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {packages.map((pkg) => {
                         const isCurrent = pkg.id === subscription?.package_id || (pkg.monthly_price === 0 && (!subscription || subscription.subscription_status !== 'active'));
                         return (
-                            <div key={pkg.id} className={`group relative bg-white rounded-[2.5rem] p-8 border-2 transition-all duration-500 hover:-translate-y-2 ${
+                            <div key={pkg.id} className={`group relative bg-white rounded-3xl p-6 border-2 transition-all duration-500 hover:-translate-y-2 ${
                                 isCurrent ? 'border-pink-500 shadow-2xl shadow-pink-500/10' : 'border-slate-100 hover:border-pink-200 shadow-xl shadow-slate-200/50'
                             } dark:bg-slate-800 dark:border-slate-700`}>
                                 {pkg.monthly_price > 0 && !isCurrent && (
@@ -201,32 +208,39 @@ export default function SubscriptionManager({ user, theme, t }) {
                                 
                                 <div className="space-y-6">
                                     <div className="flex justify-between items-start">
-                                        <div className={`p-4 rounded-2xl ${isCurrent ? 'bg-pink-500 text-white' : 'bg-slate-100 text-slate-400 dark:bg-slate-700'}`}>
-                                            <Zap size={24} fill={isCurrent ? "currentColor" : "none"} />
+                                        <div className={`p-3 rounded-2xl ${isCurrent ? 'bg-pink-500 text-white' : 'bg-slate-100 text-slate-400 dark:bg-slate-700'}`}>
+                                            <Zap size={20} fill={isCurrent ? "currentColor" : "none"} />
                                         </div>
-                                        {isCurrent && <CheckCircle size={24} className="text-green-500" />}
+                                        {isCurrent && <CheckCircle size={20} className="text-green-500" />}
                                     </div>
 
                                     <div>
-                                        <h4 className="text-xl font-black text-slate-900 dark:text-white italic uppercase tracking-tight">{pkg.package_name}</h4>
-                                        <div className="flex items-baseline gap-1 mt-2">
-                                            <span className="text-4xl font-black text-slate-900 dark:text-white">₹{pkg.monthly_price}</span>
-                                            <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">/mo</span>
+                                        <h4 className="text-lg font-black text-slate-900 dark:text-white italic uppercase tracking-tight">{pkg.package_name}</h4>
+                                        <div className="flex flex-col mt-1">
+                                            <div className="flex items-baseline gap-1">
+                                                <span className="text-3xl font-black text-slate-900 dark:text-white">₹{pkg.monthly_price}</span>
+                                                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">/mo</span>
+                                            </div>
+                                            {pkg.gst_percentage > 0 && (
+                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">
+                                                    + {pkg.gst_percentage}% GST (₹{(pkg.monthly_price * (pkg.gst_percentage / 100)).toFixed(2)})
+                                                </p>
+                                            )}
                                         </div>
                                     </div>
 
-                                    <div className="space-y-4 border-t border-slate-50 pt-6 dark:border-slate-700">
-                                        <div className="flex items-center gap-3 text-sm font-bold text-slate-600 dark:text-slate-300">
-                                            <Users size={18} className="text-pink-500" />
+                                    <div className="space-y-3 border-t border-slate-50 pt-4 dark:border-slate-700">
+                                        <div className="flex items-center gap-3 text-[13px] font-bold text-slate-600 dark:text-slate-300">
+                                            <Users size={16} className="text-pink-500" />
                                             {pkg.staff_limit} Staff Accounts
                                         </div>
-                                        <div className="flex items-center gap-3 text-sm font-bold text-slate-600 dark:text-slate-300">
-                                            <Smartphone size={18} className="text-blue-500" />
+                                        <div className="flex items-center gap-3 text-[13px] font-bold text-slate-600 dark:text-slate-300">
+                                            <Smartphone size={16} className="text-blue-500" />
                                             Device Restriction Control
                                         </div>
                                         {Object.entries(pkg.features || {}).map(([key, val]) => (
-                                            <div key={key} className={`flex items-center gap-3 text-sm font-bold ${val ? 'text-slate-600 dark:text-slate-300' : 'text-slate-300 line-through dark:text-slate-600'}`}>
-                                                <CheckCircle size={18} className={val ? "text-green-500" : "text-slate-200 dark:text-slate-700"} />
+                                            <div key={key} className={`flex items-center gap-3 text-[13px] font-bold ${val ? 'text-slate-600 dark:text-slate-300' : 'text-slate-300 line-through dark:text-slate-600'}`}>
+                                                <CheckCircle size={16} className={val ? "text-green-500" : "text-slate-200 dark:text-slate-700"} />
                                                 {key.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
                                             </div>
                                         ))}
@@ -252,9 +266,9 @@ export default function SubscriptionManager({ user, theme, t }) {
             {/* Transaction History Section */}
             {payments.length > 0 && (
                 <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-xl overflow-hidden dark:bg-slate-800 dark:border-slate-700">
-                    <div className="p-8 border-b border-slate-50 flex justify-between items-center dark:border-slate-700">
-                        <h4 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight italic">Payment History</h4>
-                        <CreditCard size={20} className="text-slate-300" />
+                    <div className="p-6 border-b border-slate-50 flex justify-between items-center dark:border-slate-700">
+                        <h4 className="text-base font-black text-slate-900 dark:text-white uppercase tracking-tight italic">Payment History</h4>
+                        <CreditCard size={18} className="text-slate-300" />
                     </div>
                     <div className="overflow-x-auto">
                         <table className="w-full text-left">
