@@ -35,7 +35,7 @@ export default function ProfilePage() {
     useEffect(() => {
         setMounted(true);
     }, []);
-    const [bookingFilter, setBookingFilter] = useState("all");
+    const [bookingFilter, setBookingFilter] = useState("booked");
     const [viewTicketModal, setViewTicketModal] = useState(null);
     const [viewInvoiceModal, setViewInvoiceModal] = useState(null);
 
@@ -150,8 +150,7 @@ export default function ProfilePage() {
     const renderTabContent = () => {
         switch (activeTab) {
             case "my_booking":
-                const displayBookings = bookingFilter === "all" ? bookings :
-                    bookingFilter === "booked" ? bookedTickets :
+                const displayBookings = bookingFilter === "booked" ? bookedTickets :
                         bookingFilter === "cancelled" ? cancelledTickets : paidTickets;
 
                 return (
@@ -162,24 +161,30 @@ export default function ProfilePage() {
                                 <p className="text-sm text-slate-500 font-medium">Track your ticket bookings, sessions, and payments.</p>
                             </div>
                             <div style={{ display: "flex", background: "#f1f5f9", padding: "4px", borderRadius: "8px", gap: "4px" }}>
-                                {["all", "booked", "cancelled", "payments"].map((f) => (
+                                {[
+                                    { id: "booked", label: "Booked Tickets" },
+                                    { id: "cancelled", label: "Cancelled Tickets" },
+                                    { id: "payments", label: "Payments" }
+                                ].map((f) => (
                                     <button
-                                        key={f}
-                                        onClick={() => setBookingFilter(f)}
+                                        key={f.id}
+                                        onClick={() => setBookingFilter(f.id)}
                                         style={{
-                                            padding: "6px 12px",
-                                            fontSize: "12px",
-                                            fontWeight: "600",
+                                            padding: "8px 16px",
+                                            fontSize: "11px",
+                                            fontWeight: "800",
                                             borderRadius: "6px",
                                             border: "none",
-                                            background: bookingFilter === f ? "#fff" : "transparent",
-                                            color: bookingFilter === f ? "#000" : t.textSub,
-                                            boxShadow: bookingFilter === f ? "0 2px 4px rgba(0,0,0,0.05)" : "none",
+                                            background: bookingFilter === f.id ? "#fff" : "transparent",
+                                            color: bookingFilter === f.id ? "#000" : t.textSub,
+                                            boxShadow: bookingFilter === f.id ? "0 2px 8px rgba(0,0,0,0.08)" : "none",
                                             cursor: "pointer",
-                                            textTransform: "capitalize"
+                                            textTransform: "uppercase",
+                                            letterSpacing: "0.05em",
+                                            transition: "all 0.2s"
                                         }}
                                     >
-                                        {f}
+                                        {f.label}
                                     </button>
                                 ))}
                             </div>
@@ -252,16 +257,14 @@ export default function ProfilePage() {
                                     {bookingFilter === "cancelled" ? "📂" : (bookingFilter === "payments" ? "💳" : "🎟️")}
                                 </div>
                                 <p style={{ fontSize: "16px", fontWeight: "600", color: t.textMain, margin: "0 0 8px" }}>
-                                    No {bookingFilter !== "all" ? bookingFilter : ""} records found
+                                    No {bookingFilter === "booked" ? "Booked Tickets" : (bookingFilter === "cancelled" ? "Cancelled Tickets" : "Payment Records")} Found
                                 </p>
                                 <p style={{ fontSize: "13px", margin: "0 0 20px" }}>
                                     {bookingFilter === "cancelled" ? "You don't have any cancelled ticket requests." : "Browse our events to start your next adventure!"}
                                 </p>
-                                {bookingFilter === "all" && (
-                                    <Link href="/" style={{ padding: "10px 24px", background: t.accent, color: "#fff", borderRadius: "50px", textDecoration: "none", fontWeight: "700", fontSize: "14px", display: "inline-block", boxShadow: `0 4px 12px ${t.accentGlow}` }}>
-                                        Explore Events
-                                    </Link>
-                                )}
+                                <Link href="/" style={{ padding: "10px 24px", background: t.accent, color: "#fff", borderRadius: "50px", textDecoration: "none", fontWeight: "700", fontSize: "14px", display: "inline-block", boxShadow: `0 4px 12px ${t.accentGlow}` }}>
+                                    Explore Events
+                                </Link>
                             </div>
                         )}
                     </div>
