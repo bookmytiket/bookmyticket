@@ -60,10 +60,12 @@ import {
     Briefcase, Package, DollarSign, Activity, TrendingUp, PieChart, BarChart, Info, Share, ShieldCheck, Zap, FileCheck2, Armchair, CheckCircle2, Landmark, Languages, Navigation, UserPlus, Trophy, Goal, Timer, Dribbble, Target
 } from "lucide-react";
 
-const ACCENT_BLUE = "#3b82f6";
-const ACCENT_PURPLE = "#8b5cf6";
 const ACCENT_PINK = "#ec4899";
-const ACCENT_GRADIENT = `linear-gradient(135deg, ${ACCENT_BLUE} 0%, ${ACCENT_PURPLE} 100%)`;
+const ACCENT_PURPLE = "#a855f7";
+const ACCENT_BLUE = "#ec4899"; // Rebranded primary to pink
+const ACCENT_GRADIENT = `linear-gradient(135deg, ${ACCENT_PINK} 0%, ${ACCENT_PURPLE} 100%)`;
+const ACCENT_SOFT_PINK = "#fdf2f8";
+const ACCENT_BORDER_PINK = "#fbcfe8";
 
 
 function LocationPickerModal({
@@ -698,7 +700,7 @@ function OrganiserPanel() {
     const [showStaffModal, setShowStaffModal] = useState(false);
     const [showUpgradeModal, setShowUpgradeModal] = useState(false);
     const [upgradingPackage, setUpgradingPackage] = useState(null);
-    const [staffFormData, setStaffFormData] = useState({ name: "", email: "", password: "", mobile: "", assignedEventId: "", expiryDate: "" });
+    const [staffFormData, setStaffFormData] = useState({ name: "", email: "", password: "", mobile: "", assignedEventId: "", expiryDate: "", gateName: "" });
     const [editingStaffId, setEditingStaffId] = useState(null);
     const [postLoading, setPostLoading] = useState(false);
     const [deletingStaffId, setDeletingStaffId] = useState(null);
@@ -4860,7 +4862,7 @@ function OrganiserPanel() {
                                         <h3 style={{ fontSize: "24px", fontWeight: 800, color: t.textMain, margin: 0 }}>Staff Management</h3>
                                         <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "4px" }}>
                                             <p style={{ fontSize: "14px", color: t.textSub, margin: 0 }}>Manage staff access for the mobile scanner application.</p>
-                                            <div style={{ backgroundColor: "#3b82f610", color: "#3b82f6", padding: "2px 8px", borderRadius: "4px", fontSize: "10px", fontWeight: 800, textTransform: "uppercase" }}>
+                                            <div style={{ backgroundColor: `${ACCENT_PINK}15`, color: ACCENT_PINK, padding: "2px 8px", borderRadius: "4px", fontSize: "10px", fontWeight: 800, textTransform: "uppercase" }}>
                                                 {currentPackage.package_name} ({staffAccounts.length}/{currentPackage.staff_limit || 3})
                                             </div>
                                         </div>
@@ -4868,7 +4870,7 @@ function OrganiserPanel() {
                                     <div style={{ display: "flex", gap: "12px" }}>
                                         <button
                                             onClick={() => setShowUpgradeModal(true)}
-                                            style={{ backgroundColor: "#3b82f610", color: "#3b82f6", padding: "12px 24px", borderRadius: "10px", border: `1px solid #3b82f630`, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}
+                                            style={{ background: "none", color: ACCENT_PINK, padding: "12px 24px", borderRadius: "10px", border: `1px solid ${ACCENT_PINK}40`, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}
                                         >
                                             <Sparkles size={18} /> Upgrade Plan
                                         </button>
@@ -4880,10 +4882,10 @@ function OrganiserPanel() {
                                                     return;
                                                 }
                                                 setEditingStaffId(null);
-                                                setStaffFormData({ name: "", email: "", password: "", mobile: "", assignedEventId: "", expiryDate: "" });
+                                                setStaffFormData({ name: "", email: "", password: "", mobile: "", assignedEventId: "", expiryDate: "", gateName: "" });
                                                 setShowStaffModal(true);
                                             }}
-                                            style={{ backgroundColor: staffLimitReached ? "#94a3b8" : "#3b82f6", color: "#fff", padding: "12px 24px", borderRadius: "10px", border: "none", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}
+                                            style={{ background: staffLimitReached ? "#94a3b8" : ACCENT_GRADIENT, color: "#fff", padding: "12px 24px", borderRadius: "10px", border: "none", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", boxShadow: staffLimitReached ? "none" : `0 4px 14px ${ACCENT_PINK}40` }}
                                         >
                                             <Plus size={20} /> Add Staff
                                         </button>
@@ -4892,8 +4894,8 @@ function OrganiserPanel() {
 
                                 {staffAccounts.length === 0 ? (
                                     <div style={{ padding: "64px 32px", textAlign: "center", backgroundColor: t.bg, borderRadius: "20px", border: `2px dashed ${t.border}` }}>
-                                        <div style={{ width: "64px", height: "64px", borderRadius: "20px", backgroundColor: "#3b82f610", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
-                                            <Users size={32} color="#3b82f6" />
+                                        <div style={{ width: "64px", height: "64px", borderRadius: "20px", backgroundColor: `${ACCENT_PINK}15`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
+                                            <Users size={32} color={ACCENT_PINK} />
                                         </div>
                                         <h4 style={{ fontSize: "18px", fontWeight: 800, color: t.textMain, margin: "0 0 8px" }}>No Staff Accounts</h4>
                                         <p style={{ fontSize: "14px", color: t.textSub, maxWidth: "320px", margin: "0 auto", lineHeight: 1.5 }}>Create staff accounts to allow your team to scan tickets using the mobile app.</p>
@@ -4915,7 +4917,7 @@ function OrganiserPanel() {
                                                     <tr key={s.id} style={{ borderBottom: `1px solid ${t.border}` }}>
                                                         <td style={{ padding: "16px" }}>
                                                             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                                                <div style={{ width: "36px", height: "36px", borderRadius: "50%", backgroundColor: "#3b82f620", color: "#3b82f6", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800 }}>{(s.name || "S").charAt(0)}</div>
+                                                                <div style={{ width: "36px", height: "36px", borderRadius: "50%", backgroundColor: `${ACCENT_PINK}15`, color: ACCENT_PINK, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800 }}>{(s.name || "S").charAt(0)}</div>
                                                                 <span style={{ fontWeight: 700, color: t.textMain }}>{s.name}</span>
                                                             </div>
                                                         </td>
@@ -4928,12 +4930,15 @@ function OrganiserPanel() {
                                                                 display: "inline-block",
                                                                 padding: "4px 10px",
                                                                 borderRadius: "6px",
-                                                                backgroundColor: s.assigned_event_id ? "#3b82f610" : "#f1f5f9",
-                                                                color: s.assigned_event_id ? "#3b82f6" : t.textSub,
+                                                                backgroundColor: s.assigned_event_id ? `${ACCENT_PINK}10` : "#f1f5f9",
+                                                                color: s.assigned_event_id ? ACCENT_PINK : t.textSub,
                                                                 fontSize: "11px",
                                                                 fontWeight: 700
                                                             }}>
                                                                 {s.assigned_event_id ? (eventsData.find(e => e.id === s.assigned_event_id)?.title || "Event Assigned") : "Global Access"}
+                                                                {s.gate_name && (
+                                                                    <span style={{ marginLeft: "6px", opacity: 0.7 }}>• {s.gate_name}</span>
+                                                                )}
                                                             </div>
                                                         </td>
                                                         <td style={{ padding: "16px" }}>
@@ -4950,7 +4955,7 @@ function OrganiserPanel() {
                                                                         refetchStaff();
                                                                     } catch (err) { alert(err.message); }
                                                                 }}
-                                                                className={`w-10 h-5 rounded-full p-1 cursor-pointer transition-colors  ${s.is_active ? 'bg-green-500' : 'bg-slate-300'}`}
+                                                                className={`w-10 h-5 rounded-full p-1 cursor-pointer transition-all duration-300 ${s.is_active ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.4)]' : 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.4)]'}`}
                                                             >
                                                                 <div className={`w-3 h-3 bg-white rounded-full transition-transform  ${s.is_active ? 'translate-x-5' : 'translate-x-0'}`} />
                                                             </div>
@@ -4959,8 +4964,8 @@ function OrganiserPanel() {
                                                         <td style={{ padding: "16px", textAlign: "right" }}>
                                                             <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", paddingRight: "8px" }}>
                                                                 <button
-                                                                    onClick={() => { setEditingStaffId(s.id); setStaffFormData({ name: s.name, email: s.email, password: s.password, mobile: s.mobile || "", assignedEventId: s.assigned_event_id || "", expiryDate: s.expiry_date || "" }); setShowStaffModal(true); }}
-                                                                    style={{ border: "none", background: "#3b82f610", color: "#3b82f6", padding: "10px", borderRadius: "10px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                                                                    onClick={() => { setEditingStaffId(s.id); setStaffFormData({ name: s.name, email: s.email, password: s.password, mobile: s.mobile || "", assignedEventId: s.assigned_event_id || "", expiryDate: s.expiry_date || "", gateName: s.gate_name || "" }); setShowStaffModal(true); }}
+                                                                    style={{ border: "none", background: `${ACCENT_PINK}15`, color: ACCENT_PINK, padding: "10px", borderRadius: "10px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
                                                                     title="Edit Staff"
                                                                 >
                                                                     <Settings size={18} />
@@ -5224,6 +5229,27 @@ function OrganiserPanel() {
                                         ]}
                                     />
                                 </div>
+                                {currentPackage.features?.multi_gate && (
+                                    <div>
+                                        <CustomSelect
+                                            label="Gate Assignment (Multi-Gate Access)"
+                                            value={staffFormData.gateName}
+                                            onChange={(val) => setStaffFormData(prev => ({ ...prev, gateName: val }))}
+                                            placeholder="Select or type a gate name..."
+                                            options={[
+                                                "Main Gate",
+                                                "VIP Entrance",
+                                                "Staff Entry",
+                                                "Media Gate",
+                                                "Backstage Access",
+                                                "Gate A",
+                                                "Gate B",
+                                                "Exit Only"
+                                            ]}
+                                        />
+                                        <p style={{ fontSize: "10px", color: t.textSub, marginTop: "4px" }}>Assign this staff member to a specific entry point.</p>
+                                    </div>
+                                )}
                                 <div>
                                     <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "4px", color: t.textMain }}>Password {editingStaffId && "(Leave blank to keep current)"}</label>
                                     <input
@@ -5271,7 +5297,7 @@ function OrganiserPanel() {
                                         }
                                     }}
                                     disabled={postLoading}
-                                    style={{ width: "100%", padding: "12px", borderRadius: "12px", backgroundColor: "#3b82f6", color: "#fff", border: "none", fontWeight: 700, cursor: "pointer", marginTop: "4px", opacity: postLoading ? 0.7 : 1 }}
+                                    style={{ width: "100%", padding: "12px", borderRadius: "12px", background: ACCENT_GRADIENT, color: "#fff", border: "none", fontWeight: 700, cursor: "pointer", marginTop: "4px", opacity: postLoading ? 0.7 : 1, boxShadow: `0 4px 14px ${ACCENT_PINK}40` }}
                                 >
                                     {postLoading ? "Processing..." : (editingStaffId ? "Update Password" : "Create Account")}
                                 </button>
@@ -5670,38 +5696,52 @@ function OrganiserPanel() {
                                 <input type="text" placeholder="Search..." className="bg-transparent border-none outline-none pl-2 text-[12px] font-bold text-slate-600 placeholder:text-slate-600" />
                             </div>
                         </div>
-                        <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
-                            <button onClick={toggleTheme} style={{ color: t.textMain, background: "none", border: "none", cursor: "pointer", padding: "8px" }}>
+                        <div className="flex items-center gap-4 lg:gap-6">
+                            <motion.button 
+                                whileHover={{ scale: 1.1 }}
+                                whileTap={{ scale: 0.9 }}
+                                onClick={toggleTheme} 
+                                className="w-10 h-10 rounded-xl bg-slate-50 text-slate-600 flex items-center justify-center hover:bg-pink-50 hover:text-pink-500 transition-all border border-slate-100"
+                            >
                                 {theme === 'light' ? <Clock size={20} /> : <Sparkles size={20} />}
-                            </button>
-                            <button style={{ color: t.textMain, background: "none", border: "none", cursor: "pointer", padding: "8px", position: "relative" }}>
+                            </motion.button>
+
+                            <motion.button 
+                                whileHover={{ scale: 1.1 }}
+                                whileTap={{ scale: 0.9 }}
+                                className="w-10 h-10 rounded-xl bg-slate-50 text-slate-600 flex items-center justify-center hover:bg-pink-50 hover:text-pink-500 transition-all border border-slate-100 relative"
+                            >
                                 <Bell size={20} />
-                                <div style={{ position: "absolute", top: "8px", right: "8px", width: "8px", height: "8px", backgroundColor: "#ef4444", borderRadius: "50%", border: `2px solid ${t.header}` }}></div>
-                            </button>
-                            <div style={{ position: "relative" }} ref={dropdownRef}>
-                                <button
+                                <div className="absolute top-2.5 right-2.5 w-2 h-2 bg-pink-500 rounded-full border-2 border-white shadow-sm animate-pulse"></div>
+                            </motion.button>
+
+                            <div className="w-[1px] h-8 bg-slate-200 mx-2 hidden md:block" />
+
+                            <div className="relative" ref={dropdownRef}>
+                                <motion.button
+                                    whileHover={{ scale: 1.02 }}
                                     onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
-                                    style={{
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: "12px",
-                                        paddingLeft: "12px",
-                                        borderLeft: `1px solid ${t.border}`,
-                                        background: "none",
-                                        borderTop: "none",
-                                        borderRight: "none",
-                                        borderBottom: "none",
-                                        cursor: "pointer",
-                                        outline: "none"
-                                    }}
+                                    className="flex items-center gap-3 pl-2 pr-1 py-1 rounded-2xl hover:bg-slate-50 transition-all group"
                                 >
-                                    <img
-                                        src={profile.avatar || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop"}
-                                        alt="User"
-                                        style={{ width: "36px", height: "36px", borderRadius: "50%", border: `2px solid ${ACCENT_BLUE}` }}
-                                    />
-                                    <ChevronDown size={14} color={t.textSub} style={{ transform: profileDropdownOpen ? "rotate(180deg)" : "rotate(0)", transition: "0.3s" }} />
-                                </button>
+                                    <div className="p-[2px] rounded-full bg-gradient-to-tr from-pink-500 via-purple-500 to-indigo-500 shadow-md">
+                                        {profile.avatar ? (
+                                            <img
+                                                src={profile.avatar}
+                                                alt="User"
+                                                className="w-9 h-9 rounded-full border-2 border-white object-cover"
+                                            />
+                                        ) : (
+                                            <div className="w-9 h-9 rounded-full border-2 border-white bg-slate-900 flex items-center justify-center text-white font-black text-xs uppercase italic">
+                                                {(profile.firstName || profile.name || profile.email || "U").charAt(0)}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="hidden lg:flex flex-col items-start mr-1">
+                                        <span className="text-[11px] font-black text-slate-900 uppercase tracking-tight">{profile.firstName || "Admin"}</span>
+                                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{isStaff ? "Staff Account" : "Organiser"}</span>
+                                    </div>
+                                    <ChevronDown size={14} className={`text-slate-400 transition-transform duration-300 ${profileDropdownOpen ? "rotate-180" : ""}`} />
+                                </motion.button>
 
                                 {profileDropdownOpen && (
                                     <div style={{

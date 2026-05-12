@@ -8,7 +8,7 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 export async function POST(request) {
   try {
-    const { name, email, password, organiserId, mobile, assignedEventId, expiryDate } = await request.json();
+    const { name, email, password, organiserId, mobile, assignedEventId, expiryDate, gateName } = await request.json();
 
     if (!supabaseAdmin) {
       return NextResponse.json({ error: 'Supabase Admin client not configured' }, { status: 500 });
@@ -91,6 +91,7 @@ export async function POST(request) {
         mobile,
         assigned_event_id: assignedEventId,
         expiry_date: expiryDate,
+        gate_name: gateName,
         role: 'staff',
         is_active: true,
         permissions: []
@@ -139,17 +140,18 @@ export async function PATCH(request) {
 
 export async function PUT(request) {
     try {
-      const { id, auth_user_id, password, name, mobile, assignedEventId, expiryDate } = await request.json();
+      const { id, auth_user_id, password, name, mobile, assignedEventId, expiryDate, gateName } = await request.json();
   
       if (!supabaseAdmin) throw new Error('Admin client missing');
   
       // 1. Update Auth User if password or metadata changed
       const authUpdates = {};
       if (password) authUpdates.password = password;
-      if (name || assignedEventId) {
+      if (name || assignedEventId || gateName) {
           authUpdates.user_metadata = { 
               full_name: name, 
-              assigned_event_id: assignedEventId 
+              assigned_event_id: assignedEventId,
+              gate_name: gateName
           };
       }
 
@@ -168,7 +170,8 @@ export async function PUT(request) {
             name, 
             mobile, 
             assigned_event_id: assignedEventId, 
-            expiry_date: expiryDate 
+            expiry_date: expiryDate,
+            gate_name: gateName
         })
         .eq('id', id);
 

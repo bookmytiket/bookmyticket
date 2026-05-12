@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, Search, Check, X } from "lucide-react";
+import { ChevronDown, Search, Check, X, Plus } from "lucide-react";
 
 export default function CustomSelect({ 
     value, 
@@ -101,9 +101,19 @@ export default function CustomSelect({
                                     </button>
                                 ))
                             ) : (
-                                <div className="py-8 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                    No results found
-                                </div>
+                                <>
+                                    {searchTerm && (
+                                        <button
+                                            onClick={() => handleSelect(searchTerm)}
+                                            className="w-full text-left px-4 py-2.5 rounded-xl text-[11px] font-bold text-blue-600 hover:bg-blue-50 transition-all flex items-center gap-2"
+                                        >
+                                            <Plus size={14} /> Add "{searchTerm}"
+                                        </button>
+                                    )}
+                                    <div className="py-8 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                        No results found
+                                    </div>
+                                </>
                             )}
                         </div>
                     </motion.div>
