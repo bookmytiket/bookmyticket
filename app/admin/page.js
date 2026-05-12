@@ -885,7 +885,7 @@ function AdminHomePage() {
     }, [user, loading, router]);
 
     useEffect(() => {
-        if (!user || (user.role !== "admin" && user.role !== "super_admin")) return;
+        if (!user || (user.role !== "admin" && user.role !== "super_admin" && user.role !== "system_admin")) return;
 
         const channel = supabase
             .channel('new-applicants')
@@ -2570,140 +2570,11 @@ function AdminHomePage() {
                             <SubscriptionPackagesAdmin t={t} theme={theme} />
                         </div>
                     )}
-                    {activeTab === "subscribers" && (
-                        <div className="px-8 lg:px-12 py-6">
-                            <div className="premium-glass p-6 rounded-[24px] bg-gradient-to-br from-white to-blue-50/20 border-blue-100/50">
-                                <div className="flex items-center gap-6">
-                                    <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center text-white shadow-xl shadow-blue-500/20"><Users size={24} /></div>
-                                    <div>
-                                        <h2 className="text-xl font-black text-slate-900 tracking-tighter uppercase italic leading-none mb-1.5">Subscriber Shard</h2>
-                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Growth Engine Intelligence Database</p>
-                                    </div>
-                                </div>
-                                <div className="mt-8 p-8 text-center bg-white/60 border border-dashed border-blue-100 rounded-[20px]">
-                                    <p className="text-blue-400 font-black uppercase text-[9px] tracking-[0.3em]">Optimizing Global Audience Records</p>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                    {activeTab === "hero" && (
-                        <div className="px-8 lg:px-12 py-8">
-                            <div className="card-premium p-12 bg-slate-900 text-white rounded-[48px] overflow-hidden relative">
-                                <div className="absolute top-0 right-0 w-96 h-96 bg-pink-500/20 blur-[120px] -mr-48 -mt-48"></div>
-                                <div className="relative z-10">
-                                    <h2 className="text-4xl font-black tracking-tighter uppercase italic mb-8">Hero Engine v2.0</h2>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                        <div className="p-10 bg-white/5 rounded-[32px] border border-white/10 hover:border-pink-500/50 transition-all group">
-                                            <div className="flex items-center justify-between mb-8">
-                                                <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center group-hover:bg-pink-500 transition-all"><Layout size={24} /></div>
-                                                <span className="px-3 py-1 bg-pink-500/20 text-pink-400 rounded-full text-[9px] font-black uppercase tracking-widest">Active Layer</span>
-                                            </div>
-                                            <h4 className="text-xl font-black mb-2">Web Homepage Hero</h4>
-                                            <p className="text-white/40 text-sm font-medium">Manage top-level branding, CTAs, and video backgrounds for web.</p>
-                                        </div>
-                                        <div className="p-10 bg-white/5 rounded-[32px] border border-white/10 hover:border-blue-500/50 transition-all group">
-                                            <div className="flex items-center justify-between mb-8">
-                                                <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center group-hover:bg-blue-500 transition-all"><Smartphone size={24} /></div>
-                                                <span className="px-3 py-1 bg-blue-500/20 text-blue-400 rounded-full text-[9px] font-black uppercase tracking-widest">Active Layer</span>
-                                            </div>
-                                            <h4 className="text-xl font-black mb-2">Mobile Discovery Hero</h4>
-                                            <p className="text-white/40 text-sm font-medium">Configure category pills, location banners, and app-only offers.</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                    {activeTab === "api_settings" && (
-                        <div className="px-8 lg:px-12 py-8">
-                            <div className="bg-white rounded-[40px] border border-slate-100 shadow-sm overflow-hidden">
-                                <div className="p-10 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-12 h-12 bg-slate-900 rounded-2xl flex items-center justify-center text-white"><Code size={24} /></div>
-                                        <div>
-                                            <h2 className="text-2xl font-black text-slate-900 tracking-tight italic uppercase">API Gateway Configuration</h2>
-                                            <p className="text-xs text-slate-400 font-black uppercase tracking-widest">Protocol & Connectivity Node</p>
-                                        </div>
-                                    </div>
-                                    <span className="px-4 py-2 bg-emerald-50 text-emerald-600 rounded-xl text-[10px] font-black uppercase tracking-widest border border-emerald-100 flex items-center gap-2">
-                                        <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div> System Operational
-                                    </span>
-                                </div>
-                                <div className="p-10 space-y-6">
-                                    {['Google Maps Platform', 'Supabase Real-time', 'Razorpay Payments', 'Cashfree Payouts', 'Resend Email Node'].map((api, i) => (
-                                        <div key={i} className="flex items-center justify-between p-6 bg-slate-50/50 rounded-[24px] border border-slate-50 group hover:border-slate-200 transition-all">
-                                            <div className="flex items-center gap-6">
-                                                <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm text-slate-400 group-hover:text-slate-900 transition-colors"><Shield size={20} /></div>
-                                                <div>
-                                                    <p className="text-sm font-black text-slate-900">{api}</p>
-                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Standard Integration Tier</p>
-                                                </div>
-                                            </div>
-                                            <button className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-900 hover:text-white hover:border-slate-900 transition-all">Configure Endpoint</button>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                    {activeTab === "meta_management" && (
-                        <div className="px-8 lg:px-12 py-8">
-                            <div className="premium-glass p-12 rounded-[48px] border-slate-200/50">
-                                <div className="flex items-center justify-between mb-12">
-                                    <div>
-                                        <h2 className="text-4xl font-black text-slate-900 tracking-tighter uppercase italic">Meta Intelligence</h2>
-                                        <p className="text-sm text-slate-500 font-bold uppercase tracking-widest">Global SEO & Social Graph Matrix</p>
-                                    </div>
-                                    <button className="px-8 py-3 bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-indigo-600/20">Sync SEO Clusters</button>
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                    <div className="p-10 bg-white rounded-[32px] border border-slate-100 shadow-sm">
-                                        <p className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em] mb-4">Indexing Status</p>
-                                        <div className="flex items-baseline gap-2 mb-6">
-                                            <p className="text-5xl font-black tracking-tighter text-slate-900">98.2%</p>
-                                            <p className="text-emerald-500 font-black text-xs">+1.2%</p>
-                                        </div>
-                                        <p className="text-slate-500 text-sm font-medium leading-relaxed">System-wide search visibility across Google, Bing, and major social graphs.</p>
-                                    </div>
-                                    <div className="p-10 bg-slate-900 rounded-[32px] shadow-2xl shadow-indigo-900/20">
-                                        <p className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] mb-4">Priority Metatags</p>
-                                        <div className="space-y-3">
-                                            {['og:title', 'og:description', 'twitter:card', 'canonical'].map(tag => (
-                                                <div key={tag} className="flex items-center justify-between py-2 border-b border-white/5">
-                                                    <span className="text-xs font-bold text-white/40">{tag}</span>
-                                                    <span className="text-[10px] font-black text-indigo-400 uppercase">Synchronized</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                    {activeTab === "promotions" && (
-                        <div className="px-8 lg:px-12 py-6">
-                            <div className="flex items-center justify-between mb-8">
-                                <h2 className="text-xl font-black text-slate-900 tracking-tighter uppercase italic">Growth Campaigns</h2>
-                                <button className="px-6 py-2 bg-pink-500 text-white rounded-xl font-black text-[9px] uppercase tracking-widest shadow-xl shadow-pink-500/20 hover:scale-105 transition-all">New Campaign</button>
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                                {[
-                                    { title: "Partner Referral", desc: "Multi-level structures.", icon: Users, color: "#3b82f6" },
-                                    { title: "Exclusive Unlocks", desc: "Private portals.", icon: Sparkles, color: "#a855f7" },
-                                    { title: "Dynamic Pricing", desc: "Automate discounts.", icon: Tag, color: "#ec4899" },
-                                    { title: "Engagement Rewards", desc: "Loyalty engine.", icon: Gift, color: "#10b981" }
-                                ].map((c, i) => (
-                                    <div key={i} className="group p-1 bg-slate-50 rounded-[24px] hover:bg-slate-900 transition-all duration-500 cursor-pointer border border-slate-100">
-                                        <div className="p-6">
-                                            <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-4 bg-white group-hover:bg-white/10 transition-all shadow-sm" style={{ color: c.color }}><c.icon size={20} /></div>
-                                            <h4 className="text-sm font-black text-slate-900 mb-1 group-hover:text-white transition-all italic tracking-tight">{c.title}</h4>
-                                            <p className="text-slate-500 text-[10px] font-medium leading-tight group-hover:text-white/60 transition-all">{c.desc}</p>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
+
+
+
+
+
                     {activeTab === "banner_ads" && (
                         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 px-8 lg:px-12 py-6">
                             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -6880,7 +6751,7 @@ function AdminHomePage() {
                         </div>
                     )}
 
-                    {(["dashboard", "banner_ads", "revenue", "payout_requests", "fee_settings", "exclusive_settings", "email_broadcast", "careers", "subscribers", "turf_partners", "turf_active", "turf_banned", "branding", "categories", "subnav", "events_settings", "event_partners", "pages", "sections", "all_org", "active_org", "banned_org", "email_unverified", "mobile_unverified", "kyc_unverified", "kyc_pending", "kyc_verified", "with_balance", "org_requests", "partner_requests", "service_active", "service_banned", "send_notif", "payment_settings", "ticket_settings", "comm_hub", "email_settings", "email_templates", "disclaimer_settings", "sso_settings", "api_settings", "meta_management", "all_events", "customers", "bookings", "all_turfs", "turf_active", "turf_banned", "turf_bookings", "pool_bookings", "gst", "coupons", "promotions", "financials", "support_tickets", "branding_partners", "hero", "video", "video_banner", "mobile_banners", "site_branding", "memories", "copyright", "meeting_settings", "admin_management", "ad_popups", "meetings", "checkout_footer", "careers_admin", "careers_banner", "contact_inquiries", "contact_settings"].includes(activeTab)) ? null : (
+                    {(["dashboard", "banner_ads", "revenue", "payout_requests", "fee_settings", "exclusive_settings", "email_broadcast", "careers", "subscribers", "subscriptions", "turf_partners", "turf_active", "turf_banned", "branding", "categories", "subnav", "events_settings", "event_partners", "pages", "sections", "all_org", "active_org", "banned_org", "email_unverified", "mobile_unverified", "kyc_unverified", "kyc_pending", "kyc_verified", "with_balance", "org_requests", "partner_requests", "service_active", "service_banned", "send_notif", "payment_settings", "ticket_settings", "comm_hub", "email_settings", "email_templates", "disclaimer_settings", "sso_settings", "api_settings", "meta_management", "all_events", "customers", "bookings", "all_turfs", "turf_active", "turf_banned", "turf_bookings", "pool_bookings", "gst", "coupons", "promotions", "financials", "support_tickets", "branding_partners", "hero", "video", "video_banner", "mobile_banners", "site_branding", "memories", "copyright", "meeting_settings", "admin_management", "ad_popups", "meetings", "checkout_footer", "careers_admin", "careers_banner", "contact_inquiries", "contact_settings"].includes(activeTab)) ? null : (
                         <div style={{ backgroundColor: t.cardBg, padding: "60px 24px", textAlign: "center", borderRadius: "10px", border: `1px solid ${t.border}` }}>
                             <h2 style={{ fontSize: "20px", fontWeight: 800, color: t.textMain }}>{activeTab.replace(/_/g, ' ').toUpperCase()}</h2>
                             <p style={{ color: t.textSub, marginTop: "8px", maxWidth: "350px", margin: "8px auto", fontSize: "14px" }}>This management module is currently being configured. You will be able to manage these settings shortly.</p>
@@ -7383,59 +7254,8 @@ function AdminHomePage() {
                         </div>
                     )}
 
-                    {activeTab === "exclusive_settings" && (
-                        <div className="px-8 lg:px-12 py-8">
-                            <div className="premium-glass p-12 rounded-[48px] bg-gradient-to-br from-pink-500 to-purple-600 text-white shadow-2xl shadow-pink-500/20">
-                                <h2 className="text-4xl font-black tracking-tighter uppercase italic mb-4">Exclusive Perks</h2>
-                                <p className="text-white/60 text-sm font-bold uppercase tracking-widest mb-12">Loyalty & Reward Configuration</p>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                    <div className="p-10 bg-black/20 rounded-[32px] border border-white/10">
-                                        <p className="text-[10px] font-black uppercase tracking-widest text-white/40 mb-3">Active Loyalty Tier</p>
-                                        <p className="text-2xl font-black mb-4 italic tracking-tight">Platinum Prime Access</p>
-                                        <button className="px-6 py-2 bg-white/10 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-white/20 transition-all">Configure Tier</button>
-                                    </div>
-                                    <div className="p-10 bg-black/20 rounded-[32px] border border-white/10">
-                                        <p className="text-[10px] font-black uppercase tracking-widest text-white/40 mb-3">Reward Distribution</p>
-                                        <p className="text-2xl font-black mb-4 italic tracking-tight">Automated Weekly Sync</p>
-                                        <button className="px-6 py-2 bg-white/10 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-white/20 transition-all">Adjust Frequency</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                    {activeTab === "sso_settings" && (
-                        <div className="px-8 lg:px-12 py-8">
-                            <div className="bg-white rounded-[40px] border border-slate-100 shadow-sm overflow-hidden">
-                                <div className="p-10 bg-slate-900 text-white flex items-center justify-between">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center"><Lock size={24} /></div>
-                                        <div>
-                                            <h2 className="text-2xl font-black tracking-tight italic uppercase">SSO & Security Protocol</h2>
-                                            <p className="text-xs text-white/40 font-black uppercase tracking-widest">Enterprise Identity Node</p>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="p-10 space-y-8">
-                                    <div className="p-10 bg-slate-50 rounded-[32px] border border-slate-100 flex items-center justify-between">
-                                        <div>
-                                            <h4 className="text-lg font-black text-slate-900 mb-1">Multi-Factor Authentication</h4>
-                                            <p className="text-sm text-slate-500 font-medium">Enforce biometric or TOTP verification for all administrative nodes.</p>
-                                        </div>
-                                        <div className="w-14 h-8 bg-pink-500 rounded-full relative p-1 cursor-pointer">
-                                            <div className="w-6 h-6 bg-white rounded-full ml-auto shadow-sm"></div>
-                                        </div>
-                                    </div>
-                                    <div className="p-10 bg-slate-50 rounded-[32px] border border-slate-100 flex items-center justify-between">
-                                        <div>
-                                            <h4 className="text-lg font-black text-slate-900 mb-1">OAuth Provider Sync</h4>
-                                            <p className="text-sm text-slate-500 font-medium">Synchronize identity states with Google Workspace and Microsoft Azure.</p>
-                                        </div>
-                                        <button className="px-8 py-3 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl">Configure Providers</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
+
+
                     {activeTab === "mobile_banners" && <MobileBannersAdmin theme={theme} t={t} />}
 
                     {partnerModal && (

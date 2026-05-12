@@ -277,8 +277,8 @@ export default function SubscriptionPackagesAdmin({ theme, t }) {
             {/* Edit Modal */}
             {showModal && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4">
-                    <div className="bg-white w-full max-w-2xl rounded-[32px] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200 dark:bg-slate-900">
-                        <div className="p-8 border-b border-slate-50 flex justify-between items-center dark:border-slate-800">
+                    <div className="bg-white w-full max-w-2xl rounded-[32px] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200 dark:bg-slate-900 max-h-[90vh] flex flex-col">
+                        <div className="p-6 border-b border-slate-50 flex justify-between items-center dark:border-slate-800">
                             <div>
                                 <h3 className="text-2xl font-black text-slate-900 dark:text-white">{editingId ? 'Edit Package' : 'Create Package'}</h3>
                                 <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Configure plan parameters & pricing</p>
@@ -288,15 +288,15 @@ export default function SubscriptionPackagesAdmin({ theme, t }) {
                             </button>
                         </div>
                         
-                        <form onSubmit={handleSave} className="p-8 space-y-6">
-                            <div className="grid grid-cols-2 gap-6">
+                        <form onSubmit={handleSave} className="p-6 space-y-4 overflow-y-auto">
+                            <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                     <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Package Name</label>
                                     <input 
                                         required 
                                         value={formData.package_name} 
                                         onChange={e => setFormData({...formData, package_name: e.target.value})}
-                                        className="w-full p-4 bg-slate-50 border-none rounded-2xl font-bold text-slate-900 dark:bg-slate-800 dark:text-white focus:ring-2 focus:ring-pink-500/20 transition-all"
+                                        className="w-full p-3 bg-slate-50 border-none rounded-2xl font-bold text-slate-900 dark:bg-slate-800 dark:text-white focus:ring-2 focus:ring-pink-500/20 transition-all"
                                         placeholder="e.g. Professional Plan"
                                     />
                                 </div>
@@ -306,21 +306,27 @@ export default function SubscriptionPackagesAdmin({ theme, t }) {
                                         required 
                                         type="number" 
                                         value={formData.monthly_price} 
-                                        onChange={e => setFormData({...formData, monthly_price: parseFloat(e.target.value)})}
-                                        className="w-full p-4 bg-slate-50 border-none rounded-2xl font-bold text-slate-900 dark:bg-slate-800 dark:text-white focus:ring-2 focus:ring-pink-500/20 transition-all"
+                                        onChange={e => {
+                                            const val = parseFloat(e.target.value);
+                                            setFormData({...formData, monthly_price: isNaN(val) ? 0 : val});
+                                        }}
+                                        className="w-full p-3 bg-slate-50 border-none rounded-2xl font-bold text-slate-900 dark:bg-slate-800 dark:text-white focus:ring-2 focus:ring-pink-500/20 transition-all"
                                     />
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-3 gap-6">
+                            <div className="grid grid-cols-3 gap-4">
                                 <div className="space-y-2">
                                     <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Staff Limit</label>
                                     <input 
                                         required 
                                         type="number" 
                                         value={formData.staff_limit} 
-                                        onChange={e => setFormData({...formData, staff_limit: parseInt(e.target.value)})}
-                                        className="w-full p-4 bg-slate-50 border-none rounded-2xl font-bold text-slate-900 dark:bg-slate-800 dark:text-white"
+                                        onChange={e => {
+                                            const val = parseInt(e.target.value);
+                                            setFormData({...formData, staff_limit: isNaN(val) ? 0 : val});
+                                        }}
+                                        className="w-full p-3 bg-slate-50 border-none rounded-2xl font-bold text-slate-900 dark:bg-slate-800 dark:text-white"
                                     />
                                 </div>
                                 <div className="space-y-2">
@@ -329,8 +335,11 @@ export default function SubscriptionPackagesAdmin({ theme, t }) {
                                         required 
                                         type="number" 
                                         value={formData.gst_percentage} 
-                                        onChange={e => setFormData({...formData, gst_percentage: parseFloat(e.target.value)})}
-                                        className="w-full p-4 bg-slate-50 border-none rounded-2xl font-bold text-slate-900 dark:bg-slate-800 dark:text-white"
+                                        onChange={e => {
+                                            const val = parseFloat(e.target.value);
+                                            setFormData({...formData, gst_percentage: isNaN(val) ? 0 : val});
+                                        }}
+                                        className="w-full p-3 bg-slate-50 border-none rounded-2xl font-bold text-slate-900 dark:bg-slate-800 dark:text-white"
                                     />
                                 </div>
                                 <div className="space-y-2">
@@ -339,24 +348,27 @@ export default function SubscriptionPackagesAdmin({ theme, t }) {
                                         required 
                                         type="number" 
                                         value={formData.discount_percentage} 
-                                        onChange={e => setFormData({...formData, discount_percentage: parseFloat(e.target.value)})}
-                                        className="w-full p-4 bg-slate-50 border-none rounded-2xl font-bold text-slate-900 dark:bg-slate-800 dark:text-white"
+                                        onChange={e => {
+                                            const val = parseFloat(e.target.value);
+                                            setFormData({...formData, discount_percentage: isNaN(val) ? 0 : val});
+                                        }}
+                                        className="w-full p-3 bg-slate-50 border-none rounded-2xl font-bold text-slate-900 dark:bg-slate-800 dark:text-white"
                                     />
                                 </div>
                             </div>
 
                             <div className="space-y-4">
                                 <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest block mb-4">Premium Features</label>
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-3 gap-3">
                                     {Object.keys(formData.features).map(feature => (
-                                        <label key={feature} className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl cursor-pointer hover:bg-slate-100 transition-colors dark:bg-slate-800 dark:hover:bg-slate-700">
+                                        <label key={feature} className="flex items-center gap-3 p-3 bg-slate-50 rounded-2xl cursor-pointer hover:bg-slate-100 transition-colors dark:bg-slate-800 dark:hover:bg-slate-700">
                                             <input 
                                                 type="checkbox" 
                                                 checked={formData.features[feature]} 
                                                 onChange={() => toggleFeature(feature)}
                                                 className="w-5 h-5 rounded-md border-slate-300 text-pink-500 focus:ring-pink-500"
                                             />
-                                            <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
+                                            <span className="text-[11px] font-bold text-slate-700 dark:text-slate-200">
                                                 {feature.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
                                             </span>
                                         </label>
