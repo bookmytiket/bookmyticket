@@ -131,8 +131,12 @@ export default function AdminDashboardLayout({ children, activeTab: initialActiv
             {/* Sidebar */}
             <aside className={`fixed md:sticky top-0 z-50 w-64 bg-white border-r border-slate-200 flex flex-col flex-shrink-0 h-screen transition-all  ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'} md:flex shadow-2xl shadow-slate-200/50`}>
                 <div className="h-16 flex items-center justify-center border-b border-slate-50 bg-white">
-                    <div className="flex items-center cursor-pointer" onClick={() => navigateToTab("dashboard")}>
-                        <img src="/logo.png" alt="BookMyTicket" className="h-14 w-auto" />
+                    <div className="flex items-center cursor-pointer group" onClick={() => navigateToTab("dashboard")}>
+                        <img 
+                            src="/logo.png" 
+                            alt="BookMyTicket" 
+                            className="h-14 w-auto object-contain hover:scale-105 transition-transform" 
+                        />
                     </div>
                 </div>
 

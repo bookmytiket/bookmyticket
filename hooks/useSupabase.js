@@ -73,7 +73,7 @@ export function useSupabaseQuery(table, queryFn = (q) => q, deps = [], options =
 
     try {
       // We call .select() immediately to get the filter builder so queryFn can use eq(), order(), etc.
-      let query = supabase.from(table).select("*");
+      let query = supabase.from(table).select(options.select || "*");
       query = queryFn(query);
       
       const { data: result, error: err } = await query;

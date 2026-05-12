@@ -13,7 +13,7 @@ import {
 
 export default function SubscriptionPackagesAdmin({ theme, t }) {
     const { data: packages = [], loading, refresh } = useSupabaseQuery('staff_packages');
-    const { data: payments = [], loading: loadingPayments } = useSupabaseQuery('subscription_payments', (q) => q.order('created_at', { ascending: false }));
+    const { data: payments = [], loading: loadingPayments } = useSupabaseQuery('subscription_payments', (q) => q.order('created_at', { ascending: false }), [], { select: "*, organiser:profiles(full_name, email, phone)" });
     const { data: logs = [], loading: loadingLogs } = useSupabaseQuery('subscription_logs', (q) => q.order('created_at', { ascending: false }));
     const [upsertPackage] = useSupabaseMutation('staff_packages', 'upsert');
     const [deletePackage] = useSupabaseMutation('staff_packages', 'delete', (q, p) => q.eq('id', p.id));
@@ -187,7 +187,7 @@ export default function SubscriptionPackagesAdmin({ theme, t }) {
                         <thead>
                             <tr className="bg-slate-50 border-b border-slate-100 dark:bg-slate-900/50 dark:border-slate-700">
                                 <th className="p-6 text-[11px] font-black uppercase tracking-widest text-slate-400">Transaction ID</th>
-                                <th className="p-6 text-[11px] font-black uppercase tracking-widest text-slate-400">Organiser</th>
+                                <th className="p-6 text-[11px] font-black uppercase tracking-widest text-slate-400">Organiser Details</th>
                                 <th className="p-6 text-[11px] font-black uppercase tracking-widest text-slate-400">Amount</th>
                                 <th className="p-6 text-[11px] font-black uppercase tracking-widest text-slate-400">Status</th>
                                 <th className="p-6 text-[11px] font-black uppercase tracking-widest text-slate-400">Date</th>
@@ -205,7 +205,20 @@ export default function SubscriptionPackagesAdmin({ theme, t }) {
                                         </div>
                                     </td>
                                     <td className="p-6">
-                                        <div className="text-sm font-bold text-slate-900 dark:text-white">{pay.organiser_id?.slice(0, 8)}...</div>
+                                        <div className="text-sm font-bold text-slate-900 dark:text-white leading-tight">
+                                            {pay.organiser?.full_name || pay.organiser?.name || "Organiser #" + pay.organiser_id?.slice(0, 4)}
+                                        </div>
+                                        <div className="text-[10px] text-slate-500 font-medium mt-0.5">
+                                            {pay.organiser?.email}
+                                        </div>
+                                        {pay.organiser?.phone && (
+                                            <div className="text-[10px] text-pink-500 font-bold mt-0.5">
+                                                {pay.organiser.phone}
+                                            </div>
+                                        )}
+                                        <div className="text-[9px] text-slate-300 font-mono mt-1">
+                                            UID: {pay.organiser_id?.slice(0, 8)}...
+                                        </div>
                                     </td>
                                     <td className="p-6">
                                         <div className="text-sm font-black text-slate-900 dark:text-white">₹{pay.paid_amount}</div>

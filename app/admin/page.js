@@ -2182,14 +2182,12 @@ function AdminHomePage() {
             <aside className={`fixed md:sticky md:top-0 md:h-screen inset-y-0 left-0 z-50 w-72 border-r transition-all duration-300 transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 flex flex-col flex-shrink-0`} style={{ backgroundColor: t.sidebar, borderColor: t.sidebarBorder }}>
                 {/* Brand Logo Area */}
                 <div className="h-24 flex items-center px-8 border-b" style={{ borderColor: t.sidebarBorder }}>
-                    <div className="flex items-center gap-3 cursor-pointer" onClick={() => setActiveTab("dashboard")}>
-                        <div className="w-10 h-10 rounded-xl bg-pink-500 flex items-center justify-center shadow-lg shadow-pink-500/20">
-                            <Ticket className="text-white" size={24} strokeWidth={2.5} />
-                        </div>
-                        <div>
-                            <h1 className="text-lg font-black tracking-tight" style={{ color: t.textMain }}>BookMyTicket</h1>
-                            <p className="text-[10px] font-bold uppercase tracking-widest text-pink-500">Admin Hub</p>
-                        </div>
+                    <div className="flex items-center cursor-pointer group" onClick={() => setActiveTab("dashboard")}>
+                        <img 
+                            src="/logo.png" 
+                            alt="BookMyTicket" 
+                            className="h-14 w-auto object-contain hover:scale-105 transition-transform" 
+                        />
                     </div>
                 </div>
 
