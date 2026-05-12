@@ -277,27 +277,9 @@ export default function HomeScreen() {
     }
   };
 
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setSelectedHomeCity((prev) => {
-        const currentIndex = POPULAR_CITIES.findIndex(c => c.name === prev);
-        const nextIndex = (currentIndex + 1) % POPULAR_CITIES.length;
-        return POPULAR_CITIES[nextIndex].name;
-      });
-    }, 3000);
-    return () => clearInterval(timer);
-  }, []);
 
-  useEffect(() => {
-    if (cityEvents.length <= 1) return;
-    const timer = setInterval(() => {
-      cityBannerIndexRef.current = (cityBannerIndexRef.current + 1) % cityEvents.length;
-      try {
-        cityBannerListRef.current?.scrollToIndex({ index: cityBannerIndexRef.current, animated: true });
-      } catch (error) {}
-    }, 4000);
-    return () => clearInterval(timer);
-  }, [cityEvents.length]);
+
+
 
   // Unified Services from Supabase
   const displayServices = useMemo(() => {

@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Search, MapPin, ChevronDown, User, LogOut, Menu, X, Calendar, Ticket as TicketIcon, Handshake, Globe, Wrench, Video } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -281,6 +281,124 @@ export default function Navbar({ compact = false }) {
     }
   };
 
+  // Countdown hook for the Coming Soon ticker
+  const useTickerCountdown = (targetDate) => {
+    const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, mins: 0, secs: 0 });
+    useEffect(() => {
+      if (!targetDate) return;
+      const calc = () => {
+        const diff = new Date(targetDate) - new Date();
+        if (diff <= 0) return setTimeLeft({ days: 0, hours: 0, mins: 0, secs: 0 });
+        setTimeLeft({
+          days: Math.floor(diff / 86400000),
+          hours: Math.floor((diff % 86400000) / 3600000),
+          mins: Math.floor((diff % 3600000) / 60000),
+          secs: Math.floor((diff % 60000) / 1000),
+        });
+      };
+      calc();
+      const t = setInterval(calc, 1000);
+      return () => clearInterval(t);
+    }, [targetDate]);
+    return timeLeft;
+  };
+
+  const ComingSoonCountdown = () => {
+    const { data: events } = useSupabaseQuery('events', (q) => q.order('date', { ascending: true }).limit(20), []);
+    const [idx, setIdx] = useState(0);
+
+    const upcoming = useMemo(() => {
+      if (!events) return [];
+      return events.filter(e => new Date(e.date) >= new Date()).slice(0, 5);
+    }, [events]);
+
+    useEffect(() => {
+      if (!upcoming || upcoming.length <= 1) return;
+      const timer = setInterval(() => {
+        setIdx((prev) => (prev + 1) % upcoming.length);
+      }, 8000);
+      return () => clearInterval(timer);
+    }, [upcoming?.length]);
+
+
+    const currentEvent = upcoming[idx];
+    const timeLeft = useTickerCountdown(currentEvent?.date);
+
+    if (upcoming.length === 0) return null;
+
+    return (
+      <div style={{ display: 'flex', alignItems: 'center' }}>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={idx}
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ 
+              opacity: 1, 
+              x: 0,
+              backgroundPosition: ['0% center', '200% center']
+            }}
+            exit={{ opacity: 0, x: 10 }}
+            transition={{ 
+              opacity: { duration: 0.5 },
+              x: { duration: 0.5 },
+              backgroundPosition: {
+                duration: 4,
+                repeat: Infinity,
+                ease: 'linear'
+              }
+            }}
+            style={{ 
+              background: 'linear-gradient(90deg, #f844a4, #c026d3, #f844a4)', 
+              backgroundSize: '200% auto',
+              padding: '0 18px', 
+              borderRadius: '10px', 
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '12px',
+              boxShadow: '0 4px 15px rgba(248, 68, 164, 0.3)',
+              height: '38px',
+              whiteSpace: 'nowrap',
+              border: 'none'
+            }}
+
+          >
+            <motion.span 
+              animate={{ opacity: [1, 0.8, 1] }}
+              transition={{ duration: 2, repeat: Infinity }}
+              style={{ 
+                fontSize: '9px', 
+                fontWeight: 950, 
+                color: '#fff', 
+                textTransform: 'uppercase', 
+                letterSpacing: '0.08em',
+              }}
+            >
+              Coming Soon
+            </motion.span>
+
+            <div style={{ width: '1px', height: '14px', background: 'rgba(255, 255, 255, 0.3)' }} />
+
+            <div style={{ 
+              fontSize: '13px', 
+              fontWeight: 800, 
+              color: '#fff',
+              fontFamily: 'var(--font-heading)',
+              maxWidth: '120px',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap'
+            }}>
+              {currentEvent?.title}
+            </div>
+          </motion.div>
+        </AnimatePresence>
+      </div>
+    );
+  };
+
+
+
   const CouponFlipTicker = ({ isScrolled = false, isMobileMode = false }) => {
     const { data: supabaseCoupons } = useSupabaseQuery('branding_coupons', (q) => q, []);
     const [currentIndex, setCurrentIndex] = useState(0);
@@ -290,13 +408,23 @@ export default function Navbar({ compact = false }) {
         return BRAND_COUPONS;
     }, [supabaseCoupons]);
 
+    const lengthRef = useRef(coupons?.length || 0);
     useEffect(() => {
-        if (!coupons || coupons.length <= 1) return;
+        lengthRef.current = coupons?.length || 0;
+    }, [coupons?.length]);
+
+    useEffect(() => {
         const timer = setInterval(() => {
-            setCurrentIndex((prev) => (prev + 1) % coupons.length);
+            if (lengthRef.current > 1) {
+                setCurrentIndex((prev) => (prev + 1) % lengthRef.current);
+            }
         }, 5000);
+
         return () => clearInterval(timer);
-    }, [coupons]);
+    }, []);
+
+
+
 
     if (!coupons || coupons.length === 0) return null;
 
@@ -394,7 +522,7 @@ export default function Navbar({ compact = false }) {
     <>
       <header className={`site-header${scrolled ? " header-scrolled" : ""}${compact ? " header-compact" : ""}`}>
         {/* Main Navbar */}
-        <div className="header-main" style={{ justifyContent: 'space-between', position: 'relative', zIndex: 100 }}>
+        <div className="header-main" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative', zIndex: 100, height: '64px', gap: '20px' }}>
           {/* Logo & Location Group for Mobile Alignment */}
           <div style={{ display: 'flex', alignItems: 'center', flex: isMobile ? 1 : 'none' }}>
             <Link href="/" className="header-logo" onClick={handleLogoClick} style={{ display: 'flex', alignItems: 'center' }}>
@@ -439,13 +567,13 @@ export default function Navbar({ compact = false }) {
                   borderRadius: '12px',
                   cursor: 'pointer',
                   color: scrolled ? '#fff' : '#1e293b',
-                  marginRight: 'auto',
                   marginLeft: '8px',
                   transition: 'all 0.3s ease',
                   backdropFilter: 'blur(8px)',
                   maxWidth: '120px',
                   overflow: 'hidden',
-                  flexShrink: 0
+                  flexShrink: 0,
+                  height: '44px'
                 }}
               >
                 <MapPin size={12} color={scrolled ? "#fff" : "#f84464"} strokeWidth={2.5} />
@@ -464,21 +592,21 @@ export default function Navbar({ compact = false }) {
           </div>
 
           <div className="nav-search-wrap hide-mobile" style={{
-            marginLeft: '20px',
-            marginRight: '20px',
-            maxWidth: '450px',
-            flex: 1,
+            margin: '0 20px',
+            maxWidth: '500px',
+            flex: 1.5,
             display: 'flex',
             alignItems: 'center',
             backgroundColor: scrolled ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.9)',
             borderRadius: '16px',
-            padding: '4px 6px',
+            padding: '0 4px 0 8px',
             border: scrolled ? '1px solid rgba(255,255,255,0.2)' : '1px solid rgba(255,255,255,0.5)',
             backdropFilter: 'blur(10px)',
             transition: 'all 0.3s ease',
-            boxShadow: scrolled ? 'none' : '0 4px 15px rgba(0,0,0,0.05)'
+            boxShadow: scrolled ? 'none' : '0 4px 15px rgba(0,0,0,0.05)',
+            height: '48px'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', flex: 1, paddingLeft: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
               <Search size={18} color={scrolled ? "#fff" : "#f84464"} />
               <input
                 className="nav-search-input"
@@ -499,20 +627,22 @@ export default function Navbar({ compact = false }) {
               />
             </div>
             <motion.button
-              whileHover={{ scale: 1.05, boxShadow: '0 0 15px rgba(248, 68, 164, 0.4)' }}
-              whileTap={{ scale: 0.95 }}
+              whileHover={{ scale: 1.02, boxShadow: '0 0 15px rgba(248, 68, 164, 0.4)' }}
+              whileTap={{ scale: 0.98 }}
               onClick={() => router.push(`/?q=${encodeURIComponent(search)}`)}
               style={{
                 background: 'linear-gradient(135deg, #f844a4 0%, #c026d3 100%)',
                 color: '#fff',
                 border: 'none',
                 borderRadius: '12px',
-                padding: '8px 20px',
+                padding: '0 24px',
                 fontSize: '13px',
                 fontWeight: 800,
                 cursor: 'pointer',
                 letterSpacing: '0.02em',
-                boxShadow: '0 4px 12px rgba(248, 68, 164, 0.2)'
+                boxShadow: '0 4px 12px rgba(248, 68, 164, 0.2)',
+                height: '40px',
+                margin: '4px'
               }}
             >
               Search
@@ -532,14 +662,14 @@ export default function Navbar({ compact = false }) {
                 gap: '8px',
                 background: scrolled ? 'rgba(255,255,255,0.1)' : 'rgba(241, 245, 249, 0.8)',
                 border: scrolled ? '1px solid rgba(255,255,255,0.2)' : '1px solid #e2e8f0',
-                padding: '8px 16px',
-                borderRadius: '14px',
+                padding: '0 20px',
+                borderRadius: '12px',
                 cursor: 'pointer',
                 color: scrolled ? '#fff' : '#1e293b',
-                marginRight: 'auto',
                 transition: 'all 0.3s ease',
                 backdropFilter: 'blur(8px)',
-                flexShrink: 0
+                flexShrink: 0,
+                height: '44px'
               }}
             >
               <MapPin size={18} color={scrolled ? "#fff" : "#f84464"} strokeWidth={2.5} />
@@ -550,8 +680,9 @@ export default function Navbar({ compact = false }) {
             </motion.button>
           )}
 
-          {/* New Desktop Navigation Buttons - gated on mounted to prevent SSR/localStorage hydration mismatch */}
-          <div className="nav-desktop-actions hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: '24px', marginRight: '20px' }}>
+          {/* Desktop Actions Area */}
+          <div className="nav-desktop-actions hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+            <ComingSoonCountdown />
             {!mounted ? (
               /* Render a neutral placeholder during SSR / before hydration */
               <Link
@@ -600,7 +731,8 @@ export default function Navbar({ compact = false }) {
                         alignItems: 'center',
                         justifyContent: 'center',
                         boxShadow: '0 4px 12px rgba(248, 68, 164, 0.2)',
-                        transition: 'all 0.3s'
+                        transition: 'all 0.3s',
+                        height: '44px'
                       }}
                     >
                       {

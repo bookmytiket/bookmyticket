@@ -244,6 +244,7 @@ export default function ComingSoonEvents({ events = [] }) {
                                         minHeight: isMobile ? "auto" : "350px"
                                     }}
                                 >
+
                                     {/* 16:9 Image Section - Reduced width for compact height */}
                                     <div style={{ 
                                         position: "relative", 
