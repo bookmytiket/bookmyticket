@@ -340,11 +340,7 @@ export default function Navbar({ compact = false }) {
                         position: 'relative'
                     }}
                 >
-                    {/* Landscape Mini Image */}
-                    <div style={{ width: '100px', height: '100%', position: 'relative', flexShrink: 0 }}>
-                        <img src={bannerUrl} alt="offer" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.1))' }} />
-                    </div>
+
 
                     <div style={{ flex: 1, padding: '0 12px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '2px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -581,33 +577,6 @@ export default function Navbar({ compact = false }) {
               </Link>
             ) : (
                 <>
-                {/* Persistent Join Now Button - Pink-Purple Gradient */}
-                <motion.div
-                  whileHover={{ scale: 1.05, y: -2 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <Link
-                    href="/join"
-                    style={{
-                      background: 'linear-gradient(135deg, #f844a4 0%, #c026d3 100%)',
-                      color: '#fff',
-                      padding: '10px 24px',
-                      borderRadius: '12px',
-                      fontWeight: 800,
-                      fontSize: '13px',
-                      textDecoration: 'none',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      boxShadow: '0 4px 12px rgba(248, 68, 164, 0.25)',
-                      transition: 'all 0.3s',
-                      border: '1px solid rgba(255,255,255,0.1)'
-                    }}
-                  >
-                    Join Now
-                  </Link>
-                </motion.div>
-
                 {user ? (
                     <motion.div
                       whileHover={{ scale: 1.05, y: -2 }}
@@ -830,7 +799,9 @@ export default function Navbar({ compact = false }) {
         {/* Mobile View - Home Only Ticker & Search */}
         <div className="show-mobile" style={{
           padding: '4px 12px',
-          background: 'transparent'
+          background: 'transparent',
+          marginTop: scrolled ? '0' : '0',
+          paddingTop: scrolled ? '4px' : '4px'
         }}>
           {/* Mobile Coupon Ticker - Top Priority */}
           {isHome && (
@@ -981,22 +952,7 @@ export default function Navbar({ compact = false }) {
                 Become a Partner
               </button>
 
-              <button
-                className="mobile-nav-link"
-                style={{ textAlign: "left", background: "none", borderBottom: "1px solid var(--border)" }}
-                onClick={() => {
-                  if (nextMeeting) {
-                      const url = nextMeeting.meetingUrl;
-                      const target = url.startsWith("http") ? url : `/${url}`;
-                      window.open(target, '_blank', 'noopener,noreferrer');
-                  } else {
-                      router.push('/meeting/join');
-                  }
-                  setMenuOpen(false);
-                }}
-              >
-                Join Now
-              </button>
+
 
               <div style={{ marginTop: "1rem", borderTop: "1px solid var(--border)", paddingTop: "1.5rem", paddingBottom: "2rem" }}>
                 {user ? (
