@@ -51,7 +51,8 @@ export function resolveFeeSettings(systemSettings = {}, organiserConfig = {}, ev
   return finalConfig;
 }
 
-export function getFeeBreakdown(baseAmount, feeSettings = {}) {
+export function getFeeBreakdown(rawBaseAmount, feeSettings = {}) {
+  const baseAmount = Number(rawBaseAmount) || 0;
   // Support all variants of naming
   const type = feeSettings.convenience_fee_type || feeSettings.convenienceFeeType || (feeSettings.fee_type === 'percentage' ? 'percent' : 'fixed') || DEFAULT_FEE_SETTINGS.convenienceFeeType;
   const feeVal = Number(feeSettings.convenience_fee_value ?? feeSettings.convenienceFeeValue ?? feeSettings.fee_value) ?? DEFAULT_FEE_SETTINGS.convenienceFeeValue;

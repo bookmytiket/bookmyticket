@@ -232,3 +232,24 @@ BEGIN
         ALTER PUBLICATION supabase_realtime ADD TABLE public.notification_logs;
     END IF;
 END $$;
+
+-- 10. TOURNAMENT & MARATHON SCHEMA STABILIZATION
+-- Fix missing event_id columns and sync relations
+ALTER TABLE public.tournament_events ADD COLUMN IF NOT EXISTS event_id UUID REFERENCES public.events(id) ON DELETE CASCADE;
+ALTER TABLE public.marathon_events ADD COLUMN IF NOT EXISTS event_id UUID REFERENCES public.events(id) ON DELETE CASCADE;
+
+-- Backfill event_id if missing (assuming 1:1 ID match for legacy records)
+UPDATE public.tournament_events SET event_id = id WHERE event_id IS NULL;
+UPDATE public.marathon_events SET event_id = id WHERE event_id IS NULL;
+
+-- Sync Price Drift
+UPDATE public.events e 
+SET price = t.registration_fee 
+FROM public.tournament_events t 
+WHERE (e.id = t.event_id OR e.id = t.id) 
+AND (e.type = 'Tournament' OR e.type = 'Tournament Event' OR e.type = 'Sports Tournament');
+
+-- Ensure event_id is searchable for performance
+CREATE INDEX IF NOT EXISTS idx_tournament_events_event_id ON public.tournament_events(event_id);
+CREATE INDEX IF NOT EXISTS idx_marathon_events_event_id ON public.marathon_events(event_id);
+

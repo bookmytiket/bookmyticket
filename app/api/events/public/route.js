@@ -65,18 +65,29 @@ export async function GET(request) {
         const eventIds = organiserEvents.map(e => e.id);
 
         // 2. Fetch related data in parallel
+        // Support both old (id = event_id) and new (event_id column) schemas
         const [tournamentsRes, marathonsRes] = await Promise.all([
-            supabase.from('tournament_events').select('*').in('id', eventIds),
-            supabase.from('marathon_events').select('*').in('id', eventIds)
+            supabase.from('tournament_events').select('*').in('event_id', eventIds),
+            supabase.from('marathon_events').select('*').in('event_id', eventIds)
         ]);
 
-        const tournaments = tournamentsRes.data || [];
-        const marathons = marathonsRes.data || [];
+        // Fallback for tables using shared UUID as PK (id = event_id)
+        let tournaments = tournamentsRes.data || [];
+        if (tournaments.length === 0) {
+            const { data } = await supabase.from('tournament_events').select('*').in('id', eventIds);
+            if (data) tournaments = data;
+        }
+
+        let marathons = marathonsRes.data || [];
+        if (marathons.length === 0) {
+            const { data } = await supabase.from('marathon_events').select('*').in('id', eventIds);
+            if (data) marathons = data;
+        }
 
         // 3. Strict mapping
         const enrichedEvents = organiserEvents.map(event => {
-            const tournament = tournaments.find(t => t.id === event.id) || null;
-            const marathon = marathons.find(m => m.id === event.id) || null;
+            const tournament = tournaments.find(t => (t.event_id === event.id || t.id === event.id)) || null;
+            const marathon = marathons.find(m => (m.event_id === event.id || m.id === event.id)) || null;
 
             // Hydration: prioritize specific table data for price/banner if parent is generic
             let price = event.price || 0;

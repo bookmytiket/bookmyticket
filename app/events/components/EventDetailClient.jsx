@@ -182,15 +182,18 @@ export default function EventDetailClient({ id }) {
                 ageGroup: c.age_group
             }));
         }
-        if (isTournament && tournamentDetails) {
+        if (isTournament) {
+            // Priority 1: tournamentDetails from re-fetch
+            // Priority 2: sports_details from already-loaded rawEvent (Prevents race condition flicker)
+            const fee = Number(tournamentDetails?.registration_fee || event?.dynamic_config?.sports_details?.registration_fee || event?.price || 0);
             return [{
-                id: tournamentDetails.id,
+                id: tournamentDetails?.id || event?.id,
                 name: "Team Registration",
-                price: tournamentDetails.registration_fee || 0
+                price: fee
             }];
         }
         return parsedConfig?.categories || [];
-    }, [isMarathon, marathonCategories, isTournament, tournamentDetails, parsedConfig?.categories]);
+    }, [isMarathon, marathonCategories, isTournament, tournamentDetails, event, parsedConfig?.categories]);
     const selectedCat = useMemo(() => {
         if (categories.length === 0) return null;
         return categories.find(c => c.id === selectedCatId) || categories[0];
