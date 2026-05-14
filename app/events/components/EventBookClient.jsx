@@ -803,7 +803,14 @@ export default function EventBookClient({ id }) {
                         {/* Summary Card */}
                         <div className="bg-white rounded-[40px] border border-slate-100 shadow-2xl overflow-hidden">
                             <div className="h-40 relative">
-                                <img src={event.img} alt={event.title} className="w-full h-full object-cover" />
+                                <img 
+                                    src={event.img} 
+                                    alt={event.title} 
+                                    className="w-full h-full object-cover" 
+                                    onError={(e) => {
+                                        e.currentTarget.src = DEFAULT_IMG;
+                                    }}
+                                />
                                 <div className="absolute inset-0 bg-gradient-to-t from-white via-transparent to-transparent" />
                                 <div className="absolute top-4 right-4 px-3 py-1 bg-white/90 backdrop-blur text-[9px] font-black uppercase tracking-widest rounded-lg shadow-sm border border-slate-100 flex items-center gap-2">
                                     <Star size={12} className="text-yellow-500 fill-yellow-500" /> Top Rated Experience

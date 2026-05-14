@@ -381,7 +381,13 @@ export default function DynamicEventClient({ event }) {
                 {/* Back Button & Category Badge */}
                 <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
                     <button 
-                        onClick={() => router.push('/events')}
+                        onClick={() => {
+                            if (window.history.length > 1) {
+                                router.back();
+                            } else {
+                                router.push('/');
+                            }
+                        }}
                         className="group flex items-center gap-2 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] hover:text-slate-900 transition-all"
                     >
                         <div className="w-8 h-8 rounded-full border border-slate-100 flex items-center justify-center group-hover:bg-slate-900 group-hover:text-white transition-all">
@@ -407,7 +413,14 @@ export default function DynamicEventClient({ event }) {
                     animate={{ opacity: 1, y: 0 }}
                     className="relative h-[450px] rounded-[3rem] overflow-hidden shadow-2xl group mb-8"
                 >
-                    <img src={event.img || DEFAULT_IMG} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt={event.title} />
+                    <img 
+                        src={event.img || DEFAULT_IMG} 
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" 
+                        alt={event.title} 
+                        onError={(e) => {
+                            e.currentTarget.src = DEFAULT_IMG;
+                        }}
+                    />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                     <div className="absolute bottom-10 left-10 right-10 z-10">
                         <h1 className="text-4xl md:text-5xl font-[900] text-white uppercase tracking-tighter leading-none shadow-sm">

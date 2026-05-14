@@ -88,7 +88,7 @@ const PhysicalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEdi
         { id: 3, title: "Logistics", icon: Car },
         { id: 4, title: "Seating", icon: Layout },
         { id: 5, title: "Tickets", icon: Ticket },
-        { id: 6, title: "Finalize", icon: Zap }
+        { id: 6, title: isEditing ? "Update" : "Finalize", icon: Zap }
     ];
 
     const nextStep = () => setCurrentStep(prev => Math.min(prev + 1, steps.length));
@@ -652,7 +652,7 @@ const PhysicalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEdi
                             <Zap size={48} strokeWidth={1.5} />
                         </div>
                         <div>
-                            <h2 className="text-4xl font-black text-slate-900 uppercase tracking-tighter italic leading-none">Initialization Complete</h2>
+                            <h2 className="text-4xl font-black text-slate-900 uppercase tracking-tighter italic leading-none">{isEditing ? "Ready to Update" : "Initialization Complete"}</h2>
                             <p className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.3em] mt-4">All architectural parameters are within nominal ranges</p>
                         </div>
 
@@ -681,7 +681,7 @@ const PhysicalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEdi
                         >
                             <span className="relative z-10 flex items-center gap-4">
                                 <ShieldCheck size={24} strokeWidth={2.5} />
-                                Execute Deployment Sequence
+                                {isEditing ? "Update Event" : "Execute Deployment Sequence"}
                             </span>
                             <div className="absolute inset-0 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
                         </button>
@@ -693,7 +693,9 @@ const PhysicalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEdi
 
             {/* Cancel Button */}
             <div className="mt-12 flex justify-center">
-                <button onClick={onCancel} className="text-slate-400 hover:text-red-500 text-[10px] font-black uppercase tracking-[0.2em] transition-colors py-4">Terminate Initialization & Discard Changes</button>
+                <button onClick={onCancel} className="text-slate-400 hover:text-red-500 text-[10px] font-black uppercase tracking-[0.2em] transition-colors py-4">
+                    {isEditing ? "Cancel Update & Return" : "Terminate Initialization & Discard Changes"}
+                </button>
             </div>
 
             <LocationSelectionModal 

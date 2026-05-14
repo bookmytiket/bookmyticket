@@ -11,45 +11,35 @@ import DynamicEventClient from '../components/DynamicEventClient';
 export async function generateMetadata({ params }) {
     const { slug } = await params;
     
-    const logPath = path.join(process.cwd(), 'scratch', 'slug_logs.txt');
-    const log = (msg) => {
-        fs.appendFileSync(logPath, `[${new Date().toISOString()}] [Metadata] ${msg}\n`);
-    };
-
-    log(`Metadata requested for slug: ${slug}`);
+    console.log('[SlugEventPage] Metadata requested for slug:', slug);
 
     if (!supabase) {
-        log('Supabase client is NULL');
         return { title: 'BookMyTicket | Event' };
     }
 
     // Fetch by slug first (preferred for SEO)
-    log(`Fetching by slug: ${slug}`);
     let { data: event, error: slugError } = await supabase
         .from('events')
         .select('*')
         .eq('slug', slug)
         .maybeSingle();
 
-    if (slugError) log(`Slug fetch error: ${JSON.stringify(slugError)}`);
+    if (slugError) console.error('[SlugEventPage] Slug fetch error:', slugError);
 
     // If not found by slug, try by ID fallback (only if slug is a valid UUID)
     if (!event && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug)) {
-        log(`Falling back to ID fetch: ${slug}`);
         const { data: byId, error: idError } = await supabase
             .from('events')
             .select('*')
             .eq('id', slug)
             .maybeSingle();
-        if (idError) log(`ID fetch error: ${JSON.stringify(idError)}`);
+        if (idError) console.error('[SlugEventPage] ID fetch error:', idError);
         event = byId;
     }
 
     if (!event) {
-        log(`Event not found for slug: ${slug}`);
         return { title: 'Event Not Found | BookMyTicket' };
     }
-    log(`Found event for metadata: ${event.id}`);
 
     const title = `${event.title} Tickets | ${event.city || event.location} | BookMyTicket`;
     const description = `Book tickets for ${event.title} in ${event.city || event.location}. ${event.description?.slice(0, 150)}... Official ticketing partner BookMyTicket.`;
@@ -74,29 +64,18 @@ export async function generateMetadata({ params }) {
  * Dynamic Event Page for Organic SEO Growth.
  * Supports clean URLs like /events/marathon-2026.
  */
-import fs from 'fs';
-import path from 'path';
 
 export default async function SlugEventPage({ params }) {
     const { slug } = await params;
     
-    // File-based logging for debugging
-    const logPath = path.join(process.cwd(), 'scratch', 'slug_logs.txt');
-    const log = (msg) => {
-        fs.appendFileSync(logPath, `[${new Date().toISOString()}] ${msg}\n`);
-    };
-
-    log(`Slug requested: ${slug}`);
     console.log('[SlugEventPage] RECEIVED params slug:', slug);
 
     try {
         if (!supabase) {
-            log('Supabase client is NULL');
             notFound();
         }
 
         // Fetch by slug first
-        log(`Fetching from events table where slug = ${slug}`);
         let { data: event, error: slugError } = await supabase
             .from('events')
             .select('*')
@@ -104,27 +83,25 @@ export default async function SlugEventPage({ params }) {
             .maybeSingle();
         
         if (slugError) {
-            log(`Slug fetch error: ${JSON.stringify(slugError)}`);
+            console.error('[SlugEventPage] Slug fetch error:', slugError);
         }
 
         // Fallback by ID
         if (!event && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug)) {
-            log(`Falling back to ID fetch: ${slug}`);
             const { data: byId, error: idError } = await supabase
                 .from('events')
                 .select('*')
                 .eq('id', slug)
                 .maybeSingle();
-            if (idError) log(`ID fetch error: ${JSON.stringify(idError)}`);
+            if (idError) console.error('[SlugEventPage] ID fetch error:', idError);
             event = byId;
         }
 
         if (!event) {
-            log(`EVENT NOT FOUND in DB for slug: ${slug}`);
             notFound();
         }
 
-        log(`SUCCESS: Found event: ${event.id} - ${event.title}`);
+        console.log('[SlugEventPage] SUCCESS: Found event:', event.id, '-', event.title);
         const isDynamic = event.type === 'Dynamic' || event.event_type === 'marathon' || event.title?.toLowerCase().includes('marathon');
 
         return (

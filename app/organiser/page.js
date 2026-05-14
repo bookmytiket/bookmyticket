@@ -1075,6 +1075,21 @@ function OrganiserPanel() {
             return;
         }
 
+        // CRITICAL: Ensure no legacy 'sports_details' column is present in the payload
+        // We use dynamic_config for all schema-agnostic data now.
+        delete payload.sports_details;
+
+        const { data, error } = await supabase
+            .from('events')
+            .update({ 
+                ...payload,
+                // Preserve status if not explicitly changing
+                publish_status: postEvent.publish_status || postEvent.eventStatus || 'published',
+                status: postEvent.status || postEvent.eventStatus || 'published'
+            })
+            .eq('id', editingEvent.id)
+            .select();
+
         setPostLoading(true);
         try {
             const { error } = await supabase
@@ -1758,37 +1773,35 @@ function OrganiserPanel() {
                     kids_area: !!postEvent.kids_area,
                     wheelchair: !!postEvent.wheelchair,
                     lost_found: !!postEvent.lost_found
-                }
+                },
+                sports_details: (['Tournament Event', 'Tournament', 'Sports Tournament', 'Sports', 'Sports Event'].includes(postEvent.type)) ? {
+                    tournament_type: postEvent.tournamentType,
+                    tournament_format: postEvent.tournamentFormat,
+                    sport_name: postEvent.sportName,
+                    registration_fee: postEvent.registrationFee,
+                    min_team_size: postEvent.minTeamSize,
+                    max_team_size: postEvent.maxTeamSize,
+                    rules_regulations: postEvent.rulesRegulations,
+                    terms_conditions: postEvent.termsConditions,
+                    prize_pool: postEvent.prizePool,
+                    contact_email: postEvent.contactEmail,
+                    contact_phone: postEvent.contactPhone,
+                    sport_type: postEvent.sportType,
+                    age_category: postEvent.ageCategory || postEvent.ageGroup,
+                    t_shirt_size: postEvent.tShirtSize,
+                    route_map: postEvent.routeMap,
+                    prize_details: postEvent.prizeDetails,
+                    teams_count: postEvent.teamsCount,
+                    match_schedule: postEvent.matchSchedule,
+                    trainer_details: postEvent.trainerDetails,
+                    session_slots: postEvent.sessionSlots
+                } : undefined
             },
             seo_title: postEvent.dynamic_config?.seo?.title || undefined,
             seo_description: postEvent.dynamic_config?.seo?.description || undefined,
             slug: postEvent.dynamic_config?.seo?.slug || undefined,
-            tags: postEvent.dynamic_config?.seo?.keywords ? postEvent.dynamic_config.seo.keywords.split(',').map(t => t.trim()) : undefined,
-            sports_details: (['Tournament Event', 'Tournament', 'Sports Tournament', 'Sports', 'Sports Event'].includes(postEvent.type)) ? {
-                tournament_type: postEvent.tournamentType,
-                tournament_format: postEvent.tournamentFormat,
-                sport_name: postEvent.sportName,
-                registration_fee: postEvent.registrationFee,
-                min_team_size: postEvent.minTeamSize,
-                max_team_size: postEvent.maxTeamSize,
-                rules_regulations: postEvent.rulesRegulations,
-                terms_conditions: postEvent.termsConditions,
-                prize_pool: postEvent.prizePool,
-                contact_email: postEvent.contactEmail,
-                contact_phone: postEvent.contactPhone,
-                sport_type: postEvent.sportType,
-                age_category: postEvent.ageCategory || postEvent.ageGroup,
-                t_shirt_size: postEvent.tShirtSize,
-                route_map: postEvent.routeMap,
-                prize_details: postEvent.prizeDetails,
-                teams_count: postEvent.teamsCount,
-                match_schedule: postEvent.matchSchedule,
-                trainer_details: postEvent.trainerDetails,
-                session_slots: postEvent.sessionSlots
-            } : undefined
-        };
-
-        // Remove undefined keys
+            tags: postEvent.dynamic_config?.seo?.keywords ? postEvent.dynamic_config.seo.keywords.split(',').map(t => t.trim()) : undefined
+        };        // Remove undefined keys
         Object.keys(payload).forEach(k => payload[k] === undefined && delete payload[k]);
 
         if (editingEvent) {
@@ -3566,28 +3579,28 @@ function OrganiserPanel() {
                                                                                     meetingType: ev.meeting_type || ev.meetingType,
                                                                                     externalMeetingUrl: ev.external_meeting_url || ev.externalMeetingUrl,
 
-                                                                                    ...(ev.sports_details || {}),
-                                                                                    sportType: ev.sports_details?.sport_type || ev.sportType,
-                                                                                    ageCategory: ev.sports_details?.age_category || ev.ageCategory,
-                                                                                    tShirtSize: ev.sports_details?.t_shirt_size || ev.tShirtSize,
-                                                                                    routeMap: ev.sports_details?.route_map || ev.routeMap,
-                                                                                    prizeDetails: ev.sports_details?.prize_details || ev.prizeDetails,
-                                                                                    teamsCount: ev.sports_details?.teams_count || ev.teamsCount,
-                                                                                    matchSchedule: ev.sports_details?.match_schedule || ev.matchSchedule,
-                                                                                    tournamentType: ev.sports_details?.tournament_type || ev.tournamentType,
-                                                                                    tournamentFormat: ev.sports_details?.tournament_format || ev.tournamentFormat,
-                                                                                    registrationFee: ev.sports_details?.registration_fee || ev.registration_fee || ev.registrationFee,
-                                                                                    minTeamSize: ev.sports_details?.min_team_size || ev.min_team_size || ev.minTeamSize,
-                                                                                    maxTeamSize: ev.sports_details?.max_team_size || ev.max_team_size || ev.maxTeamSize,
-                                                                                    sportName: ev.sports_details?.sport_name || ev.sports_details?.sport_type || ev.sportName,
-                                                                                    audienceAccess: ev.sports_details?.audience_access || (ev.sports_details?.audience_free_access === false ? 'Paid' : 'Free'),
-                                                                                    rulesRegulations: ev.sports_details?.rules_regulations || ev.rulesRegulations,
-                                                                                    termsConditions: ev.sports_details?.terms_conditions || ev.termsConditions,
-                                                                                    prizePool: ev.sports_details?.prize_pool || ev.prizePool,
-                                                                                    contactEmail: ev.sports_details?.contact_email || ev.contactEmail,
-                                                                                    contactPhone: ev.sports_details?.contact_phone || ev.contactPhone,
-                                                                                    trainerDetails: ev.sports_details?.trainer_details || ev.trainerDetails,
-                                                                                    sessionSlots: ev.sports_details?.session_slots || ev.sessionSlots,
+                                                                                    ...(ev.sports_details || ev.dynamic_config?.sports_details || {}),
+                                                                                    sportType: ev.sports_details?.sport_type || ev.dynamic_config?.sports_details?.sport_type || ev.sportType,
+                                                                                    ageCategory: ev.sports_details?.age_category || ev.dynamic_config?.sports_details?.age_category || ev.ageCategory,
+                                                                                    tShirtSize: ev.sports_details?.t_shirt_size || ev.dynamic_config?.sports_details?.t_shirt_size || ev.tShirtSize,
+                                                                                    routeMap: ev.sports_details?.route_map || ev.dynamic_config?.sports_details?.route_map || ev.routeMap,
+                                                                                    prizeDetails: ev.sports_details?.prize_details || ev.dynamic_config?.sports_details?.prize_details || ev.prizeDetails,
+                                                                                    teamsCount: ev.sports_details?.teams_count || ev.dynamic_config?.sports_details?.teams_count || ev.teamsCount,
+                                                                                    matchSchedule: ev.sports_details?.match_schedule || ev.dynamic_config?.sports_details?.match_schedule || ev.matchSchedule,
+                                                                                    tournamentType: ev.sports_details?.tournament_type || ev.dynamic_config?.sports_details?.tournament_type || ev.tournamentType,
+                                                                                    tournamentFormat: ev.sports_details?.tournament_format || ev.dynamic_config?.sports_details?.tournament_format || ev.tournamentFormat,
+                                                                                    registrationFee: ev.sports_details?.registration_fee || ev.dynamic_config?.sports_details?.registration_fee || ev.registration_fee || ev.registrationFee,
+                                                                                    minTeamSize: ev.sports_details?.min_team_size || ev.dynamic_config?.sports_details?.min_team_size || ev.min_team_size || ev.minTeamSize,
+                                                                                    maxTeamSize: ev.sports_details?.max_team_size || ev.dynamic_config?.sports_details?.max_team_size || ev.max_team_size || ev.maxTeamSize,
+                                                                                    sportName: ev.sports_details?.sport_name || ev.dynamic_config?.sports_details?.sport_name || ev.sports_details?.sport_type || ev.dynamic_config?.sports_details?.sport_type || ev.sportName,
+                                                                                    audienceAccess: ev.sports_details?.audience_access || ev.dynamic_config?.sports_details?.audience_access || (ev.sports_details?.audience_free_access === false || ev.dynamic_config?.sports_details?.audience_free_access === false ? 'Paid' : 'Free'),
+                                                                                    rulesRegulations: ev.sports_details?.rules_regulations || ev.dynamic_config?.sports_details?.rules_regulations || ev.rulesRegulations,
+                                                                                    termsConditions: ev.sports_details?.terms_conditions || ev.dynamic_config?.sports_details?.terms_conditions || ev.termsConditions,
+                                                                                    prizePool: ev.sports_details?.prize_pool || ev.dynamic_config?.sports_details?.prize_pool || ev.prizePool,
+                                                                                    contactEmail: ev.sports_details?.contact_email || ev.dynamic_config?.sports_details?.contact_email || ev.contactEmail,
+                                                                                    contactPhone: ev.sports_details?.contact_phone || ev.dynamic_config?.sports_details?.contact_phone || ev.contactPhone,
+                                                                                    trainerDetails: ev.sports_details?.trainer_details || ev.dynamic_config?.sports_details?.trainer_details || ev.trainerDetails,
+                                                                                    sessionSlots: ev.sports_details?.session_slots || ev.dynamic_config?.sports_details?.session_slots || ev.sessionSlots,
                                                                                     isFeature: (ev.featured === true || ev.isFeature === "Yes") ? "Yes" : "No",
                                                                                     isExclusive: (ev.exclusive === true || ev.isExclusive === "Yes") ? "Yes" : "No",
                                                                                     eventStatus: ev.status || "published",
@@ -3655,10 +3668,10 @@ function OrganiserPanel() {
                             <div className="flex flex-col items-center justify-center min-h-[60vh] p-8 animate-in fade-in zoom-in duration-500">
                                 <div className="text-center mb-12 space-y-4">
                                     <div className="inline-flex items-center gap-2 px-6 py-2 rounded-full bg-pink-50/50 border border-pink-100 text-[10px] font-black uppercase tracking-[0.2em] text-pink-600 mb-2">
-                                        <Sparkles size={14} /> Intelligence Matrix
+                                        <Sparkles size={14} /> {editingEvent ? "Calibration Matrix" : "Intelligence Matrix"}
                                     </div>
-                                    <h2 className="text-5xl font-black text-slate-900 tracking-tighter uppercase italic leading-none">Initialize Creation</h2>
-                                    <p className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">Select the architectural framework for your experience</p>
+                                    <h2 className="text-5xl font-black text-slate-900 tracking-tighter uppercase italic leading-none">{editingEvent ? "Update Event" : "Initialize Creation"}</h2>
+                                    <p className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">{editingEvent ? "Modify the core architecture of your existing experience" : "Select the architectural framework for your experience"}</p>
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full max-w-6xl">
                                     <button

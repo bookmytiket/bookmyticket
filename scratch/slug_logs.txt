@@ -106,3 +106,9 @@
 [2026-05-14T10:48:51.452Z] [Metadata] Fetching by slug: pollachi-trophy-2026-2a6133
 [2026-05-14T10:48:51.655Z] SUCCESS: Found event: 9bfc2322-8630-4f2f-b522-1aa8c271c9f9 - Pollachi Trophy 2026
 [2026-05-14T10:48:51.656Z] [Metadata] Found event for metadata: 9bfc2322-8630-4f2f-b522-1aa8c271c9f9
+[2026-05-14T12:06:49.354Z] Slug requested: pollachi-trophy-2026-2a6133
+[2026-05-14T12:06:49.355Z] Fetching from events table where slug = pollachi-trophy-2026-2a6133
+[2026-05-14T12:06:49.380Z] [Metadata] Metadata requested for slug: pollachi-trophy-2026-2a6133
+[2026-05-14T12:06:49.380Z] [Metadata] Fetching by slug: pollachi-trophy-2026-2a6133
+[2026-05-14T12:06:49.714Z] SUCCESS: Found event: 9bfc2322-8630-4f2f-b522-1aa8c271c9f9 - Pollachi Trophy 2026
+[2026-05-14T12:06:49.715Z] [Metadata] Found event for metadata: 9bfc2322-8630-4f2f-b522-1aa8c271c9f9

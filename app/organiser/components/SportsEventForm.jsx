@@ -119,7 +119,7 @@ const SportsEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEditi
         { id: 2, title: "Grounds", icon: MapPin },
         { id: 3, title: "Schedule", icon: Timer },
         { id: 4, title: "Ticketing", icon: DollarSign },
-        { id: 5, title: "Deploy", icon: Zap }
+        { id: 5, title: isEditing ? "Update" : "Deploy", icon: Zap }
     ];
 
     const nextStep = () => setCurrentStep(prev => Math.min(prev + 1, steps.length));
@@ -591,7 +591,7 @@ const SportsEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEditi
                         >
                             <span className="relative z-10 flex items-center gap-4">
                                 <ShieldCheck size={24} strokeWidth={2.5} />
-                                Execute Event Launch
+                                {isEditing ? "Update Sports Event" : "Execute Event Launch"}
                             </span>
                             <div className="absolute inset-0 bg-gradient-to-r from-pink-600 via-red-600 to-orange-500 opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
                         </button>
@@ -603,7 +603,9 @@ const SportsEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEditi
 
             {/* Cancel Button */}
             <div className="mt-12 flex justify-center">
-                <button onClick={onCancel} className="text-slate-400 hover:text-red-500 text-[10px] font-black uppercase tracking-[0.2em] transition-colors py-4">Discard & Terminate Creation</button>
+                <button onClick={onCancel} className="text-slate-400 hover:text-red-500 text-[10px] font-black uppercase tracking-[0.2em] transition-colors py-4">
+                    {isEditing ? "Cancel Update & Return" : "Discard & Terminate Creation"}
+                </button>
             </div>
 
             <LocationSelectionModal 

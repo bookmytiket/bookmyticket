@@ -127,7 +127,7 @@ const TournamentEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isE
         { id: 2, title: "Registration", icon: UserPlus },
         { id: 3, title: "Logistics", icon: MapPin },
         { id: 4, title: "Rules & Terms", icon: ClipboardList },
-        { id: 5, title: "Finalize", icon: Zap }
+        { id: 5, title: isEditing ? "Update" : "Finalize", icon: Zap }
     ];
 
     const nextStep = () => setCurrentStep(prev => Math.min(prev + 1, steps.length));
@@ -563,7 +563,7 @@ const TournamentEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isE
                             <Zap size={48} strokeWidth={1.5} />
                         </div>
                         <div>
-                            <h2 className="text-4xl font-black text-slate-900 uppercase tracking-tighter italic leading-none">Tournament Ready</h2>
+                            <h2 className="text-4xl font-black text-slate-900 uppercase tracking-tighter italic leading-none">{isEditing ? "Ready to Update" : "Tournament Ready"}</h2>
                             <p className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.3em] mt-4">Verification Audit: Parameters locked & loaded</p>
                         </div>
 
@@ -592,7 +592,7 @@ const TournamentEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isE
                         >
                             <span className="relative z-10 flex items-center gap-4">
                                 <ShieldCheck size={24} strokeWidth={2.5} />
-                                Launch Tournament
+                                {isEditing ? "Update Tournament" : "Launch Tournament"}
                             </span>
                             <div className="absolute inset-0 bg-gradient-to-r from-[#3b82f6] via-[#a855f7] to-[#ec4899] opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
                         </button>
@@ -604,7 +604,9 @@ const TournamentEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isE
 
             {/* Cancel Button */}
             <div className="mt-12 flex justify-center">
-                <button onClick={onCancel} className="text-slate-400 hover:text-red-500 text-[10px] font-black uppercase tracking-[0.2em] transition-colors py-4">Discard & Terminate Creation</button>
+                <button onClick={onCancel} className="text-slate-400 hover:text-red-500 text-[10px] font-black uppercase tracking-[0.2em] transition-colors py-4">
+                    {isEditing ? "Cancel Update & Return" : "Discard & Terminate Creation"}
+                </button>
             </div>
         </div>
     );

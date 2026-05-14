@@ -486,7 +486,7 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
         { id: 6, title: "Pricing & Rules", icon: DollarSign },
         { id: 7, title: "Content & FAQs", icon: HelpCircle },
         { id: 8, title: "SEO & Social", icon: Globe },
-        { id: 9, title: "Publish", icon: ShieldCheck }
+        { id: 9, title: isEditing ? "Update" : "Publish", icon: ShieldCheck }
     ];
 
     return (
@@ -1213,7 +1213,7 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                             <CheckCircle2 size={48} />
                         </div>
                         <div>
-                            <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tight">Ready to Go!</h2>
+                            <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tight">{isEditing ? "Ready to Update!" : "Ready to Go!"}</h2>
                             <p className="text-[11px] font-bold text-slate-800 uppercase tracking-[0.2em] mt-2">Your dynamic event is fully configured</p>
                         </div>
                     </div>
@@ -1247,7 +1247,7 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                                 onClick={onPublish}
                                 className="w-full py-6 bg-[#ec4899] text-white rounded-[2rem] text-sm font-black uppercase tracking-[0.2em] shadow-2xl shadow-pink-200 hover:scale-105 active:scale-95 transition-all"
                             >
-                                {isEditing ? "Update Changes" : "Publish Event"}
+                                {isEditing ? "Update Event" : "Publish Event"}
                             </button>
                         </div>
                     </div>

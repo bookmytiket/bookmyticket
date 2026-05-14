@@ -547,7 +547,7 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
         { id: 3, title: "Pricing & Rules", icon: Timer },
         { id: 4, title: "Form Builder", icon: CheckCircle2 },
         { id: 5, title: "Content & FAQs", icon: Star },
-        { id: 6, title: "Location", icon: MapPin }
+        { id: 6, title: marathonId ? "Update" : "Location", icon: MapPin }
     ];
 
     return (

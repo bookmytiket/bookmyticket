@@ -279,8 +279,7 @@ function HomeClient() {
     };
   }, [fetchPublicEvents]);
 
-  // Keep other queries for reviews, branding, etc.
-  const { data: reviewsRaw, loading: reviewsLoading } = useSupabaseQuery('service_reviews', (q) => q, [], { realtime: true });
+  // Keep other queries for branding, etc.
   const { data: brandingRaw } = useSupabaseQuery('site_branding', (q) => q, [], { realtime: false });
 
 
