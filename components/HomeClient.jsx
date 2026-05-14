@@ -241,11 +241,19 @@ function HomeClient() {
 
   const fetchPublicEvents = useCallback(async () => {
     try {
-      const res = await fetch(`/api/events/public?district=${selectedDistrict || selectedCity || 'Coimbatore'}`);
+      const params = new URLSearchParams();
+      if (selectedDistrict && selectedDistrict !== 'All' && selectedDistrict !== 'India') {
+        params.append('district', selectedDistrict);
+      } else if (selectedCity && selectedCity !== 'All Cities' && selectedCity !== 'India') {
+        params.append('city', selectedCity);
+      }
+      
+      // Cache buster for instant updates
+      const url = `/api/events/public?${params.toString()}&t=${Date.now()}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
       const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      setApiEvents(data);
-      setApiError(null);
+      setApiEvents(data || []);
     } catch (err) {
       console.error("Failed to fetch public events:", err);
       setApiError(err);
@@ -311,7 +319,7 @@ function HomeClient() {
         // Use normalized data from API
         return {
           ...ev,
-          id: ev.id || `ev-${idx}`,
+          id: ev.id,
           title: ev.title || "Event",
           img: ev.img || "https://images.unsplash.com/photo-1540575861501-7ad058c647a0?w=500&h=280&fit=crop",
           rawDate: ev.date,
@@ -397,12 +405,18 @@ function HomeClient() {
   const tournamentEventsList = useMemo(() => allLiveEvents.filter((e) => 
     e.type === "Tournament Event" || 
     e.type === "Tournament" || 
-    e.tournament_events?.length > 0
+    e.tournament_data ||
+    (Array.isArray(e.tournament_events) && e.tournament_events.length > 0)
   ), [allLiveEvents]);
 
   const trendingTournamentsList = useMemo(() => tournamentEventsList.filter((e) => e.trending || e.featured), [tournamentEventsList]);
   
-  const sportsTournamentsList = useMemo(() => tournamentEventsList.filter((e) => e.category === "Sports"), [tournamentEventsList]);
+  const sportsTournamentsList = useMemo(() => tournamentEventsList.filter((e) => 
+    e.category === "Sports" || 
+    e.category === "Tournament" ||
+    String(e.type || '').toLowerCase().includes('tournament') ||
+    String(e.type || '').toLowerCase().includes('sports')
+  ), [tournamentEventsList]);
   
   const comingSoonList = useMemo(() => {
     const today = new Date();
@@ -416,7 +430,7 @@ function HomeClient() {
 
 
   const venueEventsList = useMemo(() => {
-    return filteredEvents.filter(e => (e.venue || e.location) && !e.virtual);
+    return filteredEvents.filter(e => (e.venue || e.location || e.venue_data?.name) && !e.virtual);
   }, [filteredEvents]);
 
 

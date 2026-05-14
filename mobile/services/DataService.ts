@@ -16,7 +16,7 @@ const DataService = {
       if (district) queryParams.push(`district=${district}`);
       else if (city) queryParams.push(`city=${city}`);
       
-      const url = `${baseUrl}/api/events/public${queryParams.length > 0 ? `?${queryParams.join('&')}` : ''}`;
+      const url = `${baseUrl}/api/events/public?${queryParams.length > 0 ? `${queryParams.join('&')}&` : ''}t=${Date.now()}`;
       
       const response = await fetch(url);
       if (!response.ok) throw new Error('API fetch failed');

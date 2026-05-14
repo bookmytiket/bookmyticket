@@ -24,10 +24,11 @@ export const slugify = (text) => {
  */
 export const getEventPath = (event) => {
   if (!event) return "/events";
-  if (event.slug) {
+  const id = event.id || event._id || event.event_id;
+  if (event.slug && typeof event.slug === 'string' && event.slug.length > 2) {
     return `/events/${event.slug}`;
   }
-  return `/events/detail?id=${event.id || event._id}`;
+  return `/events/detail?id=${id}`;
 };
 
 /**

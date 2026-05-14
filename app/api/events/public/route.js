@@ -78,24 +78,46 @@ export async function GET(request) {
             const tournament = tournaments.find(t => t.id === event.id) || null;
             const marathon = marathons.find(m => m.id === event.id) || null;
 
-            // Ensure isolation: only use data belonging to this specific event_id
+            // Hydration: prioritize specific table data for price/banner if parent is generic
+            let price = event.price || 0;
+            let img = event.img;
+            let venue = event.venue;
+
+            if (tournament) {
+                price = tournament.registration_fee || price;
+                img = tournament.banner_image || img;
+                venue = tournament.venue || venue;
+            } else if (marathon) {
+                // Marathon pricing is often in dynamic_config.marathonCategories
+                const mConfig = (typeof event.dynamic_config === 'string' ? JSON.parse(event.dynamic_config) : event.dynamic_config) || {};
+                const cats = mConfig.marathonCategories || mConfig.categories || [];
+                if (cats.length > 0) {
+                    price = Math.min(...cats.map(c => Number(c.price) || 0));
+                }
+                img = marathon.banner_image || img;
+                venue = marathon.venue || venue;
+            }
+
+            const eventType = String(event.type || '').toLowerCase();
+            const isTournament = eventType.includes('tournament') || !!tournament;
+            const isMarathon = eventType.includes('marathon') || !!marathon;
+
             return {
                 ...event,
                 tournament_data: tournament,
                 marathon_data: marathon,
-                // Hydration: prioritize specific table data for price/banner if parent is generic
-                img: event.img || tournament?.banner_image || marathon?.banner_image,
-                price: event.price || tournament?.registration_fee || marathon?.price || 0,
-                venue: event.venue || tournament?.venue || marathon?.venue,
+                img,
+                price,
+                venue,
                 city: event.city || tournament?.city || marathon?.city,
                 district: event.district || tournament?.district || marathon?.district,
-                category: event.category || (tournament ? 'Tournament' : (marathon ? 'Marathon' : event.category))
+                category: event.category || (isTournament ? 'Tournament' : (isMarathon ? 'Marathon' : event.category))
             };
         });
 
         return NextResponse.json(enrichedEvents, {
             headers: {
-                'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=60',
+                'Cache-Control': 'no-store, max-age=0, must-revalidate',
                 'X-Data-Source': 'Unified-Discovery-API'
             }
         });

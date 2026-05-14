@@ -1,23 +1,23 @@
+
 const { createClient } = require('@supabase/supabase-js');
-require('dotenv').config({ path: '.env.local' });
+const dotenv = require('dotenv');
+const path = require('path');
 
-async function check() {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY
-  );
+const envPath = path.join(process.cwd(), '.env.local');
+dotenv.config({ path: envPath });
 
-  console.log("Checking tables...");
-  const tables = ['bookings', 'payments', 'tickets', 'coupons'];
-  
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+const supabase = createClient(supabaseUrl, supabaseKey);
+
+async function checkTables() {
+  const tables = ['event_pricing', 'event_media', 'event_sync_logs', 'cache_invalidation_logs'];
   for (const table of tables) {
     const { data, error } = await supabase.from(table).select('*').limit(1);
-    if (error) {
-      console.log(`Table ${table}: ERROR - ${error.message}`);
-    } else {
-      console.log(`Table ${table}: EXISTS`);
-    }
+    console.log(`Table ${table}:`, error ? 'Error or Not Found' : 'Exists');
+    if (error) console.log(`  Error: ${error.message}`);
   }
 }
 
-check();
+checkTables();
