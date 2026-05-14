@@ -18,9 +18,22 @@ import AdminContactInquiries from "@/app/admin/components/AdminContactInquiries"
 import RevenueDashboard from "@/app/admin/components/RevenueDashboard";
 import GstAuditDashboard from "@/app/admin/components/GstAuditDashboard";
 import SubscriptionPackagesAdmin from "@/app/admin/components/SubscriptionPackagesAdmin";
+import ScannerMonitor from "@/app/admin/components/ScannerMonitor";
+import FraudDashboard from "@/app/admin/components/FraudDashboard";
+import FlashAdmin from "@/app/admin/components/FlashAdmin";
+import PushCenter from "@/app/admin/components/PushCenter";
 
 
-import { MoreVertical, Zap, Briefcase, LayoutDashboard, Settings, Video, Image as ImageIcon, Sparkles, CheckCircle, Ticket, Users, Menu, Bell, Save, X, Plus, Trash2, Mail, Lock, CreditCard, Code, Globe, Shield, FileText, Megaphone, Tag, LayoutGrid, Calendar, ShoppingCart, UserCircle, Gift, Send, BarChart3, Archive, MessageCircle, Upload, Edit, Search, AlertCircle, ChevronDown, ChevronRight, LogOut, Activity, RefreshCw, AlertTriangle, Info, Smartphone, MessageSquare, Landmark, Ban, Sun, Moon, Filter, Building2, Cpu, ExternalLink, Eye, Layout, Settings2, ShieldCheck, Slash, ArrowRight, User, Phone } from "lucide-react";
+import { 
+    MoreVertical, Zap, Briefcase, LayoutDashboard, Settings, Video, Image as ImageIcon, 
+    Sparkles, CheckCircle, Ticket, Users, Menu, Bell, Save, X, Plus, Trash2, Mail, Lock, 
+    CreditCard, Code, Globe, Shield, FileText, Megaphone, Tag, LayoutGrid, Calendar, 
+    ShoppingCart, UserCircle, Gift, Send, BarChart3, Archive, MessageCircle, Upload, 
+    Edit, Search, AlertCircle, ChevronDown, ChevronRight, LogOut, Activity, RefreshCw, 
+    AlertTriangle, Info, Smartphone, MessageSquare, Landmark, Ban, Sun, Moon, Filter, 
+    Building2, Cpu, ExternalLink, Eye, Layout, Settings2, ShieldCheck, Slash, ArrowRight, 
+    User, Phone, Star
+} from "lucide-react";
 import { HOME_EVENTS, HERO_BANNER_SLIDES } from "@/app/data/homeEvents";
 import { eventMatchesCategory } from "@/app/utils/categoryMatch";
 import { hashPassword } from "@/app/utils/hashPassword";
@@ -101,6 +114,83 @@ export default function AdminHomePageWrapper() {
         </ErrorBoundary>
     );
 }
+
+const AdminReviewsTable = ({ t, theme }) => {
+    const [reviews, setReviews] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const { showToast } = useToast();
+
+    const fetchReviews = async () => {
+        setLoading(true);
+        try {
+            const { data } = await supabase
+                .from('reviews')
+                .select('*, profiles:user_id(full_name), events:event_id(title)')
+                .order('created_at', { ascending: false });
+            setReviews(data || []);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => { fetchReviews(); }, []);
+
+    const toggleApproval = async (id, currentStatus) => {
+        try {
+            const { error } = await supabase.from('reviews').update({ is_approved: !currentStatus }).eq('id', id);
+            if (error) throw error;
+            showToast(currentStatus ? "Review Hidden" : "Review Approved", "success");
+            fetchReviews();
+        } catch (err) {
+            showToast("Failed to update review", "error");
+        }
+    };
+
+    if (loading) return <div style={{ padding: "40px", textAlign: "center", color: t.textSub }}>Loading reviews...</div>;
+    
+    return (
+        <div className="table-container" style={{ overflowX: 'auto' }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "800px" }}>
+                <thead>
+                    <tr style={{ borderBottom: `1px solid ${t.border}`, textAlign: "left" }}>
+                        <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>User / Event</th>
+                        <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Rating</th>
+                        <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Content</th>
+                        <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Status</th>
+                        <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {reviews.length === 0 ? (
+                        <tr><td colSpan="5" style={{ padding: "40px", textAlign: "center", color: t.textSub }}>No reviews found.</td></tr>
+                    ) : reviews.map((r) => (
+                        <tr key={r.id} style={{ borderBottom: `1px solid ${t.border}` }}>
+                            <td style={{ padding: "12px" }}>
+                                <div style={{ fontWeight: 700, color: t.textMain }}>{r.profiles?.full_name || 'Anonymous'}</div>
+                                <div style={{ fontSize: "11px", color: t.textSub }}>{r.events?.title || 'Unknown Event'}</div>
+                            </td>
+                            <td style={{ padding: "12px", fontWeight: 800, color: "#eab308" }}>⭐ {r.rating}/5</td>
+                            <td style={{ padding: "12px" }}>
+                                <div style={{ fontWeight: 600, color: t.textMain, fontSize: "13px" }}>{r.title}</div>
+                                <div style={{ fontSize: "12px", color: t.textSub, maxWidth: "300px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.content}</div>
+                            </td>
+                            <td style={{ padding: "12px" }}>
+                                <span className={`badge ${r.is_approved ? 'badge-green' : 'badge-red'}`}>
+                                    {r.is_approved ? 'APPROVED' : 'HIDDEN'}
+                                </span>
+                            </td>
+                            <td style={{ padding: "12px" }}>
+                                <button onClick={() => toggleApproval(r.id, r.is_approved)} style={{ padding: "6px 12px", borderRadius: "6px", backgroundColor: r.is_approved ? "#ef4444" : "#10b981", color: "#fff", border: "none", fontSize: "11px", fontWeight: 700, cursor: "pointer" }}>
+                                    {r.is_approved ? 'Hide' : 'Approve'}
+                                </button>
+                            </td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </div>
+    );
+};
 
 const SubscribersTable = ({ t, theme }) => {
     const { data: subscribers = [], loading, error } = useSupabaseQuery('subscribers');
@@ -736,21 +826,32 @@ const PayoutRequestsTable = ({ t, theme }) => {
     const fetchRequests = async () => {
         setLoading(true);
         try {
-            // Fetch requests with both potential links
             const { data } = await supabase
-                .from('withdraw_requests')
-                .select('*, organisers:organiser_id(business_name, id), providers:service_provider_id(full_name, id)')
+                .from('payout_requests')
+                .select('*, profiles:requester_id(full_name, id)')
                 .order('created_at', { ascending: false });
             
             if (data) {
-                // For each request, fetch the latest balance from the correct table
                 const enriched = await Promise.all(data.map(async (req) => {
-                    const table = req.organiser_id ? 'organiser_wallet' : 'provider_wallet';
-                    const col = req.organiser_id ? 'organiser_id' : 'service_provider_id';
-                    const pid = req.organiser_id || req.service_provider_id;
-
-                    const { data: w } = await supabase.from(table).select('balance').eq(col, pid).maybeSingle();
-                    return { ...req, current_balance: w?.balance || 0 };
+                    const type = req.requester_type;
+                    const walletTable = type === 'organiser' ? 'organiser_wallet' : 'provider_wallets';
+                    const profileTable = type === 'organiser' ? 'organisers' : 'service_providers';
+                    const walletCol = type === 'organiser' ? 'organiser_id' : 'provider_id';
+                    
+                    let pid = null;
+                    if (type === 'organiser') {
+                        const { data: profile } = await supabase.from('organisers').select('id').eq('id', req.requester_id).maybeSingle();
+                        pid = profile?.id;
+                    } else {
+                        const { data: profile } = await supabase.from('service_providers').select('id').eq('organiser_id', req.requester_id).maybeSingle();
+                        pid = profile?.id;
+                    }
+                    
+                    if (pid) {
+                        const { data: w } = await supabase.from(walletTable).select('balance').eq(walletCol, pid).maybeSingle();
+                        return { ...req, current_balance: w?.balance || 0, provider_id: pid, wallet_table: walletTable, wallet_col: walletCol };
+                    }
+                    return { ...req, current_balance: 0 };
                 }));
                 setRequests(enriched);
             }
@@ -763,55 +864,47 @@ const PayoutRequestsTable = ({ t, theme }) => {
 
     useEffect(() => { fetchRequests(); }, []);
 
-    const [updateStatus] = useSupabaseMutation('withdraw_requests', 'update', (q, p) => q.eq('id', p.id));
+    const [updateStatus] = useSupabaseMutation('payout_requests', 'update', (q, p) => q.eq('id', p.id));
     const [addTransaction] = useSupabaseMutation('wallet_transactions', 'insert');
     const { showToast } = useToast();
     const refresh = fetchRequests;
 
     const handleAction = async (request, newStatus) => {
         try {
-            const providerId = request.organiser_id || request.service_provider_id;
-            const providerType = request.organiser_id ? 'organiser' : 'service';
-            const walletTable = providerType === 'organiser' ? 'organiser_wallet' : 'provider_wallet';
-            const idColumn = providerType === 'organiser' ? 'organiser_id' : 'service_provider_id';
-
             if (newStatus === 'approved') {
-                // 1. Update request status to 'approved'
-                // No need to deduct here as it's now deducted on request
                 await updateStatus({ id: request.id, status: 'approved' });
 
-                // 2. Update transaction description to reflect completion
                 await supabase.from('wallet_transactions')
                     .update({ description: 'Withdrawal Completed' })
                     .eq('reference_id', request.id);
 
                 showToast("Payout marked as approved", "success");
             } else if (newStatus === 'rejected') {
-                // 1. Update request status to 'rejected'
                 await updateStatus({ id: request.id, status: 'rejected' });
 
-                // 2. Refund the amount (since it was deducted on request)
-                const { data: walletData } = await supabase
-                    .from(walletTable)
-                    .select('balance')
-                    .eq(idColumn, providerId)
-                    .single();
-                
-                if (walletData) {
-                    await supabase
-                        .from(walletTable)
-                        .update({ balance: walletData.balance + request.amount })
-                        .eq(idColumn, providerId);
+                // Refund to appropriate wallet
+                if (request.provider_id && request.wallet_table && request.wallet_col) {
+                    const { data: walletData } = await supabase
+                        .from(request.wallet_table)
+                        .select('balance')
+                        .eq(request.wallet_col, request.provider_id)
+                        .single();
+                    
+                    if (walletData) {
+                        await supabase
+                            .from(request.wallet_table)
+                            .update({ balance: walletData.balance + request.amount })
+                            .eq(request.wallet_col, request.provider_id);
+                    }
                 }
 
-                // 3. Record Refund Transaction
                 await addTransaction({
-                    provider_id: providerId,
+                    provider_id: request.provider_id,
+                    provider_type: request.requester_type === 'organiser' ? 'organiser' : 'service',
                     amount: request.amount,
                     type: 'credit',
                     description: `Payout Rejected - Refunded`,
-                    reference_id: request.id,
-                    provider_type: providerType
+                    reference_id: request.id
                 });
 
                 showToast("Payout rejected and funds refunded", "info");
@@ -843,7 +936,7 @@ const PayoutRequestsTable = ({ t, theme }) => {
                         <tr key={req.id} style={{ borderBottom: `1px solid ${t.border}` }}>
                             <td style={{ padding: "12px" }}>
                                 <div style={{ fontWeight: 700, color: t.textMain }}>
-                                    {req.organisers?.business_name || req.providers?.full_name || 'Partner'}
+                                    {req.profiles?.full_name || 'Partner'}
                                 </div>
                                 <div style={{ fontSize: "11px", color: t.textSub }}>{new Date(req.created_at).toLocaleString()}</div>
                             </td>
@@ -1177,7 +1270,10 @@ function AdminHomePage() {
         items: [
             { id: 1, label: "Home", icon: "🏠", order: 0 },
             { id: 2, label: "Events", icon: "🎫", order: 1 },
-            { id: 3, label: "Services", icon: "🛠️", order: 2 }
+            { id: 3, label: "Services", icon: "🛠️", order: 2 },
+            { id: 4, label: "Security", icon: "🛡️", order: 3 },
+            { id: 5, label: "Live Gate", icon: "⚡", order: 4 },
+            { id: 6, label: "Campaigns", icon: "🔥", order: 5 }
         ]
     });
     const subnavItems = subnavConfig.items || [];
@@ -2251,8 +2347,15 @@ function AdminHomePage() {
                                 <NavLink id="payout_requests" label="Payouts" icon={CreditCard} active={activeTab === "payout_requests"} onClick={() => setActiveTab("payout_requests")} />
                                 <NavLink id="subscriptions" label="Staff Subscriptions" icon={Zap} active={activeTab === "subscriptions"} onClick={() => setActiveTab("subscriptions")} />
                                 <NavLink id="gst" label="Tax Audits" icon={FileText} active={activeTab === "gst"} onClick={() => setActiveTab("gst")} />
+                                
+                                <GroupTitle title="Security & Monitoring" />
+                                <NavLink id="scanner_monitor" label="Scanner Analytics" icon={Activity} active={activeTab === "scanner_monitor"} onClick={() => setActiveTab("scanner_monitor")} />
+                                <NavLink id="fraud_dashboard" label="Fraud Detection" icon={ShieldCheck} active={activeTab === "fraud_dashboard"} onClick={() => setActiveTab("fraud_dashboard")} />
+                                <NavLink id="flash_deals" label="Flash Deals" icon={Zap} active={activeTab === "flash_deals"} onClick={() => setActiveTab("flash_deals")} />
+
 
                                 <GroupTitle title="Reports" />
+                                <NavLink id="reviews" label="Reviews Moderation" icon={Star} active={activeTab === "reviews"} onClick={() => setActiveTab("reviews")} />
                                 <NavLink id="support_tickets" label="Ticket System" icon={MessageCircle} active={activeTab === "support_tickets"} onClick={() => setActiveTab("support_tickets")} />
                                 <NavLink id="contact_inquiries" label="Inquiry Inbox" icon={Mail} active={activeTab === "contact_inquiries"} onClick={() => setActiveTab("contact_inquiries")} />
                                 <NavLink id="branding_partners" label="Brand Requests" icon={Briefcase} active={activeTab === "branding_partners"} onClick={() => setActiveTab("branding_partners")} />
@@ -2426,6 +2529,26 @@ function AdminHomePage() {
                     {activeTab === "revenue" && (
                         <div className="px-8 lg:px-12 py-8">
                             <RevenueDashboard t={t} theme={theme} />
+                        </div>
+                    )}
+                    {activeTab === "scanner_monitor" && (
+                        <div className="px-8 lg:px-12 py-8">
+                            <ScannerMonitor t={t} theme={theme} />
+                        </div>
+                    )}
+                    {activeTab === "fraud_dashboard" && (
+                        <div className="px-8 lg:px-12 py-8">
+                            <FraudDashboard t={t} theme={theme} />
+                        </div>
+                    )}
+                    {activeTab === "flash_deals" && (
+                        <div className="px-8 lg:px-12 py-8">
+                            <FlashAdmin t={t} theme={theme} />
+                        </div>
+                    )}
+                    {activeTab === "send_notif" && (
+                        <div className="px-8 lg:px-12 py-8">
+                            <PushCenter t={t} theme={theme} />
                         </div>
                     )}
                     {activeTab === "financials" && (
@@ -6165,6 +6288,22 @@ function AdminHomePage() {
                             <div className="px-4 lg:px-0">
                                 <div className="bg-white rounded-[40px] border border-slate-100 p-8 shadow-sm">
                                     <SubscribersTable t={t} theme={theme} />
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === "reviews" && (
+                        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                            {/* Header */}
+                            <div className="px-4 lg:px-0">
+                                <h2 className="text-3xl font-black text-slate-900 tracking-tighter uppercase italic">Review Moderation</h2>
+                                <p className="text-sm text-slate-500 font-medium">Approve or hide user reviews across all events.</p>
+                            </div>
+
+                            <div className="px-4 lg:px-0">
+                                <div className="bg-white rounded-[40px] border border-slate-100 p-8 shadow-sm">
+                                    <AdminReviewsTable t={t} theme={theme} />
                                 </div>
                             </div>
                         </div>

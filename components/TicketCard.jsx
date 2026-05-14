@@ -2,6 +2,7 @@
 import React from "react";
 import { MapPin, Calendar, ArrowRight, Star, Heart } from "lucide-react";
 import Link from "next/link";
+import WishlistButton from "@/components/WishlistButton";
 
 export default function TicketCard({ event, router }) {
     if (!event) return null;
@@ -137,15 +138,7 @@ export default function TicketCard({ event, router }) {
                 alignItems: "center"
             }}>
                 <div style={{ display: "flex", gap: "8px" }}>
-                    <button style={{ 
-                        background: "none", 
-                        border: "none", 
-                        padding: 0, 
-                        color: "#94a3b8", 
-                        cursor: "pointer" 
-                    }}>
-                        <Heart size={18} />
-                    </button>
+                    <WishlistButton eventId={event.id} size={16} />
                 </div>
                 <div style={{
                     display: "flex",

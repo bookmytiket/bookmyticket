@@ -33,7 +33,7 @@ export default function VisualSeatPicker({
     const getSeatStatus = (seatId) => {
         if (bookedSeats.includes(seatId)) return 'sold';
         if (blockedSeats.includes(seatId)) return 'blocked';
-        if (reservedSeats.includes(seatId)) return 'reserved';
+        if (reservedSeats.includes(seatId)) return 'temp_locked'; // Maps to others' locks
         if (selectedSeats.some(s => s.id === seatId)) return 'selected';
         return 'available';
     };
@@ -289,14 +289,14 @@ export default function VisualSeatPicker({
                                                                         ? 'bg-slate-100 border-slate-100 text-slate-300 cursor-not-allowed shadow-inner' 
                                                                         : status === 'blocked'
                                                                         ? 'bg-red-50 border-red-200 text-red-500 cursor-not-allowed'
-                                                                        : status === 'reserved'
+                                                                        : status === 'temp_locked'
                                                                         ? 'bg-amber-50 border-amber-200 text-amber-500 cursor-wait animate-pulse'
                                                                         : status === 'selected'
                                                                         ? 'bg-pink-500 border-pink-500 text-white shadow-xl shadow-pink-500/30'
                                                                         : 'bg-white border-emerald-500 text-emerald-600 hover:bg-emerald-50 hover:shadow-xl'
                                                                     }`}
                                                                 >
-                                                                    {seatNum}
+                                                                    {status === 'temp_locked' ? <Clock size={14} /> : seatNum}
                                                                 </motion.button>
                                                             );
                                                         })}
@@ -326,7 +326,7 @@ export default function VisualSeatPicker({
                         { label: 'Selected', color: 'border-pink-500', bg: 'bg-pink-500 shadow-pink-500/20 shadow-lg' },
                         { label: 'Sold', color: 'border-slate-100', bg: 'bg-slate-100' },
                         { label: 'Blocked', color: 'border-red-200', bg: 'bg-red-50' },
-                        { label: 'Reserved', color: 'border-amber-200', bg: 'bg-amber-50' },
+                        { label: 'Temp Locked', color: 'border-amber-200', bg: 'bg-amber-50 animate-pulse' },
                     ].map(item => (
                         <div key={item.label} className="flex items-center gap-4">
                             <div className={`w-6 h-6 rounded-xl border-2 ${item.color} ${item.bg}`} />

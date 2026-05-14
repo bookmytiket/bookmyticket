@@ -28,6 +28,7 @@ import TournamentEventForm from "./components/TournamentEventForm";
 import WalletDashboard from "./components/WalletDashboard";
 import SubscriptionManager from "./components/SubscriptionManager";
 import CouponManagement from "./components/CouponManagement";
+import PayoutRequestPanel from "@/components/PayoutRequestPanel";
 import GoogleInlineMap from "./components/GoogleInlineMap";
 import { reverseGeocode, geocode } from "@/lib/googleMaps";
 
@@ -5193,7 +5194,15 @@ function OrganiserPanel() {
                 }
                 case "withdraw":
                 case "transactions":
-                    return <WalletDashboard user={user} />;
+                case "payout":
+                    return (
+                        <div style={{ padding: '24px 0' }}>
+                            <WalletDashboard user={user} />
+                            <div style={{ marginTop: '32px' }}>
+                                <PayoutRequestPanel requesterType="organiser" />
+                            </div>
+                        </div>
+                    );
                 case "coupons":
                     return <CouponManagement user={user} />;
                 default:

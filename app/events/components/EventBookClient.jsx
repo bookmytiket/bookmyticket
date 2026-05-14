@@ -19,6 +19,7 @@ import CalendarModal from '@/components/booking/CalendarModal';
 import PackageSelector from '@/components/booking/PackageSelector';
 import EventMap from './EventMap';
 import VisualSeatPicker from './VisualSeatPicker';
+import { useSeatLocking } from '@/hooks/useSeatLocking';
 
 const DEFAULT_IMG = 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200&h=600&fit=crop';
 const ROW_LABELS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
@@ -131,6 +132,9 @@ export default function EventBookClient({ id }) {
             );
     }, [event]);
 
+    // Real-time Seat Locking
+    const { lockedSeats, myLocks, lockSeat, releaseSeat } = useSeatLocking(id, user?.id);
+
     const isMarathon = event?.type === 'Marathon';
     const isTournament = event?.type === 'Tournament' || event?.type === 'Tournament Event';
 
@@ -187,18 +191,31 @@ export default function EventBookClient({ id }) {
     const cols = useMemo(() => Math.min(30, Math.max(0, Math.floor(Number(event?.cols) || 0))), [event]);
     const layout = event?.layoutType || 'stage';
 
-    const toggleSeat = (seatId, cat) => {
-        if (isSeatBooked(seatId)) return;
-        setSelectedSeats(prev => {
-            const idx = prev.findIndex(s => s.id === seatId);
-            if (idx >= 0) return prev.filter(s => s.id !== seatId);
-            return [...prev, { 
+    const toggleSeat = async (seatId, cat) => {
+        const isCurrentlySelected = selectedSeats.some(s => s.id === seatId);
+        
+        if (isCurrentlySelected) {
+            // Release the lock
+            await releaseSeat(seatId);
+            setSelectedSeats(prev => prev.filter(s => s.id !== seatId));
+        } else {
+            // Check if already locked by someone else
+            if (lockedSeats.includes(seatId)) return;
+            
+            // Try to lock the seat
+            const { success, error } = await lockSeat(seatId);
+            if (!success) {
+                alert(error || "Seat could not be locked.");
+                return;
+            }
+
+            setSelectedSeats(prev => [...prev, { 
                 id: seatId, 
                 catName: cat.name || cat.category_name || cat.title || 'General', 
                 price: Number(cat.price) || 0, 
                 isFree: !!cat.isFree 
-            }];
-        });
+            }]);
+        }
     };
 
     const totalSeatPrice = selectedSeats.reduce((s, seat) => s + (seat.isFree ? 0 : seat.price), 0);
@@ -414,6 +431,7 @@ export default function EventBookClient({ id }) {
                                                 blocks={event.blocks}
                                                 categories={event.dynamic_config?.categories || event.seat_categories || []}
                                                 bookedSeats={bookedSeats}
+                                                reservedSeats={lockedSeats} // Others' locks
                                                 selectedSeats={selectedSeats}
                                                 onToggleSeat={toggleSeat}
                                                 backgroundUrl={event.seat_map_background_url}

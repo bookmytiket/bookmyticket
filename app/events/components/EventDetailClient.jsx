@@ -14,6 +14,8 @@ import Footer from '@/components/Footer';
 import EventMap from './EventMap';
 import { getFeeBreakdown, resolveFeeSettings, DEFAULT_FEE_SETTINGS } from '@/app/utils/feeBreakdown';
 import TournamentRegistration from '@/app/organiser/components/TournamentRegistration';
+import ReviewsSection from '@/components/ReviewsSection';
+import WishlistButton from '@/components/WishlistButton';
 
 const DEFAULT_IMG = "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&q=80";
 const DEFAULT_FEATURES = [
@@ -431,6 +433,11 @@ export default function EventDetailClient({ id }) {
                                     </div>
                                 </div>
                             </div>
+                        </div>
+
+                        {/* Reviews Section */}
+                        <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm p-6 md:p-10 mt-6">
+                            <ReviewsSection eventId={id} />
                         </div>
                     </div>
 

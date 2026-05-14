@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Ticket, Lock, LogOut, ArrowLeft, Sparkles, Video, X, LayoutDashboard } from "lucide-react";
+import { Ticket, Lock, LogOut, ArrowLeft, Sparkles, Video, X, LayoutDashboard, Heart } from "lucide-react";
 import { useAuth } from "@/components/AuthContext";
 import Link from "next/link";
 import { isVirtualEvent } from "@/app/utils/eventUtils";
@@ -9,6 +9,7 @@ import { supabase } from "@/lib/supabase";
 import JoinNowButton from "@/components/JoinNowButton";
 import DigitalTicket from "@/components/DigitalTicket";
 import DigitalInvoice from "@/components/DigitalInvoice";
+import TicketCard from "@/components/TicketCard";
 
 const THEME = {
     bg: "#f8fafc",
@@ -41,11 +42,15 @@ export default function ProfilePage() {
 
     const [eventBookingsList, setEventBookingsList] = useState([]);
     const [vendorBookingsList, setVendorBookingsList] = useState([]);
+    const [wishlistEvents, setWishlistEvents] = useState([]);
     const [siteBranding, setSiteBranding] = useState({});
 
     useEffect(() => {
         if (!user?.id) return;
         const uid = user.id;
+        
+        supabase.from('user_wishlists').select('*, events(*)').eq('user_id', uid)
+            .then(({ data }) => setWishlistEvents((data || []).map(w => w.events).filter(Boolean)));
         supabase.from('bookings').select('*, events(*)').eq('user_id', uid)
             .then(({ data }) => setEventBookingsList((data || []).map(b => ({
                 ...b,
@@ -294,6 +299,37 @@ export default function ProfilePage() {
                         </div>
                     </div>
                 );
+            case "wishlist":
+                return (
+                    <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "16px", border: `1px solid ${t.border}` }}>
+                        <div style={{ marginBottom: "20px" }}>
+                            <h3 className="text-xl font-black text-slate-900 italic tracking-tighter uppercase flex items-center gap-2">
+                                <Heart className="text-pink-500" fill="currentColor" size={24} /> My Wishlist
+                            </h3>
+                            <p className="text-sm text-slate-500 font-medium">Events you've saved for later.</p>
+                        </div>
+                        {wishlistEvents.length > 0 ? (
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "20px" }}>
+                                {wishlistEvents.map(event => (
+                                    <TicketCard key={event.id} event={event} router={router} />
+                                ))}
+                            </div>
+                        ) : (
+                            <div style={{ padding: "60px 24px", textAlign: "center", color: t.textSub, border: `1px dashed ${t.border}`, borderRadius: "12px" }}>
+                                <Heart size={40} className="mx-auto text-slate-300 mb-4" />
+                                <p style={{ fontSize: "16px", fontWeight: "600", color: t.textMain, margin: "0 0 8px" }}>
+                                    Your Wishlist is Empty
+                                </p>
+                                <p style={{ fontSize: "13px", margin: "0 0 20px" }}>
+                                    Save events you love to keep track of them here.
+                                </p>
+                                <Link href="/" style={{ padding: "10px 24px", background: t.accent, color: "#fff", borderRadius: "50px", textDecoration: "none", fontWeight: "700", fontSize: "14px", display: "inline-block", boxShadow: `0 4px 12px ${t.accentGlow}` }}>
+                                    Explore Events
+                                </Link>
+                            </div>
+                        )}
+                    </div>
+                );
             default:
                 return null;
         }
@@ -409,6 +445,12 @@ export default function ProfilePage() {
                             style={{ width: "100%", padding: "12px 16px", background: activeTab === "my_booking" ? t.activeItem : "transparent", border: "none", borderRadius: "8px", display: "flex", alignItems: "center", gap: "12px", cursor: "pointer", color: activeTab === "my_booking" ? t.activeText : t.textSub, fontWeight: "600", fontSize: "14px", marginBottom: "4px", transition: "all 0.2s" }}
                         >
                             <Ticket size={18} /> My Booking
+                        </button>
+                        <button
+                            onClick={() => setActiveTab("wishlist")}
+                            style={{ width: "100%", padding: "12px 16px", background: activeTab === "wishlist" ? t.activeItem : "transparent", border: "none", borderRadius: "8px", display: "flex", alignItems: "center", gap: "12px", cursor: "pointer", color: activeTab === "wishlist" ? t.activeText : t.textSub, fontWeight: "600", fontSize: "14px", marginBottom: "4px", transition: "all 0.2s" }}
+                        >
+                            <Heart size={18} /> Wishlist
                         </button>
                         <button
                             onClick={() => setActiveTab("change_password")}

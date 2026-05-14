@@ -10,6 +10,7 @@ import { Country, State, City } from "country-state-city";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/components/AuthContext";
 import { useSupabaseQuery } from "@/hooks/useSupabase";
+import NotificationsDrawer from "@/components/NotificationsDrawer";
 
 const SUBNAV_LINKS = [
   { href: "/#featured-events", label: "Events" },
@@ -774,7 +775,8 @@ export default function Navbar({ compact = false }) {
             )}
           </div>
 
-          <div className="header-actions-area" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <div className="header-actions-area" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {mounted && user && <NotificationsDrawer />}
             {mounted && user ? (
               <div style={{ position: 'relative' }}>
                 <div
