@@ -2,10 +2,12 @@ import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 
 export async function GET() {
+  console.log("Branding API route called.");
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!supabaseUrl || !supabaseServiceKey) {
+    console.error("Branding API: Credentials missing", { url: !!supabaseUrl, key: !!supabaseServiceKey });
     return NextResponse.json({ error: "Supabase credentials missing" }, { status: 500 });
   }
 
@@ -20,7 +22,9 @@ export async function GET() {
       }
       throw error;
     }
-    return NextResponse.json(data);
+    const response = NextResponse.json(data);
+    response.headers.set('X-Branding-API', 'hit');
+    return response;
   } catch (error) {
     console.error("Error fetching branding:", error);
     return NextResponse.json({ powered_by_logo_url: "/logo.png" }, { status: 200 }); // Graceful fallback

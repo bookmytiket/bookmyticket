@@ -24,6 +24,7 @@ import UniversalEventForm from "./components/UniversalEventForm";
 import PhysicalEventForm from "./components/PhysicalEventForm";
 import VirtualEventForm from "./components/VirtualEventForm";
 import MarathonEventForm from "./components/MarathonEventForm";
+import TournamentEventForm from "./components/TournamentEventForm";
 import WalletDashboard from "./components/WalletDashboard";
 import SubscriptionManager from "./components/SubscriptionManager";
 import CouponManagement from "./components/CouponManagement";
@@ -510,6 +511,8 @@ function OrganiserPanel() {
 
     const [createMarathonConfig] = useSupabaseMutation("marathon_config", "insert");
     const [createTournamentConfig] = useSupabaseMutation("tournament_config", "insert");
+    const [createTournamentEventMutation] = useSupabaseMutation("tournament_events", "insert");
+    const [updateTournamentEventMutation] = useSupabaseMutation("tournament_events", "update", (q, p) => q.eq("id", p.id));
     const [createCoachingConfig] = useSupabaseMutation("coaching_config", "insert");
 
     const { data: eventsData = [], refresh: refreshEvents } = useSupabaseQuery(
@@ -520,9 +523,9 @@ function OrganiserPanel() {
                 // Admins should still see their own events if they are also acting as an organiser
                 // But typically they want to see everything. If they want to see "ONLY" their own, 
                 // we should filter by their ID unless they are in an admin-specific view.
-                return q.select('*').eq("organiser_id", orgId).eq("status", "published").order('created_at', { ascending: false });
+                return q.select('*').eq("organiser_id", orgId).order('created_at', { ascending: false });
             }
-            return q.select('*').eq("organiser_id", orgId).eq("status", "published").order('created_at', { ascending: false });
+            return q.select('*').eq("organiser_id", orgId).order('created_at', { ascending: false });
         },
         [organiserData?.id, user?.id, user?.role]
     );
@@ -1271,10 +1274,17 @@ function OrganiserPanel() {
         normalTicketPrice: "",
         rows: 10, cols: 10,
         categories: [
-            { name: "VIP", price: 2000, rows: 2, isFree: false },
-            { name: "Gold", price: 1000, rows: 4, isFree: false },
-            { name: "Silver", price: 500, rows: 4, isFree: false },
+            { id: Date.now(), name: "Standard Entry", price: 500, totalSlots: 100, isFree: false }
         ],
+        // Tournament Specifics
+        tournamentFormat: "Knockout",
+        audienceFreeAccess: true,
+        minTeamSize: 1,
+        maxTeamSize: 20,
+        registrationFee: 0,
+        sportType: "Other",
+        rulesRegulations: "",
+        termsConditions: "",
         // Advanced Information & Features
         ageLimit: "All ages",
         language: "English",
@@ -1574,7 +1584,7 @@ function OrganiserPanel() {
         let finalPrice = 0;
         if (isOnline) {
             finalPrice = postEvent.ticketsAreFree ? 0 : (Number(postEvent.price) || 0);
-        } else if ((isSeating || postEvent.type === "Dynamic" || postEvent.type === "Sports") && categories.length > 0) {
+        } else if ((isSeating || postEvent.type === "Dynamic" || postEvent.type === "Sports" || postEvent.type === "Tournament" || postEvent.type === "Tournament Event") && categories.length > 0) {
             const prices = categories.flatMap(c => {
                 if (c.isFree) return [0];
 
@@ -1584,9 +1594,9 @@ function OrganiserPanel() {
                     return ageRates.map(r => Number(r.price) || 0);
                 }
 
-                return [Number(c.price) || 0];
+                return [Number(c.price || c.fee) || 0];
             });
-            finalPrice = prices.length > 0 ? Math.min(...prices) : (Number(postEvent.price || postEvent.normalTicketPrice) || 0);
+            finalPrice = prices.length > 0 ? Math.min(...prices) : (Number(postEvent.price || postEvent.normalTicketPrice || postEvent.registrationFee) || 0);
         } else {
             // Support both price and normalTicketPrice
             finalPrice = Number(postEvent.price || postEvent.normalTicketPrice) || 0;
@@ -1597,7 +1607,7 @@ function OrganiserPanel() {
             : postEvent.img || postEvent.image_url || "https://images.unsplash.com/photo-1540575861501-7ad058c647a0?w=500&h=650&fit=crop";
 
         // Build payload with ONLY fields accepted by Convex
-        if (!isOnline && postEvent.type !== "Sports" && postEvent.type !== "Dynamic") {
+        if (!isOnline && postEvent.type !== "Sports" && postEvent.type !== "Dynamic" && postEvent.type !== "Tournament Event") {
             if (!postEvent.country) { setPublishError("Please select a Country."); return; }
             if (!postEvent.state) { setPublishError("Please select a State."); return; }
             if (!postEvent.district) { setPublishError("Please select a District."); return; }
@@ -1635,6 +1645,11 @@ function OrganiserPanel() {
             meeting_url: isOnline ? (postEvent.meetingUrl || (editingEvent?.meeting_url || undefined)) : undefined,
             featured: postEvent.isFeature === "Yes" ? true : false,
             exclusive: postEvent.isExclusive === "Yes" ? true : false,
+            entity_type: 'event',
+            publish_status: 'published',
+            visibility_status: 'public',
+            approval_status: 'approved',
+            listing_status: 'active',
             status: (() => {
                 const now = new Date();
                 now.setHours(0, 0, 0, 0); // Compare against start of today
@@ -1703,7 +1718,6 @@ function OrganiserPanel() {
             entry_gate: postEvent.entryGate || undefined,
             emergency_exit: postEvent.emergencyExit || undefined,
             video_trailer_url: postEvent.videoTrailerUrl || undefined,
-            sport_type: postEvent.sportType || undefined,
             dynamic_config: {
                 ...(postEvent.dynamic_config || {}),
                 marathonCategories: postEvent.marathonCategories || [],
@@ -1749,7 +1763,29 @@ function OrganiserPanel() {
             seo_title: postEvent.dynamic_config?.seo?.title || undefined,
             seo_description: postEvent.dynamic_config?.seo?.description || undefined,
             slug: postEvent.dynamic_config?.seo?.slug || undefined,
-            tags: postEvent.dynamic_config?.seo?.keywords ? postEvent.dynamic_config.seo.keywords.split(',').map(t => t.trim()) : undefined
+            tags: postEvent.dynamic_config?.seo?.keywords ? postEvent.dynamic_config.seo.keywords.split(',').map(t => t.trim()) : undefined,
+            sports_details: (['Tournament Event', 'Tournament', 'Sports Tournament', 'Sports', 'Sports Event'].includes(postEvent.type)) ? {
+                tournament_type: postEvent.tournamentType,
+                tournament_format: postEvent.tournamentFormat,
+                sport_name: postEvent.sportName,
+                registration_fee: postEvent.registrationFee,
+                min_team_size: postEvent.minTeamSize,
+                max_team_size: postEvent.maxTeamSize,
+                rules_regulations: postEvent.rulesRegulations,
+                terms_conditions: postEvent.termsConditions,
+                prize_pool: postEvent.prizePool,
+                contact_email: postEvent.contactEmail,
+                contact_phone: postEvent.contactPhone,
+                sport_type: postEvent.sportType,
+                age_category: postEvent.ageCategory || postEvent.ageGroup,
+                t_shirt_size: postEvent.tShirtSize,
+                route_map: postEvent.routeMap,
+                prize_details: postEvent.prizeDetails,
+                teams_count: postEvent.teamsCount,
+                match_schedule: postEvent.matchSchedule,
+                trainer_details: postEvent.trainerDetails,
+                session_slots: postEvent.sessionSlots
+            } : undefined
         };
 
         // Remove undefined keys
@@ -1759,6 +1795,31 @@ function OrganiserPanel() {
             const { organiser_id, ...updatePayload } = payload;
             updateEventMutation({ id: editingEvent.id, ...updatePayload })
                 .then(async () => {
+                    // Update Tournament specialized record if needed
+                    if (['Tournament Event', 'Tournament', 'Sports Tournament'].includes(postEvent.type)) {
+                        try {
+                            const tourneyPayload = {
+                                id: editingEvent.id,
+                                event_name: (postEvent.title || "").trim(),
+                                sport_type: postEvent.sportType || postEvent.category || "General",
+                                tournament_format: postEvent.tournamentFormat || "Knockout",
+                                registration_fee: Number(postEvent.registrationFee || postEvent.teamRegistrationFee) || 0,
+                                min_team_size: Number(postEvent.minTeamSize) || 1,
+                                max_team_size: Number(postEvent.maxTeamSize) || 20,
+                                audience_free_access: postEvent.audienceAccess !== 'Paid',
+                                status: postEvent.eventStatus === 'draft' ? 'draft' : 'published',
+                                metadata: {
+                                    prizePool: postEvent.prizePool || "TBA",
+                                    contactEmail: postEvent.contactEmail,
+                                    contactPhone: postEvent.contactPhone
+                                }
+                            };
+                            await updateTournamentEventMutation(tourneyPayload);
+                        } catch (err) {
+                            console.error("Tournament record update failed:", err);
+                        }
+                    }
+
                     // Relational Seating Logic
                     if (isSeating && postEvent.blocks?.length > 0) {
                         try {
@@ -1832,6 +1893,32 @@ function OrganiserPanel() {
         } else {
             createEventMutation(payload)
                 .then(async (newEvent) => {
+                    // Create Tournament specialized record if needed
+                    if ((['Tournament Event', 'Tournament', 'Sports Tournament'].includes(postEvent.type)) && newEvent?.id) {
+                        try {
+                            const { error: tourneyError } = await supabase.from('tournament_events').insert({
+                                id: newEvent.id,
+                                organiser_id: user?.id,
+                                event_name: (postEvent.title || "").trim(),
+                                sport_type: postEvent.sportType || postEvent.category || "General",
+                                tournament_format: postEvent.tournamentFormat || "Knockout",
+                                registration_fee: Number(postEvent.teamRegistrationFee) || 0,
+                                min_team_size: Number(postEvent.minTeamSize) || 1,
+                                max_team_size: Number(postEvent.maxTeamSize) || 20,
+                                audience_free_access: postEvent.audienceAccess !== 'Paid',
+                                status: 'published',
+                                metadata: {
+                                    prizePool: postEvent.prizePool || "TBA",
+                                    contactEmail: postEvent.contactEmail,
+                                    contactPhone: postEvent.contactPhone
+                                }
+                            });
+                            if (tourneyError) console.error("Tournament Record Error:", tourneyError);
+                        } catch (err) {
+                            console.error("Tournament record creation failed:", err);
+                        }
+                    }
+
                     // Relational Seating Logic for New Event
                     if (isSeating && postEvent.blocks?.length > 0 && newEvent?.id) {
                         try {
@@ -1934,6 +2021,30 @@ function OrganiserPanel() {
                                 sessions_json: postEvent.sessionsJson || []
                             });
                         }
+                    }
+
+                    // Tournament Event Specific Insertion
+                    if (postEvent.type === "Tournament Event") {
+                        await createTournamentEventMutation({
+                            event_id: eventId,
+                            organiser_id: user?.id,
+                            event_name: postEvent.title,
+                            sport_type: postEvent.tournamentType || 'Cricket',
+                            tournament_format: postEvent.tournamentFormat || 'Knockout',
+                            min_team_size: parseInt(postEvent.minPlayers) || 1,
+                            max_team_size: parseInt(postEvent.maxPlayers) || 20,
+                            registration_fee: parseFloat(postEvent.registrationFee) || 0,
+                            audience_free_access: !!postEvent.audienceFreeAccess,
+                            rules_regulations: postEvent.rulesAndRegulations || "",
+                            venue_name: postEvent.venue,
+                            address: postEvent.address,
+                            status: 'published',
+                            metadata: {
+                                prizes: postEvent.prizes || [],
+                                reportingTime: postEvent.startTime,
+                                sportSpecific: postEvent.sportSpecific || {}
+                            }
+                        });
                     }
                     setPostEvent(getInitialPostEvent());
                     setAddEventStep("select_type");
@@ -3464,6 +3575,17 @@ function OrganiserPanel() {
                                                                                     teamsCount: ev.sports_details?.teams_count || ev.teamsCount,
                                                                                     matchSchedule: ev.sports_details?.match_schedule || ev.matchSchedule,
                                                                                     tournamentType: ev.sports_details?.tournament_type || ev.tournamentType,
+                                                                                    tournamentFormat: ev.sports_details?.tournament_format || ev.tournamentFormat,
+                                                                                    registrationFee: ev.sports_details?.registration_fee || ev.registration_fee || ev.registrationFee,
+                                                                                    minTeamSize: ev.sports_details?.min_team_size || ev.min_team_size || ev.minTeamSize,
+                                                                                    maxTeamSize: ev.sports_details?.max_team_size || ev.max_team_size || ev.maxTeamSize,
+                                                                                    sportName: ev.sports_details?.sport_name || ev.sports_details?.sport_type || ev.sportName,
+                                                                                    audienceAccess: ev.sports_details?.audience_access || (ev.sports_details?.audience_free_access === false ? 'Paid' : 'Free'),
+                                                                                    rulesRegulations: ev.sports_details?.rules_regulations || ev.rulesRegulations,
+                                                                                    termsConditions: ev.sports_details?.terms_conditions || ev.termsConditions,
+                                                                                    prizePool: ev.sports_details?.prize_pool || ev.prizePool,
+                                                                                    contactEmail: ev.sports_details?.contact_email || ev.contactEmail,
+                                                                                    contactPhone: ev.sports_details?.contact_phone || ev.contactPhone,
                                                                                     trainerDetails: ev.sports_details?.trainer_details || ev.trainerDetails,
                                                                                     sessionSlots: ev.sports_details?.session_slots || ev.sessionSlots,
                                                                                     isFeature: (ev.featured === true || ev.isFeature === "Yes") ? "Yes" : "No",
@@ -3611,6 +3733,9 @@ function OrganiserPanel() {
                                                 if (st.id === "Marathon") {
                                                     setActiveTab("marathon_publish");
                                                     setAddEventStep("select_type");
+                                                } else if (st.id === "Tournament") {
+                                                    setPostEvent(pe => ({ ...pe, type: "Tournament", sportType: "Tournament" }));
+                                                    setAddEventStep("form");
                                                 } else {
                                                     setPostEvent(pe => ({ ...pe, sportType: st.id }));
                                                     setAddEventStep("form");
@@ -3665,6 +3790,17 @@ function OrganiserPanel() {
                         if (postEvent.type === "Sports Event" || postEvent.type === "Sports") {
                             return (
                                 <SportsEventForm
+                                    postEvent={postEvent}
+                                    setPostEvent={setPostEvent}
+                                    onCancel={() => { setPostEvent(getInitialPostEvent()); setAddEventStep("select_type"); }}
+                                    onPublish={publishSeatEvent}
+                                    isEditing={!!editingEvent}
+                                />
+                            );
+                        }
+                        if (postEvent.type === "Tournament" || postEvent.type === "Tournament Event") {
+                            return (
+                                <TournamentEventForm
                                     postEvent={postEvent}
                                     setPostEvent={setPostEvent}
                                     onCancel={() => { setPostEvent(getInitialPostEvent()); setAddEventStep("select_type"); }}

@@ -59,6 +59,7 @@ export default function LocationSelectionModal({
   const [selectedCountry, setSelectedCountry] = useState("India");
   const [geoLoading, setGeoLoading] = useState(false);
   const [allCities, setAllCities] = useState([]);
+  const [allDistricts, setAllDistricts] = useState([]);
   const [liveResults, setLiveResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
 
@@ -71,9 +72,23 @@ export default function LocationSelectionModal({
                 if (data) {
                     const formatted = data.map(c => ({
                         name: c.name,
+                        district: c.district?.name,
                         full: `${c.name}, ${c.district?.name || ''}, ${c.district?.state?.name || ''}, ${c.district?.state?.country?.name || ''}`.replace(/, , /g, ', ').replace(/, $/g, '')
                     }));
                     setAllCities(formatted);
+                }
+            });
+
+        supabase.from('districts')
+            .select('name, state:states(name, country:countries(name))')
+            .order('name')
+            .then(({ data }) => {
+                if (data) {
+                    const formatted = data.map(d => ({
+                        name: d.name,
+                        full: `${d.name} District, ${d.state?.name || ''}, ${d.state?.country?.name || ''}`.replace(/, , /g, ', ').replace(/, $/g, '')
+                    }));
+                    setAllDistricts(formatted);
                 }
             });
     }
@@ -193,11 +208,16 @@ export default function LocationSelectionModal({
         return 0;
     });
 
+    // District matches
+    const districtMatches = allDistricts
+        .filter(d => d.name.toLowerCase().includes(search.toLowerCase()))
+        .map(d => ({ ...d, type: 'district' }));
+
     const apiMatches = liveResults
         .filter(lr => !sortedDb.some(dm => dm.name.toLowerCase() === lr.name.toLowerCase()))
         .map(lr => ({ ...lr, type: 'live' }));
 
-    return [...sortedDb, ...apiMatches].slice(0, 10);
+    return [...districtMatches, ...sortedDb, ...apiMatches].slice(0, 10);
   }, [search, allCities, liveResults, selectedCountry]);
 
   if (!isOpen) return null;
@@ -275,21 +295,23 @@ export default function LocationSelectionModal({
                                         onClick={() => {
                                             updateCity(city.name, { 
                                                 city: city.name,
+                                                district: city.district || (city.type === 'district' ? city.name : null),
                                                 fullAddress: city.full,
                                                 lat: city.lat,
                                                 lng: city.lng
-                                            });
+                                            }, city.district || (city.type === 'district' ? city.name : null));
                                             onClose();
                                         }}
                                         className="w-full px-6 py-4 flex flex-col items-start hover:bg-pink-50/50 transition-colors border-b last:border-none border-pink-50 group"
                                     >
                                         <div className="flex items-center gap-4 w-full">
-                                            <div className={`p-2 rounded-lg ${city.type === 'database' ? 'bg-pink-50 text-pink-500' : 'bg-slate-50 text-slate-400'}`}>
+                                            <div className={`p-2 rounded-lg ${city.type === 'district' ? 'bg-purple-50 text-purple-500' : (city.type === 'database' ? 'bg-pink-50 text-pink-500' : 'bg-slate-50 text-slate-400')}`}>
                                                 <MapPin size={16} />
                                             </div>
-                                            <span className="font-bold text-slate-800 text-sm group-hover:text-pink-600 transition-colors">{city.name}</span>
+                                            <span className="font-bold text-slate-800 text-sm group-hover:text-pink-600 transition-colors">{city.name}{city.type === 'district' ? ' District' : ''}</span>
                                             {city.type === 'live' && <span className="ml-auto text-[9px] font-black uppercase tracking-widest text-slate-400 bg-slate-100 px-2 py-1 rounded-full">Global</span>}
-                                            {city.type === 'database' && <span className="ml-auto text-[9px] font-black uppercase tracking-widest text-emerald-500 bg-emerald-50 px-2 py-1 rounded-full">Verified</span>}
+                                            {city.type === 'database' && <span className="ml-auto text-[9px] font-black uppercase tracking-widest text-emerald-500 bg-emerald-50 px-2 py-1 rounded-full">City</span>}
+                                            {city.type === 'district' && <span className="ml-auto text-[9px] font-black uppercase tracking-widest text-purple-500 bg-purple-50 px-2 py-1 rounded-full">District</span>}
                                         </div>
                                         <div className="pl-12 text-[11px] text-slate-400 font-medium truncate w-full text-left mt-1">
                                             {city.full.split(',').slice(1).join(',').trim()}

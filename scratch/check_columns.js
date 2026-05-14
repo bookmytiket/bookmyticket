@@ -1,26 +1,40 @@
+
 const { createClient } = require('@supabase/supabase-js');
-const fs = require('fs');
-let url, key;
+const dotenv = require('dotenv');
+const path = require('path');
 
-try {
-    const env = fs.readFileSync('/home/raja/bookmyticket/.env.local', 'utf8');
-    url = env.match(/NEXT_PUBLIC_SUPABASE_URL=(.*)/)?.[1]?.trim();
-    key = env.match(/NEXT_PUBLIC_SUPABASE_ANON_KEY=(.*)/)?.[1]?.trim();
-} catch (e) {
-    const env = fs.readFileSync('/home/raja/bookmyticket/mobile/.env', 'utf8');
-    url = env.match(/EXPO_PUBLIC_SUPABASE_URL=(.*)/)?.[1]?.trim();
-    key = env.match(/EXPO_PUBLIC_SUPABASE_ANON_KEY=(.*)/)?.[1]?.trim();
-}
+const envPath = path.join(process.cwd(), '.env.local');
+dotenv.config({ path: envPath });
 
-const supabase = createClient(url, key);
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-async function check() {
-  const { data, error } = await supabase
+const supabase = createClient(supabaseUrl, supabaseKey);
+
+async function checkColumns() {
+  // Check events table
+  const { data: eventData, error: eventError } = await supabase
     .from('events')
     .select('*')
     .limit(1);
-    
-  if (error) console.error(error);
-  else console.log(Object.keys(data[0]));
+
+  if (eventData && eventData[0]) {
+    console.log('Events columns:', Object.keys(eventData[0]));
+    console.log('Events status:', eventData[0].status);
+    console.log('Events publish_status:', eventData[0].publish_status);
+  }
+
+  // Check tournament_events table
+  const { data: tourneyData, error: tourneyError } = await supabase
+    .from('tournament_events')
+    .select('*')
+    .limit(1);
+
+  if (tourneyData && tourneyData[0]) {
+    console.log('Tournament Events columns:', Object.keys(tourneyData[0]));
+  } else if (tourneyError) {
+    console.error('Tournament Events error:', tourneyError);
+  }
 }
-check();
+
+checkColumns();

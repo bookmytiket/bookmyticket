@@ -13,10 +13,12 @@ export default function PackageSelector({
             <div className="flex items-center justify-between mb-2">
                 <div>
                     <h3 className="text-xl font-black text-slate-900 uppercase italic tracking-tighter">
-                        {type === "event" ? "Select Tickets" : "Choose Package"}
+                        {type === "event" || type === "marathon" || type === "tournament" ? "Select Category" : "Choose Package"}
                     </h3>
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                        {type === "event" ? "Different tiers for different vibes" : "Curated service experiences"}
+                        {type === "event" ? "Different tiers for different vibes" : 
+                         type === "marathon" ? "Choose your distance" :
+                         type === "tournament" ? "Pick your team tier" : "Curated service experiences"}
                     </p>
                 </div>
                 <div className="w-10 h-10 bg-orange-100 rounded-2xl flex items-center justify-center text-orange-500">
@@ -66,7 +68,9 @@ export default function PackageSelector({
                                     ₹{pkg.price.toLocaleString()}
                                 </div>
                                 <div className="text-[10px] font-black text-slate-400 uppercase italic">
-                                    {type === "event" ? "per ticket" : "starting from"}
+                                    {type === "event" ? "per ticket" : 
+                                     type === "marathon" ? "per runner" :
+                                     type === "tournament" ? "per team" : "starting from"}
                                 </div>
                             </div>
                         </div>

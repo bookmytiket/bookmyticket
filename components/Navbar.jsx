@@ -149,7 +149,7 @@ const DEFAULT_CATEGORIES = [
 ];
 
 export default function Navbar({ compact = false }) {
-  const { user, logout, selectedCity, updateCity } = useAuth();
+  const { user, logout, selectedCity, selectedDistrict, updateCity } = useAuth();
   const [scrolled, setScrolled] = useState(false);
   const [search, setSearch] = useState("");
   const [profileOpen, setProfileOpen] = useState(false);
@@ -429,8 +429,9 @@ export default function Navbar({ compact = false }) {
     if (!coupons || coupons.length === 0) return null;
 
     const current = coupons[currentIndex];
-    const brandName = current.brand_name || current.brandName;
-    const title = current.title;
+    if (!current) return null;
+    const brandName = current.brand_name || current.brandName || "Special Offer";
+    const title = current.title || "Limited Time Deal";
     const bannerUrl = current.banner_url || current.bannerUrl || 'https://images.unsplash.com/photo-1596462502278-27bf85033e5a?w=400';
     const discount = current.discountValue ? `${current.discountValue}${current.discountType === 'Percentage' ? '%' : '₹'} OFF` : (current.discount || 'OFFER');
 
@@ -585,7 +586,7 @@ export default function Navbar({ compact = false }) {
                   overflow: 'hidden', 
                   textOverflow: 'ellipsis' 
                 }}>
-                  {mounted ? (selectedCity || "Location") : "Location"}
+                  {mounted ? (selectedDistrict || selectedCity || "Location") : "Location"}
                 </div>
               </motion.button>
             )}
@@ -674,7 +675,7 @@ export default function Navbar({ compact = false }) {
             >
               <MapPin size={18} color={scrolled ? "#fff" : "#f84464"} strokeWidth={2.5} />
               <div suppressHydrationWarning style={{ fontWeight: 800, fontSize: '14px', letterSpacing: '-0.01em' }}>
-                {mounted ? (selectedCity || "Select Location") : "Select Location"}
+                {mounted ? (selectedDistrict || selectedCity || "Select Location") : "Select Location"}
               </div>
               <ChevronDown size={14} opacity={0.5} />
             </motion.button>

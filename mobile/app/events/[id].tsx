@@ -239,6 +239,11 @@ export default function EventDetailScreen() {
       );
       return;
     }
+    if (event.type === 'Tournament') {
+      router.push({ pathname: '/events/book', params: { id: event.id, type: 'tournament' } });
+      return;
+    }
+
     router.push({ pathname: '/events/book', params: { id: event.id } });
   };
 
@@ -601,7 +606,7 @@ export default function EventDetailScreen() {
                             return `₹${cat.price || 0}`;
                           })()}
                         </Text>
-                        <Text style={{ fontSize: 9, fontWeight: '800', color: colors.muted, textTransform: 'uppercase' }}>PER RUNNER</Text>
+                        <Text style={{ fontSize: 9, fontWeight: '800', color: colors.muted, textTransform: 'uppercase' }}>{event?.type === 'Tournament' ? 'PER TEAM' : (event?.type === 'Marathon' ? 'PER RUNNER' : 'PER PERSON')}</Text>
                       </RNView>
                     </RNView>
                     
@@ -740,11 +745,30 @@ export default function EventDetailScreen() {
             end={{ x: 1, y: 0 }}
             style={styles.bookBtnGradient}
           >
-            <Ticket size={18} color="#fff" />
-            <Text style={styles.bookBtnText}>Book Now</Text>
+            {event?.type === 'Tournament' ? (
+              <>
+                <Users size={18} color="#fff" />
+                <Text style={styles.bookBtnText}>Register Team</Text>
+              </>
+            ) : (
+              <>
+                <Ticket size={18} color="#fff" />
+                <Text style={styles.bookBtnText}>Book Now</Text>
+              </>
+            )}
             <ChevronRight size={16} color="#fff" />
           </LinearGradient>
         </Pressable>
+        {event?.type === 'Tournament' && dynamicConfig?.audienceFreeAccess && (
+          <Pressable 
+            onPress={() => router.push({ pathname: '/events/book', params: { id: event.id, type: 'audience_free' } })} 
+            style={[styles.bookBtn, { marginLeft: 10, flex: 0.6 }]}
+          >
+            <RNView style={[styles.bookBtnGradient, { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border }]}>
+              <Text style={[styles.bookBtnText, { color: colors.text, fontSize: 10 }]}>Free Visitor Pass</Text>
+            </RNView>
+          </Pressable>
+        )}
       </RNView>
     </RNView>
   );

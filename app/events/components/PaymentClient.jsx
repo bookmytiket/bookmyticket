@@ -36,6 +36,11 @@ export default function PaymentClient({ id: eventId, bookingId: propBookingId })
         [bookingId],
         { enabled: !!bookingId }
     );
+    const { data: event } = useSupabaseQuery('events', (q) => 
+        q.eq('id', eventId).single(),
+        [eventId],
+        { enabled: !!eventId }
+    );
     const { data: gateways } = useSupabaseQuery('payment_gateways', (q) => q, []);
 
     useEffect(() => {
@@ -513,9 +518,15 @@ export default function PaymentClient({ id: eventId, bookingId: propBookingId })
                 <div className="bg-[#fcf9f299] p-6 lg:p-[40px_48px] flex flex-col border-t lg:border-t-0 lg:border-l border-black/5 backdrop-blur-md">
                     <h3 style={{ fontSize: '11px', fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.25em', marginBottom: '32px' }}>Transaction Overview</h3>
                     
+                    {event?.bannerPreview && (
+                        <div style={{ width: '100%', height: '160px', borderRadius: '24px', overflow: 'hidden', marginBottom: '32px', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', border: '1px solid rgba(0,0,0,0.03)' }}>
+                            <img src={event.bannerPreview || event.img} style={{ width: '100%', height: '100%', objectCover: 'cover' }} alt="" />
+                        </div>
+                    )}
+
                     <div style={{ marginBottom: '32px', position: 'relative' }}>
                         <div style={{ position: 'absolute', left: '-20px', top: '0', bottom: '0', width: '4px', background: 'linear-gradient(to bottom, #FF1CF7, #b249f8)', borderRadius: '2px' }}></div>
-                        <p style={{ fontSize: '22px', fontWeight: 900, color: '#111827', margin: '0 0 6px 0', letterSpacing: '-0.03em' }}>{booking.event_name || 'Event Ticket'}</p>
+                        <p style={{ fontSize: '22px', fontWeight: 900, color: '#111827', margin: '0 0 6px 0', letterSpacing: '-0.03em' }}>{booking.event_name || event?.title || 'Event Ticket'}</p>
                         <p style={{ fontSize: '14px', color: '#64748b', margin: 0, fontWeight: 600 }}>{booking.ticket_count}x Official Registration</p>
                     </div>
 

@@ -10,6 +10,7 @@ export function AuthProvider({ children }) {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
     const [selectedCity, setSelectedCity] = useState("");
+    const [selectedDistrict, setSelectedDistrict] = useState("");
     const [locationHierarchy, setLocationHierarchy] = useState({ country: "", state: "", district: "", city: "", pincode: "" });
     const isProcessingRef = useRef(false);
     const ongoingFetchRef = useRef(null);
@@ -33,8 +34,10 @@ export function AuthProvider({ children }) {
             }
 
             const storedCity = localStorage.getItem("selectedCity");
+            const storedDistrict = localStorage.getItem("selectedDistrict");
             if (storedCity) {
                 setSelectedCity(storedCity);
+                if (storedDistrict) setSelectedDistrict(storedDistrict);
                 try {
                     const storedHierarchy = localStorage.getItem("locationHierarchy");
                     if (storedHierarchy) setLocationHierarchy(JSON.parse(storedHierarchy));
@@ -44,7 +47,9 @@ export function AuthProvider({ children }) {
             } else {
                 // First visit logic: Try geo-detection, then default
                 setSelectedCity("Coimbatore");
+                setSelectedDistrict("Coimbatore");
                 localStorage.setItem("selectedCity", "Coimbatore");
+                localStorage.setItem("selectedDistrict", "Coimbatore");
                 
                 // Fire and forget geo-detection to improve initial experience
                 if ("geolocation" in navigator) {
@@ -63,7 +68,7 @@ export function AuthProvider({ children }) {
                                         lng: longitude,
                                         address: `${geo.city}, ${geo.state}, ${geo.country}`
                                     };
-                                    updateCity(geo.city, hierarchy);
+                                    updateCity(geo.city, hierarchy, geo.district);
                                 }
                             } catch (e) {}
                         },
@@ -286,9 +291,14 @@ export function AuthProvider({ children }) {
     return ongoingFetchRef.current;
     };
 
-    const updateCity = async (city, hierarchy = null) => {
+    const updateCity = async (city, hierarchy = null, district = null) => {
         setSelectedCity(city);
         localStorage.setItem("selectedCity", city);
+        
+        const finalDistrict = district || hierarchy?.district || city; // Fallback to city name if district missing
+        setSelectedDistrict(finalDistrict);
+        localStorage.setItem("selectedDistrict", finalDistrict);
+
         if (hierarchy) {
             setLocationHierarchy(hierarchy);
             localStorage.setItem("locationHierarchy", JSON.stringify(hierarchy));
@@ -425,7 +435,7 @@ export function AuthProvider({ children }) {
     };
 
     return (
-        <AuthContext.Provider value={{ user, login, logout, loginWithGoogle, loading, selectedCity, updateCity, locationHierarchy }}>
+        <AuthContext.Provider value={{ user, login, logout, loginWithGoogle, loading, selectedCity, selectedDistrict, updateCity, locationHierarchy }}>
             {children}
         </AuthContext.Provider>
     );

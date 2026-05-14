@@ -57,6 +57,52 @@ export default function TicketScanningScreen() {
     Vibration.vibrate(100);
 
     try {
+      if (data.startsWith('TEAM-')) {
+        // Tournament Team QR Scan
+        const teamId = data.replace('TEAM-', '');
+        const { data: team, error: teamError } = await supabase
+          .from('tournament_teams')
+          .select(`
+            *,
+            tournament_events (
+              title,
+              event_date
+            )
+          `)
+          .eq('id', teamId)
+          .single();
+
+        if (teamError || !team) {
+          setScanStatus('invalid');
+          setLastResult({ message: 'Invalid Team QR Code' });
+          return;
+        }
+
+        // Add to scan history
+        const { error: scanError } = await supabase
+          .from('tournament_qr_scans')
+          .insert({
+            team_id: team.id,
+            scanned_by: user?.id,
+            scan_location: 'Main Entry'
+          });
+
+        const result = {
+          title: team.tournament_events?.title || 'Tournament',
+          customer: team.team_name,
+          category: 'Team Registration',
+          quantity: team.captain_name,
+          message: 'Team Access Granted'
+        };
+
+        setScanStatus('success');
+        setLastResult(result);
+        setScanHistory(prev => [{ ...result, id: Math.random().toString(), time: new Date().toISOString() }, ...prev].slice(0, 10));
+        Vibration.vibrate(200);
+        return;
+      }
+
+      // Standard Ticket Scan
       const { data: ticket, error: ticketError } = await supabase
         .from('tickets')
         .select(`

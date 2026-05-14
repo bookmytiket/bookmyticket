@@ -40,13 +40,16 @@ import {
 import { getFeeBreakdown, resolveFeeSettings } from '@/lib/feeBreakdown';
 import VisualSeatPicker from '@/components/VisualSeatPicker';
 import { DataService } from '../../services/DataService';
+import TournamentRegistrationWizard from '@/components/TournamentRegistrationWizard';
 
 export default function BookEventScreen() {
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
   const router = useRouter();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, type } = useLocalSearchParams<{ id: string, type: string }>();
   const { user } = useAuth();
+  const isTournament = type === 'tournament';
+  const isAudienceFree = type === 'audience_free';
 
   const [event, setEvent] = useState<any>(null);
   const [marathonCategories, setMarathonCategories] = useState<any[]>([]);
@@ -640,6 +643,60 @@ export default function BookEventScreen() {
     return (
       <RNView style={[styles.container, { backgroundColor: colors.background }]}>
         <RNView style={[styles.skeletonHero, { backgroundColor: colors.border }]} />
+      </RNView>
+    );
+  }
+
+  if (isTournament) {
+    return (
+      <RNView style={[styles.container, { backgroundColor: colors.background }]}>
+        <RNView style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+          <Pressable onPress={() => router.back()} hitSlop={12}>
+            <ArrowLeft size={22} color={colors.text} />
+          </Pressable>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Team Registration</Text>
+          <RNView style={{ width: 22 }} />
+        </RNView>
+        <TournamentRegistrationWizard 
+          event={event} 
+          user={user} 
+          onComplete={(team: any) => {
+            setSuccess(true);
+          }} 
+        />
+      </RNView>
+    );
+  }
+
+  if (isAudienceFree) {
+    return (
+      <RNView style={[styles.container, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', padding: 30 }]}>
+        <RNView style={{ alignItems: 'center', gap: 20 }}>
+          <LinearGradient
+            colors={['#fdf2f8', '#fce7f3']}
+            style={{ width: 120, height: 120, borderRadius: 60, alignItems: 'center', justifyContent: 'center' }}
+          >
+            <Users size={60} color="#db2777" />
+          </LinearGradient>
+          <View style={{ alignItems: 'center', gap: 10 }}>
+            <Text style={{ fontSize: 24, fontWeight: '900', color: colors.text, textAlign: 'center' }}>Free Visitor Pass</Text>
+            <Text style={{ fontSize: 14, fontWeight: '600', color: colors.muted, textAlign: 'center' }}>
+              Claim your complimentary entry to the tournament as an audience member.
+            </Text>
+          </View>
+          <Pressable 
+            onPress={handleBook} 
+            disabled={submitting}
+            style={{ width: '100%', height: 60, borderRadius: 20, overflow: 'hidden', marginTop: 20 }}
+          >
+            <LinearGradient
+              colors={['#db2777', '#7c3aed']}
+              style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
+            >
+              {submitting ? <ActivityIndicator color="#fff" /> : <Text style={{ color: '#fff', fontSize: 16, fontWeight: '900' }}>CONFIRM PASS</Text>}
+            </LinearGradient>
+          </Pressable>
+        </RNView>
       </RNView>
     );
   }

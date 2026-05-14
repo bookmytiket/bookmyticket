@@ -6,9 +6,34 @@ import { supabase } from '../lib/supabase';
  */
 const DataService = {
   /**
-   * Fetches all active events with consistent filtering and ordering.
+   * Fetches all active events from the unified Public API
+   * to ensure strict data mapping and prevent organizer leakage.
+   */
+  async getPublicEvents(city?: string, district?: string) {
+    try {
+      const baseUrl = process.env.EXPO_PUBLIC_API_URL || 'https://bookmyticket.com'; // Adjust to real production URL
+      let queryParams = [];
+      if (district) queryParams.push(`district=${district}`);
+      else if (city) queryParams.push(`city=${city}`);
+      
+      const url = `${baseUrl}/api/events/public${queryParams.length > 0 ? `?${queryParams.join('&')}` : ''}`;
+      
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('API fetch failed');
+      
+      return await response.json();
+    } catch (err) {
+      console.warn('DataService.getPublicEvents failed, falling back to direct Supabase:', err);
+      // Fallback to legacy direct fetch if API is unreachable
+      return this.getEvents();
+    }
+  },
+
+  /**
+   * Fetches all active events with consistent filtering and ordering (Legacy).
    */
   async getEvents() {
+
     const { data, error } = await supabase
       .from('events')
       .select('*')

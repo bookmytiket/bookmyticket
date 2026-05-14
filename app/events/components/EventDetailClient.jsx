@@ -3,7 +3,8 @@ import React, { useMemo, useEffect, useState } from 'react';
 import { 
     Calendar, MapPin, Clock, Users, Languages, Share2, Heart, 
     CheckCircle, ShieldCheck, Warehouse, Info, Sparkles, ChevronRight,
-    ArrowRight, CheckCircle2, InfoIcon, ArrowLeft, Phone, MessageCircle, ChevronDown, HelpCircle
+    ArrowRight, CheckCircle2, InfoIcon, ArrowLeft, Phone, MessageCircle, ChevronDown, HelpCircle,
+    Trophy
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -12,6 +13,7 @@ import { useAuth } from "@/components/AuthContext";
 import Footer from '@/components/Footer';
 import EventMap from './EventMap';
 import { getFeeBreakdown, resolveFeeSettings, DEFAULT_FEE_SETTINGS } from '@/app/utils/feeBreakdown';
+import TournamentRegistration from '@/app/organiser/components/TournamentRegistration';
 
 const DEFAULT_IMG = "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&q=80";
 const DEFAULT_FEATURES = [
@@ -66,6 +68,7 @@ export default function EventDetailClient({ id }) {
     const router = useRouter();
     const { user } = useAuth();
     const [storageLoaded, setStorageLoaded] = useState(false);
+    const [showTournamentReg, setShowTournamentReg] = useState(false);
     useEffect(() => { setStorageLoaded(true); }, []);
 
     const { data: rawEvent, loading: eventLoading } = useSupabaseQuery('events', (q) => 
@@ -76,13 +79,22 @@ export default function EventDetailClient({ id }) {
         user ? q.select('*').eq('user_id', user.id).eq('event_id', id) : q.select('*').limit(0)
     , [user, id]);
 
-    const existingBooking = userBookings && userBookings.length > 0;
+    const confirmedBooking = userBookings?.find(b => 
+        b.status === 'Confirmed' || b.payment_status === 'paid' || b.payment_status === 'SUCCESS'
+    );
+    const existingBooking = !!confirmedBooking;
     
-    // Fetch Marathon Categories if it's a marathon
+    // Fetch Marathon/Tournament Specifics
     const isMarathon = rawEvent?.type === 'Marathon';
-    const { data: marathonCategories } = useSupabaseQuery('marathon_categories', (q) => 
-        q.select('*').eq('marathon_id', id).order('distance_km', { ascending: true })
-    , [id], { enabled: isMarathon });
+    const isTournament = rawEvent?.type === 'Tournament' || rawEvent?.type === 'Tournament Event';
+    
+    const { data: tournamentDetails } = useSupabaseQuery('tournament_events', (q) => 
+        q.select('*').eq('id', id).maybeSingle()
+    , [id], { enabled: isTournament });
+
+    const { data: registeredTeams } = useSupabaseQuery('tournament_teams', (q) => 
+        q.select('*').eq('tournament_event_id', tournamentDetails?.id || id)
+    , [tournamentDetails?.id, id], { enabled: isTournament, refreshOn: ['tournament_teams'] });
 
     const event = useMemo(() => {
         if (!rawEvent) return null;
@@ -132,6 +144,19 @@ export default function EventDetailClient({ id }) {
     }, [event, isExpired]);
 
     const [selectedCatId, setSelectedCatId] = useState(null);
+    const [marathonCategories, setMarathonCategories] = useState([]);
+
+    const { data: marathonData } = useSupabaseQuery('marathon_categories', (q) => 
+        q.select('*').eq('marathon_id', id).order('distance_km', { ascending: true })
+    , [id], { enabled: isMarathon });
+
+    useEffect(() => {
+        if (marathonData) {
+            setMarathonCategories(marathonData);
+        } else if (isMarathon && event?.dynamic_config?.marathonCategories) {
+            setMarathonCategories(event.dynamic_config.marathonCategories);
+        }
+    }, [marathonData, isMarathon, event?.dynamic_config]);
 
     const parsedConfig = useMemo(() => {
         if (!event?.dynamic_config) return {};
@@ -155,8 +180,15 @@ export default function EventDetailClient({ id }) {
                 ageGroup: c.age_group
             }));
         }
+        if (isTournament && tournamentDetails) {
+            return [{
+                id: tournamentDetails.id,
+                name: "Team Registration",
+                price: tournamentDetails.registration_fee || 0
+            }];
+        }
         return parsedConfig?.categories || [];
-    }, [isMarathon, marathonCategories, parsedConfig?.categories]);
+    }, [isMarathon, marathonCategories, isTournament, tournamentDetails, parsedConfig?.categories]);
     const selectedCat = useMemo(() => {
         if (categories.length === 0) return null;
         return categories.find(c => c.id === selectedCatId) || categories[0];
@@ -242,6 +274,69 @@ export default function EventDetailClient({ id }) {
                     {/* Main Content */}
                     <div className="lg:col-span-8 flex flex-col gap-6">
                         <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm p-6 md:p-10">
+                            {isTournament && tournamentDetails && (
+                                <div className="mb-12 space-y-8">
+                                    <div className="p-8 bg-slate-900 rounded-[3rem] text-white border border-white/5 relative overflow-hidden group">
+                                        <div className="absolute top-0 right-0 w-64 h-64 bg-pink-500/10 blur-[100px] -translate-y-1/2 translate-x-1/2" />
+                                        
+                                        <div className="relative z-10 space-y-8">
+                                            <div className="flex items-center gap-6">
+                                                <div className="w-16 h-16 rounded-3xl bg-white/10 flex items-center justify-center text-pink-400">
+                                                    <Trophy size={32} />
+                                                </div>
+                                                <div>
+                                                    <h2 className="text-2xl font-black uppercase tracking-tighter italic">Tournament Details</h2>
+                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{tournamentDetails.sport_type} Competition</p>
+                                                </div>
+                                            </div>
+
+                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                                                <div className="p-5 bg-white/5 rounded-3xl border border-white/5">
+                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Format</p>
+                                                    <p className="text-sm font-black text-white uppercase">{tournamentDetails.tournament_format}</p>
+                                                </div>
+                                                <div className="p-5 bg-white/5 rounded-3xl border border-white/5">
+                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Team Size</p>
+                                                    <p className="text-sm font-black text-white">{tournamentDetails.min_team_size}-{tournamentDetails.max_team_size} Players</p>
+                                                </div>
+                                                <div className="p-5 bg-white/5 rounded-3xl border border-white/5">
+                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Registered</p>
+                                                    <p className="text-sm font-black text-pink-400">{registeredTeams?.length || 0} Teams</p>
+                                                </div>
+                                                <div className="p-5 bg-white/5 rounded-3xl border border-white/5">
+                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Prize Pool</p>
+                                                    <p className="text-sm font-black text-emerald-400">₹{tournamentDetails.metadata?.prizePool || "TBA"}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {registeredTeams?.length > 0 && (
+                                        <div className="space-y-6">
+                                            <h2 className="text-xl font-black text-slate-900 uppercase tracking-tight flex items-center gap-3">
+                                                <Users size={24} className="text-pink-500" /> Registered Teams
+                                            </h2>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                {registeredTeams.map(team => (
+                                                    <div key={team.id} className="p-6 bg-white border border-slate-100 rounded-3xl flex items-center gap-5 hover:border-pink-200 transition-all group">
+                                                        <div className="w-14 h-14 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400 overflow-hidden shrink-0">
+                                                            {team.team_logo_url ? <img src={team.team_logo_url} className="w-full h-full object-cover" /> : <Users size={24} />}
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <h3 className="text-sm font-black text-slate-900 uppercase truncate">{team.team_name}</h3>
+                                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Captain: {team.captain_name}</p>
+                                                        </div>
+                                                        <div className="px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-xl text-[9px] font-black uppercase">Confirmed</div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                    
+                                    <div className="h-px bg-slate-100 w-full" />
+                                </div>
+                            )}
+
                             <h2 className="text-xl font-black text-slate-900 uppercase tracking-tighter mb-4 flex items-center gap-3">
                                 <Info className="text-pink-500" size={24} /> About the Event
                             </h2>
@@ -356,6 +451,26 @@ export default function EventDetailClient({ id }) {
                                     >
                                         View My Tickets
                                     </button>
+                                    <button 
+                                        onClick={() => confirmedBooking ? window.location.reload() : null} // This is a trick to bypass existingBooking if user clicks "Book Again"
+                                        className="w-full py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-pink-500 transition-colors"
+                                        style={{ display: 'none' }} // We'll show it below in a cleaner way
+                                    >
+                                        Register Another
+                                    </button>
+                                    <div className="pt-4 border-t border-slate-50 flex flex-col gap-2">
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase text-center italic">Want to register another {isTournament ? 'team' : 'ticket'}?</p>
+                                        <button 
+                                            onClick={() => {
+                                                // Temporarily hide existing booking to allow new registration
+                                                const url = `/events/book?id=${id}${isTournament ? '' : ''}`;
+                                                router.push(url);
+                                            }}
+                                            className="text-[11px] font-black text-pink-500 uppercase tracking-widest hover:underline text-center"
+                                        >
+                                            Click here to Register Again
+                                        </button>
+                                    </div>
                                 </div>
                             ) : (
                                 <>
@@ -365,7 +480,9 @@ export default function EventDetailClient({ id }) {
                                             <span className="text-4xl font-black text-slate-900 tracking-tighter">
                                                 ₹{displayPrice}
                                             </span>
-                                            <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">/person</span>
+                                            <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                                                /{isTournament ? 'team' : 'person'}
+                                            </span>
                                         </div>
                                     </div>
 
@@ -404,6 +521,23 @@ export default function EventDetailClient({ id }) {
                                         <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3">
                                             <ShieldCheck size={16} className="text-rose-500" />
                                             <p className="text-[10px] font-bold text-rose-600 uppercase tracking-widest">Closed</p>
+                                        </div>
+                                    ) : isTournament ? (
+                                        <div className="space-y-4">
+                                            <button 
+                                                onClick={() => router.push('/events/book?id=' + id)}
+                                                className="w-full py-5 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-[24px] font-black uppercase tracking-[0.3em] text-[12px] shadow-2xl shadow-pink-500/40 hover:scale-[1.02] active:scale-95 transition-all"
+                                            >
+                                                Register Team
+                                            </button>
+                                            {event.dynamic_config?.audienceFreeAccess && (
+                                                <button 
+                                                    onClick={() => router.push(`/events/book?id=${id}&type=audience_free`)}
+                                                    className="w-full py-4 bg-slate-900 text-white rounded-[24px] font-bold uppercase tracking-[0.2em] text-[10px] hover:bg-slate-800 transition-all"
+                                                >
+                                                    Get Free Visitor Pass
+                                                </button>
+                                            )}
                                         </div>
                                     ) : (
                                         <button 
@@ -446,6 +580,13 @@ export default function EventDetailClient({ id }) {
                 </div>
             </div>
             <Footer />
+
+            {showTournamentReg && (
+                <TournamentRegistration 
+                    event={event} 
+                    onClose={() => setShowTournamentReg(false)} 
+                />
+            )}
         </main>
     );
 }

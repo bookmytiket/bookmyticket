@@ -74,6 +74,9 @@ export default function CheckoutClient({ id }) {
     const [qty, setQty] = useState(initialQty);
     const selectedPackageName = searchParams.get('package');
     const regDataParam = searchParams.get('regData');
+    const participantParam = searchParams.get('participant');
+    const teamParam = searchParams.get('team');
+    const bookingType = searchParams.get('type');
 
     const [storageLoaded, setStorageLoaded] = useState(false);
     const [feeSettings, setFeeSettings] = useState(DEFAULT_FEE_SETTINGS);
@@ -115,7 +118,6 @@ export default function CheckoutClient({ id }) {
             if (c.applicable_events && c.applicable_events.length > 0) {
                 if (!c.applicable_events.includes(id)) return false;
             }
-            // Check ticket limits
             if (qty < (c.min_tickets || 1)) return false;
             if (c.max_tickets && qty > c.max_tickets) return false;
             
@@ -123,7 +125,6 @@ export default function CheckoutClient({ id }) {
         });
     }, [availableCoupons, id, qty]);
 
-    // Toast Timer
     useEffect(() => {
         if (notification) {
             const timer = setTimeout(() => setNotification(null), 5000);
@@ -149,7 +150,6 @@ export default function CheckoutClient({ id }) {
         }
     }, [rawFeeSettings]);
     
-    // Auto-revalidate coupon on qty change
     useEffect(() => {
         if (appliedCoupon) {
             if (qty < (appliedCoupon.min_tickets || 1)) {
@@ -163,7 +163,6 @@ export default function CheckoutClient({ id }) {
             }
         }
     }, [qty, appliedCoupon]);
-
 
     useEffect(() => {
         if (isSuccess && existingBooking && existingBooking.status === "Confirmed") {
@@ -187,7 +186,6 @@ export default function CheckoutClient({ id }) {
         }
     }, [isSuccess, existingBooking, event]);
 
-    
     const baseAmount = useMemo(() => {
         if (selectedSeats.length > 0) {
             return selectedSeats.reduce((s, seat) => s + (seat.isFree ? 0 : Number(seat.price) || 0), 0);
@@ -304,31 +302,66 @@ export default function CheckoutClient({ id }) {
 
             if (error) throw error;
 
-            // ─── Save structured runner identity to runner_registrations ───
             try {
-                await fetch('/api/runner-registration', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        eventId:       String(event.id),
-                        bookingId:     booking.id,
-                        userId:        user.id,
-                        identity: {
-                            fullName: regData['Full Name'] || regData.fullName || user.name || '',
-                            email:    regData['Email Address'] || regData.email || user.identifier || user.email || '',
-                            phone:    regData['Phone Number'] || regData.phone || user.phone || '',
-                            dob:      regData['Date of Birth'] || regData.dob || '',
-                            gender:   regData['Gender'] || regData.gender || '',
-                        },
-                        details:       regData,
-                        category:      selectedPackageName || '',
-                        paymentStatus: isFree ? 'paid' : 'pending',
-                    })
-                });
+                if (participantParam) {
+                    const participantData = JSON.parse(participantParam);
+                    await fetch('/api/runner-registration', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            eventId:       String(event.id),
+                            bookingId:     booking.id,
+                            userId:        user.id,
+                            identity: {
+                                fullName: participantData.fullName || user.name || '',
+                                email:    participantData.email || user.identifier || user.email || '',
+                                phone:    participantData.phone || user.phone || '',
+                                dob:      participantData.dob || '',
+                            },
+                            details:       participantData,
+                            category:      selectedPackageName || '',
+                            paymentStatus: isFree ? 'paid' : 'pending',
+                        })
+                    });
+                }
             } catch (regErr) {
                 console.warn('[runner-registration] Save failed (non-critical):', regErr);
             }
-            // ─────────────────────────────────────────────────────────────
+
+            try {
+                if (teamParam) {
+                    const teamData = JSON.parse(teamParam);
+                    const { data: team, error: teamError } = await supabase
+                        .from('tournament_teams')
+                        .insert({
+                            tournament_event_id: String(event.id),
+                            booking_id: booking.id,
+                            team_name: teamData.teamName,
+                            captain_name: teamData.captainName,
+                            captain_mobile: teamData.captainMobile,
+                            captain_email: teamData.captainEmail || user.email || "",
+                            registration_status: 'pending_approval',
+                            payment_status: isFree ? 'paid' : 'pending',
+                            metadata: { category: selectedPackageName, city: teamData.city }
+                        })
+                        .select()
+                        .single();
+
+                    if (teamError) throw teamError;
+
+                    if (teamData.members && teamData.members.length > 0) {
+                        const membersToInsert = teamData.members.map(m => ({
+                            team_id: team.id,
+                            member_name: m.name,
+                            role: m.role,
+                            jersey_number: m.jerseyNumber
+                        }));
+                        await supabase.from('tournament_team_members').insert(membersToInsert);
+                    }
+                }
+            } catch (tourneyErr) {
+                console.warn('[tournament-registration] Save failed (non-critical):', tourneyErr);
+            }
 
             if (isFree) {
                 setLastBooking({
@@ -474,7 +507,6 @@ export default function CheckoutClient({ id }) {
 
     return (
         <main className="min-h-screen bg-[#FDFCFB]">
-            {/* Custom UI Notification */}
             <AnimatePresence>
                 {notification && (
                     <motion.div 
@@ -499,233 +531,242 @@ export default function CheckoutClient({ id }) {
                 )}
             </AnimatePresence>
 
-            <div className="max-w-[850px] mx-auto px-4 md:px-6 py-4">
-                <div className="mb-12">
-                    <button 
-                        onClick={() => router.push(`/events/detail?id=${id}`)}
-                        className="inline-flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-slate-900 transition-colors"
-                    >
-                        <ChevronLeft size={16} /> Back to Event Registration
-                    </button>
-                </div>
+            <div className="w-full px-4 md:px-12 py-2 space-y-2">
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                        <button 
+                            onClick={() => router.push(`/events/detail?id=${id}`)}
+                            className="inline-flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-slate-900 transition-colors"
+                        >
+                            <ChevronLeft size={16} /> Back to Event Registration
+                        </button>
+                        <div className="px-4 py-2 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg">
+                            Step 1 of 2
+                        </div>
+                    </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
-                    
-                    {/* Left: Checkout Form */}
-                    <div className="lg:col-span-7 space-y-8">
-                        <div className="bg-white rounded-[40px] p-8 md:p-12 border border-slate-100 shadow-sm">
-                            <div className="flex items-center justify-between mb-12">
-                                <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter">Confirmation</h2>
-                                <div className="px-4 py-2 bg-yellow-400 text-black rounded-xl text-[10px] font-black uppercase tracking-widest">
-                                    Step 2 of 2
+                    <div className="bg-white rounded-[40px] border border-slate-100 shadow-2xl overflow-hidden">
+                        <div className="flex flex-col lg:flex-row gap-0">
+                            <div className="lg:w-[600px] relative shrink-0 border-r border-slate-50 overflow-hidden bg-slate-900">
+                                <div className="h-64 lg:h-full lg:min-h-[600px] relative">
+                                    <img src={event.img} alt="" className="w-full h-full object-cover opacity-60" />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent lg:bg-gradient-to-r" />
+                                    <div className="absolute bottom-12 left-12 right-12">
+                                        <h3 className="text-3xl font-black text-white uppercase tracking-tight leading-tight mb-3 drop-shadow-xl">{event.title}</h3>
+                                        <div className="flex items-center gap-2 text-[10px] font-black text-white/90 uppercase tracking-[0.2em]">
+                                            <div className="w-8 h-8 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20">
+                                                <Calendar size={14} className="text-pink-400" />
+                                            </div>
+                                            {event.date}
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div className="space-y-10">
-                                {/* Profile Info Section */}
-                                <div className="space-y-6">
-                                    <div className="flex items-center gap-3 text-pink-500">
-                                        <User size={20} />
-                                        <h3 className="text-xs font-black uppercase tracking-widest">Attendee Details</h3>
+                            <div className="flex-1 p-6 lg:p-8 bg-white flex flex-col items-center justify-center">
+                                <div className="max-w-[550px] w-full space-y-4">
+                                    <div className="space-y-3">
+                                        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                                            <div className="space-y-1">
+                                                <h4 className="text-[12px] font-black text-slate-900 uppercase tracking-[0.2em]">Ticket Details</h4>
+                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Review your selection</p>
+                                            </div>
+                                            <span className="text-[10px] font-black text-pink-500 uppercase tracking-widest bg-pink-50 px-4 py-2 rounded-full border border-pink-100/50">Secure Checkout</span>
+                                        </div>
+
+                                        {selectedSeats.length > 0 ? (
+                                            <div className="flex flex-wrap gap-4">
+                                                {selectedSeats.map(seat => (
+                                                    <div key={seat.id} className="px-6 py-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center gap-4 shadow-sm">
+                                                        <span className="text-[14px] font-black text-slate-900 uppercase tracking-tight">Seat {seat.id}</span>
+                                                        <div className="w-1.5 h-6 bg-pink-500 rounded-full" />
+                                                        <span className="text-[14px] font-black text-pink-500">₹{seat.price}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="bg-slate-50 p-3 rounded-[1.5rem] border border-slate-100 flex items-center justify-between shadow-inner">
+                                                <div className="space-y-1.5">
+                                                    <span className="text-[16px] font-black text-slate-900 uppercase tracking-tight leading-none block">{selectedPackageName || "Ticket"}</span>
+                                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Base Category</span>
+                                                </div>
+                                                <div className="flex items-center gap-6">
+                                                    <div className="flex items-center gap-4 bg-white border border-slate-200 rounded-xl px-4 py-2 shadow-sm">
+                                                        <button onClick={() => setQty(Math.max(1, qty - 1))} className="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-pink-500 transition-colors bg-slate-50 rounded-lg"><Minus size={12} /></button>
+                                                        <span className="text-sm text-slate-900 font-black min-w-[20px] text-center">{qty}</span>
+                                                        <button onClick={() => setQty(qty + 1)} className="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-pink-500 transition-colors bg-slate-50 rounded-lg"><Plus size={12} /></button>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <span className="text-xl font-black text-slate-900 tracking-tighter">₹{baseAmount.toFixed(2)}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <div className="space-y-3">
-                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Full Name</p>
-                                            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 font-bold text-slate-900">
-                                                {user?.name || "Guest Attendee"}
+
+                                    <div className="space-y-4">
+                                        {!appliedCoupon ? (
+                                            <div className="space-y-3">
+                                                <div className="flex gap-2">
+                                                    <input 
+                                                        type="text" 
+                                                        value={couponCode}
+                                                        onChange={(e) => setCouponCode(e.target.value)}
+                                                        placeholder="Coupon Code"
+                                                        className="flex-1 px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-[11px] font-bold outline-none uppercase focus:ring-1 focus:ring-pink-500 transition-all"
+                                                    />
+                                                    <button 
+                                                        onClick={handleApplyCoupon}
+                                                        disabled={isValidatingCoupon || !couponCode}
+                                                        className="px-6 py-3 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 disabled:opacity-50 transition-all shadow-lg"
+                                                    >
+                                                        Apply
+                                                    </button>
+                                                </div>
+                                                {validCoupons.length > 0 && (
+                                                    <button 
+                                                        onClick={() => setShowCouponsModal(true)}
+                                                        className="text-[10px] font-black text-pink-500 uppercase tracking-widest hover:underline w-full text-left pl-1"
+                                                    >
+                                                        View All Offers
+                                                    </button>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center justify-between p-3 bg-emerald-50 rounded-xl border border-emerald-100 border-dashed">
+                                                <div className="flex items-center gap-2 text-emerald-600">
+                                                    <Sparkles size={14} />
+                                                    <span className="text-[10px] font-black uppercase tracking-widest">{appliedCoupon.code} Applied</span>
+                                                </div>
+                                                <button onClick={removeCoupon} className="text-slate-400 hover:text-rose-500 transition-colors">
+                                                    <X size={16} />
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="space-y-2 pt-3 border-t border-slate-100">
+                                        <div className="flex justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                            <span>Sub Total</span>
+                                            <span className="text-slate-900">₹{(qty * baseAmount).toFixed(2)}</span>
+                                        </div>
+                                        <div className="flex justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                            <span>Platform Fee</span>
+                                            <span className="text-slate-900">₹{convenienceFee.toFixed(2)}</span>
+                                        </div>
+                                        <div className="flex justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                            <span>GST ({gstPercent}%)</span>
+                                            <span className="text-slate-900">₹{gst.toFixed(2)}</span>
+                                        </div>
+                                        {appliedCoupon && (
+                                            <div className="flex justify-between text-[10px] font-black text-emerald-500 uppercase tracking-widest pt-4 border-t border-slate-50">
+                                                <span>Discount Applied</span>
+                                                <span>- ₹{discountAmount.toFixed(2)}</span>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="space-y-3 pt-3 border-t-[3px] border-dotted border-slate-100">
+                                        <div className="flex justify-between items-end">
+                                            <div className="space-y-1">
+                                                <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.25em]">Total Amount</p>
+                                                <div className="text-3xl font-black text-slate-900 tracking-tighter flex items-baseline gap-1">
+                                                    <span className="text-2xl font-bold opacity-20 tracking-normal mr-2">₹</span>{total.toFixed(2)}
+                                                </div>
+                                            </div>
+                                            <div className="w-14 h-14 rounded-2xl bg-pink-50 flex items-center justify-center text-pink-500 shadow-inner border border-pink-100/50">
+                                                <CreditCard size={32} />
                                             </div>
                                         </div>
-                                        <div className="space-y-3">
-                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Email Address</p>
-                                            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 font-bold text-slate-900 truncate">
-                                                {user?.identifier || user?.email}
-                                            </div>
+
+                                        <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-100/50">
+                                            <label className="flex items-center gap-3 cursor-pointer group">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={termsAccepted}
+                                                    onChange={(e) => setTermsAccepted(e.target.checked)}
+                                                    className="w-5 h-5 rounded border-slate-200 text-pink-500 focus:ring-pink-500 transition-all cursor-pointer"
+                                                />
+                                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-tight">
+                                                    I agree to the <button type="button" onClick={() => setShowTermsModal(true)} className="text-slate-900 underline underline-offset-4 font-black hover:text-pink-500 transition-colors">Event Terms & Conditions</button>
+                                                </span>
+                                            </label>
                                         </div>
+
+                                        <button 
+                                            onClick={handleConfirmPay}
+                                            disabled={!termsAccepted || isProcessing}
+                                            className={`
+                                                w-full py-4 rounded-[1.5rem] font-black uppercase tracking-[0.25em] text-[13px] transition-all shadow-2xl flex items-center justify-center gap-4
+                                                ${termsAccepted && !isProcessing
+                                                    ? 'bg-slate-900 text-white shadow-slate-900/40 hover:scale-[1.02] active:scale-98 hover:shadow-slate-900/60' 
+                                                    : 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none'}
+                                            `}
+                                        >
+                                            {isProcessing ? (
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-5 h-5 border-4 border-white/20 border-t-white rounded-full animate-spin" />
+                                                    Processing...
+                                                </div>
+                                            ) : (
+                                                <>Proceed to Payment <ArrowRight size={20} /></>
+                                            )}
+                                        </button>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
+                </div>
 
-                    {/* Right: Summary Sidebar */}
-                    <div className="lg:col-span-5 space-y-6 sticky top-28">
-                        <div className="bg-white rounded-[40px] border border-slate-100 shadow-2xl overflow-hidden">
-                            <div className="p-8 space-y-8">
-                                <div className="flex items-center gap-6">
-                                    <div className="w-24 h-24 rounded-3xl overflow-hidden shrink-0 border border-slate-100">
-                                        <img src={event.img} className="w-full h-full object-cover" />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight leading-tight">{event.title}</h3>
-                                        <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                            <Calendar size={12} className="text-pink-500" /> {event.date}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                    <div className="space-y-4">
-                                        <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 pb-4">Order Summary</h4>
-                                        
-                                        <div className="space-y-3">
-                                            {selectedSeats.length > 0 ? (
-                                                selectedSeats.map(seat => (
-                                                    <div key={seat.id} className="flex justify-between items-center text-sm font-bold">
-                                                        <span className="text-slate-500">Seat {seat.id} ({seat.catName})</span>
-                                                        <span className="text-slate-900">₹{seat.price}</span>
-                                                    </div>
-                                                ))
-                                            ) : (
-                                                <div className="flex justify-between items-center text-sm font-bold">
-                                                    <div className="flex flex-col gap-1">
-                                                        <span className="text-slate-500">{selectedPackageName || "Ticket"}</span>
-                                                        <div className="flex items-center gap-3 bg-slate-50 border border-slate-100 rounded-xl px-3 py-1.5 w-fit">
-                                                            <button 
-                                                                onClick={() => setQty(Math.max(1, qty - 1))}
-                                                                className="text-slate-400 hover:text-pink-500 transition-colors"
-                                                            >
-                                                                <Minus size={12} />
-                                                            </button>
-                                                            <span className="text-xs text-slate-900 font-black min-w-[12px] text-center">{qty}</span>
-                                                            <button 
-                                                                onClick={() => setQty(qty + 1)}
-                                                                className="text-slate-400 hover:text-pink-500 transition-colors"
-                                                            >
-                                                                <Plus size={12} />
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                    <span className="text-slate-900">₹{baseAmount.toFixed(2)}</span>
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        {/* Coupon Section */}
-                                        <div className="pt-4 border-t border-slate-50">
-                                            {!appliedCoupon ? (
-                                                <div className="space-y-2">
-                                                    <div className="flex justify-between items-center">
-                                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Have a Coupon?</p>
-                                                        {validCoupons.length > 0 && (
-                                                            <button 
-                                                                onClick={() => setShowCouponsModal(true)}
-                                                                className="text-[10px] font-black text-pink-500 uppercase tracking-widest hover:underline"
-                                                            >
-                                                                (View All)
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                    <div className="flex gap-2">
-                                                        <input 
-                                                            type="text" 
-                                                            value={couponCode}
-                                                            onChange={(e) => setCouponCode(e.target.value)}
-                                                            placeholder="Enter Code"
-                                                            className="flex-1 px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold focus:ring-2 focus:ring-pink-500 outline-none uppercase"
-                                                        />
-                                                        <button 
-                                                            onClick={handleApplyCoupon}
-                                                            disabled={isValidatingCoupon || !couponCode}
-                                                            className="px-4 py-2 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 disabled:opacity-50 transition-all"
-                                                        >
-                                                            {isValidatingCoupon ? '...' : 'Apply'}
-                                                        </button>
-                                                    </div>
-                                                    {couponError && <p className="text-[10px] font-bold text-rose-500 uppercase tracking-tight">{couponError}</p>}
-                                                </div>
-                                            ) : (
-                                                <div className="flex items-center justify-between p-3 bg-emerald-50 rounded-2xl border border-emerald-100">
-                                                    <div className="flex items-center gap-2 text-emerald-600">
-                                                        <Sparkles size={16} />
-                                                        <span className="text-[10px] font-black uppercase tracking-widest">{appliedCoupon.code} Applied</span>
-                                                    </div>
-                                                    <button onClick={removeCoupon} className="text-slate-400 hover:text-rose-500 transition-colors">
-                                                        <X size={16} />
-                                                    </button>
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        <div className="space-y-3 pt-4 border-t border-slate-50">
-                                            {appliedCoupon && (
-                                                <div className="flex justify-between text-xs font-bold text-emerald-600">
-                                                    <span>Coupon Discount</span>
-                                                    <span>- ₹{discountAmount.toFixed(2)}</span>
-                                                </div>
-                                            )}
-                                            <div className="flex justify-between text-xs font-bold text-slate-400">
-                                                <span>Platform Fee</span>
-                                                <span>₹{convenienceFee.toFixed(2)}</span>
-                                            </div>
-                                            <div className="flex justify-between text-xs font-bold text-slate-400">
-                                                <span>GST ({gstPercent}%)</span>
-                                                <span>₹{gst.toFixed(2)}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                <div className="pt-8 border-t-[3px] border-dotted border-slate-100">
-                                    <div className="flex justify-between items-end">
-                                        <div className="space-y-1">
-                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Payable Amount</p>
-                                            <div className="text-4xl font-black text-slate-900 tracking-tighter">
-                                                ₹{total.toFixed(2)}
-                                            </div>
-                                        </div>
-                                        <div className="text-pink-500">
-                                            <CreditCard size={32} />
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Terms Section */}
-                                <div className="p-8 bg-blue-50 rounded-[32px] border border-blue-100 space-y-6 mt-8">
-                                    <div className="flex items-start gap-4">
-                                        <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-blue-500 shadow-sm shrink-0">
-                                            <ShieldCheck size={20} />
-                                        </div>
-                                        <div className="space-y-1">
-                                            <h4 className="text-sm font-black text-blue-900 uppercase tracking-tight">Terms of Attendance</h4>
-                                            <p className="text-xs font-medium text-blue-700/70 leading-relaxed">Please review the event guidelines and safety protocols before proceeding.</p>
-                                        </div>
-                                    </div>
-                                    
-                                    <label className="flex items-center gap-4 cursor-pointer group">
-                                        <div className="relative flex items-center">
-                                            <input
-                                                type="checkbox"
-                                                checked={termsAccepted}
-                                                onChange={(e) => setTermsAccepted(e.target.checked)}
-                                                className="w-6 h-6 rounded-lg border-blue-200 text-blue-600 focus:ring-blue-500 transition-all cursor-pointer"
-                                            />
-                                        </div>
-                                        <span className="text-xs font-bold text-blue-900 group-hover:text-blue-700 transition-colors">
-                                            I agree to the <button type="button" onClick={() => setShowTermsModal(true)} className="underline decoration-blue-300 underline-offset-4">Event Terms & Conditions</button>
-                                        </span>
-                                    </label>
-                                </div>
-
-                                <button 
-                                    onClick={handleConfirmPay}
-                                    disabled={!termsAccepted || isProcessing}
-                                    className={`
-                                        w-full py-6 rounded-[2rem] font-black uppercase tracking-[0.2em] text-sm transition-all shadow-2xl flex items-center justify-center gap-3
-                                        ${termsAccepted && !isProcessing
-                                            ? 'bg-slate-900 text-white shadow-slate-900/20 hover:scale-[1.02] active:scale-95' 
-                                            : 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none'}
-                                    `}
-                                >
-                                    {isProcessing ? (
-                                        <>Preparing Tickets...</>
-                                    ) : (
-                                        <>{total > 0 ? "Proceed to Payment" : "Confirm My Spot"} <ArrowRight size={20} /></>
-                                    )}
-                                </button>
+                <div className="space-y-8">
+                    <div className="bg-white rounded-[40px] p-8 md:p-12 border border-slate-100 shadow-sm">
+                        <div className="flex items-center justify-between mb-4">
+                            <h2 className="text-xl font-black text-slate-900 uppercase tracking-tighter">Confirmation</h2>
+                            <div className="px-4 py-2 bg-amber-400 text-slate-900 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-amber-400/20">
+                                Step 2 of 2
                             </div>
                         </div>
 
-                        <div className="px-8 space-y-4">
-                            <div className="flex items-center gap-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                <ShieldCheck size={16} className="text-emerald-500" /> Instant Ticket Delivery
+                        <div className="space-y-4">
+                            <div className="flex items-center gap-4 text-[11px] font-black text-pink-500 uppercase tracking-widest">
+                                <div className="w-8 h-8 rounded-full bg-pink-50 flex items-center justify-center">
+                                    <User size={16} />
+                                </div>
+                                Attendee Details
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Full Name</label>
+                                    <input 
+                                        type="text"
+                                        value={user?.name || ""}
+                                        readOnly
+                                        className="w-full px-8 py-5 bg-slate-50 border border-slate-100 rounded-[2rem] text-sm font-bold text-slate-900 outline-none"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Email Address</label>
+                                    <input 
+                                        type="email"
+                                        value={user?.identifier || user?.email || ""}
+                                        readOnly
+                                        className="w-full px-8 py-5 bg-slate-50 border border-slate-100 rounded-[2rem] text-sm font-bold text-slate-900 outline-none"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 px-4">
+                        <div className="flex-1" />
+                        <div className="flex items-center gap-8">
+                            <div className="flex items-center gap-2 text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                                <ShieldCheck size={14} className="text-emerald-500" /> Instant Delivery
+                            </div>
+                            <div className="flex items-center gap-2 text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                                <CreditCard size={14} className="text-blue-500" /> SSL Secured
                             </div>
                         </div>
                     </div>
@@ -739,7 +780,6 @@ export default function CheckoutClient({ id }) {
                 type="event"
             />
 
-            {/* Available Coupons Modal */}
             <AnimatePresence>
                 {showCouponsModal && (
                     <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-md">
@@ -783,41 +823,31 @@ export default function CheckoutClient({ id }) {
                                             }}
                                             className="w-full group text-left p-6 bg-slate-50 hover:bg-pink-50 rounded-3xl border border-slate-100 hover:border-pink-200 transition-all space-y-3 relative overflow-hidden"
                                         >
-                                            <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-10 transition-opacity">
-                                                <Sparkles size={40} className="text-pink-500" />
-                                            </div>
-
-                                            <div className="flex justify-between items-start">
-                                                <div className="space-y-1">
-                                                    <span className="inline-block px-3 py-1 bg-pink-500 text-white text-[10px] font-black rounded-lg uppercase tracking-widest">
-                                                        {coupon.type === 'percent' ? `${coupon.value}% OFF` : `₹${coupon.value} OFF`}
-                                                    </span>
-                                                    <h4 className="text-lg font-black text-slate-900 uppercase tracking-tighter block">{coupon.code}</h4>
+                                            <div className="flex items-center justify-between relative z-10">
+                                                <div className="px-3 py-1 bg-white rounded-lg border border-slate-200 text-[10px] font-black text-slate-900 uppercase tracking-widest group-hover:border-pink-200 transition-colors">
+                                                    {coupon.code}
                                                 </div>
-                                                <div className="w-10 h-10 rounded-xl bg-white border border-slate-100 flex items-center justify-center text-pink-500 shadow-sm group-hover:scale-110 transition-transform">
-                                                    <ArrowRight size={18} />
+                                                <div className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">
+                                                    Active Offer
                                                 </div>
                                             </div>
-                                            
-                                            <div className="flex flex-wrap gap-4 pt-2">
-                                                <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-tight">
-                                                    <Ticket size={12} className="text-slate-300" /> Min {coupon.min_tickets} Tickets
-                                                </div>
-                                                {coupon.expiry_date && (
-                                                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-tight">
-                                                        <Calendar size={12} className="text-slate-300" /> Exp: {new Date(coupon.expiry_date).toLocaleDateString()}
-                                                    </div>
-                                                )}
+                                            <div className="relative z-10">
+                                                <p className="text-lg font-black text-slate-900 leading-tight group-hover:text-pink-600 transition-colors">
+                                                    Save ₹{coupon.value}
+                                                </p>
+                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                                                    Applied on total value
+                                                </p>
                                             </div>
+                                            <div className="absolute top-0 right-0 w-24 h-24 bg-pink-500/5 rounded-full -mr-12 -mt-12 group-hover:bg-pink-500/10 transition-colors" />
                                         </button>
                                     ))
                                 )}
                             </div>
-
-                            <div className="p-6 bg-slate-50 border-t border-slate-100">
+                            <div className="p-6 bg-slate-50/50 border-t border-slate-50">
                                 <button 
                                     onClick={() => setShowCouponsModal(false)}
-                                    className="w-full py-4 bg-white border border-slate-200 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-500 hover:bg-slate-50 transition-all"
+                                    className="w-full py-4 bg-white border border-slate-200 rounded-2xl text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] hover:bg-slate-50 transition-all"
                                 >
                                     Cancel
                                 </button>

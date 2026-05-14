@@ -12,9 +12,11 @@ import TrendingEvents from '@/components/TrendingEvents';
 import ExclusiveEvents from '@/components/ExclusiveEvents';
 import VirtualEvents from '@/components/VirtualEvents';
 import VenueEventCard from '@/components/VenueEventCard';
+import TournamentCard from '@/components/TournamentCard';
 import SubscriptionBanner from '@/components/SubscriptionBanner';
 import SubnavMarquee from '@/components/SubnavMarquee';
 import Footer from '@/components/Footer';
+import { Trophy, Zap, TrendingUp, Map as MapIcon, Calendar as CalendarIcon, Activity } from 'lucide-react';
 import { MEMORIES, FEATURED_ORGANISERS, HERO_BANNER_SLIDES, BRAND_COUPONS } from '@/app/data/homeEvents';
 import { eventMatchesCategory } from '@/app/utils/categoryMatch';
 import { useAuth } from '@/components/AuthContext';
@@ -156,7 +158,7 @@ const parseEventDate = (dateStr, timeStr, event = null) => {
 function HomeClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, selectedCity } = useAuth();
+  const { user, selectedCity, selectedDistrict } = useAuth();
   const [now, setNow] = useState(new Date());
 
   useEffect(() => {
@@ -232,55 +234,72 @@ function HomeClient() {
     }
   }, [metaSettings]);
 
-  const { data: supabaseEventsRaw } = useSupabaseQuery('events', (q) => q, [], { refreshOn: ['event_like_counts'] });
-  const supabaseEvents = useMemo(() => supabaseEventsRaw || EMPTY_ARRAY, [supabaseEventsRaw]);
+  // 1. Fetch data from unified API
+  const [apiEvents, setApiEvents] = useState([]);
+  const [apiLoading, setApiLoading] = useState(true);
+  const [apiError, setApiError] = useState(null);
 
-  const { data: serviceProvidersRaw } = useSupabaseQuery('service_providers', (q) => q.eq('status', 'active'), [], { refreshOn: ['service_like_counts'] });
+  const fetchPublicEvents = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/events/public?district=${selectedDistrict || selectedCity || 'Coimbatore'}`);
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setApiEvents(data);
+      setApiError(null);
+    } catch (err) {
+      console.error("Failed to fetch public events:", err);
+      setApiError(err);
+    } finally {
+      setApiLoading(false);
+    }
+  }, [selectedDistrict, selectedCity]);
 
-  const filteredServices = useMemo(() => {
-    if (!serviceProvidersRaw) return [];
-    if (!selectedCity || selectedCity === "All Cities") return serviceProvidersRaw;
+  // Initial fetch and city change fetch
+  useEffect(() => {
+    fetchPublicEvents();
+  }, [fetchPublicEvents]);
 
-    const cityLower = selectedCity.toLowerCase();
-    const cityVariations = {
-      'bengaluru': ['bangalore', 'bengaluru'],
-      'bangalore': ['bangalore', 'bengaluru'],
-      'new delhi': ['delhi', 'new delhi', 'ncr'],
-      'delhi': ['delhi', 'new delhi', 'ncr'],
-      'mumbai': ['bombay', 'mumbai'],
-      'chennai': ['madras', 'chennai'],
-      'kochi': ['cochin', 'kochi'],
-      'coimbatore': ['coimbatore', 'pollachi'],
-    };
-    
-    const targetCities = cityVariations[cityLower] || [cityLower];
+  // 2. Realtime listener to trigger API re-fetch
+  useEffect(() => {
+    if (!supabase) return;
 
-    return serviceProvidersRaw.filter(p => {
-      const pCity = String(p.city || '').toLowerCase().trim();
-      const pLoc = String(p.location || '').toLowerCase().trim();
-      const pDistrict = String(p.district || '').toLowerCase().trim();
-
-      if (!pCity && !pLoc && !pDistrict) return true;
-
-      return targetCities.some(tc => 
-        pCity.includes(tc) || 
-        pDistrict.includes(tc) || 
-        pLoc.includes(tc)
-      );
+    const tables = ['events', 'tournament_events', 'marathon_events'];
+    const channels = tables.map(table => {
+        return supabase
+            .channel(`public_sync_${table}`)
+            .on('postgres_changes', { event: '*', schema: 'public', table }, () => {
+                console.log(`Realtime update detected in ${table}, re-fetching API...`);
+                fetchPublicEvents();
+            })
+            .subscribe();
     });
-  }, [serviceProvidersRaw, selectedCity]);
+
+    return () => {
+        channels.forEach(ch => supabase.removeChannel(ch));
+    };
+  }, [fetchPublicEvents]);
+
+  // Keep other queries for reviews, branding, etc.
+  const { data: reviewsRaw, loading: reviewsLoading } = useSupabaseQuery('service_reviews', (q) => q, [], { realtime: true });
+  const { data: brandingRaw } = useSupabaseQuery('site_branding', (q) => q, [], { realtime: false });
+
+
+  // Professional services removed from event discovery feed
+
 
   const allLiveEvents = useMemo(() => {
-    return (Array.isArray(supabaseEvents) ? supabaseEvents : [])
+    const list = Array.isArray(apiEvents) ? apiEvents : [];
+    return list
       .filter(ev => {
         const s = String(ev.status || '').toLowerCase();
         if (s === "inactive" || s === "draft" || s === "expired") return false;
 
         const eventDate = parseEventDate(ev.date || ev.rawDate || ev.startDate, ev.time || ev.rawTime || ev.startTime, ev);
         if (eventDate) {
-            return eventDate >= now;
+            const isToday = eventDate.toDateString() === now.toDateString();
+            return eventDate >= now || isToday;
         }
-        return false; // Hide events with invalid/missing dates to prevent stale data
+        return false;
       })
       .map((ev, idx) => {
         const loc = String(ev.location || ev.venue || ev.address || ev.city || "").trim();
@@ -289,25 +308,31 @@ function HomeClient() {
                  String(ev.type || '').toLowerCase() === "virtual" ||
                  loc.toLowerCase().includes("online") ||
                  loc.toLowerCase().includes("virtual");
+        
+        // Use normalized data from API
         return {
           ...ev,
-          id: ev.id || ev._id || `org-${idx}-${Date.now()}`,
+          id: ev.id || `ev-${idx}`,
           title: ev.title || "Event",
-          img: ev.img || ev.banner_preview || ev.bannerPreview || "https://images.unsplash.com/photo-1540575861501-7ad058c647a0?w=500&h=280&fit=crop",
+          img: ev.img || "https://images.unsplash.com/photo-1540575861501-7ad058c647a0?w=500&h=280&fit=crop",
           rawDate: ev.date,
           rawTime: ev.time,
           date: [ev.date, ev.time].filter(Boolean).join(" ") || "TBA",
           location: loc,
-          featured: ev.featured === true || ev.featured === "Yes",
-          trending: ev.trending === true || ev.trending === "Yes",
-          spotlight: ev.spotlight === true || ev.spotlight === "Yes",
-          exclusive: ev.exclusive === true || ev.exclusive === "Yes",
-          is_spotlight: ev.is_spotlight === true,
-          is_exclusive: ev.is_exclusive === true,
+          featured: !!ev.featured,
+          trending: !!ev.trending,
+          spotlight: !!ev.spotlight || !!ev.is_spotlight,
+          exclusive: !!ev.exclusive || !!ev.is_exclusive,
+          is_spotlight: !!ev.is_spotlight,
+          is_exclusive: !!ev.is_exclusive,
           virtual: isVirtual,
+          // Hydrate nested objects for specific cards
+          tournament_events: ev.tournament_data ? [ev.tournament_data] : [],
+          marathon_events: ev.marathon_data ? [ev.marathon_data] : []
         };
       });
-  }, [supabaseEvents, now]);
+  }, [apiEvents, now]);
+
 
   const normalizedOrgEvents = useMemo(() => {
     return allLiveEvents;
@@ -322,40 +347,18 @@ function HomeClient() {
   const filteredEvents = useMemo(() => {
     let results = allEventsForFilter;
 
-    // 0. Filter by Selected City
-    if (selectedCity && selectedCity !== "All Cities") {
-      const cityLower = selectedCity.toLowerCase();
-      const cityVariations = {
-        'bengaluru': ['bangalore', 'bengaluru'],
-        'bangalore': ['bangalore', 'bengaluru'],
-        'new delhi': ['delhi', 'new delhi', 'ncr'],
-        'delhi': ['delhi', 'new delhi', 'ncr'],
-        'mumbai': ['bombay', 'mumbai'],
-        'chennai': ['madras', 'chennai'],
-        'kochi': ['cochin', 'kochi'],
-        'coimbatore': ['coimbatore', 'pollachi'],
-      };
+    // 0. Filter by Selected District/City
+    if (selectedDistrict || selectedCity) {
+      const target = (selectedDistrict || selectedCity).toLowerCase();
       
-      const targetCities = cityVariations[cityLower] || [cityLower];
-
       results = results.filter(ev => {
-        // Only Virtual events show everywhere. Spotlight/Exclusive are now filtered by city.
         if (ev.virtual === true) return true;
         
-        const evCity = String(ev.city || '').toLowerCase().trim();
-        const evLoc = String(ev.location || '').toLowerCase().trim();
-        const evVenue = String(ev.venue || '').toLowerCase().trim();
-        const evDistrict = String(ev.district || '').toLowerCase().trim();
+        const evCity = String(ev.city || '').toLowerCase();
+        const evDistrict = String(ev.district || '').toLowerCase();
+        const evLoc = String(ev.location || '').toLowerCase();
 
-        // If no city/location info at all, show it anyway
-        if (!evCity && !evLoc && !evVenue && !evDistrict) return true;
-
-        return targetCities.some(tc => 
-          evCity.includes(tc) || 
-          evDistrict.includes(tc) || 
-          evLoc.includes(tc) || 
-          evVenue.includes(tc)
-        );
+        return evCity.includes(target) || evDistrict.includes(target) || evLoc.includes(target);
       });
     }
 
@@ -379,7 +382,8 @@ function HomeClient() {
       const eventDate = parseEventDate(ev.rawDate || ev.date, ev.rawTime || ev.time, ev);
       if (!eventDate) return false; // Hide expired/invalid
       
-      return eventDate >= now;
+      const isToday = eventDate.toDateString() === now.toDateString();
+      return eventDate >= now || isToday;
     });
   }, [activeCat, searchQuery, allEventsForFilter, selectedCity, now]);
 
@@ -390,6 +394,16 @@ function HomeClient() {
   const spotlightEventsList = useMemo(() => filteredEvents.filter((e) => e.spotlight || e.is_spotlight), [filteredEvents]);
 
   const exclusiveEventsList = useMemo(() => filteredEvents.filter((e) => e.exclusive || e.is_exclusive), [filteredEvents]);
+  
+  const tournamentEventsList = useMemo(() => allLiveEvents.filter((e) => 
+    e.type === "Tournament Event" || 
+    e.type === "Tournament" || 
+    e.tournament_events?.length > 0
+  ), [allLiveEvents]);
+
+  const trendingTournamentsList = useMemo(() => tournamentEventsList.filter((e) => e.trending || e.featured), [tournamentEventsList]);
+  
+  const sportsTournamentsList = useMemo(() => tournamentEventsList.filter((e) => e.category === "Sports"), [tournamentEventsList]);
   
   const comingSoonList = useMemo(() => {
     const today = new Date();
@@ -654,6 +668,58 @@ function HomeClient() {
           <div style={{ width: '100%' }}>
             <VideoHeroBanner />
 
+            {/* 0) Tournament Spotlight Banner - Premium Highlight */}
+            {trendingTournamentsList.length > 0 && (
+                <section style={{ width: '100%', padding: '60px 0', background: 'linear-gradient(to bottom, #fff, #f8fafc)' }}>
+                    <div className="container mx-auto px-6">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '32px' }}>
+                            <div className="w-12 h-12 rounded-2xl bg-pink-600 flex items-center justify-center text-white shadow-lg shadow-pink-500/20">
+                                <Trophy size={24} />
+                            </div>
+                            <div>
+                                <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter italic leading-none">Tournaments in {selectedDistrict || 'Your District'}</h2>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">The most anticipated competitions happening now</p>
+                            </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                            {trendingTournamentsList.slice(0, 3).map(event => (
+                                <TournamentCard key={event.id} event={event} />
+                            ))}
+                        </div>
+                    </div>
+                </section>
+            )}
+
+            {/* 0.5) Sports Championships Section */}
+            {sportsTournamentsList.length > 0 && (
+                <section style={{ width: '100%', maxWidth: '1240px', margin: '0 auto', padding: '40px 20px' }}>
+                    <div style={{ marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                        <div>
+                            <h2 style={{ fontSize: '28px', fontWeight: 900, color: '#111827', margin: '0 0 8px', letterSpacing: '-0.04em', lineHeight: 1.1 }}>
+                                Sports in <span style={{
+                                    background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                                    WebkitBackgroundClip: 'text',
+                                    WebkitTextFillColor: 'transparent',
+                                    display: 'inline-block'
+                                }}>{selectedDistrict || 'District'}</span> 🏆
+                            </h2>
+                            <p style={{ color: '#9ca3af', fontSize: '13px', margin: 0, fontWeight: 500 }}>Join the most competitive sports events in your region</p>
+                        </div>
+                    </div>
+                    
+                    <div style={{ 
+                        display: "grid", 
+                        gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", 
+                        gap: "32px" 
+                    }}>
+                        {sportsTournamentsList.slice(0, 4).map(event => (
+                            <TournamentCard key={event.id} event={event} />
+                        ))}
+                    </div>
+                </section>
+            )}
+
             {/* 1) Recently Viewed */}
             <RecentlyViewedEvents liveEvents={allLiveEvents} />
 
@@ -676,14 +742,14 @@ function HomeClient() {
                 <div style={{ marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
                     <div>
                         <h2 style={{ fontSize: '28px', fontWeight: 900, color: '#111827', margin: '0 0 8px', letterSpacing: '-0.04em', lineHeight: 1.1, fontFamily: 'var(--font-heading)' }}>
-                            Just <span style={{
+                            New Events in <span style={{
                                 background: 'linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%)',
                                 WebkitBackgroundClip: 'text',
                                 WebkitTextFillColor: 'transparent',
                                 display: 'inline-block'
-                            }}>In</span> ⚡
+                            }}>{selectedDistrict || 'District'}</span> ⚡
                         </h2>
-                        <p style={{ color: '#9ca3af', fontSize: '13px', margin: 0, fontWeight: 500 }}>The latest events added to BookMyTicket</p>
+                        <p style={{ color: '#9ca3af', fontSize: '13px', margin: 0, fontWeight: 500 }}>The latest events added in your area</p>
                     </div>
                 </div>
                 
@@ -692,13 +758,18 @@ function HomeClient() {
                     gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", 
                     gap: "24px" 
                 }}>
-                    {justInEventsList.length > 0 ? (
+                    {apiLoading ? (
+                        <div style={{ gridColumn: '1 / -1', padding: '40px', textAlign: 'center', color: '#9ca3af' }}>
+                            <div className="w-8 h-8 border-2 border-pink-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+                            Checking for latest events...
+                        </div>
+                    ) : justInEventsList.length > 0 ? (
                         justInEventsList.map(event => (
                             <TicketCard key={event.id} event={event} router={router} />
                         ))
                     ) : (
                         <div style={{ gridColumn: '1 / -1', padding: '40px', textAlign: 'center', color: '#9ca3af', border: '1px dashed #e2e8f0', borderRadius: '16px' }}>
-                            Loading fresh events...
+                            No new events at the moment.
                         </div>
                     )}
                 </div>
@@ -761,66 +832,8 @@ function HomeClient() {
             {/* 5) Exclusive Events */}
             <ExclusiveEvents events={exclusiveEventsList} />
 
-            {/* Professional Services Section */}
-            <section id="services" style={{ width: '100%', maxWidth: '1240px', margin: '0 auto', padding: '40px 20px' }}>
-              <div style={{ 
-                display: 'flex', 
-                justifyContent: 'space-between', 
-                alignItems: 'center', 
-                marginBottom: '32px',
-                gap: '12px',
-                flexWrap: 'nowrap'
-              }}>
-                <div style={{ minWidth: 0, flex: 1 }}>
-                  <h2 style={{ 
-                    fontSize: isMobile ? '20px' : '28px', 
-                    fontWeight: 900, 
-                    color: '#111827', 
-                    margin: '0', 
-                    letterSpacing: '-0.04em', 
-                    lineHeight: 1.1, 
-                    fontFamily: 'var(--font-heading)',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis'
-                  }}>
-                    Professional <span style={{
-                      background: 'linear-gradient(135deg, #f84464 0%, #c026d3 100%)',
-                      WebkitBackgroundClip: 'text',
-                      WebkitTextFillColor: 'transparent',
-                      display: 'inline-block'
-                    }}>Services</span>
-                  </h2>
-                  <p style={{ color: '#9ca3af', fontSize: '13px', margin: '4px 0 0', fontWeight: 500 }}>Top rated artists and studios for your special occasions</p>
-                </div>
-                <Link href="/services" style={{ 
-                  padding: isMobile ? '6px 12px' : '10px 20px',
-                  background: '#fff',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '10px',
-                  color: '#f84464', 
-                  fontWeight: 800, 
-                  fontSize: isMobile ? '12px' : '14px', 
-                  textDecoration: 'none',
-                  transition: 'all 0.2s',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
-                  whiteSpace: 'nowrap',
-                  flexShrink: 0
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = '#f84464';
-                  e.currentTarget.style.background = '#fff1f2';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = '#e2e8f0';
-                  e.currentTarget.style.background = '#fff';
-                }}
-                >
-                  View all →
-                </Link>
-              </div>
-              <ServiceCategories />
-            </section>
+            {/* Marketplace and Services removed from main event discovery feed */}
+
 
             {/* --- DYNAMIC & ATTRACTIVE DISCOVERY SECTION (PINK & PURPLE UI) --- */}
             <section style={{ width: '100%', padding: '60px 20px', background: 'linear-gradient(180deg, #fafbfc 0%, #ffffff 100%)', position: 'relative', overflow: 'hidden' }}>
@@ -1048,8 +1061,7 @@ function HomeClient() {
             {/* 6) Virtual Events */}
             <VirtualEvents events={normalizedOrgEvents} />
 
-            {/* Top Rated Professional Services */}
-            <TopRatedServices professionals={filteredServices} />
+            {/* Professional Services section removed as per requirement */}
 
             {/* Branding & Others removed */}
 

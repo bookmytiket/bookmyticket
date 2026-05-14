@@ -8,8 +8,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
     Calendar, MapPin, CheckCircle, ChevronLeft, Ticket, 
     ShieldCheck, Zap, Info, CreditCard, Users, Clock,
-    ArrowRight, Star, Sparkles
+    ArrowRight, Star, Sparkles, Trophy
 } from 'lucide-react';
+import { supabase } from "@/lib/supabase";
 import { HOME_EVENTS } from '@/app/data/homeEvents';
 import { getFeeBreakdown, DEFAULT_FEE_SETTINGS, resolveFeeSettings } from '@/app/utils/feeBreakdown';
 import { useSupabaseQuery } from "@/hooks/useSupabase";
@@ -59,13 +60,14 @@ export default function EventBookClient({ id }) {
     const [selectedDate, setSelectedDate] = useState(null);
     const [selectedPackage, setSelectedPackage] = useState(null);
     const [selectedSeats, setSelectedSeats] = useState([]);
+    const [bookingType, setBookingType] = useState('standard'); // standard, audience_free
     const searchParams = useSearchParams();
 
     useEffect(() => {
         const catId = searchParams.get('catId');
-        if (catId) {
-            setSelectedCatId(catId);
-        }
+        const type = searchParams.get('type');
+        if (catId) setSelectedCatId(catId);
+        if (type === 'audience_free') setBookingType('audience_free');
     }, [searchParams]);
 
     const event = useMemo(() => {
@@ -121,32 +123,47 @@ export default function EventBookClient({ id }) {
 
     const [relationalSeats, setRelationalSeats] = useState([]);
 
+    const isSeating = useMemo(() => {
+        return event &&
+            (
+                (event.seatingEnabled !== false && Array.isArray(event.seatCategories) && event.seatCategories.length > 0 && Number(event.cols) > 0) ||
+                (event.dynamic_config?.seating_type === 'visual' && event.blocks?.length > 0)
+            );
+    }, [event]);
+
+    const isMarathon = event?.type === 'Marathon';
+    const isTournament = event?.type === 'Tournament' || event?.type === 'Tournament Event';
+
     useEffect(() => {
-        if (!id || !isSeating) return;
-        
         const fetchRelationalData = async () => {
-            // 1. Get Venue Layout
-            const { data: layout } = await supabase.from('venue_layouts').select('id').eq('event_id', id).maybeSingle();
-            if (!layout) return;
+            if (!id || !isSeating) return;
+            
+            try {
+                // 1. Get Venue Layout
+                const { data: layout } = await supabase.from('venue_layouts').select('id').eq('event_id', id).maybeSingle();
+                if (!layout) return;
 
-            // 2. Get Blocks & Seats
-            const { data: blocksData } = await supabase.from('seat_blocks').select('id, block_name').eq('venue_layout_id', layout.id);
-            if (blocksData?.length > 0) {
-                const blockIds = blocksData.map(b => b.id);
-                const { data: seatsData } = await supabase.from('seats').select('*').in('block_id', blockIds);
-                if (seatsData) setRelationalSeats(seatsData);
+                // 2. Get Blocks & Seats
+                const { data: blocksData } = await supabase.from('seat_blocks').select('id, block_name').eq('venue_layout_id', layout.id);
+                if (blocksData?.length > 0) {
+                    const blockIds = blocksData.map(b => b.id);
+                    const { data: seatsData } = await supabase.from('seats').select('*').in('block_id', blockIds);
+                    if (seatsData) setRelationalSeats(seatsData);
 
-                // 3. Subscribe to Realtime Updates
-                const subscription = supabase
-                    .channel(`seats_${id}`)
-                    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'seats' }, (payload) => {
-                        setRelationalSeats(current => 
-                            current.map(s => s.id === payload.new.id ? payload.new : s)
-                        );
-                    })
-                    .subscribe();
+                    // 3. Subscribe to Realtime Updates
+                    const subscription = supabase
+                        .channel(`seats_${id}`)
+                        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'seats' }, (payload) => {
+                            setRelationalSeats(current => 
+                                current.map(s => s.id === payload.new.id ? payload.new : s)
+                            );
+                        })
+                        .subscribe();
 
-                return () => supabase.removeChannel(subscription);
+                    return () => supabase.removeChannel(subscription);
+                }
+            } catch (err) {
+                console.error("Failed to fetch seat data:", err);
             }
         };
 
@@ -161,14 +178,6 @@ export default function EventBookClient({ id }) {
     }, [relationalSeats, event?.blocks]);
 
     const isSeatBooked = (seatId) => bookedSeats.includes(seatId);
-
-    const isSeating = useMemo(() => {
-        return event &&
-            (
-                (event.seatingEnabled !== false && Array.isArray(event.seatCategories) && event.seatCategories.length > 0 && Number(event.cols) > 0) ||
-                (Array.isArray(event.blocks) && event.blocks.length > 0)
-            );
-    }, [event]);
 
     const totalRows = useMemo(() => {
         if (!isSeating) return 0;
@@ -198,20 +207,38 @@ export default function EventBookClient({ id }) {
         : (event?.dynamic_config?.price || event?.price || 499);
     const currentPrice = selectedPackage ? selectedPackage.price : ticketPrice;
     const baseAmount = isSeating ? totalSeatPrice : currentPrice * quantity;
-    const { convenienceFee, gst, total } = getFeeBreakdown(baseAmount, feeSettings);
+    const { convenienceFee, gst, total } = getFeeBreakdown(bookingType === 'audience_free' ? 0 : baseAmount, feeSettings);
 
-    const isMarathon = event?.type === 'Marathon';
     const [bookingStep, setBookingStep] = useState(1);
     const [participantData, setParticipantData] = useState({});
+    const [teamData, setTeamData] = useState({
+        teamName: "",
+        captainName: "",
+        captainMobile: "",
+        captainEmail: "",
+        teamLogo: null,
+        teamLogoPreview: "",
+        category: "",
+        city: "",
+        members: []
+    });
 
     const marathonSteps = [
         { id: 1, title: "Category", icon: Ticket },
         { id: 2, title: "Identity", icon: Users },
         { id: 3, title: "Details", icon: Info },
         { id: 4, title: "Amenities", icon: Sparkles },
-        { id: 5, title: "Review", icon: CheckCircle },
-        { id: 6, title: "Payment", icon: CreditCard }
+        { id: 5, title: "Review", icon: CheckCircle }
     ];
+
+    const tournamentSteps = [
+        { id: 1, title: "Category", icon: Ticket },
+        { id: 2, title: "Team Info", icon: Users },
+        { id: 3, title: "Roster", icon: Trophy },
+        { id: 4, title: "Review", icon: CheckCircle }
+    ];
+
+    const steps = isMarathon ? marathonSteps : (isTournament ? tournamentSteps : []);
 
     if (eventLoading || !storageLoaded) {
         return (
@@ -259,16 +286,26 @@ export default function EventBookClient({ id }) {
             }
         }
 
+        if (isTournament) {
+            if (bookingStep < 4) {
+                if (bookingStep === 1 && !selectedPackage) return;
+                setBookingStep(bookingStep + 1);
+                return;
+            }
+        }
+
         if (isSeating && selectedSeats.length === 0) return;
         const seatParam = selectedSeats.length > 0
             ? `&seats=${encodeURIComponent(JSON.stringify(selectedSeats))}`
             : '';
         const qtyParam = !isSeating ? `&qty=${quantity}` : '';
         const packageParam = selectedPackage ? `&package=${encodeURIComponent(selectedPackage.title || selectedPackage.name)}` : '';
-        const priceParam = !isSeating ? `&price=${currentPrice}` : '';
+        const priceParam = !isSeating ? `&price=${bookingType === 'audience_free' ? 0 : currentPrice}` : '';
         const participantParam = isMarathon ? `&participant=${encodeURIComponent(JSON.stringify(participantData))}` : '';
+        const teamParam = isTournament ? `&team=${encodeURIComponent(JSON.stringify(teamData))}` : '';
+        const typeParam = bookingType === 'audience_free' ? `&type=audience_free` : (isTournament ? `&type=tournament` : '');
         
-        router.push(`/events/book/checkout?id=${id}${qtyParam}${seatParam}${packageParam}${priceParam}${participantParam}`);
+        router.push(`/events/book/checkout?id=${id}${qtyParam}${seatParam}${packageParam}${priceParam}${participantParam}${teamParam}${typeParam}`);
     };
 
     return (
@@ -283,9 +320,9 @@ export default function EventBookClient({ id }) {
                         <span>Back to event details</span>
                     </Link>
                     
-                    {isMarathon ? (
+                    {(isMarathon || isTournament) ? (
                         <div className="flex items-center gap-6 overflow-x-auto no-scrollbar py-2">
-                            {marathonSteps.map((s, idx) => (
+                            {steps.map((s, idx) => (
                                 <React.Fragment key={s.id}>
                                     <div className="flex items-center gap-2 shrink-0">
                                         <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-[10px] transition-all ${
@@ -297,7 +334,7 @@ export default function EventBookClient({ id }) {
                                             {s.title}
                                         </span>
                                     </div>
-                                    {idx < marathonSteps.length - 1 && <div className="w-4 h-[1px] bg-slate-100" />}
+                                    {idx < steps.length - 1 && <div className="w-4 h-[1px] bg-slate-100" />}
                                 </React.Fragment>
                             ))}
                         </div>
@@ -324,18 +361,18 @@ export default function EventBookClient({ id }) {
                     {/* Left Column: Selection Flow */}
                     <div className="lg:col-span-8 space-y-8">
                         
-                        {isMarathon && (
+                        {(isMarathon || isTournament) && (
                             <div className="mb-8">
                                 <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter leading-none mb-2">
-                                    {marathonSteps[bookingStep - 1].title} Registration
+                                    {steps[bookingStep - 1].title} {isTournament ? 'Registration' : 'Registration'}
                                 </h2>
-                                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Step {bookingStep} of 6</p>
+                                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Step {bookingStep} of {steps.length}</p>
                             </div>
                         )}
 
                         <AnimatePresence mode="wait">
                             {/* Step 1: Category Selection */}
-                            {(!isMarathon || bookingStep === 1) && (
+                            {((!isMarathon && !isTournament) || bookingStep === 1) && (
                                 <motion.div 
                                     key="step1"
                                     initial={{ opacity: 0, y: 20 }}
@@ -343,7 +380,31 @@ export default function EventBookClient({ id }) {
                                     exit={{ opacity: 0, y: -20 }}
                                     className="bg-white rounded-[40px] p-8 md:p-12 border border-slate-100 shadow-sm"
                                 >
-                                    {isSeating && event.blocks?.length > 0 ? (
+                                    {bookingType === 'audience_free' ? (
+                                        <div className="flex flex-col items-center text-center space-y-8 py-12">
+                                            <div className="w-24 h-24 rounded-[3rem] bg-pink-50 flex items-center justify-center text-pink-600 shadow-inner">
+                                                <Users size={48} strokeWidth={1.5} />
+                                            </div>
+                                            <div className="space-y-4">
+                                                <h3 className="text-3xl font-black text-slate-900 uppercase tracking-tighter leading-none italic">Free Audience Pass</h3>
+                                                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest max-w-xs mx-auto">
+                                                    You are claiming a complimentary visitor pass for this tournament.
+                                                </p>
+                                            </div>
+                                            <div className="p-6 bg-slate-50 rounded-3xl border border-slate-100 w-full max-w-md">
+                                                <div className="flex justify-between items-center text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                                    <span>Entry Fee</span>
+                                                    <span className="text-pink-600">FREE</span>
+                                                </div>
+                                            </div>
+                                            <button 
+                                                onClick={handleContinue}
+                                                className="w-full py-5 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-[0.2em] text-[12px] shadow-2xl shadow-slate-900/20 hover:scale-105 transition-all"
+                                            >
+                                                Claim My Free Pass
+                                            </button>
+                                        </div>
+                                    ) : isSeating && event.blocks?.length > 0 ? (
                                         <div className="space-y-8">
                                             <div className="flex flex-col items-center text-center space-y-4 mb-8">
                                                 <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter italic leading-none">Architectural Selection</h2>
@@ -366,13 +427,13 @@ export default function EventBookClient({ id }) {
                                             selectedPackage={selectedPackage}
                                             onSelect={(p) => {
                                                 setSelectedPackage(p);
-                                                if (!isMarathon) setQuantity(1);
+                                                if (!isMarathon && !isTournament) setQuantity(1);
                                             }}
-                                            type={isMarathon ? "marathon" : "event"}
+                                            type={isMarathon ? "marathon" : (isTournament ? "tournament" : "event")}
                                         />
                                     )}
                                     
-                                    {!isMarathon && (selectedPackage || (isSeating && selectedSeats.length > 0)) && (
+                                    {!isMarathon && !isTournament && (selectedPackage || (isSeating && selectedSeats.length > 0)) && (
                                         <motion.div 
                                             initial={{ opacity: 0, height: 0 }}
                                             animate={{ opacity: 1, height: 'auto' }}
@@ -553,10 +614,167 @@ export default function EventBookClient({ id }) {
                                     </div>
                                 </motion.div>
                             )}
+                            {/* Tournament Step 2: Team Info */}
+                            {isTournament && bookingStep === 2 && (
+                                <motion.div 
+                                    key="tourneyStep2"
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -20 }}
+                                    className="bg-white rounded-[40px] p-8 md:p-12 border border-slate-100 shadow-sm space-y-8"
+                                >
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                        <div className="space-y-4">
+                                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 pl-1">Team Name*</label>
+                                            <input 
+                                                className="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl text-sm font-black text-slate-900 outline-none focus:border-pink-500"
+                                                placeholder="e.g. Phoenix Warriors"
+                                                value={teamData.teamName}
+                                                onChange={e => setTeamData({...teamData, teamName: e.target.value})}
+                                            />
+                                        </div>
+                                        <div className="space-y-4">
+                                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 pl-1">Base City</label>
+                                            <input 
+                                                className="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl text-sm font-black text-slate-900 outline-none focus:border-pink-500"
+                                                placeholder="e.g. Mumbai"
+                                                value={teamData.city}
+                                                onChange={e => setTeamData({...teamData, city: e.target.value})}
+                                            />
+                                        </div>
+                                        <div className="space-y-4">
+                                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 pl-1">Captain Name*</label>
+                                            <input 
+                                                className="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl text-sm font-black text-slate-900 outline-none focus:border-pink-500"
+                                                placeholder="Enter full name"
+                                                value={teamData.captainName}
+                                                onChange={e => setTeamData({...teamData, captainName: e.target.value})}
+                                            />
+                                        </div>
+                                        <div className="space-y-4">
+                                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 pl-1">Captain Mobile*</label>
+                                            <input 
+                                                className="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl text-sm font-black text-slate-900 outline-none focus:border-pink-500"
+                                                placeholder="10 digit number"
+                                                value={teamData.captainMobile}
+                                                onChange={e => setTeamData({...teamData, captainMobile: e.target.value})}
+                                            />
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            )}
+
+                            {/* Tournament Step 3: Roster */}
+                            {isTournament && bookingStep === 3 && (
+                                <motion.div 
+                                    key="tourneyStep3"
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -20 }}
+                                    className="bg-white rounded-[40px] p-8 md:p-12 border border-slate-100 shadow-sm space-y-8"
+                                >
+                                    <div className="flex items-center justify-between mb-8">
+                                        <h3 className="text-xl font-black text-slate-900 uppercase italic">Player Roster</h3>
+                                        <button 
+                                            onClick={() => setTeamData(prev => ({
+                                                ...prev,
+                                                members: [...prev.members, { name: "", role: "Player", jerseyNumber: "" }]
+                                            }))}
+                                            className="px-6 py-3 bg-pink-50 text-pink-500 border border-pink-100 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-pink-500 hover:text-white transition-all"
+                                        >
+                                            Add Player
+                                        </button>
+                                    </div>
+
+                                    <div className="space-y-4">
+                                        {teamData.members.map((m, idx) => (
+                                            <div key={idx} className="p-6 bg-slate-50 border border-slate-100 rounded-3xl flex flex-col md:flex-row gap-6 items-center">
+                                                <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
+                                                    <input 
+                                                        className="w-full bg-white border border-slate-200 text-xs font-bold px-4 py-2.5 rounded-xl outline-none focus:border-pink-500"
+                                                        placeholder="Full Name"
+                                                        value={m.name}
+                                                        onChange={e => {
+                                                            const next = [...teamData.members];
+                                                            next[idx].name = e.target.value;
+                                                            setTeamData({...teamData, members: next});
+                                                        }}
+                                                    />
+                                                    <input 
+                                                        className="w-full bg-white border border-slate-200 text-xs font-bold px-4 py-2.5 rounded-xl outline-none focus:border-pink-500"
+                                                        placeholder="Jersey #"
+                                                        value={m.jerseyNumber}
+                                                        onChange={e => {
+                                                            const next = [...teamData.members];
+                                                            next[idx].jerseyNumber = e.target.value;
+                                                            setTeamData({...teamData, members: next});
+                                                        }}
+                                                    />
+                                                    <select 
+                                                        className="w-full bg-white border border-slate-200 text-xs font-bold px-4 py-2.5 rounded-xl outline-none"
+                                                        value={m.role}
+                                                        onChange={e => {
+                                                            const next = [...teamData.members];
+                                                            next[idx].role = e.target.value;
+                                                            setTeamData({...teamData, members: next});
+                                                        }}
+                                                    >
+                                                        <option>Player</option>
+                                                        <option>Captain</option>
+                                                        <option>Sub</option>
+                                                        <option>Coach</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        ))}
+                                        {teamData.members.length === 0 && (
+                                            <div className="py-12 border-2 border-dashed border-slate-100 rounded-3xl text-center text-slate-400">
+                                                <p className="text-[10px] font-black uppercase tracking-widest">No players added yet</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </motion.div>
+                            )}
+
+                            {/* Tournament Step 4: Review */}
+                            {isTournament && bookingStep === 4 && (
+                                <motion.div 
+                                    key="tourneyStep4"
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -20 }}
+                                    className="bg-white rounded-[40px] p-8 md:p-12 border border-slate-100 shadow-sm space-y-8"
+                                >
+                                    <div className="p-8 bg-slate-50 rounded-3xl border border-slate-100 space-y-6">
+                                        <div className="flex justify-between items-center border-b border-slate-200 pb-4">
+                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Team Summary</span>
+                                            <button onClick={() => setBookingStep(2)} className="text-[10px] font-black text-pink-500 uppercase">Edit</button>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-y-4">
+                                            <div>
+                                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Team Name</p>
+                                                <p className="text-xs font-black text-slate-900 uppercase">{teamData.teamName}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Captain</p>
+                                                <p className="text-xs font-black text-slate-900 uppercase">{teamData.captainName}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Players</p>
+                                                <p className="text-xs font-black text-slate-900 uppercase">{teamData.members.length} Members</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Category</p>
+                                                <p className="text-xs font-black text-pink-500 uppercase">{selectedPackage?.name || selectedPackage?.title}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            )}
                         </AnimatePresence>
 
-                        {/* Navigation Buttons for Marathon */}
-                        {isMarathon && (
+                        {/* Navigation Buttons for Marathon/Tournament */}
+                        {(isMarathon || isTournament) && (
                             <div className="flex justify-between items-center pt-8">
                                 <button 
                                     onClick={() => bookingStep > 1 && setBookingStep(bookingStep - 1)}
@@ -568,7 +786,7 @@ export default function EventBookClient({ id }) {
                                     onClick={handleContinue}
                                     className="px-12 py-5 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-[0.2em] text-[11px] shadow-2xl shadow-slate-900/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center gap-3"
                                 >
-                                    {bookingStep === 5 ? 'Confirm & Pay' : 'Next Step'} <ArrowRight size={16} />
+                                    {bookingStep === steps.length ? (isTournament ? 'Confirm & Checkout' : 'Confirm & Pay') : 'Next Step'} <ArrowRight size={16} />
                                 </button>
                             </div>
                         )}
@@ -613,7 +831,7 @@ export default function EventBookClient({ id }) {
                                             <div className="flex justify-between items-center bg-slate-50 p-4 rounded-2xl border border-slate-100">
                                                 <div className="space-y-0.5">
                                                     <p className="text-[13px] font-black text-slate-900 uppercase tracking-tight">{selectedPackage.title || selectedPackage.name}</p>
-                                                    <p className="text-[10px] font-bold text-slate-400 uppercase">× {quantity} Tickets</p>
+                                                    <p className="text-[10px] font-bold text-slate-400 uppercase">× {quantity} {isTournament ? (quantity === 1 ? 'Team' : 'Teams') : (isMarathon ? (quantity === 1 ? 'Runner' : 'Runners') : (quantity === 1 ? 'Ticket' : 'Tickets'))}</p>
                                                 </div>
                                                 <span className="text-[15px] font-black text-slate-900">₹{(currentPrice * quantity).toFixed(2)}</span>
                                             </div>

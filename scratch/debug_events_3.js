@@ -1,15 +1,14 @@
 const { createClient } = require('@supabase/supabase-js');
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabaseUrl = 'https://yayrfycnmbpeeintfcvf.supabase.co';
+const supabaseKey = 'sb_publishable_uDGW5qXObQq5NseQGJVwTQ_ZgIur68-';
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function checkEvents() {
   const { data, error } = await supabase
     .from('events')
-    .select('id, title, status, city, date, type, tournament_events(*)')
-    .eq('status', 'published')
-    .limit(5);
+    .select('*')
+    .eq('status', 'published');
   
   if (error) {
     console.error('Error:', error);

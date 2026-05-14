@@ -6,7 +6,7 @@ import {
     ChevronRight, Info, HeartPulse, GraduationCap, Briefcase, Timer, Target,
     Bike, Award, Utensils, Shirt, Coffee, Car, Smile, Camera, Home, FileText,
     TrendingUp, Trash2, Trash, Zap, Wallet, Sparkles, Search, Monitor, ShieldCheck,
-    Dribbble, Sword, Flag, Medal, Footprints
+    Dribbble, Sword, Flag, Medal, Footprints, Plus, Image as ImageIcon
 } from "lucide-react";
 import CalendarPicker from "./CalendarPicker";
 import TimePicker from "./TimePicker";
@@ -14,6 +14,12 @@ import { useAuth } from '@/components/AuthContext';
 import LocationSelectionModal from "@/components/LocationSelectionModal";
 import BlockMapDesigner from "./BlockMapDesigner";
 import CustomSelect from "./CustomSelect";
+import GoogleInlineMap from "./GoogleInlineMap";
+import { geocode, reverseGeocode } from "@/lib/googleMaps";
+import { COUNTRIES } from "@/app/data/locationData";
+import { State, City } from 'country-state-city';
+import { INDIAN_STATES, getIndianDistricts, getIndianCities } from "@/app/data/indianLocations";
+import { supabase } from "@/lib/supabase";
 
 const renderInput = (label, value, onChange, type = "text", placeholder = "", fullWidth = false) => (
     <div className={`space-y-3 ${fullWidth ? 'md:col-span-2' : ''}`}>
@@ -46,6 +52,56 @@ const SportsEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEditi
     const { user } = useAuth();
     const [currentStep, setCurrentStep] = useState(1);
     const [showLocationModal, setShowLocationModal] = useState(false);
+    const [dbDistricts, setDbDistricts] = useState([]);
+    const [dbCities, setDbCities] = useState([]);
+    const [distLoading, setDistLoading] = useState(false);
+    const [cityLoading, setCityLoading] = useState(false);
+
+    useEffect(() => {
+        if (!postEvent.country) {
+            setPostEvent(prev => ({ 
+                ...prev, 
+                country: prev.country || "India",
+                countryCode: prev.countryCode || "IN"
+            }));
+        }
+    }, []);
+
+    useEffect(() => {
+        const fetchDistricts = async () => {
+            if (!postEvent.state || postEvent.country !== "India") {
+                setDbDistricts([]);
+                return;
+            }
+            setDistLoading(true);
+            try {
+                const { data: stateData } = await supabase.from('states').select('id').eq('name', postEvent.state).maybeSingle();
+                if (stateData) {
+                    const { data: dists } = await supabase.from('districts').select('name').eq('state_id', stateData.id).order('name');
+                    setDbDistricts(dists?.map(d => d.name) || []);
+                }
+            } catch (err) { console.error(err); } finally { setDistLoading(false); }
+        };
+        fetchDistricts();
+    }, [postEvent.state, postEvent.country]);
+
+    useEffect(() => {
+        const fetchCities = async () => {
+            if (!postEvent.district || postEvent.country !== "India") {
+                setDbCities([]);
+                return;
+            }
+            setCityLoading(true);
+            try {
+                const { data: distData } = await supabase.from('districts').select('id').eq('name', postEvent.district).maybeSingle();
+                if (distData) {
+                    const { data: cts } = await supabase.from('cities').select('name').eq('district_id', distData.id).order('name');
+                    setDbCities(cts?.map(c => c.name) || []);
+                }
+            } catch (err) { console.error(err); } finally { setCityLoading(false); }
+        };
+        fetchCities();
+    }, [postEvent.district, postEvent.country]);
 
     useEffect(() => {
         if (!postEvent.sportType) {
@@ -145,6 +201,48 @@ const SportsEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEditi
                         {renderInput("Event Name*", postEvent.title, (v) => setPostEvent(p => ({ ...p, title: v })), "text", "e.g. Pro Cricket League 2026", true)}
                         {renderInput("Sport Name*", postEvent.sportName, (v) => setPostEvent(p => ({ ...p, sportName: v })), "text", "e.g. Cricket, Football")}
                         {renderInput("Age Category", postEvent.ageGroup, (v) => setPostEvent(p => ({ ...p, ageGroup: v })), "text", "e.g. U-19, Open")}
+
+                        <div className="md:col-span-2 space-y-4">
+                            <label className="block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] pl-1">Tournament Banner*</label>
+                            <div className="relative group h-64 rounded-[2.5rem] border-2 border-dashed border-slate-200 bg-slate-50 overflow-hidden hover:border-orange-300 transition-all flex items-center justify-center">
+                                {postEvent.bannerPreview ? (
+                                    <>
+                                        <img src={postEvent.bannerPreview} className="absolute inset-0 w-full h-full object-cover" />
+                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                            <button 
+                                                onClick={() => setPostEvent(p => ({ ...p, bannerPreview: "" }))}
+                                                className="p-4 bg-white/20 backdrop-blur-xl rounded-2xl text-white hover:bg-red-500 transition-all"
+                                            >
+                                                <Trash2 size={24} />
+                                            </button>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <label className="cursor-pointer flex flex-col items-center gap-4 group/label">
+                                        <div className="w-16 h-16 rounded-2xl bg-white shadow-sm flex items-center justify-center text-slate-400 group-hover/label:text-orange-500 group-hover/label:scale-110 transition-all">
+                                            <ImageIcon size={32} strokeWidth={1.5} />
+                                        </div>
+                                        <div className="text-center">
+                                            <span className="block text-[10px] font-black text-slate-900 uppercase tracking-widest">Upload Main Banner</span>
+                                            <span className="block text-[8px] font-bold text-slate-400 uppercase tracking-tight mt-1">Recommended: 1200x600px</span>
+                                        </div>
+                                        <input 
+                                            type="file" 
+                                            className="hidden" 
+                                            accept="image/*"
+                                            onChange={(e) => {
+                                                const file = e.target.files[0];
+                                                if (file) {
+                                                    const reader = new FileReader();
+                                                    reader.onload = (ev) => setPostEvent(p => ({ ...p, bannerPreview: ev.target.result }));
+                                                    reader.readAsDataURL(file);
+                                                }
+                                            }} 
+                                        />
+                                    </label>
+                                )}
+                            </div>
+                        </div>
                     </div>
 
                     <div className="pt-10 flex justify-end">
@@ -167,9 +265,100 @@ const SportsEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEditi
                         {/* Locate Ground button removed */}
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         {renderInput("Stadium/Ground Name*", postEvent.venue, (v) => setPostEvent(p => ({ ...p, venue: v })), "text", "e.g. Chinnaswamy Stadium", true)}
-                        {renderInput("Address*", postEvent.address, (v) => setPostEvent(p => ({ ...p, address: v })), "text", "Full venue location", true)}
+                        {renderInput("Full Address*", postEvent.address, (v) => setPostEvent(p => ({ ...p, address: v })), "text", "Full venue location", true)}
+                        
+                        <CustomSelect 
+                            label="Country"
+                            value={postEvent.country}
+                            options={COUNTRIES}
+                            onChange={(v) => {
+                                const countryData = COUNTRIES.find(c => (c.label || c) === v);
+                                setPostEvent(p => ({ ...p, country: v, countryCode: countryData?.code || "IN", state: "", district: "", city: "", zipCode: "" }));
+                            }}
+                        />
+                        <CustomSelect 
+                            label="State / Province"
+                            value={postEvent.state}
+                            options={State.getStatesOfCountry(postEvent.countryCode || 'IN').map(s => s.name)}
+                            onChange={(v) => {
+                                const stateObj = State.getStatesOfCountry(postEvent.countryCode || 'IN').find(s => s.name === v);
+                                setPostEvent(p => ({ ...p, state: v, stateCode: stateObj?.isoCode || "", district: "", city: "" }));
+                            }}
+                        />
+
+                        {postEvent.countryCode === "IN" ? (
+                            <>
+                                <CustomSelect 
+                                    label="District"
+                                    value={postEvent.district}
+                                    options={Array.from(new Set([...dbDistricts, ...getIndianDistricts(postEvent.state)])).sort()}
+                                    isLoading={distLoading}
+                                    onChange={(v) => setPostEvent(prev => ({ ...prev, district: v, city: "", zipCode: "" }))}
+                                />
+                                <CustomSelect 
+                                    label="City"
+                                    value={postEvent.city}
+                                    options={Array.from(new Set([...dbCities, ...getIndianCities(postEvent.district)])).sort()}
+                                    isLoading={cityLoading}
+                                    onChange={async (v) => {
+                                        setPostEvent(prev => ({ ...prev, city: v }));
+                                        try {
+                                            const coords = await geocode(`${v}, ${postEvent.state}, ${postEvent.country}`);
+                                            if (coords) setPostEvent(prev => ({ ...prev, latitude: coords.lat, longitude: coords.lng }));
+                                        } catch (err) {}
+                                    }}
+                                />
+                            </>
+                        ) : (
+                            <CustomSelect 
+                                label="City"
+                                value={postEvent.city}
+                                options={City.getCitiesOfState(postEvent.countryCode || 'IN', postEvent.stateCode).map(c => c.name)}
+                                onChange={async (v) => {
+                                    setPostEvent(prev => ({ ...prev, city: v }));
+                                    try {
+                                        const coords = await geocode(`${v}, ${postEvent.state}, ${postEvent.country}`);
+                                        if (coords) setPostEvent(prev => ({ ...prev, latitude: coords.lat, longitude: coords.lng }));
+                                    } catch (err) {}
+                                }}
+                            />
+                        )}
+
+                        <div className="space-y-3">
+                            <label className="block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] pl-1">Pincode / Zip Code</label>
+                            <input 
+                                type="text"
+                                value={postEvent.zipCode || ""}
+                                onChange={(e) => setPostEvent(prev => ({ ...prev, zipCode: e.target.value }))}
+                                className="w-full bg-slate-50/50 border border-slate-100 text-slate-900 text-sm font-bold px-6 py-4 rounded-2xl focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-orange-200 transition-all placeholder:text-slate-400"
+                                placeholder="Enter Pincode"
+                            />
+                        </div>
+
+                        <div className="md:col-span-2 h-[350px] rounded-[3rem] overflow-hidden border border-slate-100 shadow-2xl relative">
+                            <GoogleInlineMap 
+                                lat={postEvent.latitude || 20.5937} 
+                                lng={postEvent.longitude || 78.9629}
+                                onLocationSelect={async (lat, lng) => {
+                                    setPostEvent(p => ({ ...p, latitude: lat, longitude: lng }));
+                                    try {
+                                        const geo = await reverseGeocode(lat, lng);
+                                        if (geo) {
+                                            setPostEvent(p => ({ 
+                                                ...p, 
+                                                address: geo.fullAddress,
+                                                city: geo.city,
+                                                state: geo.state,
+                                                country: geo.country,
+                                                zipCode: geo.pincode
+                                            }));
+                                        }
+                                    } catch (err) {}
+                                }}
+                            />
+                        </div>
                     </div>
 
                     <div className="space-y-6 pt-6">

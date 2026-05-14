@@ -14,6 +14,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import LocationSelectionModal from '@/components/LocationSelectionModal';
 import { useLocation } from '@/context/LocationContext';
 import { supabase } from '@/lib/supabase';
+import { DataService } from '@/services/DataService';
 
 const { width } = Dimensions.get('window');
 const SCREEN_WIDTH = width;
@@ -202,12 +203,52 @@ export default function HomeScreen() {
   const { data: banners, refresh: refreshBanners } = useSupabaseQuery('branding_banners', (q) => q.eq('status', 'Active'), [], { realtime: true });
   const { data: couponsRaw, refresh: refreshCoupons } = useSupabaseQuery('branding_coupons', (q) => q.eq('status', 'Active'), [], { realtime: true });
   const { data: memoriesData, refresh: refreshMemories } = useSupabaseQuery('memories', (q) => q, [], { realtime: true });
-  const { data: events, loading: eventsLoading, refresh: refreshEvents } = useSupabaseQuery(
-    'events',
-    (q) => q.order('created_at', { ascending: false }),
-    [],
-    { realtime: true, refreshOn: ['event_like_counts'] }
-  );
+  const [apiEvents, setApiEvents] = useState<any[]>([]);
+  const [eventsLoading, setEventsLoading] = useState(true);
+
+  const fetchUnifiedEvents = useCallback(async () => {
+    try {
+      const city = userLocationData.city || '';
+      const district = userLocationData.district || '';
+      const data = await DataService.getPublicEvents(city === 'Select City' ? '' : city, district);
+      setApiEvents(data || []);
+    } catch (err) {
+      console.warn('Failed to fetch unified events:', err);
+    } finally {
+      setEventsLoading(false);
+    }
+  }, [userLocationData.city, userLocationData.district]);
+
+  useEffect(() => {
+    fetchUnifiedEvents();
+  }, [fetchUnifiedEvents]);
+
+  // Listen to realtime changes and re-fetch API
+  useEffect(() => {
+    const unsubEvents = DataService.subscribeToTable('events', () => fetchUnifiedEvents());
+    const unsubTourney = DataService.subscribeToTable('tournament_events', () => fetchUnifiedEvents());
+    const unsubMarathon = DataService.subscribeToTable('marathon_events', () => fetchUnifiedEvents());
+    
+    return () => {
+      unsubEvents();
+      unsubTourney();
+      unsubMarathon();
+    };
+  }, [fetchUnifiedEvents]);
+
+  const { data: banners, refresh: refreshBanners } = useSupabaseQuery('branding_banners', (q) => q.eq('status', 'Active'), [], { realtime: true });
+  const { data: couponsRaw, refresh: refreshCoupons } = useSupabaseQuery('branding_coupons', (q) => q.eq('status', 'Active'), [], { realtime: true });
+  const { data: memoriesData, refresh: refreshMemories } = useSupabaseQuery('memories', (q) => q, [], { realtime: true });
+  
+  const events = useMemo(() => {
+    return apiEvents.map(ev => ({
+        ...ev,
+        // Ensure compatibility with mobile EventCard
+        tournament_events: ev.tournament_data ? [ev.tournament_data] : [],
+        marathon_events: ev.marathon_data ? [ev.marathon_data] : []
+    }));
+  }, [apiEvents]);
+
 
   const { data: professionals, refresh: refreshPros } = useSupabaseQuery(
     'service_providers',
@@ -230,12 +271,13 @@ export default function HomeScreen() {
       refreshBanners(),
       refreshCoupons(),
       refreshMemories(),
-      refreshEvents(),
+      fetchUnifiedEvents(),
       refreshPros(),
       refreshUnified()
     ]);
     setRefreshing(false);
-  }, [refreshBanners, refreshCoupons, refreshMemories, refreshEvents, refreshPros, refreshUnified]);
+  }, [refreshBanners, refreshCoupons, refreshMemories, fetchUnifiedEvents, refreshPros, refreshUnified]);
+
 
   // City Discovery State
   const [selectedHomeCity, setSelectedHomeCity] = useState('Bengaluru');
@@ -378,8 +420,9 @@ export default function HomeScreen() {
 
         const timeStr = ev.end_time || ev.endTime || configBasic.endTime || ev.time || ev.startTime || '23:59';
         const eventDateTime = new Date(`${dateStr}T${timeStr}`);
+        const isToday = eventDateTime.toDateString() === now.toDateString();
 
-        if (!isNaN(eventDateTime.getTime()) && eventDateTime < now) {
+        if (!isNaN(eventDateTime.getTime()) && eventDateTime < now && !isToday) {
           return false; // Expired
         }
       } catch (err) {
@@ -502,6 +545,14 @@ export default function HomeScreen() {
   const popularEvents = useMemo(() => {
     return activeEvents.slice(0, 10);
   }, [activeEvents]);
+
+  const tournamentEvents = useMemo(() => {
+    return allLiveEvents.filter(e => e.type === "Tournament Event" || e.type === "Tournament" || (e.tournament_events && e.tournament_events.length > 0));
+  }, [allLiveEvents]);
+
+  const sportsChampionships = useMemo(() => {
+    return tournamentEvents.filter(e => e.category === "Sports");
+  }, [tournamentEvents]);
 
   const comingSoonListRef = useRef(null);
   const servicesListRef = useRef(null);
@@ -771,6 +822,31 @@ export default function HomeScreen() {
                }
             }} 
           />
+        )}
+
+        {/* 0.5) Sports Championships */}
+        {sportsChampionships.length > 0 && (
+          <View style={[styles.section, { marginTop: 20 }]}>
+            <View style={[styles.sectionHeader, { marginBottom: 16 }]}>
+              <View>
+                <Text style={[styles.sectionTitle, { color: colors.text }]}>Sports <Text style={{ color: '#f59e0b' }}>Championships</Text> 🏆</Text>
+                <Text style={{ fontSize: 11, color: colors.muted, fontWeight: '600', marginTop: 2 }}>Join the most competitive leagues</Text>
+              </View>
+            </View>
+            <FlatList
+              data={sportsChampionships}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              keyExtractor={(item) => `tourney-${item.id}`}
+              contentContainerStyle={{ paddingLeft: 20, paddingRight: 20, gap: 16 }}
+              renderItem={({ item }) => (
+                <EventCard 
+                  event={item} 
+                  onPress={() => router.push({ pathname: "/events/[id]", params: { id: item.id } })} 
+                />
+              )}
+            />
+          </View>
         )}
 
         {/* 1) Featured Events (Popular) */}
@@ -1084,68 +1160,6 @@ export default function HomeScreen() {
 
         {/* Old Explore Popular Events position removed */}
 
-
-        {/* Professional Services Section */}
-        <View style={[styles.section, { marginTop: 10, paddingBottom: 20 }]}>
-          <View style={[styles.sectionHeader, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }]}>
-            <Text style={[styles.sectionTitle, { color: colors.text, fontSize: 22, letterSpacing: -0.5, flex: 1 }]} numberOfLines={1}>
-              Professional <Text style={{ color: '#a855f7' }}>Services</Text>
-            </Text>
-            <Pressable onPress={() => router.push('/services')}>
-              <Text style={{ color: colors.tint, fontSize: 13, fontWeight: '800' }}>View all →</Text>
-            </Pressable>
-          </View>
-          <Text style={{ fontSize: 12, color: colors.muted, fontWeight: '600', marginBottom: 16, paddingHorizontal: 0 }}>Top rated artists and studios for your special occasions</Text>
-
-          <FlatList
-            ref={servicesListRef}
-            data={displayServices}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            keyExtractor={(item) => item.name}
-            contentContainerStyle={{ paddingLeft: 20, paddingRight: 20, gap: 16 }}
-            renderItem={({ item }) => (
-              <Pressable 
-                style={{ width: width - 40, height: 220, backgroundColor: colors.card, borderRadius: 24, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.15, shadowRadius: 16, elevation: 5 }}
-                onPress={() => router.push({ pathname: "/services", params: { category: item.name } })}
-              >
-                {/* Background Image */}
-                <Image source={{ uri: item.image }} style={[StyleSheet.absoluteFill, { width: '100%', height: '100%' }]} />
-                
-                {/* Overlay */}
-                <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.45)' }]} />
-                <LinearGradient
-                  colors={['transparent', 'rgba(0,0,0,0.8)']}
-                  style={[StyleSheet.absoluteFill]}
-                  locations={[0.3, 1]}
-                />
-
-                <View style={{ padding: 20, flex: 1, justifyContent: 'space-between' }}>
-                  {/* Top Pill */}
-                  <LinearGradient
-                    colors={item.gradient as [string, string]}
-                    start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-                    style={{ alignSelf: 'flex-start', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 12, flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)' }}
-                  >
-                    <Text style={{ fontSize: 14 }}>{item.icon}</Text>
-                    <Text style={{ color: '#fff', fontSize: 12, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 1 }}>{item.name}</Text>
-                  </LinearGradient>
-
-                  {/* Bottom Text */}
-                  <View>
-                    <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600', lineHeight: 22, marginBottom: 12, textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 4 }}>
-                      {item.description}
-                    </Text>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                      <Text style={{ color: '#fff', fontSize: 12, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1 }}>Browse Experts</Text>
-                      <ChevronRight size={14} color="#fff" />
-                    </View>
-                  </View>
-                </View>
-              </Pressable>
-            )}
-          />
-        </View>
 
         {/* Newsletter Subscription Section */}
         <View style={{ paddingHorizontal: 20, marginTop: 20, marginBottom: 40 }}>

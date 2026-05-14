@@ -33,6 +33,7 @@ export default function LocationSelectionModal({ isOpen, onClose }: LocationSele
   const [selectedCountry, setSelectedCountry] = useState("India");
   const [geoLoading, setGeoLoading] = useState(false);
   const [allCities, setAllCities] = useState<any[]>([]);
+  const [allDistricts, setAllDistricts] = useState<any[]>([]);
   const [liveResults, setLiveResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
 
@@ -93,9 +94,23 @@ export default function LocationSelectionModal({ isOpen, onClose }: LocationSele
           if (data) {
             const formatted = data.map(c => ({
               name: c.name,
+              district: c.district?.name,
               full: `${c.name}, ${c.district?.name || ''}, ${c.district?.state?.name || ''}, ${c.district?.state?.country?.name || ''}`.replace(/, , /g, ', ').replace(/, $/g, '')
             }));
             setAllCities(formatted);
+          }
+        });
+
+      supabase.from('districts')
+        .select('name, state:states(name, country:countries(name))')
+        .order('name')
+        .then(({ data }) => {
+          if (data) {
+            const formatted = data.map(d => ({
+              name: d.name,
+              full: `${d.name} District, ${d.state?.name || ''}, ${d.state?.country?.name || ''}`.replace(/, , /g, ', ').replace(/, $/g, '')
+            }));
+            setAllDistricts(formatted);
           }
         });
     }
@@ -171,12 +186,16 @@ export default function LocationSelectionModal({ isOpen, onClose }: LocationSele
       .filter(c => c.name.toLowerCase().includes(search.toLowerCase()))
       .map(c => ({ ...c, type: 'database' }));
 
+    const districtMatches = allDistricts
+      .filter(d => d.name.toLowerCase().includes(search.toLowerCase()))
+      .map(d => ({ ...d, type: 'district' }));
+
     const apiMatches = liveResults
       .filter(lr => !dbMatches.some(dm => dm.name.toLowerCase() === lr.name.toLowerCase()))
       .map(lr => ({ ...lr, type: 'live' }));
 
-    return [...dbMatches, ...apiMatches].slice(0, 10);
-  }, [search, allCities, liveResults]);
+    return [...districtMatches, ...dbMatches, ...apiMatches].slice(0, 10);
+  }, [search, allCities, allDistricts, liveResults]);
 
   if (!isOpen) return null;
 
@@ -265,6 +284,7 @@ export default function LocationSelectionModal({ isOpen, onClose }: LocationSele
                     onPress={async () => {
                       await setLocation({ 
                         city: city.name,
+                        district: city.district || (city.type === 'district' ? city.name : undefined),
                         address: city.full,
                         latitude: city.lat,
                         longitude: city.lng
@@ -274,17 +294,17 @@ export default function LocationSelectionModal({ isOpen, onClose }: LocationSele
                     style={styles.resultItem}
                   >
                     <View style={styles.resultItemLeft}>
-                      <View style={[styles.resultIcon, { backgroundColor: city.type === 'database' ? '#fdf2f8' : '#f8fafc' }]}>
-                        <MapPin size={16} color={city.type === 'database' ? '#f844a4' : '#94a3b8'} />
+                      <View style={[styles.resultIcon, { backgroundColor: city.type === 'district' ? '#f3e8ff' : (city.type === 'database' ? '#fdf2f8' : '#f8fafc') }]}>
+                        <MapPin size={16} color={city.type === 'district' ? '#a855f7' : (city.type === 'database' ? '#f844a4' : '#94a3b8')} />
                       </View>
                       <View>
-                        <Text style={styles.resultName}>{city.name}</Text>
+                        <Text style={styles.resultName}>{city.name}{city.type === 'district' ? ' District' : ''}</Text>
                         <Text style={styles.resultFull} numberOfLines={1}>{city.full}</Text>
                       </View>
                     </View>
-                    <View style={[styles.typeBadge, { backgroundColor: city.type === 'database' ? '#f0fdf4' : '#f1f5f9' }]}>
-                      <Text style={[styles.typeBadgeText, { color: city.type === 'database' ? '#10b981' : '#64748b' }]}>
-                        {city.type === 'database' ? 'VERIFIED' : 'GLOBAL'}
+                    <View style={[styles.typeBadge, { backgroundColor: city.type === 'district' ? '#f3e8ff' : (city.type === 'database' ? '#f0fdf4' : '#f1f5f9') }]}>
+                      <Text style={[styles.typeBadgeText, { color: city.type === 'district' ? '#a855f7' : (city.type === 'database' ? '#10b981' : '#64748b') }]}>
+                        {city.type === 'district' ? 'DISTRICT' : (city.type === 'database' ? 'VERIFIED' : 'GLOBAL')}
                       </Text>
                     </View>
                   </Pressable>

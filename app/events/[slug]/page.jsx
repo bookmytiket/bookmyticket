@@ -10,27 +10,46 @@ import DynamicEventClient from '../components/DynamicEventClient';
  */
 export async function generateMetadata({ params }) {
     const { slug } = await params;
+    
+    const logPath = path.join(process.cwd(), 'scratch', 'slug_logs.txt');
+    const log = (msg) => {
+        fs.appendFileSync(logPath, `[${new Date().toISOString()}] [Metadata] ${msg}\n`);
+    };
 
-    if (!supabase) return { title: 'BookMyTicket | Event' };
+    log(`Metadata requested for slug: ${slug}`);
+
+    if (!supabase) {
+        log('Supabase client is NULL');
+        return { title: 'BookMyTicket | Event' };
+    }
 
     // Fetch by slug first (preferred for SEO)
-    let { data: event } = await supabase
+    log(`Fetching by slug: ${slug}`);
+    let { data: event, error: slugError } = await supabase
         .from('events')
         .select('*')
         .eq('slug', slug)
         .maybeSingle();
 
+    if (slugError) log(`Slug fetch error: ${JSON.stringify(slugError)}`);
+
     // If not found by slug, try by ID fallback (only if slug is a valid UUID)
     if (!event && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug)) {
-        const { data: byId } = await supabase
+        log(`Falling back to ID fetch: ${slug}`);
+        const { data: byId, error: idError } = await supabase
             .from('events')
             .select('*')
             .eq('id', slug)
             .maybeSingle();
+        if (idError) log(`ID fetch error: ${JSON.stringify(idError)}`);
         event = byId;
     }
 
-    if (!event) return { title: 'Event Not Found | BookMyTicket' };
+    if (!event) {
+        log(`Event not found for slug: ${slug}`);
+        return { title: 'Event Not Found | BookMyTicket' };
+    }
+    log(`Found event for metadata: ${event.id}`);
 
     const title = `${event.title} Tickets | ${event.city || event.location} | BookMyTicket`;
     const description = `Book tickets for ${event.title} in ${event.city || event.location}. ${event.description?.slice(0, 150)}... Official ticketing partner BookMyTicket.`;
@@ -55,80 +74,111 @@ export async function generateMetadata({ params }) {
  * Dynamic Event Page for Organic SEO Growth.
  * Supports clean URLs like /events/marathon-2026.
  */
+import fs from 'fs';
+import path from 'path';
+
 export default async function SlugEventPage({ params }) {
     const { slug } = await params;
+    
+    // File-based logging for debugging
+    const logPath = path.join(process.cwd(), 'scratch', 'slug_logs.txt');
+    const log = (msg) => {
+        fs.appendFileSync(logPath, `[${new Date().toISOString()}] ${msg}\n`);
+    };
 
-    if (!supabase) notFound();
+    log(`Slug requested: ${slug}`);
+    console.log('[SlugEventPage] RECEIVED params slug:', slug);
 
-    // Fetch by slug first (preferred for SEO)
-    let { data: event } = await supabase
-        .from('events')
-        .select('*')
-        .eq('slug', slug)
-        .maybeSingle();
+    try {
+        if (!supabase) {
+            log('Supabase client is NULL');
+            notFound();
+        }
 
-    // If not found by slug, try by ID fallback (only if slug is a valid UUID)
-    if (!event && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug)) {
-        const { data: byId } = await supabase
+        // Fetch by slug first
+        log(`Fetching from events table where slug = ${slug}`);
+        let { data: event, error: slugError } = await supabase
             .from('events')
             .select('*')
-            .eq('id', slug)
+            .eq('slug', slug)
             .maybeSingle();
-        event = byId;
-    }
+        
+        if (slugError) {
+            log(`Slug fetch error: ${JSON.stringify(slugError)}`);
+        }
 
-    if (!event) notFound();
+        // Fallback by ID
+        if (!event && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug)) {
+            log(`Falling back to ID fetch: ${slug}`);
+            const { data: byId, error: idError } = await supabase
+                .from('events')
+                .select('*')
+                .eq('id', slug)
+                .maybeSingle();
+            if (idError) log(`ID fetch error: ${JSON.stringify(idError)}`);
+            event = byId;
+        }
 
-    const isDynamic = event.type === 'Dynamic' || event.event_type === 'marathon' || event.title?.toLowerCase().includes('marathon');
+        if (!event) {
+            log(`EVENT NOT FOUND in DB for slug: ${slug}`);
+            notFound();
+        }
 
-    return (
-        <>
-            {/* Structured Data (JSON-LD) for Google Rich Results */}
-            <script
-                type="application/ld+json"
-                dangerouslySetInnerHTML={{
-                    __html: JSON.stringify({
-                        "@context": "https://schema.org",
-                        "@type": "Event",
-                        "name": event.title,
-                        "startDate": event.date,
-                        "endDate": event.date,
-                        "description": event.description,
-                        "image": [event.img],
-                        "eventAttendanceMode": event.virtual ? "https://schema.org/OnlineEventAttendanceMode" : "https://schema.org/OfflineEventAttendanceMode",
-                        "eventStatus": "https://schema.org/EventScheduled",
-                        "location": {
-                            "@type": event.virtual ? "VirtualLocation" : "Place",
-                            "name": event.venue || event.location,
-                            "address": {
-                                "@type": "PostalAddress",
-                                "addressLocality": event.city || event.location,
-                                "addressRegion": "IN",
-                                "addressCountry": "IN"
+        log(`SUCCESS: Found event: ${event.id} - ${event.title}`);
+        const isDynamic = event.type === 'Dynamic' || event.event_type === 'marathon' || event.title?.toLowerCase().includes('marathon');
+
+        return (
+            <>
+                {/* Structured Data (JSON-LD) for Google Rich Results */}
+                <script
+                    type="application/ld+json"
+                    dangerouslySetInnerHTML={{
+                        __html: JSON.stringify({
+                            "@context": "https://schema.org",
+                            "@type": "Event",
+                            "name": event.title,
+                            "startDate": event.date,
+                            "endDate": event.date,
+                            "description": event.description,
+                            "image": [event.img],
+                            "eventAttendanceMode": event.virtual ? "https://schema.org/OnlineEventAttendanceMode" : "https://schema.org/OfflineEventAttendanceMode",
+                            "eventStatus": "https://schema.org/EventScheduled",
+                            "location": {
+                                "@type": event.virtual ? "VirtualLocation" : "Place",
+                                "name": event.venue || event.location,
+                                "address": {
+                                    "@type": "PostalAddress",
+                                    "addressLocality": event.city || event.location,
+                                    "addressRegion": "IN",
+                                    "addressCountry": "IN"
+                                }
+                            },
+                            "offers": {
+                                "@type": "Offer",
+                                "url": `https://bookmyticket.net/events/${event.slug || event.id}`,
+                                "price": event.price || 0,
+                                "priceCurrency": "INR",
+                                "availability": "https://schema.org/InStock",
+                                "validFrom": event.created_at
+                            },
+                            "organizer": {
+                                "@type": "Organization",
+                                "name": "BookMyTicket",
+                                "url": "https://bookmyticket.net"
                             }
-                        },
-                        "offers": {
-                            "@type": "Offer",
-                            "url": `https://bookmyticket.net/events/${event.slug || event.id}`,
-                            "price": event.price || 0,
-                            "priceCurrency": "INR",
-                            "availability": "https://schema.org/InStock",
-                            "validFrom": event.created_at
-                        },
-                        "organizer": {
-                            "@type": "Organization",
-                            "name": "BookMyTicket",
-                            "url": "https://bookmyticket.net"
-                        }
-                    })
-                }}
-            />
+                        })
+                    }}
+                />
 
-            {isDynamic ? (
-                <DynamicEventClient event={event} />
-            ) : (
-                <EventDetailClient id={event.id} />
-            )}
-        </>
-    );
+                {isDynamic ? (
+                    <DynamicEventClient event={event} />
+                ) : (
+                    <EventDetailClient id={event.id} />
+                )}
+            </>
+        );
+    } catch (error) {
+        log(`CRITICAL ERROR: ${error.message}`);
+        throw error;
+    }
 }
