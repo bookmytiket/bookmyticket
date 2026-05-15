@@ -208,10 +208,12 @@ export function useSupabaseConfig(table, initialValue) {
     const { data, refresh } = useSupabaseQuery(table, (q) => key ? q.eq('key', key) : q, [key], { realtime: false });
     const [updateConfig] = useSupabaseMutation(table, 'update', (q, p) => p.id ? q.eq('id', p.id) : (key ? q.eq('key', key) : q));
 
-    const rawData = data && data[0] ? data[0] : initialValue;
-    const config = (table === 'system_config' && rawData?.value) 
-        ? { ...rawData, ...rawData.value } 
-        : rawData;
+    const config = React.useMemo(() => {
+        const rawData = data && data[0] ? data[0] : initialValue;
+        return (table === 'system_config' && rawData?.value) 
+            ? { ...rawData, ...rawData.value } 
+            : rawData;
+    }, [data, table, JSON.stringify(initialValue)]);
 
     const setConfig = async (newValue) => {
         const payload = typeof newValue === 'function' ? newValue(config) : newValue;

@@ -74,12 +74,12 @@ export async function POST(request) {
       const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString(); // 15 mins
 
       // 2. Store Token in existing 'otps' table
-      const { error } = await supabaseAdmin.from('otps').insert({
-        email,
+      const { error } = await supabaseAdmin.from('otps').upsert({
+        identifier: email,
         code: token,
         purpose: 'reset',
         expires_at: expiresAt
-      });
+      }, { onConflict: 'identifier' });
 
       if (error) {
         console.error("Token DB Save Error:", error);
@@ -122,7 +122,7 @@ export async function POST(request) {
 
       const { data, error } = await supabaseAdmin.from('otps')
         .select('*')
-        .eq('email', email)
+        .eq('identifier', email)
         .eq('code', token)
         .eq('purpose', 'reset')
         .gte('expires_at', new Date().toISOString())
@@ -143,7 +143,7 @@ export async function POST(request) {
       // 1. Double check token again
       const { data: validToken, error: tokenError } = await supabaseAdmin.from('otps')
         .select('*')
-        .eq('email', email)
+        .eq('identifier', email)
         .eq('code', token)
         .eq('purpose', 'reset')
         .gte('expires_at', new Date().toISOString())
@@ -195,7 +195,7 @@ export async function POST(request) {
       }
 
       // 4. Cleanup: Remove used token
-      await supabaseAdmin.from('otps').delete().eq('id', validToken.id);
+      await supabaseAdmin.from('otps').delete().eq('identifier', email).eq('purpose', 'reset');
 
 
       return NextResponse.json({ success: true, message: 'Password updated successfully.' });

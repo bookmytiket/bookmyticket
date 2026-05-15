@@ -56,24 +56,51 @@ export async function POST(request) {
 
   try {
     const body = await request.json();
-    const { firstName, lastName, email, phone, category, type, role, remarks } = body;
+    const { firstName, lastName, email, phone, category, type, role, remarks, businessName, serviceType, city, experience, portfolioLink, coverageArea } = body;
 
-    // 1. Insert into partner_requests
-    const { data: partnerReq, error: insertError } = await supabaseAdmin
-      .from('partner_requests')
-      .insert({
-        first_name: firstName,
-        last_name: lastName,
-        email: email,
-        phone: phone,
-        category: category,
-        type: type,
-        role: role,
-        remarks: remarks,
-        status: 'Pending'
-      })
-      .select()
-      .single();
+    let partnerReq;
+    let insertError;
+
+    if (type === 'professional_service') {
+      const res = await supabaseAdmin
+        .from('professional_service_requests')
+        .insert({
+          full_name: `${firstName} ${lastName}`.trim(),
+          email: email,
+          mobile: phone,
+          business_name: businessName,
+          service_category: category,
+          service_type: serviceType,
+          city: city,
+          experience: experience,
+          description: remarks,
+          portfolio_link: portfolioLink,
+          coverage_area: coverageArea,
+          status: 'Pending Review'
+        })
+        .select()
+        .single();
+      partnerReq = res.data;
+      insertError = res.error;
+    } else {
+      const res = await supabaseAdmin
+        .from('partner_requests')
+        .insert({
+          first_name: firstName,
+          last_name: lastName,
+          email: email,
+          phone: phone,
+          category: category,
+          type: type,
+          role: role,
+          remarks: remarks,
+          status: 'Pending'
+        })
+        .select()
+        .single();
+      partnerReq = res.data;
+      insertError = res.error;
+    }
 
     if (insertError) throw insertError;
 

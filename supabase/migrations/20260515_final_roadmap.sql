@@ -236,11 +236,35 @@ END $$;
 -- 10. TOURNAMENT & MARATHON SCHEMA STABILIZATION
 -- Fix missing event_id columns and sync relations
 ALTER TABLE public.tournament_events ADD COLUMN IF NOT EXISTS event_id UUID REFERENCES public.events(id) ON DELETE CASCADE;
+ALTER TABLE public.tournament_events ADD COLUMN IF NOT EXISTS registration_end_date TIMESTAMPTZ;
+ALTER TABLE public.tournament_events ADD COLUMN IF NOT EXISTS min_players INTEGER DEFAULT 1;
+ALTER TABLE public.tournament_events ADD COLUMN IF NOT EXISTS max_players INTEGER DEFAULT 20;
+ALTER TABLE public.tournament_events ADD COLUMN IF NOT EXISTS audience_free_access BOOLEAN DEFAULT true;
+ALTER TABLE public.tournament_events ADD COLUMN IF NOT EXISTS registration_open BOOLEAN DEFAULT true;
+
 ALTER TABLE public.marathon_events ADD COLUMN IF NOT EXISTS event_id UUID REFERENCES public.events(id) ON DELETE CASCADE;
 
 -- Backfill event_id if missing (assuming 1:1 ID match for legacy records)
 UPDATE public.tournament_events SET event_id = id WHERE event_id IS NULL;
 UPDATE public.marathon_events SET event_id = id WHERE event_id IS NULL;
+
+-- 11. TOURNAMENT CATEGORIES (TIERED PRICING)
+CREATE TABLE IF NOT EXISTS public.tournament_categories (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    event_id UUID NOT NULL REFERENCES public.events(id) ON DELETE CASCADE,
+    category_name TEXT NOT NULL,
+    category_fee NUMERIC(15,2) NOT NULL DEFAULT 0,
+    max_teams INTEGER DEFAULT 16,
+    active BOOLEAN DEFAULT true,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.tournament_categories ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public select categories" ON public.tournament_categories FOR SELECT USING (true);
+CREATE POLICY "Organisers manage own categories" ON public.tournament_categories FOR ALL USING (
+    event_id IN (SELECT id FROM public.events WHERE organiser_id = auth.uid())
+);
 
 -- Sync Price Drift
 UPDATE public.events e 
@@ -252,4 +276,16 @@ AND (e.type = 'Tournament' OR e.type = 'Tournament Event' OR e.type = 'Sports To
 -- Ensure event_id is searchable for performance
 CREATE INDEX IF NOT EXISTS idx_tournament_events_event_id ON public.tournament_events(event_id);
 CREATE INDEX IF NOT EXISTS idx_marathon_events_event_id ON public.marathon_events(event_id);
+CREATE INDEX IF NOT EXISTS idx_tournament_categories_event_id ON public.tournament_categories(event_id);
+
+-- Realtime for Tournaments
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'tournament_events') THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.tournament_events;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'tournament_categories') THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.tournament_categories;
+    END IF;
+END $$;
 

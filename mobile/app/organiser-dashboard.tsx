@@ -67,10 +67,20 @@ export default function OrganiserDashboard() {
       if (bookingsData) {
         setRecentBookings(bookingsData.slice(0, 5));
         const totalRev = bookingsData.reduce((acc, b) => acc + (Number(b.total_price) || 0), 0);
+        
+        const activeCount = events.filter(e => {
+          const pStatus = e.publish_status || (e.status === 'draft' ? 'draft' : 'published');
+          const lStatus = e.listing_status || (e.status === 'archived' ? 'archived' : 'active');
+          const endAt = e.event_end_at ? new Date(e.event_end_at) : new Date(e.date);
+          const startAt = e.event_start_at ? new Date(e.event_start_at) : new Date(e.date);
+          
+          return lStatus !== 'archived' && pStatus === 'published' && endAt >= now && startAt <= now;
+        }).length;
+
         setStats({
           totalBookings: bookingsData.length,
           totalRevenue: totalRev,
-          activeEvents: events.filter(e => new Date(e.date) >= new Date()).length,
+          activeEvents: activeCount,
         });
       }
     };

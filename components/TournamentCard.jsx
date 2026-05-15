@@ -7,9 +7,10 @@ import { getEventPath } from "@/app/utils/seo";
 export default function TournamentCard({ event }) {
     if (!event) return null;
 
-    const tournament = event.tournament_events?.[0] || event.tournament_events || {};
+    const tournament = event.tournament_data || event.tournament_events?.[0] || event.tournament_events || {};
     const teamCount = tournament.metadata?.registeredTeamsCount || 0;
     const isFreeAudience = tournament.audience_free_access !== false;
+    const registrationEndDate = event.registration_end_date || tournament.registration_end_at || tournament.registration_end_date;
 
     return (
         <div
@@ -44,6 +45,14 @@ export default function TournamentCard({ event }) {
                     <div className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
                     <span className="text-[9px] font-black uppercase tracking-widest">Registration Open</span>
                 </div>
+
+                {/* Registration End Date Badge */}
+                {registrationEndDate && (
+                    <div className="absolute bottom-6 right-6 px-4 py-2 bg-slate-900/80 backdrop-blur-md text-white rounded-2xl flex items-center gap-2 border border-white/10 shadow-2xl">
+                        <Calendar size={12} className="text-pink-400" />
+                        <span className="text-[8px] font-black uppercase tracking-widest">Ends: {new Date(registrationEndDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</span>
+                    </div>
+                )}
             </div>
 
             {/* Content Section */}

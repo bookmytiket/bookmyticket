@@ -21,7 +21,8 @@ import {
     CheckCircle,
     UserCircle,
     Package,
-    Sparkles
+    Sparkles,
+    Zap
 } from "lucide-react";
 
 export default function VendorLayout({ children }) {
@@ -35,13 +36,31 @@ export default function VendorLayout({ children }) {
         setMounted(true);
         if (!loading && !user) {
             router.push("/signin");
+            return;
         }
         // Check if user is a vendor or admin
         const isVendor = ["vendor", "organiser", "staff", "admin", "super_admin", "system_admin"].includes(user?.role);
         if (!loading && user && !isVendor) {
             router.push("/");
+            return;
         }
-    }, [user, loading, router]);
+
+        // Redirect Turf Partners to the new Turf Panel
+        const isTurf = user?.category?.toLowerCase().includes("turf") || user?.role === "turf_organiser";
+        if (!loading && isTurf && pathname.startsWith("/vendor") && !pathname.includes("/vendor/signin")) {
+            const routeMap = {
+                "/vendor/dashboard": "/turf-panel",
+                "/vendor/services": "/turf-panel/facilities",
+                "/vendor/bookings": "/turf-panel/bookings",
+                "/vendor/calendar": "/turf-panel/calendar",
+                "/vendor/portfolio": "/turf-panel/facilities",
+                "/vendor/reviews": "/turf-panel/reviews",
+                "/vendor/earnings": "/turf-panel/revenue",
+                "/vendor/settings": "/turf-panel/settings",
+            };
+            router.push(routeMap[pathname] || "/turf-panel");
+        }
+    }, [user, loading, router, pathname]);
 
     if (!mounted || loading || !user) {
         return (
@@ -54,16 +73,27 @@ export default function VendorLayout({ children }) {
     const isTurfVendor = user?.category?.toLowerCase().includes("turf");
     const isPoolVendor = user?.category?.toLowerCase().includes("swimming");
 
-    const navigation = [
+    const navigation = isTurfVendor ? [
+        { name: "Dashboard", href: "/turf-panel", icon: LayoutDashboard },
+        { name: "Facilities", href: "/turf-panel/facilities", icon: Package },
+        { name: "Slots", href: "/turf-panel/slots", icon: Zap },
+        { name: "Bookings", href: "/turf-panel/bookings", icon: CheckCircle },
+        { name: "Calendar", href: "/turf-panel/calendar", icon: Calendar },
+        { name: "Customers", href: "/turf-panel/customers", icon: UserCircle },
+        { name: "Promotions", href: "/turf-panel/promotions", icon: Sparkles },
+        { name: "Reviews", href: "/turf-panel/reviews", icon: Star },
+        { name: "Revenue", href: "/turf-panel/revenue", icon: DollarSign },
+        { name: "Settings", href: "/turf-panel/settings", icon: Settings },
+    ] : [
         { name: "Dashboard", href: "/vendor/dashboard", icon: LayoutDashboard },
         { name: "Bookings", href: "/vendor/bookings", icon: CheckCircle },
         { name: "Calendar", href: "/vendor/calendar", icon: Calendar },
         { 
-            name: isTurfVendor ? "Turf Management" : isPoolVendor ? "Pool Management" : "Services / Packages", 
+            name: isPoolVendor ? "Pool Management" : "Services / Packages", 
             href: isPoolVendor ? "/vendor/swimming-pool" : "/vendor/services", 
             icon: (isTurfVendor || isPoolVendor) ? Package : Sparkles 
         },
-        { name: isTurfVendor ? "Facility Gallery" : isPoolVendor ? "Pool Images" : "Portfolio", href: isPoolVendor ? "/vendor/swimming-pool" : "/vendor/portfolio", icon: ImageIcon },
+        { name: isPoolVendor ? "Pool Images" : "Portfolio", href: isPoolVendor ? "/vendor/swimming-pool" : "/vendor/portfolio", icon: ImageIcon },
         { name: "Messages", href: "/vendor/messages", icon: MessageSquare },
         { name: "Reviews", href: "/vendor/reviews", icon: Star },
         { name: "Earnings", href: "/vendor/earnings", icon: DollarSign },

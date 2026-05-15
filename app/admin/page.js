@@ -9,6 +9,7 @@ import { useAuth } from "@/components/AuthContext";
 import AdminCheckoutFooter from "@/app/admin/components/AdminCheckoutFooter";
 import MobileBannersAdmin from "@/app/admin/components/MobileBannersAdmin";
 import AdminPartnerRequestsTable from "@/app/admin/components/AdminPartnerRequestsTable";
+import AdminServiceRequestsTable from "@/app/admin/components/AdminServiceRequestsTable";
 import BrandingHeader from "@/components/BrandingHeader";
 import EmailCommSystem from "@/app/admin/components/EmailCommSystem";
 import SeoAnalyticsAdmin from "@/app/admin/components/SeoAnalyticsAdmin";
@@ -32,7 +33,7 @@ import {
     Edit, Search, AlertCircle, ChevronDown, ChevronRight, LogOut, Activity, RefreshCw, 
     AlertTriangle, Info, Smartphone, MessageSquare, Landmark, Ban, Sun, Moon, Filter, 
     Building2, Cpu, ExternalLink, Eye, Layout, Settings2, ShieldCheck, Slash, ArrowRight, 
-    User, Phone, Star
+    User, Phone, Star, Trophy, Timer, Key
 } from "lucide-react";
 import { HOME_EVENTS, HERO_BANNER_SLIDES } from "@/app/data/homeEvents";
 import { eventMatchesCategory } from "@/app/utils/categoryMatch";
@@ -41,6 +42,7 @@ import { useToast } from "@/context/ToastContext";
 import { useConfirm } from "@/context/ConfirmContext";
 
 const SERVICE_CATEGORIES = ["Mehendi Artist", "Mehandi Artist", "Photographer/Studio", "Makeup Artist", "Personal Service", "Artist"];
+const EMPTY_ARRAY = Object.freeze([]);
 // Standardize icons
 const NavIcon = ({ icon: Icon, size = 18, color }) => (
     <div style={{ 
@@ -56,8 +58,22 @@ const NavIcon = ({ icon: Icon, size = 18, color }) => (
         <Icon size={size} strokeWidth={2.5} />
     </div>
 );
-
-
+const GroupTitle = ({ title, t }) => (
+    <p className="px-8 mt-6 mb-2 text-[10px] font-extrabold uppercase tracking-[0.2em]" style={{ color: t?.textSub || '#64748b', opacity: 0.4 }}>{title}</p>
+);
+const NavLink = ({ id, label, icon: Icon, active, setActiveTab, setIsSidebarOpen }) => (
+    <div 
+        className={`sidebar-item-new ${active ? 'active' : ''}`} 
+        onClick={() => {
+            setActiveTab(id);
+            if (window.innerWidth < 1024) setIsSidebarOpen(false);
+        }}
+        style={{ pointerEvents: 'auto', cursor: 'pointer', position: 'relative', zIndex: 10 }}
+    >
+        <Icon size={20} strokeWidth={active ? 2.5 : 2} />
+        <span>{label}</span>
+    </div>
+);
 
 
 class ErrorBoundary extends React.Component {
@@ -110,7 +126,9 @@ export default function AdminHomePageWrapper() {
 
     return (
         <ErrorBoundary>
-            <AdminHomePage />
+            <React.Suspense fallback={<div className="flex items-center justify-center min-h-screen"><RefreshCw className="animate-spin text-pink-500" size={40} /></div>}>
+                <AdminHomePage />
+            </React.Suspense>
         </ErrorBoundary>
     );
 }
@@ -826,32 +844,35 @@ const PayoutRequestsTable = ({ t, theme }) => {
     const fetchRequests = async () => {
         setLoading(true);
         try {
+            // Unify with organiser panel's withdraw_requests table
             const { data } = await supabase
-                .from('payout_requests')
-                .select('*, profiles:requester_id(full_name, id)')
+                .from('withdraw_requests')
+                .select('*, organisers:organiser_id(business_name, id, email), bank_details:bank_details_id(*)')
                 .order('created_at', { ascending: false });
             
             if (data) {
                 const enriched = await Promise.all(data.map(async (req) => {
-                    const type = req.requester_type;
-                    const walletTable = type === 'organiser' ? 'organiser_wallet' : 'provider_wallets';
-                    const profileTable = type === 'organiser' ? 'organisers' : 'service_providers';
-                    const walletCol = type === 'organiser' ? 'organiser_id' : 'provider_id';
+                    const type = 'organiser'; // Default to organiser for withdraw_requests
+                    const walletTable = 'organiser_wallet';
+                    const walletCol = 'organiser_id';
                     
-                    let pid = null;
-                    if (type === 'organiser') {
-                        const { data: profile } = await supabase.from('organisers').select('id').eq('id', req.requester_id).maybeSingle();
-                        pid = profile?.id;
-                    } else {
-                        const { data: profile } = await supabase.from('service_providers').select('id').eq('organiser_id', req.requester_id).maybeSingle();
-                        pid = profile?.id;
-                    }
+                    const pid = req.organiser_id;
                     
                     if (pid) {
                         const { data: w } = await supabase.from(walletTable).select('balance').eq(walletCol, pid).maybeSingle();
-                        return { ...req, current_balance: w?.balance || 0, provider_id: pid, wallet_table: walletTable, wallet_col: walletCol };
+                        return { 
+                            ...req, 
+                            current_balance: w?.balance || 0, 
+                            provider_id: pid, 
+                            wallet_table: walletTable, 
+                            wallet_col: walletCol,
+                            // Map for UI compatibility
+                            requester_name: req.organisers?.business_name || 'Partner',
+                            requester_type: 'organiser',
+                            requested_amount: req.amount
+                        };
                     }
-                    return { ...req, current_balance: 0 };
+                    return { ...req, current_balance: 0, requester_name: 'Partner', requester_type: 'organiser' };
                 }));
                 setRequests(enriched);
             }
@@ -864,7 +885,7 @@ const PayoutRequestsTable = ({ t, theme }) => {
 
     useEffect(() => { fetchRequests(); }, []);
 
-    const [updateStatus] = useSupabaseMutation('payout_requests', 'update', (q, p) => q.eq('id', p.id));
+    const [updateStatus] = useSupabaseMutation('withdraw_requests', 'update', (q, p) => q.eq('id', p.id));
     const [addTransaction] = useSupabaseMutation('wallet_transactions', 'insert');
     const { showToast } = useToast();
     const refresh = fetchRequests;
@@ -915,10 +936,38 @@ const PayoutRequestsTable = ({ t, theme }) => {
         }
     };
 
+    const stats = useMemo(() => {
+        const pending = requests.filter(r => r.status === 'pending').reduce((acc, r) => acc + (r.amount || 0), 0);
+        const approved = requests.filter(r => r.status === 'approved').reduce((acc, r) => acc + (r.amount || 0), 0);
+        const total = requests.filter(r => r.status === 'paid' || r.status === 'processed').reduce((acc, r) => acc + (r.amount || 0), 0);
+        return { pending, approved, total, count: requests.length };
+    }, [requests]);
+
     if (loading) return <div style={{ padding: "40px", textAlign: "center", color: t.textSub }}>Loading payout requests...</div>;
 
     return (
-        <div className="table-container">
+        <div className="space-y-6">
+            {/* Analytics Cards */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "20px", marginBottom: "32px" }}>
+                <div style={{ padding: "24px", backgroundColor: "#fff", borderRadius: "16px", border: "1px solid #f1f5f9", boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.05)" }}>
+                    <p style={{ fontSize: "10px", fontWeight: 800, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.1em" }}>Pending Payouts</p>
+                    <p style={{ fontSize: "24px", fontWeight: 900, color: "#f59e0b", marginTop: "8px" }}>₹{stats.pending.toLocaleString()}</p>
+                </div>
+                <div style={{ padding: "24px", backgroundColor: "#fff", borderRadius: "16px", border: "1px solid #f1f5f9", boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.05)" }}>
+                    <p style={{ fontSize: "10px", fontWeight: 800, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.1em" }}>Approved (Unpaid)</p>
+                    <p style={{ fontSize: "24px", fontWeight: 900, color: "#3b82f6", marginTop: "8px" }}>₹{stats.approved.toLocaleString()}</p>
+                </div>
+                <div style={{ padding: "24px", backgroundColor: "#fff", borderRadius: "16px", border: "1px solid #f1f5f9", boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.05)" }}>
+                    <p style={{ fontSize: "10px", fontWeight: 800, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.1em" }}>Total Disbursed</p>
+                    <p style={{ fontSize: "24px", fontWeight: 900, color: "#10b981", marginTop: "8px" }}>₹{stats.total.toLocaleString()}</p>
+                </div>
+                <div style={{ padding: "24px", backgroundColor: "#fff", borderRadius: "16px", border: "1px solid #f1f5f9", boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.05)" }}>
+                    <p style={{ fontSize: "10px", fontWeight: 800, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.1em" }}>Total Requests</p>
+                    <p style={{ fontSize: "24px", fontWeight: 900, color: "#1e293b", marginTop: "8px" }}>{stats.count}</p>
+                </div>
+            </div>
+
+            <div className="table-container" style={{ backgroundColor: "#fff", borderRadius: "24px", border: "1px solid #f1f5f9", overflow: "hidden" }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
                     <tr style={{ borderBottom: `1px solid ${t.border}`, textAlign: "left" }}>
@@ -936,9 +985,14 @@ const PayoutRequestsTable = ({ t, theme }) => {
                         <tr key={req.id} style={{ borderBottom: `1px solid ${t.border}` }}>
                             <td style={{ padding: "12px" }}>
                                 <div style={{ fontWeight: 700, color: t.textMain }}>
-                                    {req.profiles?.full_name || 'Partner'}
+                                    {req.requester_name}
                                 </div>
                                 <div style={{ fontSize: "11px", color: t.textSub }}>{new Date(req.created_at).toLocaleString()}</div>
+                                {req.bank_details && (
+                                    <div style={{ marginTop: "4px", padding: "4px 8px", backgroundColor: "#f8fafc", borderRadius: "4px", fontSize: "10px", color: "#64748b", border: "1px solid #e2e8f0" }}>
+                                        <span style={{ fontWeight: 800, color: "#475569" }}>{req.bank_details.payment_type?.toUpperCase()}:</span> {req.bank_details.account_number || req.bank_details.upi_id} ({req.bank_details.ifsc_code || 'UPI'})
+                                    </div>
+                                )}
                             </td>
                             <td style={{ padding: "12px", fontWeight: 800, color: "#ec4899" }}>₹{Number(req.amount).toFixed(2)}</td>
                             <td style={{ padding: "12px", color: t.textMain, fontWeight: 600 }}>₹{Number(req.current_balance || 0).toFixed(2)}</td>
@@ -958,7 +1012,8 @@ const PayoutRequestsTable = ({ t, theme }) => {
                         </tr>
                     ))}
                 </tbody>
-            </table>
+                </table>
+            </div>
         </div>
     );
 };
@@ -971,14 +1026,17 @@ function AdminHomePage() {
     const searchParams = useSearchParams();
     const router = useRouter();
 
+    // Admin Security Gate: Support all administrative roles
+    const adminRoles = useMemo(() => ["admin", "super_admin", "system_admin", "finance_admin", "moderator", "support_admin"], []);
+    
     useEffect(() => {
-        if (!loading && (!user || (user.role !== "admin" && user.role !== "super_admin" && user.role !== "system_admin"))) {
+        if (!loading && (!user || !adminRoles.includes(user.role?.toLowerCase()))) {
             router.push("/signin?redirect=/admin");
         }
-    }, [user, loading, router]);
+    }, [user, loading, router, adminRoles]);
 
     useEffect(() => {
-        if (!user || (user.role !== "admin" && user.role !== "super_admin" && user.role !== "system_admin")) return;
+        if (!user || !adminRoles.includes(user.role)) return;
 
         const channel = supabase
             .channel('new-applicants')
@@ -995,7 +1053,29 @@ function AdminHomePage() {
     const handleLogout = () => {
         logout();
     };
-    const [activeTab, setActiveTab] = useState("dashboard");
+    const rawTab = searchParams.get("tab") || "dashboard";
+    const aliases = useMemo(() => ({
+        'users': 'customers',
+        'organisers': 'all_org',
+        'providers': 'service_active',
+        'vendors': 'service_active',
+        'kyc': 'partner_requests',
+        'fraud-monitoring': 'fraud_dashboard',
+        'analytics': 'financials',
+        'all_org': 'all_org',
+        'active_org': 'active_org',
+        'kyc_pending': 'kyc_pending',
+        'banned_org': 'banned_org',
+        'service_active': 'service_active',
+        'revenue': 'revenue',
+        'payments': 'revenue'
+    }), []);
+    const activeTab = aliases[rawTab] || rawTab;
+    const setActiveTab = (tabId) => {
+        const canonicalTab = aliases[tabId] || tabId;
+        router.push(`/admin?tab=${encodeURIComponent(canonicalTab)}`);
+    };
+
     const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
     const dropdownRef = React.useRef(null);
 
@@ -1042,7 +1122,7 @@ function AdminHomePage() {
     const [isGrowthOpen, setIsGrowthOpen] = useState(false);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     // Careers Data
-    const { data: jobApplicants = [] } = useSupabaseQuery('job_applications', (q) => q.eq('status', 'new'), []);
+    const { data: jobApplicants = EMPTY_ARRAY } = useSupabaseQuery('job_applications', (q) => q.eq('status', 'new'), []);
     const newApplicantsCount = jobApplicants.length;
 
     const [isCareersOpen, setIsCareersOpen] = useState(false);
@@ -1054,6 +1134,11 @@ function AdminHomePage() {
     const [paymentGatewayConfig, setPaymentGatewayConfig] = useState(null);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editingOrg, setEditingOrg] = useState(null);
+    const [isEditVendorModalOpen, setIsEditVendorModalOpen] = useState(false);
+    const [editingVendor, setEditingVendor] = useState(null);
+    const [isPasswordResetModalOpen, setIsPasswordResetModalOpen] = useState(false);
+    const [selectedUserForPassword, setSelectedUserForPassword] = useState(null);
+    const [newManualPassword, setNewManualPassword] = useState("");
     const [activeTemplate, setActiveTemplate] = useState(null);
     const [editingTemplate, setEditingTemplate] = useState(null);
     const [categories, setCategories] = useState([]);
@@ -1062,37 +1147,40 @@ function AdminHomePage() {
     const [partnerModal, setPartnerModal] = useState(null); // 'add' | 'edit'
     const [editingPartner, setEditingPartner] = useState(null);
     const [partnerForm, setPartnerForm] = useState({ name: "", logo: "", url: "" });
-    const [videoBannerConfig, setVideoBannerConfig] = useSupabaseConfig("system_config", {
+    const initialVideoConfig = useMemo(() => ({
         key: 'admin_video_banner',
         videoUrl: "/bookmyticket/videoplayback.mp4",
         title1: "Discover Your Next",
         title2: "Unforgettable Experience",
         subtitle: "Explore concerts, shows, nightlife, and exclusive experiences happening around you.",
-    });
+    }), []);
+    const [videoBannerConfig, setVideoBannerConfig] = useSupabaseConfig("system_config", initialVideoConfig);
 
-    const [maintenanceConfig, setMaintenanceConfig] = useSupabaseConfig("system_config", {
+    const initialMaintenanceConfig = useMemo(() => ({
         key: 'maintenance_mode',
         maintenance_mode: false,
         maintenance_message: "We're upgrading your experience. Please check back soon!"
-    });
+    }), []);
+    const [maintenanceConfig, setMaintenanceConfig] = useSupabaseConfig("system_config", initialMaintenanceConfig);
 
-    const [seoAnalyticsConfig, setSeoAnalyticsConfig] = useSupabaseConfig("system_config", {
+    const initialSeoConfig = useMemo(() => ({
         key: 'seo_analytics',
         ga_id: "G-XXXXXXXXXX",
         ga_enabled: false,
         city_seo_overrides: {},
         backlink_tracking: [],
         sitemap_last_ping: null
-    });
+    }), []);
+    const [seoAnalyticsConfig, setSeoAnalyticsConfig] = useSupabaseConfig("system_config", initialSeoConfig);
 
 
-    const { data: rawPaymentGateways = [], loading: gatewaysLoading } = useSupabaseQuery('payment_gateways', q => q, [], { realtime: true });
+    const { data: rawPaymentGateways = EMPTY_ARRAY, loading: gatewaysLoading } = useSupabaseQuery('payment_gateways', q => q, [], { realtime: true });
     const [addPaymentGateway] = useSupabaseMutation('payment_gateways', 'insert');
     const [patchPaymentGateway] = useSupabaseMutation('payment_gateways', 'update', (q, p) => q.eq('id', p.id));
     const [removePaymentGateway] = useSupabaseMutation('payment_gateways', 'delete', (q, p) => q.eq('id', p.id));
 
     // Sync turf bookings from Supabase
-    const { data: turfBookingsArr = [] } = useSupabaseQuery('turf_bookings', q => q, [], { realtime: false });
+    const { data: turfBookingsArr = EMPTY_ARRAY } = useSupabaseQuery('turf_bookings', q => q, [], { realtime: false });
     const [showLedgerModal, setShowLedgerModal] = useState(false);
     const [selectedLedgerOrg, setSelectedLedgerOrg] = useState(null);
     const [showEditEventModal, setShowEditEventModal] = useState(false);
@@ -1103,9 +1191,12 @@ function AdminHomePage() {
         }
     }, [turfBookingsArr]);
 
+    const hasSeededGatewaysRef = React.useRef(false);
+
     // Seed default gateways if empty
     useEffect(() => {
-        if (!gatewaysLoading && rawPaymentGateways.length === 0) {
+        if (activeTab === "payment_settings" && !gatewaysLoading && rawPaymentGateways.length === 0 && !hasSeededGatewaysRef.current) {
+            hasSeededGatewaysRef.current = true;
             const defaults = [
                 { name: "Stripe", is_enabled: true, config: { apiKey: "", secret_key: "", webhook_secret: "", mode: "test" }, test_mode: true },
                 { name: "PayPal", is_enabled: false, config: { apiKey: "", secret_key: "", mode: "test" }, test_mode: true },
@@ -1116,10 +1207,10 @@ function AdminHomePage() {
             ];
             defaults.forEach(d => addPaymentGateway(d).catch(e => console.log('Gateway seed skipped:', e.message)));
         }
-    }, [rawPaymentGateways, gatewaysLoading]);
+    }, [activeTab, rawPaymentGateways, gatewaysLoading]);
 
     // Fee Settings
-    const { data: feeSettingsArr = [] } = useSupabaseQuery('fee_settings', q => q, [], { realtime: false });
+    const { data: feeSettingsArr = EMPTY_ARRAY } = useSupabaseQuery('fee_settings', q => q, [], { realtime: false });
     const [updateFeeSettings] = useSupabaseMutation('fee_settings', 'update', (q, p) => q.eq('id', p.id));
 
     const [localFeeSettings, setLocalFeeSettings] = useState({
@@ -1152,34 +1243,37 @@ function AdminHomePage() {
     };
 
     // Supabase settings definitions
-    const { data: ticketSettingsArr = [] } = useSupabaseQuery('ticket_settings', q => q, [], { realtime: false });
+    const { data: ticketSettingsArr = EMPTY_ARRAY } = useSupabaseQuery('ticket_settings', q => q, [], { realtime: false });
     const [updateTicketSettings] = useSupabaseMutation('ticket_settings', 'update', (q, p) => q.eq('id', p.id));
 
-    const { data: emailSettingsArr = [] } = useSupabaseQuery('email_settings', q => q, [], { realtime: false });
+    const { data: emailSettingsArr = EMPTY_ARRAY } = useSupabaseQuery('email_settings', q => q, [], { realtime: false });
     const [updateEmailSettings] = useSupabaseMutation('email_settings', 'update', (q, p) => q.eq('id', p.id));
 
-    const { data: seoSettingsArr = [] } = useSupabaseQuery('seo_settings', q => q, [], { realtime: false });
+    const { data: seoSettingsArr = EMPTY_ARRAY } = useSupabaseQuery('seo_settings', q => q, [], { realtime: false });
     const [updateSeoSettings] = useSupabaseMutation('seo_settings', 'update', (q, p) => q.eq('id', p.id));
 
-    const { data: emailTemplates = [] } = useSupabaseQuery('email_templates', q => q, [], { realtime: false });
+    const { data: emailTemplates = EMPTY_ARRAY } = useSupabaseQuery('email_templates', q => q, [], { realtime: false });
     const [addEmailTemplate] = useSupabaseMutation('email_templates', 'upsert');
     const [patchEmailTemplate] = useSupabaseMutation('email_templates', 'update', (q, p) => q.eq('id', p.id));
     const [removeEmailTemplate] = useSupabaseMutation('email_templates', 'delete', (q, p) => q.eq('id', p.id));
 
+    const hasSeededEmailTemplatesRef = React.useRef(false);
+
     // Seed default email templates if empty
     useEffect(() => {
-        if (emailTemplates !== undefined && emailTemplates.length === 0) {
+        if (activeTab === "email_templates" && emailTemplates !== undefined && emailTemplates.length === 0 && !hasSeededEmailTemplatesRef.current) {
+            hasSeededEmailTemplatesRef.current = true;
             const defaults = [
                 { identifier: "booking", name: "Ticket Booking Confirmation", subject: "Your Tickets for {{event_name}}", body: "Hello {{user_name}},\n\nYour tickets for {{event_name}} are confirmed.\n\nDate: {{event_date}}\nVenue: {{event_venue}}\n\nDownload your ticket here: {{ticket_url}}\n\nThank you for booking with us!", auto_send: true },
                 { identifier: "canceled", name: "Ticket Booking Canceled", subject: "Booking Canceled: {{event_name}}", body: "Hello {{user_name}},\n\nYour booking for {{event_name}} has been canceled.\n\nRefund details: {{refund_info}}\n\nWe hope to see you again soon.", auto_send: true },
                 { identifier: "registration", name: "User Registration", subject: "Welcome to BookMyTicket!", body: "Welcome to BookMyTicket!\n\nYour account has been successfully created.\n\nStart exploring events here: {{site_url}}", auto_send: true },
                 { identifier: "otp", name: "OTP Verification", subject: "{{otp}} is your verification code", body: "Your verification code is: {{otp}}\n\nDo not share this code with anyone.", auto_send: true },
             ];
-            defaults.forEach(d => addEmailTemplate(d, { onConflict: 'identifier' }));
+            defaults.forEach(d => addEmailTemplate(d, { onConflict: 'identifier' }).catch(e => console.log('Email template seed skipped:', e.message)));
         }
-    }, [emailTemplates]);
+    }, [activeTab, emailTemplates]);
 
-    const { data: commSettingsArr = [], refresh: refreshComm } = useSupabaseQuery('communicationSettings');
+    const { data: commSettingsArr = EMPTY_ARRAY, refresh: refreshComm } = useSupabaseQuery('communicationSettings');
     const [updateCommSetting] = useSupabaseMutation('communicationSettings', 'update', (q, p) => q.eq('key', p.key));
     const [localCommSettings, setLocalCommSettings] = useState([]);
 
@@ -1205,7 +1299,7 @@ function AdminHomePage() {
         setLocalCommSettings(prev => prev.map(s => s.key === key ? { ...s, value: { ...s.value, [field]: val } } : s));
     };
 
-    const { data: policiesArr = [] } = useSupabaseQuery('policies', q => q, [], { realtime: false });
+    const { data: policiesArr = EMPTY_ARRAY } = useSupabaseQuery('policies', q => q, [], { realtime: false });
     const [updatePolicies] = useSupabaseMutation('policies', 'update', (q, p) => q.eq('id', p.id));
 
     // ── Local buffer so copy-paste isn't interrupted by DB re-renders ──
@@ -1229,43 +1323,43 @@ function AdminHomePage() {
         }
     }, [policiesArr[0]?.id]);  // only re-sync when the record itself changes, not on every field update
 
-    const { data: ssoSettingsArr = [] } = useSupabaseQuery('sso_settings', q => q, [], { realtime: true });
+    const { data: ssoSettingsArr = EMPTY_ARRAY } = useSupabaseQuery('sso_settings', q => q, [], { realtime: true });
     const [updateSsoSettings] = useSupabaseMutation('sso_settings', 'upsert');
 
-    const { data: homeCategoriesArr = [] } = useSupabaseQuery('categories');
+    const { data: homeCategoriesArr = EMPTY_ARRAY } = useSupabaseQuery('categories');
     const [addCategory] = useSupabaseMutation('categories', 'insert');
     const [patchCategory] = useSupabaseMutation('categories', 'update', (q, p) => q.eq('id', p.id));
     const [removeCategory] = useSupabaseMutation('categories', 'delete', (q, p) => q.eq('id', p.id));
 
-    const { data: homePartnersArr = [] } = useSupabaseQuery('home_partners');
+    const { data: homePartnersArr = EMPTY_ARRAY } = useSupabaseQuery('home_partners');
     const [addEventPartner] = useSupabaseMutation('home_partners', 'insert');
     const [patchEventPartner] = useSupabaseMutation('home_partners', 'update', (q, p) => q.eq('id', p.id));
     const [removeEventPartner] = useSupabaseMutation('home_partners', 'delete', (q, p) => q.eq('id', p.id));
 
-    const { data: homeSlidesArr = [] } = useSupabaseQuery('home_slides', q => q, [], { realtime: false });
+    const { data: homeSlidesArr = EMPTY_ARRAY } = useSupabaseQuery('home_slides', q => q, [], { realtime: false });
     const [addBannerSlide] = useSupabaseMutation('home_slides', 'insert');
     const [updateBannerSlide] = useSupabaseMutation('home_slides', 'update', (q, p) => q.eq('id', p.id));
     const [removeBannerSlide] = useSupabaseMutation('home_slides', 'delete', (q, p) => q.eq('id', p.id));
 
     // Pages management
-    const { data: pages = [] } = useSupabaseQuery('pages', q => q, [], { realtime: false });
+    const { data: pages = EMPTY_ARRAY } = useSupabaseQuery('pages', q => q, [], { realtime: false });
     const [createPage] = useSupabaseMutation('pages', 'insert');
     const [updatePage] = useSupabaseMutation('pages', 'update', (q, p) => q.eq('id', p.id));
     const [deletePage] = useSupabaseMutation('pages', 'delete', (q, p) => q.eq('id', p.id));
 
     // Recent Memories management
-    const { data: memories = [] } = useSupabaseQuery('memories');
+    const { data: memories = EMPTY_ARRAY } = useSupabaseQuery('memories');
     const [createMemory] = useSupabaseMutation('memories', 'insert');
     const [updateMemory] = useSupabaseMutation('memories', 'update', (q, p) => q.eq('id', p.id));
     const [deleteMemory] = useSupabaseMutation('memories', 'delete', (q, p) => q.eq('id', p.id));
 
     // Consolidated remaining queries
-    const { data: bannerRequests = [] } = useSupabaseQuery('banners', (q) => q.eq('status', 'Pending'));
-    const { data: allBanners = [] } = useSupabaseQuery('banners');
-    const { data: allBrandingKYC = [] } = useSupabaseQuery('brand_kyc');
+    const { data: bannerRequests = EMPTY_ARRAY } = useSupabaseQuery('banners', (q) => q.eq('status', 'Pending'));
+    const { data: allBanners = EMPTY_ARRAY } = useSupabaseQuery('banners');
+    const { data: allBrandingKYC = EMPTY_ARRAY } = useSupabaseQuery('brand_kyc');
     const [verifyKYCMutation] = useSupabaseMutation('brand_kyc', 'update', (q, p) => q.eq('id', p.id));
-    const { data: siteBrandingArr = [] } = useSupabaseQuery('site_branding', q => q, [], { realtime: false });
-    const [subnavConfig, setSubnavConfig] = useSupabaseConfig("system_config", {
+    const { data: siteBrandingArr = EMPTY_ARRAY } = useSupabaseQuery('site_branding', q => q, [], { realtime: false });
+    const initialNavConfig = useMemo(() => ({
         key: 'admin_navigation_config',
         items: [
             { id: 1, label: "Home", icon: "🏠", order: 0 },
@@ -1275,28 +1369,63 @@ function AdminHomePage() {
             { id: 5, label: "Live Gate", icon: "⚡", order: 4 },
             { id: 6, label: "Campaigns", icon: "🔥", order: 5 }
         ]
-    });
+    }), []);
+    const [subnavConfig, setSubnavConfig] = useSupabaseConfig("system_config", initialNavConfig);
     const subnavItems = subnavConfig.items || [];
-    const { data: promotionsArr = [] } = useSupabaseQuery('promotions');
+    const { data: promotionsArr = EMPTY_ARRAY } = useSupabaseQuery('promotions');
     
-    // Structured User Management: Fetch from role-specific tables
-    const { data: vendorsOnly = [], refresh: refreshVendors } = useSupabaseQuery('organisers', (q) => q.select('*, profiles:organisers_id_fkey(email)'));
+    // Structured User Management: Reverted to verified production tables
+    const { data: organisersData = EMPTY_ARRAY, refresh: refreshVendors } = useSupabaseQuery('organisers', (q) => q.select('*, profiles:organisers_id_fkey(email, full_name)'));
     
     // Merge for backward compatibility in Admin Panel
     const organisersArr = useMemo(() => {
-        return vendorsOnly;
-    }, [vendorsOnly]);
+        return organisersData;
+    }, [organisersData]);
 
+    const { data: serviceProvidersArr = EMPTY_ARRAY, refresh: refreshServiceProviders } = useSupabaseQuery('vendors', (q) => q.select('*, profiles:vendors_id_fkey(email, full_name)'));
+    const [updateVendorMutation] = useSupabaseMutation('vendors', 'update', (q, p) => q.eq('id', p.id));
+    const [removeVendor] = useSupabaseMutation('vendors', 'delete', (q, p) => q.eq('id', p.id));
+    const { data: homeSectionsArr = EMPTY_ARRAY } = useSupabaseQuery('home_sections');
+    const { data: supportTicketsArr = EMPTY_ARRAY } = useSupabaseQuery('support_tickets');
+    const { data: usersArr = EMPTY_ARRAY } = useSupabaseQuery('profiles');
+    const { data: adminsArr = EMPTY_ARRAY } = useSupabaseQuery('admins', q => q.select('*, profiles:id (full_name, email, username)'));
+    const { data: kycData = EMPTY_ARRAY } = useSupabaseQuery('kyc_details', (q) => q.order('updated_at', { ascending: false }));
+    const { data: paymentsArr = EMPTY_ARRAY } = useSupabaseQuery('payments', (q) => q.order('created_at', { ascending: false }));
+    const { data: gstReportsArr = EMPTY_ARRAY } = useSupabaseQuery('gst_reports', (q) => q.order('created_at', { ascending: false }));
+    const { data: flashDealsArr = EMPTY_ARRAY } = useSupabaseQuery('flash_deals', (q) => q.order('created_at', { ascending: false }));
+    const { data: fraudAlertsArr = EMPTY_ARRAY } = useSupabaseQuery('fraud_alerts', (q) => q.order('created_at', { ascending: false }));
+    const { data: scannerLogsArr = EMPTY_ARRAY } = useSupabaseQuery('scanner_logs', (q) => q.order('scanned_at', { ascending: false }));
+    const { data: allAdPopups = EMPTY_ARRAY } = useSupabaseQuery('ad_popups', q => q.order('id', { ascending: true }), [], { realtime: false });
+    // 1. Consolidated Platform Data Fetching
+    const { data: physicalEvents = EMPTY_ARRAY } = useSupabaseQuery('events', (q) => q.order('created_at', { ascending: false }));
+    const { data: tournamentEvents = EMPTY_ARRAY } = useSupabaseQuery('tournament_events', (q) => q.order('created_at', { ascending: false }));
+    const { data: marathonEvents = EMPTY_ARRAY } = useSupabaseQuery('marathon_events', (q) => q.order('created_at', { ascending: false }));
 
-    const { data: serviceProvidersArr = [] } = useSupabaseQuery('vendors', (q) => q.select('*, profiles:vendors_id_fkey(email)'));
-    const { data: homeSectionsArr = [] } = useSupabaseQuery('home_sections');
-    const { data: supportTicketsArr = [] } = useSupabaseQuery('support_tickets');
-    const { data: usersArr = [] } = useSupabaseQuery('profiles');
-    const { data: adminsArr = [] } = useSupabaseQuery('admins', q => q.select('*, profiles:id (full_name, email, username)'));
-    const { data: allAdPopups = [] } = useSupabaseQuery('ad_popups', q => q.order('id', { ascending: true }), [], { realtime: false });
-    const { data: eventsArr = [] } = useSupabaseQuery('events', (q) => q.order('created_at', { ascending: false }));
-    const { data: bookingsArr = [] } = useSupabaseQuery('bookings', (q) => q.select('*, events(title), profiles(full_name, email)'));
-    const { data: apiKeysArr = [] } = useSupabaseQuery('api_keys', q => q, [], { realtime: false });
+    // 2. Merge all events for the main dashboard and management view
+    const eventsArr = useMemo(() => {
+        const merged = [
+            ...physicalEvents.map(e => ({ ...e, event_category: 'Physical' })),
+            ...tournamentEvents.map(e => ({ ...e, event_category: 'Tournament', title: e.event_name })),
+            ...marathonEvents.map(e => ({ ...e, event_category: 'Marathon' }))
+        ];
+        return merged.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    }, [physicalEvents, tournamentEvents, marathonEvents]);
+
+    const { data: bookingsRaw = EMPTY_ARRAY } = useSupabaseQuery('bookings', (q) => q.select('*, profiles(full_name, email)'));
+    
+    // Resolve event titles for bookings across multiple master tables
+    const bookingsArr = useMemo(() => {
+        return bookingsRaw.map(b => {
+            // Find the event title from our merged events array
+            const linkedEvent = eventsArr.find(e => e.id === b.event_id);
+            return {
+                ...b,
+                event_title: linkedEvent?.title || linkedEvent?.event_name || "Unknown Event",
+                events: { title: linkedEvent?.title || linkedEvent?.event_name || "Unknown Event" } // Maintain compat with existing UI
+            };
+        });
+    }, [bookingsRaw, eventsArr]);
+    const { data: apiKeysArr = EMPTY_ARRAY } = useSupabaseQuery('api_keys', q => q, [], { realtime: false });
     const [editingMemoryObj, setEditingMemoryObj] = useState(null);
     const [memoryForm, setMemoryForm] = useState({ imageUrl: "", altText: "" });
     const [isUploading, setIsUploading] = useState(false);
@@ -1523,27 +1652,51 @@ function AdminHomePage() {
     };
 
 
-    const [footerCopyrightConfig, setFooterCopyrightConfig] = useSupabaseConfig("system_config", {
+    const initialFooterConfig = useMemo(() => ({
         key: 'admin_footer_copyright',
         copyrightText: "© Copyright 2026 – Nexvant Technologies. All Rights Reserved.",
         privacyUrl: "#",
         termsUrl: "#"
-    });
+    }), []);
+    const [footerCopyrightConfig, setFooterCopyrightConfig] = useSupabaseConfig("system_config", initialFooterConfig);
     
-    const [internalMeetingEnabled, setInternalMeetingEnabled] = useSupabaseConfig("system_config", {
+    const initialMeetingConfig = useMemo(() => ({
         key: 'internal_meeting_portal_enabled',
         value: true
-    });
+    }), []);
+    const [internalMeetingEnabled, setInternalMeetingEnabled] = useSupabaseConfig("system_config", initialMeetingConfig);
 
-    const { data: contactDataArr = [] } = useSupabaseQuery('contact_settings');
-    const [updateContactSettings] = useSupabaseMutation('contact_settings', 'update', (q, p) => q.eq('id', 1));
+    const { data: contactDataArr = EMPTY_ARRAY, loading: contactLoading, error: contactError, refresh: refreshContact } = useSupabaseQuery('contact_settings');
+    const [upsertContactSettings, { loading: upsertingContact }] = useSupabaseMutation('contact_settings', 'upsert');
     const [localContact, setLocalContact] = useState(null);
 
     useEffect(() => {
-        if (contactDataArr?.[0] && !localContact) {
+        if (contactDataArr?.[0]) {
             setLocalContact(contactDataArr[0]);
+        } else if (!contactLoading && contactDataArr.length === 0 && !localContact) {
+            setLocalContact({
+                id: 1,
+                header_title: "Get in Support",
+                header_description: "Have a general question for us? We're here to help with any inquiries about our services.",
+                support_email: "support@bookmyticket.net",
+                support_phone: "+91 90420 29927",
+                sales_india: "+91 97907 62727",
+                sales_uae: "+971 55 747 2927",
+                sales_singapore: "+60 14-210 7199",
+                address_line1: "4th Floor, Ramani's West Gate,",
+                address_line2: "No: 402C, Viswanathapuram,",
+                address_line3: "Thudiyalur, Coimbatore, Tamil Nadu",
+                address_pincode: "641034",
+                hours_mon_fri: "9:30 AM - 6:30 PM IST",
+                hours_sat: "9:30 AM - 1:30 PM IST",
+                hours_sun: "We're offline ( Day Off )",
+                social_linkedin: "#",
+                social_instagram: "#",
+                social_facebook: "#",
+                social_twitter: "#"
+            });
         }
-    }, [contactDataArr]);
+    }, [contactDataArr, contactLoading]);
 
     // Bookings (ticket orders) — sync with homepage/organiser events
     const [createPromotion] = useSupabaseMutation('promotions', 'insert');
@@ -1565,9 +1718,11 @@ function AdminHomePage() {
     };
 
     // Archive: hide events from main list
-    const [archivedHomeIds, setArchivedHomeIds] = useSupabaseConfig("system_config", { key: 'admin_archived_home_ids', value: [] });
-    const [eventMetaOverrides, setEventMetaOverrides] = useSupabaseConfig("system_config", { key: 'admin_event_meta_overrides', value: {} });
-    const [feeSettingsConfig, setFeeSettingsConfig] = useSupabaseConfig("system_config", {
+    const initialArchivedIds = useMemo(() => ({ key: 'admin_archived_home_ids', value: [] }), []);
+    const [archivedHomeIds, setArchivedHomeIds] = useSupabaseConfig("system_config", initialArchivedIds);
+    const initialMetaOverrides = useMemo(() => ({ key: 'admin_event_meta_overrides', value: {} }), []);
+    const [eventMetaOverrides, setEventMetaOverrides] = useSupabaseConfig("system_config", initialMetaOverrides);
+    const initialGlobalFeeSettings = useMemo(() => ({
         key: 'global_fee_settings',
         value: {
             default_fee_type: "percentage",
@@ -1576,7 +1731,8 @@ function AdminHomePage() {
             enable_gst: true,
             gst_apply_on: "fee_only"
         }
-    });
+    }), []);
+    const [feeSettingsConfig, setFeeSettingsConfig] = useSupabaseConfig("system_config", initialGlobalFeeSettings);
 
     const [organizers, setOrganizers] = useState([]);
     const [createOrganizer] = useSupabaseMutation('organisers', 'insert');
@@ -1692,35 +1848,70 @@ function AdminHomePage() {
         const organiserList = (Array.isArray(eventsArr) ? eventsArr : []).filter(e => !e.archived);
         const homeList = (Array.isArray(HOME_EVENTS) ? HOME_EVENTS : []).filter(e => !archivedHomeIds.includes(e.id));
         return [
-            ...homeList.map(e => ({ ...e, source: "home" })),
+            ...homeList.map(e => ({ ...e, source: "home", event_category: "Standard" })),
             ...organiserList.map((e, index) => ({
                 ...e,
                 id: e.id || `temp-${index}`,
                 title: e.title || "Event",
                 category: e.category || "Others",
                 type: e.type || "Paid",
-                source: "organiser"
+                source: "organiser",
+                event_category: "Standard"
             }))
         ];
     }, [eventsArr, archivedHomeIds]);
+    const dashboardStats = useMemo(() => {
+        const revSum = (paymentsArr || []).reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
+        const platformRev = (paymentsArr || []).reduce((acc, curr) => acc + (Number(curr.platform_fee) || 0), 0);
+        
+        return {
+            totalEvents: (eventsArr || []).length || 0,
+            activeTournaments: (tournamentEvents || []).length || 0,
+            pendingKyc: (kycData || []).filter(k => k.status === 'Pending').length || 0,
+            totalVendors: (serviceProvidersArr || []).length || 0,
+            totalRevenue: platformRev || 0,
+            grossVolume: revSum || 0,
+            totalBookings: (bookingsArr || []).length || 0,
+            totalUsers: (usersArr || []).length || 0
+        };
+    }, [eventsArr, tournamentEvents, kycData, serviceProvidersArr, paymentsArr, bookingsArr, usersArr]);
 
-    const [updateEvent] = useSupabaseMutation('events', 'update', (q, p) => q.eq('id', p.id));
+    const [updatePhysicalEvent] = useSupabaseMutation('events', 'update', (q, p) => q.eq('id', p.id));
+    const [updateTournamentEvent] = useSupabaseMutation('tournament_events', 'update', (q, p) => q.eq('id', p.id));
+    const [updateMarathonEvent] = useSupabaseMutation('marathon_events', 'update', (q, p) => q.eq('id', p.id));
+
+    const handlePlatformEventUpdate = async (event, updates) => {
+        try {
+            if (event.event_category === 'Tournament') {
+                await updateTournamentEvent({ id: event.id, ...updates });
+            } else if (event.event_category === 'Marathon') {
+                await updateMarathonEvent({ id: event.id, ...updates });
+            } else {
+                await updatePhysicalEvent({ id: event.id, ...updates });
+            }
+            showToast("Event updated successfully", "success");
+        } catch (err) {
+            showToast("Failed to update event: " + err.message, "error");
+        }
+    };
+
     const [deleteEvent] = useSupabaseMutation('events', 'delete', (q, p) => q.eq('id', p.id));
     const [createAdmin] = useSupabaseMutation('admins', 'insert');
     const [updateAdminStatus] = useSupabaseMutation('admins', 'update', (q, p) => q.eq('id', p.id));
     const [deleteAdmin] = useSupabaseMutation('admins', 'delete', (q, p) => q.eq('id', p.id));
 
-    const dashboardStats = useMemo(() => {
+    const stats = useMemo(() => {
         return {
-            totalRevenue: bookingsArr.reduce((acc, b) => acc + (b.total_amount || 0), 0),
-            totalEvents: eventsArr.length,
-            totalTickets: bookingsArr.length, // Simplified
             totalUsers: usersArr.length,
             totalOrganisers: organisersArr.length,
-            totalServiceProviders: serviceProvidersArr.length,
+            totalEvents: eventsArr.length,
             totalBookings: bookingsArr.length,
+            totalRevenue: bookingsArr.reduce((acc, curr) => acc + (Number(curr.total_price) || 0), 0),
+            pendingKyc: (kycData || []).filter(k => k.status === 'Pending').length || 0,
+            activeTournaments: tournamentEvents.length,
+            totalVendors: serviceProvidersArr.length
         };
-    }, [bookingsArr, eventsArr, usersArr, organisersArr, serviceProvidersArr]);
+    }, [usersArr, organisersArr, eventsArr, bookingsArr, tournamentEvents, serviceProvidersArr]);
 
     // Ad Popups
     const [createAdPopup] = useSupabaseMutation('ad_popups', 'insert');
@@ -1809,11 +2000,12 @@ function AdminHomePage() {
     const [newAdmin, setNewAdmin] = useState({ fullName: '', username: '', email: '', password: '', role: 'Admin' });
 
     // Premium Branding Banners Pricing
-    const [brandingPricingConfig, setBrandingPricingConfig] = useSupabaseConfig("system_config", {
+    const initialBrandingPricing = useMemo(() => ({
         key: 'branding_pricing',
         monthlyPrice: 999,
         yearlyPrice: 9999
-    });
+    }), []);
+    const [brandingPricingConfig, setBrandingPricingConfig] = useSupabaseConfig("system_config", initialBrandingPricing);
     const [brandingPricing, setBrandingPricing] = useState({ monthlyPrice: 999, yearlyPrice: 9999 });
 
     // Sync Pricing Config
@@ -1852,10 +2044,7 @@ function AdminHomePage() {
         }
     };
 
-    useEffect(() => {
-        const tab = searchParams.get("tab");
-        if (tab === "categories") setActiveTab("categories");
-    }, [searchParams]);
+    // Tab sync effect removed as activeTab is now derived directly from searchParams
 
     // Sync events from Supabase
     useEffect(() => {
@@ -1987,16 +2176,19 @@ function AdminHomePage() {
         setPartnerForm({ name: "", logo: "", url: "" });
     };
 
+    const hasSeededApiKeysRef = React.useRef(false);
+
     // Seed default API keys if empty
     useEffect(() => {
-        if (apiKeysArr.length === 0) {
+        if (activeTab === "api_settings" && apiKeysArr.length === 0 && !hasSeededApiKeysRef.current) {
+            hasSeededApiKeysRef.current = true;
             const defaults = [
                 { name: "Production Mobile App", key_value: "ak_live_724819...9238" },
                 { name: "Staging Environment", key_value: "ak_test_123891...0841" }
             ];
-            defaults.forEach(d => createApiKey(d));
+            defaults.forEach(d => createApiKey(d).catch(e => console.log('API key seed skipped:', e.message)));
         }
-    }, [apiKeysArr]);
+    }, [activeTab, apiKeysArr]);
     const [localEmailSettings, setLocalEmailSettings] = useState({
         provider: "SMTP",
         host: "",
@@ -2235,9 +2427,10 @@ function AdminHomePage() {
                 }
 
                 .sidebar-item-new.active {
-                    background: ${ACCENT_GRADIENT};
-                    color: #fff;
-                    box-shadow: 0 10px 20px -5px ${ACCENT_PINK}40;
+                    background: ${ACCENT_GRADIENT} !important;
+                    color: #fff !important;
+                    box-shadow: 0 10px 20px -5px ${ACCENT_PINK}40 !important;
+                    opacity: 1 !important;
                 }
 
                 .status-badge {
@@ -2289,109 +2482,105 @@ function AdminHomePage() {
 
                 <div className="flex-1 overflow-y-auto py-6">
                     {/* Navigation Groups */}
-                    {(() => {
-                        const NavLink = ({ id, label, icon: Icon, active, onClick }) => (
-                            <div className={`sidebar-item-new ${active ? 'active' : ''}`} onClick={onClick}>
-                                <Icon size={20} strokeWidth={active ? 2.5 : 2} />
-                                <span>{label}</span>
-                            </div>
-                        );
-
-                        const GroupTitle = ({ title }) => (
-                            <p className="px-8 mt-6 mb-2 text-[10px] font-extrabold uppercase tracking-[0.2em]" style={{ color: t.textSub, opacity: 0.4 }}>{title}</p>
-                        );
-
-                        return (
-                            <>
-                                <GroupTitle title="Main" />
-                                <NavLink id="dashboard" label="Overview" icon={LayoutDashboard} active={activeTab === "dashboard"} onClick={() => setActiveTab("dashboard")} />
-                                <NavLink id="all_events" label="All Events" icon={Calendar} active={activeTab === "all_events"} onClick={() => setActiveTab("all_events")} />
-                                <NavLink id="bookings" label="Ticket Orders" icon={ShoppingCart} active={activeTab === "bookings"} onClick={() => setActiveTab("bookings")} />
-                                <NavLink id="customers" label="Customer List" icon={Users} active={activeTab === "customers"} onClick={() => setActiveTab("customers")} />
-                                
-                                <GroupTitle title="Partners" />
-                                <NavLink id="partner_requests" label="Onboarding" icon={Users} active={activeTab === "partner_requests"} onClick={() => setActiveTab("partner_requests")} />
-                                <NavLink id="event_partners" label="Event Partners" icon={Users} active={activeTab === "event_partners"} onClick={() => setActiveTab("event_partners")} />
-                                <div className={`sidebar-item-new ${isOrganizersOpen ? 'text-pink-500' : ''}`} onClick={() => setIsOrganizersOpen(!isOrganizersOpen)}>
-                                    <Shield size={20} />
-                                    <span>Organizers</span>
-                                    <ChevronDown size={14} className={`ml-auto transition-transform ${isOrganizersOpen ? 'rotate-180' : ''}`} />
-                                </div>
+                    <div className="space-y-1">
+                        <GroupTitle title="Main" t={t} />
+                        {[
+                            { id: "dashboard", label: "Overview", icon: LayoutDashboard },
+                            { id: "analytics", label: "Insights", icon: BarChart3, alias: "financials" },
+                            { id: "all_events", label: "Physical Events", icon: Calendar },
+                            { id: "tournaments", label: "Tournaments", icon: Trophy },
+                            { id: "marathons", label: "Marathons", icon: Timer },
+                            { id: "bookings", label: "Ticket Orders", icon: ShoppingCart },
+                            { id: "users", label: "Users & Profiles", icon: Users, alias: "customers" }
+                        ].map(item => (
+                            <NavLink 
+                                key={item.id}
+                                id={item.id} 
+                                label={item.label} 
+                                icon={item.icon} 
+                                active={activeTab === item.id || activeTab === item.alias} 
+                                setActiveTab={setActiveTab}
+                                router={router}
+                                setIsSidebarOpen={setIsSidebarOpen}
+                            />
+                        ))}
+                        
+                        <GroupTitle title="Partners" t={t} />
+                        <NavLink 
+                            id="kyc" 
+                            label="KYC Verification" 
+                            icon={ShieldCheck} 
+                            active={activeTab === "kyc" || activeTab === "partner_requests"} 
+                            setActiveTab={setActiveTab}
+                            router={router}
+                            setIsSidebarOpen={setIsSidebarOpen}
+                        />
+                        <div 
+                            className={`sidebar-item-new ${["organisers", "all_org", "active_org", "kyc_verified", "kyc_pending", "kyc_unverified", "banned_org"].includes(activeTab) ? 'active' : ''}`} 
+                            onClick={() => setIsOrganizersOpen(!isOrganizersOpen)}
+                        >
+                            <Users size={20} />
+                            <span>Organisers</span>
+                            <ChevronDown size={14} className={`ml-auto transition-transform ${isOrganizersOpen ? 'rotate-180' : ''}`} />
+                        </div>
                                 {isOrganizersOpen && (
                                     <div className="ml-8 mr-4 mt-1 flex flex-col gap-1">
-                                        {['all_org', 'active_org', 'kyc_verified', 'kyc_pending', 'kyc_unverified', 'banned_org', 'email_unverified', 'with_balance'].map(sub => (
-                                            <div key={sub} className={`px-4 py-2 rounded-lg text-[13px] font-bold cursor-pointer transition-colors ${activeTab === sub ? 'text-pink-500 bg-pink-50' : 'text-slate-500 hover:text-pink-400'}`} onClick={() => setActiveTab(sub)}>
-                                                {sub === 'all_org' ? 'All Partners' : sub.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+                                        {[
+                                            { id: 'all_org', label: 'All Partners' },
+                                            { id: 'active_org', label: 'Active Only' },
+                                            { id: 'kyc_pending', label: 'KYC Pending' },
+                                            { id: 'banned_org', label: 'Banned' }
+                                        ].map(sub => (
+                                            <div key={sub.id} className={`px-4 py-2 rounded-lg text-[13px] font-bold cursor-pointer transition-colors ${activeTab === sub.id ? 'text-pink-500 bg-pink-50' : 'text-slate-500 hover:text-pink-400'}`} onClick={() => { setActiveTab(sub.id); }}>
+                                                {sub.label}
                                             </div>
                                         ))}
                                     </div>
                                 )}
 
-                                <GroupTitle title="Services" />
-                                <NavLink id="turf_partners" label="Turf Booking" icon={Landmark} active={activeTab === "turf_partners"} onClick={() => setActiveTab("turf_partners")} />
-                                <NavLink id="pool_bookings" label="Pool Requests" icon={Smartphone} active={activeTab === "pool_bookings"} onClick={() => setActiveTab("pool_bookings")} />
-                                <NavLink id="meetings" label="Meeting Hub" icon={Video} active={activeTab === "meetings"} onClick={() => setActiveTab("meetings")} />
+                                <GroupTitle title="Services" t={t} />
+                                <NavLink id="service_requests" label="Service Requests" icon={Briefcase} active={activeTab === "service_requests"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
+                                <NavLink id="providers" label="Service Providers" icon={Briefcase} active={activeTab === "providers" || activeTab === "service_active"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
+                                <NavLink id="turf_partners" label="Turf Booking" icon={Landmark} active={activeTab === "turf_partners"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
+                                <NavLink id="pool_bookings" label="Pool Requests" icon={Smartphone} active={activeTab === "pool_bookings"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
+                                <NavLink id="meetings" label="Meeting Hub" icon={Video} active={activeTab === "meetings"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
 
-                                <GroupTitle title="Growth" />
-                                <NavLink id="coupons" label="Advanced Coupons" icon={Tag} active={activeTab === "coupons"} onClick={() => setActiveTab("coupons")} />
-                                <NavLink id="promotions" label="Promotional Hub" icon={Sparkles} active={activeTab === "promotions"} onClick={() => setActiveTab("promotions")} />
-                                <NavLink id="banner_ads" label="Marketing Banners" icon={Megaphone} active={activeTab === "banner_ads"} onClick={() => setActiveTab("banner_ads")} />
-                                <NavLink id="email_broadcast" label="Newsletter Hub" icon={Mail} active={activeTab === "email_broadcast"} onClick={() => setActiveTab("email_broadcast")} />
-                                <NavLink id="comm_hub" label="Comm Hub" icon={MessageSquare} active={activeTab === "comm_hub"} onClick={() => setActiveTab("comm_hub")} />
-                                <NavLink id="subscribers" label="Subscriber Base" icon={Users} active={activeTab === "subscribers"} onClick={() => setActiveTab("subscribers")} />
-                                <NavLink id="send_notif" label="Push Notifications" icon={Send} active={activeTab === "send_notif"} onClick={() => setActiveTab("send_notif")} />
+                                <GroupTitle title="Growth" t={t} />
+                                <NavLink id="coupons" label="Advanced Coupons" icon={Tag} active={activeTab === "coupons"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
+                                <NavLink id="promotions" label="Promotional Hub" icon={Sparkles} active={activeTab === "promotions"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
+                                <NavLink id="banner_ads" label="Marketing Banners" icon={Megaphone} active={activeTab === "banner_ads"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
+                                <NavLink id="email_broadcast" label="Newsletter Hub" icon={Mail} active={activeTab === "email_broadcast"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
+                                <NavLink id="subscribers" label="Subscriber Base" icon={Users} active={activeTab === "subscribers"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
+                                <NavLink id="send_notif" label="Push Notifications" icon={Send} active={activeTab === "send_notif"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
 
-                                <GroupTitle title="Finance" />
-                                <NavLink id="revenue" label="Revenue Ledger" icon={BarChart3} active={activeTab === "revenue"} onClick={() => setActiveTab("revenue")} />
-                                <NavLink id="financials" label="Fiscal Analytics" icon={Activity} active={activeTab === "financials"} onClick={() => setActiveTab("financials")} />
-                                <NavLink id="payout_requests" label="Payouts" icon={CreditCard} active={activeTab === "payout_requests"} onClick={() => setActiveTab("payout_requests")} />
-                                <NavLink id="subscriptions" label="Staff Subscriptions" icon={Zap} active={activeTab === "subscriptions"} onClick={() => setActiveTab("subscriptions")} />
-                                <NavLink id="gst" label="Tax Audits" icon={FileText} active={activeTab === "gst"} onClick={() => setActiveTab("gst")} />
+                                <GroupTitle title="Finance" t={t} />
+                                <NavLink id="payments" label="Revenue Ledger" icon={BarChart3} active={activeTab === "payments" || activeTab === "revenue"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
+                                <NavLink id="payout_requests" label="Payouts" icon={CreditCard} active={activeTab === "payout_requests"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
+                                <NavLink id="gst" label="Tax Audits" icon={FileText} active={activeTab === "gst"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
+                                <NavLink id="subscriptions" label="Staff Subscriptions" icon={Zap} active={activeTab === "subscriptions"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
                                 
-                                <GroupTitle title="Security & Monitoring" />
-                                <NavLink id="scanner_monitor" label="Scanner Analytics" icon={Activity} active={activeTab === "scanner_monitor"} onClick={() => setActiveTab("scanner_monitor")} />
-                                <NavLink id="fraud_dashboard" label="Fraud Detection" icon={ShieldCheck} active={activeTab === "fraud_dashboard"} onClick={() => setActiveTab("fraud_dashboard")} />
-                                <NavLink id="flash_deals" label="Flash Deals" icon={Zap} active={activeTab === "flash_deals"} onClick={() => setActiveTab("flash_deals")} />
+                                <GroupTitle title="Security & Monitoring" t={t} />
+                                <NavLink id="fraud_monitoring" label="Fraud Detection" icon={ShieldCheck} active={activeTab === "fraud_monitoring" || activeTab === "fraud_dashboard"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
+                                <NavLink id="scanner_monitor" label="Scanner Analytics" icon={Activity} active={activeTab === "scanner_monitor"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
+                                <NavLink id="audit_logs" label="Audit Logs" icon={Archive} active={activeTab === "audit_logs"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
 
+                                <GroupTitle title="Reports" t={t} />
+                                <NavLink id="support_tickets" label="Ticket System" icon={MessageCircle} active={activeTab === "support_tickets"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
+                                <NavLink id="contact_inquiries" label="Inquiry Inbox" icon={Mail} active={activeTab === "contact_inquiries"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
+                                <NavLink id="branding_partners" label="Brand Requests" icon={Briefcase} active={activeTab === "branding_partners"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
+                                <NavLink id="pages" label="Pages" icon={FileText} active={activeTab === "pages"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
+                                <NavLink id="sections" label="Site Sections" icon={LayoutGrid} active={activeTab === "sections"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
 
-                                <GroupTitle title="Reports" />
-                                <NavLink id="reviews" label="Reviews Moderation" icon={Star} active={activeTab === "reviews"} onClick={() => setActiveTab("reviews")} />
-                                <NavLink id="support_tickets" label="Ticket System" icon={MessageCircle} active={activeTab === "support_tickets"} onClick={() => setActiveTab("support_tickets")} />
-                                <NavLink id="contact_inquiries" label="Inquiry Inbox" icon={Mail} active={activeTab === "contact_inquiries"} onClick={() => setActiveTab("contact_inquiries")} />
-                                <NavLink id="branding_partners" label="Brand Requests" icon={Briefcase} active={activeTab === "branding_partners"} onClick={() => setActiveTab("branding_partners")} />
-                                <NavLink id="pages" label="Pages" icon={FileText} active={activeTab === "pages"} onClick={() => setActiveTab("pages")} />
-                                <NavLink id="sections" label="Site Sections" icon={LayoutGrid} active={activeTab === "sections"} onClick={() => setActiveTab("sections")} />
-                                <NavLink id="subnav" label="Navigation Config" icon={Menu} active={activeTab === "subnav"} onClick={() => setActiveTab("subnav")} />
-
-                                <GroupTitle title="Content" />
-                                <NavLink id="hero" label="Hero Engine" icon={Layout} active={activeTab === "hero"} onClick={() => setActiveTab("hero")} />
-                                <NavLink id="video_banner" label="Video Banners" icon={Video} active={activeTab === "video_banner"} onClick={() => setActiveTab("video_banner")} />
-                                <NavLink id="mobile_banners" label="App Banners" icon={Smartphone} active={activeTab === "mobile_banners"} onClick={() => setActiveTab("mobile_banners")} />
-                                <NavLink id="memories" label="Photo Memories" icon={ImageIcon} active={activeTab === "memories"} onClick={() => setActiveTab("memories")} />
-                                <NavLink id="ad_popups" label="Ad Popups" icon={Megaphone} active={activeTab === "ad_popups"} onClick={() => setActiveTab("ad_popups")} />
-                                <NavLink id="checkout_footer" label="Checkout Footer" icon={Archive} active={activeTab === "checkout_footer"} onClick={() => setActiveTab("checkout_footer")} />
-
-                                <GroupTitle title="Settings" />
-                                <NavLink id="admin_management" label="Team Management" icon={Shield} active={activeTab === "admin_management"} onClick={() => setActiveTab("admin_management")} />
-                                <NavLink id="site_branding" label="Branding & Logos" icon={Sparkles} active={activeTab === "site_branding"} onClick={() => setActiveTab("site_branding")} />
-                                <NavLink id="events_settings" label="Site Config" icon={Settings} active={activeTab === "events_settings"} onClick={() => setActiveTab("events_settings")} />
-                                <NavLink id="exclusive_settings" label="Exclusive Perks" icon={Sparkles} active={activeTab === "exclusive_settings"} onClick={() => setActiveTab("exclusive_settings")} />
-                                <NavLink id="email_settings" label="Email Config" icon={Mail} active={activeTab === "email_settings"} onClick={() => setActiveTab("email_settings")} />
-                                <NavLink id="email_templates" label="Email Templates" icon={FileText} active={activeTab === "email_templates"} onClick={() => setActiveTab("email_templates")} />
-                                <NavLink id="payment_settings" label="Payment Gateway" icon={CreditCard} active={activeTab === "payment_settings"} onClick={() => setActiveTab("payment_settings")} />
-                                <NavLink id="fee_settings" label="Revenue & Fees" icon={BarChart3} active={activeTab === "fee_settings"} onClick={() => setActiveTab("fee_settings")} />
-                                <NavLink id="ticket_settings" label="Ticket Config" icon={Ticket} active={activeTab === "ticket_settings"} onClick={() => setActiveTab("ticket_settings")} />
-                                <NavLink id="careers_admin" label="Careers Admin" icon={Briefcase} active={activeTab === "careers_admin"} onClick={() => setActiveTab("careers_admin")} />
-                                <NavLink id="meeting_settings" label="Meeting Config" icon={Video} active={activeTab === "meeting_settings"} onClick={() => setActiveTab("meeting_settings")} />
-                                <NavLink id="sso_settings" label="SSO & Security" icon={Lock} active={activeTab === "sso_settings"} onClick={() => setActiveTab("sso_settings")} />
-                                <NavLink id="api_settings" label="API Gateway" icon={Code} active={activeTab === "api_settings"} onClick={() => setActiveTab("api_settings")} />
-                                <NavLink id="meta_management" label="Meta / SEO" icon={Globe} active={activeTab === "meta_management"} onClick={() => setActiveTab("meta_management")} />
-                                <NavLink id="disclaimer_settings" label="Legal Policy" icon={Shield} active={activeTab === "disclaimer_settings"} onClick={() => setActiveTab("disclaimer_settings")} />
-                                <NavLink id="contact_settings" label="Contact Settings" icon={Phone} active={activeTab === "contact_settings"} onClick={() => setActiveTab("contact_settings")} />
-                                <NavLink id="copyright" label="Copyright Info" icon={Archive} active={activeTab === "copyright"} onClick={() => setActiveTab("copyright")} />
-                            </>
-                        );
-                    })()}
+                                <GroupTitle title="Settings" t={t} />
+                                <NavLink id="admin_management" label="Team Management" icon={Shield} active={activeTab === "admin_management"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
+                                <NavLink id="site_branding" label="Branding & Logos" icon={Sparkles} active={activeTab === "site_branding"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
+                                <NavLink id="events_settings" label="Site Config" icon={Settings} active={activeTab === "events_settings"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
+                                <NavLink id="payment_settings" label="Payment Gateway" icon={CreditCard} active={activeTab === "payment_settings"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
+                                <NavLink id="fee_settings" label="Revenue & Fees" icon={BarChart3} active={activeTab === "fee_settings"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
+                                <NavLink id="api_settings" label="API Gateway" icon={Code} active={activeTab === "api_settings"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
+                                <NavLink id="meta_management" label="Meta / SEO" icon={Globe} active={activeTab === "meta_management"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
+                                <NavLink id="contact_settings" label="Contact Settings" icon={Phone} active={activeTab === "contact_settings"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
+                    </div>
                 </div>
 
                 {/* Footer / User Profile */}
@@ -2432,7 +2621,7 @@ function AdminHomePage() {
                             <div className="flex items-center gap-3 mb-0.5">
                                 <div className="w-1.5 h-5 bg-pink-500 rounded-full"></div>
                                 <h1 className="text-2xl font-black tracking-tighter uppercase italic" style={{ color: t.textMain }}>
-                                    {activeTab.replace('_', ' ')}
+                                    {activeTab.replace(/_/g, ' ')}
                                 </h1>
                             </div>
                             <p className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-50" style={{ color: t.textSub }}>
@@ -2518,6 +2707,170 @@ function AdminHomePage() {
                                         </div>
                                     </div>
                                 ))}
+                            </div>
+                        </div>
+                    )}
+                    {activeTab === "all_events" && (
+                        <div className="px-8 py-6">
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "32px", flexWrap: "wrap", gap: "20px" }}>
+                                <div>
+                                    <h3 style={{ fontSize: "24px", fontWeight: 800, color: t.textMain, letterSpacing: "-0.02em", margin: 0 }}>Events Directory</h3>
+                                    <p style={{ color: t.textSub, fontSize: "14px", marginTop: "4px" }}>Manage both Homepage and Organiser-published events</p>
+                                </div>
+                                <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
+                                    <div className="bg-slate-100 p-1 rounded-xl flex gap-1">
+                                        <button className="px-4 py-1.5 bg-white shadow-sm rounded-lg text-[10px] font-black uppercase">All Events</button>
+                                        <button className="px-4 py-1.5 text-slate-400 rounded-lg text-[10px] font-black uppercase hover:text-slate-900 transition-all">Drafts</button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 gap-4">
+                                {allEvents.map((ev) => (
+                                    <div key={ev.id} className="bg-white p-6 rounded-[24px] border border-slate-100 shadow-sm flex items-center gap-6 hover:shadow-xl hover:shadow-slate-200/50 transition-all group">
+                                        <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-400 group-hover:scale-110 transition-transform overflow-hidden">
+                                            {ev.banner || ev.img ? <img src={ev.banner || ev.img} className="w-full h-full object-cover" /> : <Calendar size={32} />}
+                                        </div>
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <span className="text-[10px] font-black uppercase tracking-widest bg-slate-900 text-white px-2 py-0.5 rounded-md">{ev.category}</span>
+                                                <span className="text-[10px] font-black uppercase tracking-widest bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-md">{ev.status || 'Active'}</span>
+                                            </div>
+                                            <h4 className="text-lg font-black text-slate-900">{ev.title}</h4>
+                                            <p className="text-xs font-bold text-slate-400 mt-1">{ev.organiser_name || ev.venue || "Public Event"}</p>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <button 
+                                                onClick={() => handlePlatformEventUpdate(ev, { spotlight: !ev.spotlight })}
+                                                className={`p-2.5 rounded-xl transition-all border ${ev.spotlight ? 'bg-amber-50 text-amber-500 border-amber-100' : 'bg-slate-50 text-slate-400 border-slate-100 hover:text-amber-500'}`}
+                                                title="Spotlight Event"
+                                            >
+                                                <Zap size={18} fill={ev.spotlight ? "currentColor" : "none"} />
+                                            </button>
+                                            <button 
+                                                onClick={() => handlePlatformEventUpdate(ev, { is_exclusive: !ev.is_exclusive })}
+                                                className={`p-2.5 rounded-xl transition-all border ${ev.is_exclusive ? 'bg-pink-50 text-pink-500 border-pink-100' : 'bg-slate-50 text-slate-400 border-slate-100 hover:text-pink-500'}`}
+                                                title="Exclusive Event"
+                                            >
+                                                <Star size={18} fill={ev.is_exclusive ? "currentColor" : "none"} />
+                                            </button>
+                                            <button className="p-2.5 bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition-all shadow-lg shadow-black/10">
+                                                <Edit size={18} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === "tournaments" && (
+                        <div className="px-8 py-6">
+                            <div className="flex justify-between items-center mb-8">
+                                <div>
+                                    <h3 className="text-2xl font-black text-slate-900 tracking-tight">Tournament Arena</h3>
+                                    <p className="text-sm text-slate-500 font-bold">Manage sports trophies and team registrations</p>
+                                </div>
+                                <div className="bg-amber-50 text-amber-600 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider border border-amber-100">
+                                    {tournamentEvents.length} Active Trophies
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-1 gap-4">
+                                {tournamentEvents.length > 0 ? tournamentEvents.map((te) => (
+                                    <div key={te.id} className="bg-white p-6 rounded-[24px] border border-slate-100 shadow-sm flex items-center gap-6 hover:shadow-xl hover:shadow-slate-200/50 transition-all group">
+                                        <div className="w-16 h-16 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-500 group-hover:scale-110 transition-transform">
+                                            <Trophy size={32} />
+                                        </div>
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <span className="text-[10px] font-black uppercase tracking-widest bg-slate-900 text-white px-2 py-0.5 rounded-md">{te.sport_type}</span>
+                                                <span className="text-[10px] font-black uppercase tracking-widest bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-md">{te.status}</span>
+                                            </div>
+                                            <h4 className="text-lg font-black text-slate-900">{te.event_name}</h4>
+                                            <div className="flex items-center gap-4 mt-2 text-xs font-bold text-slate-400">
+                                                <span className="flex items-center gap-1"><Users size={14} /> Team Size: {te.min_team_size}-{te.max_team_size}</span>
+                                                <span className="flex items-center gap-1"><Landmark size={14} /> {te.venue_name || "TBA"}</span>
+                                                <span className="flex items-center gap-1 text-pink-500 font-black">₹{te.registration_fee} / Team</span>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <button 
+                                                onClick={() => handlePlatformEventUpdate({ ...te, event_category: 'Tournament' }, { spotlight: !te.spotlight })}
+                                                className={`p-2.5 rounded-xl transition-all border ${te.spotlight ? 'bg-amber-50 text-amber-500 border-amber-100' : 'bg-slate-50 text-slate-400 border-slate-100 hover:text-amber-500'}`}
+                                            >
+                                                <Zap size={18} fill={te.spotlight ? "currentColor" : "none"} />
+                                            </button>
+                                            <button 
+                                                onClick={() => handlePlatformEventUpdate({ ...te, event_category: 'Tournament' }, { is_exclusive: !te.is_exclusive })}
+                                                className={`p-2.5 rounded-xl transition-all border ${te.is_exclusive ? 'bg-pink-50 text-pink-500 border-pink-100' : 'bg-slate-50 text-slate-400 border-slate-100 hover:text-pink-500'}`}
+                                            >
+                                                <Star size={18} fill={te.is_exclusive ? "currentColor" : "none"} />
+                                            </button>
+                                            <button className="px-6 py-2.5 bg-slate-900 text-white rounded-xl text-xs font-black hover:bg-slate-800 transition-all uppercase tracking-widest">Manage Brackets</button>
+                                            <button className="p-2.5 bg-slate-50 text-slate-400 rounded-xl hover:text-red-500 hover:bg-red-50 transition-all border border-slate-100">
+                                                <Trash2 size={18} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                )) : (
+                                    <div className="p-20 text-center bg-slate-50 rounded-[32px] border-2 border-dashed border-slate-200">
+                                        <Trophy size={48} className="mx-auto mb-4 text-slate-300 opacity-50" />
+                                        <p className="text-slate-400 font-black uppercase tracking-widest">No tournaments found in database</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === "marathons" && (
+                        <div className="px-8 py-6">
+                            <div className="flex justify-between items-center mb-8">
+                                <div>
+                                    <h3 className="text-2xl font-black text-slate-900 tracking-tight">Marathon Control</h3>
+                                    <p className="text-sm text-slate-500 font-bold">Runner registrations and race categories</p>
+                                </div>
+                                <div className="bg-indigo-50 text-indigo-600 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider border border-indigo-100">
+                                    {marathonEvents.length} Active Races
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-1 gap-4">
+                                {marathonEvents.length > 0 ? marathonEvents.map((me) => (
+                                    <div key={me.id} className="bg-white p-6 rounded-[24px] border border-slate-100 shadow-sm flex items-center gap-6 hover:shadow-xl hover:shadow-slate-200/50 transition-all group">
+                                        <div className="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-500 group-hover:scale-110 transition-transform">
+                                            <Timer size={32} />
+                                        </div>
+                                        <div className="flex-1">
+                                            <h4 className="text-lg font-black text-slate-900">{me.title}</h4>
+                                            <div className="flex items-center gap-4 mt-2 text-xs font-bold text-slate-400">
+                                                <span className="flex items-center gap-1"><Calendar size={14} /> {new Date(me.event_date).toLocaleDateString()}</span>
+                                                <span className="flex items-center gap-1"><Landmark size={14} /> {me.city || "Various Locations"}</span>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <button 
+                                                onClick={() => handlePlatformEventUpdate({ ...me, event_category: 'Marathon' }, { spotlight: !me.spotlight })}
+                                                className={`p-2.5 rounded-xl transition-all border ${me.spotlight ? 'bg-amber-50 text-amber-500 border-amber-100' : 'bg-slate-50 text-slate-400 border-slate-100 hover:text-amber-500'}`}
+                                            >
+                                                <Zap size={18} fill={me.spotlight ? "currentColor" : "none"} />
+                                            </button>
+                                            <button 
+                                                onClick={() => handlePlatformEventUpdate({ ...me, event_category: 'Marathon' }, { is_exclusive: !me.is_exclusive })}
+                                                className={`p-2.5 rounded-xl transition-all border ${me.is_exclusive ? 'bg-pink-50 text-pink-500 border-pink-100' : 'bg-slate-50 text-slate-400 border-slate-100 hover:text-pink-500'}`}
+                                            >
+                                                <Star size={18} fill={me.is_exclusive ? "currentColor" : "none"} />
+                                            </button>
+                                            <button className="px-6 py-2.5 bg-slate-900 text-white rounded-xl text-xs font-black hover:bg-slate-800 transition-all uppercase tracking-widest">View Runners</button>
+                                            <button className="p-2.5 bg-slate-50 text-slate-400 rounded-xl hover:text-red-500 hover:bg-red-50 transition-all border border-slate-100">
+                                                <Trash2 size={18} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                )) : (
+                                    <div className="p-20 text-center bg-slate-50 rounded-[32px] border-2 border-dashed border-slate-200">
+                                        <Timer size={48} className="mx-auto mb-4 text-slate-300 opacity-50" />
+                                        <p className="text-slate-400 font-black uppercase tracking-widest">No marathon events found</p>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}
@@ -3056,137 +3409,6 @@ function AdminHomePage() {
                         </div>
                     )}
 
-                    {activeTab === "all_events" && (
-                        <div style={{ padding: "20px 0" }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "32px", flexWrap: "wrap", gap: "20px" }}>
-                                <div>
-                                    <h3 style={{ fontSize: "24px", fontWeight: 800, color: t.textMain, letterSpacing: "-0.02em", margin: 0 }}>Events Directory</h3>
-                                    <p style={{ color: t.textSub, fontSize: "14px", marginTop: "4px" }}>Manage both Homepage and Organiser-published events</p>
-                                </div>
-                                <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
-                                    <div style={{ position: "relative" }}>
-                                        <Search size={18} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: t.textSub }} />
-                                        <input
-                                            type="text"
-                                            placeholder="Search events..."
-                                            style={{ padding: "12px 16px 12px 40px", borderRadius: "14px", border: `1px solid ${t.border}`, backgroundColor: t.cardBg, color: t.textMain, fontSize: "14px", width: "280px", boxShadow: "0 2px 4px rgba(0,0,0,0.02)" }}
-                                        />
-                                    </div>
-                                    <a href="/organiser" style={{ display: "inline-flex", alignItems: "center", gap: "10px", padding: "12px 24px", borderRadius: "14px", background: "linear-gradient(135deg, #ec4899 0%, #a855f7 100%)", color: "#fff", border: "none", fontWeight: 800, cursor: "pointer", fontSize: "14px", textDecoration: "none", boxShadow: "0 10px 25px rgba(236,72,153,0.3)" }}>
-                                        <Plus size={20} /> Create Event
-                                    </a>
-                                </div>
-                            </div>
-
-                            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                                {allEvents.length > 0 ? allEvents.map((ev) => {
-                                    const eventDateStr = ev.date;
-                                    const eventTimeStr = ev.time || "23:59";
-                                    let isExpired = false;
-                                    try {
-                                        const eDate = new Date(`${eventDateStr}T${eventTimeStr.includes(':') ? eventTimeStr : eventTimeStr + ':00'}`);
-                                        isExpired = !isNaN(eDate.getTime()) && eDate < new Date();
-                                    } catch (e) { isExpired = false; }
-                                    
-                                    const statusLabel = (isExpired || ev.status === 'expired') ? 'EXPIRED' : (ev.status || 'ACTIVE').toUpperCase();
-                                    const statusColor = statusLabel === 'EXPIRED' || statusLabel === 'CANCELLED' ? '#ef4444' : '#22c55e';
-
-                                    return (
-                                        <div key={ev.id + (ev.source || "")} style={{ 
-                                            backgroundColor: t.cardBg, 
-                                            borderRadius: "20px", 
-                                            padding: "20px", 
-                                            border: `1px solid ${t.border}`,
-                                            display: "flex",
-                                            alignItems: "center",
-                                            gap: "24px",
-                                            transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-                                            boxShadow: "0 4px 6px -1px rgba(0,0,0,0.02), 0 2px 4px -1px rgba(0,0,0,0.01)",
-                                            position: "relative",
-                                            overflow: "hidden"
-                                        }} className="admin-event-row">
-                                            {/* Left: Thumbnail */}
-                                            <div style={{ width: "80px", height: "80px", borderRadius: "16px", overflow: "hidden", border: `1px solid ${t.border}`, backgroundColor: "#f8fafc", flexShrink: 0 }}>
-                                                {ev.thumbnail ? (
-                                                    <img src={ev.thumbnail} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                                                ) : (
-                                                    <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: t.textSub }}>
-                                                        <ImageIcon size={32} opacity={0.2} />
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            {/* Center: Info */}
-                                            <div style={{ flex: 1, minWidth: 0 }}>
-                                                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
-                                                    <span style={{ fontSize: "10px", fontWeight: 800, padding: "2px 8px", borderRadius: "6px", backgroundColor: `${statusColor}15`, color: statusColor }}>{statusLabel}</span>
-                                                    <span style={{ fontSize: "10px", fontWeight: 800, padding: "2px 8px", borderRadius: "6px", backgroundColor: "#3b82f615", color: "#3b82f6" }}>{ev.category || "General"}</span>
-                                                    {ev.source === "organiser" && <span style={{ fontSize: "10px", fontWeight: 800, padding: "2px 8px", borderRadius: "6px", backgroundColor: "#f59e0b15", color: "#f59e0b" }}>PARTNER PUB</span>}
-                                                </div>
-                                                <h4 style={{ margin: 0, fontSize: "18px", fontWeight: 800, color: t.textMain, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{ev.title}</h4>
-                                                <div style={{ display: "flex", gap: "16px", marginTop: "8px", color: t.textSub, fontSize: "13px" }}>
-                                                    <span style={{ display: "flex", alignItems: "center", gap: "4px" }}><Calendar size={14} /> {ev.date}</span>
-                                                    <span style={{ display: "flex", alignItems: "center", gap: "4px" }}><Landmark size={14} /> {ev.venue || ev.location || "Online"}</span>
-                                                </div>
-                                            </div>
-
-                                            {/* Right: Promotions */}
-                                            <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
-                                                <button 
-                                                    onClick={() => updateEvent({ id: ev.id, is_exclusive: !ev.is_exclusive })}
-                                                    style={{ width: "40px", height: "40px", borderRadius: "12px", border: `1px solid ${ev.is_exclusive ? '#f59e0b' : t.border}`, backgroundColor: ev.is_exclusive ? '#f59e0b15' : 'transparent', color: ev.is_exclusive ? '#f59e0b' : t.textSub, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
-                                                    title="Exclusive Status"
-                                                >
-                                                    <Sparkles size={18} />
-                                                </button>
-                                                <button 
-                                                    onClick={() => updateEvent({ id: ev.id, is_spotlight: !ev.is_spotlight })}
-                                                    style={{ width: "40px", height: "40px", borderRadius: "12px", border: `1px solid ${ev.is_spotlight ? '#3b82f6' : t.border}`, backgroundColor: ev.is_spotlight ? '#3b82f615' : 'transparent', color: ev.is_spotlight ? '#3b82f6' : t.textSub, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
-                                                    title="Spotlight Status"
-                                                >
-                                                    <Zap size={18} />
-                                                </button>
-                                            </div>
-
-                                            {/* Far Right: Actions */}
-                                            <div style={{ display: "flex", gap: "8px", borderLeft: `1px solid ${t.border}`, paddingLeft: "24px", flexShrink: 0 }}>
-                                                <button 
-                                                    onClick={() => { setEventEditForm(ev); setShowEditEventModal(true); }}
-                                                    style={{ width: "36px", height: "36px", borderRadius: "10px", background: "#f1f5f9", color: "#334155", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
-                                                    title="Edit"
-                                                >
-                                                    <Edit size={16} />
-                                                </button>
-                                                <button 
-                                                    onClick={() => updateEvent({ id: ev.id, archived: true })}
-                                                    style={{ width: "36px", height: "36px", borderRadius: "10px", background: "#f1f5f9", color: "#334155", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
-                                                    title="Archive"
-                                                >
-                                                    <Archive size={16} />
-                                                </button>
-                                                <button 
-                                                    onClick={async () => {
-                                                        const confirmed = await confirm("Delete Event", `Permanently delete "${ev.title}"?`, { confirmText: "DELETE", type: "danger" });
-                                                        if (confirmed) deleteEvent({ id: ev.id });
-                                                    }}
-                                                    style={{ width: "36px", height: "36px", borderRadius: "10px", background: "#fee2e2", color: "#ef4444", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
-                                                    title="Delete"
-                                                >
-                                                    <Trash2 size={16} />
-                                                </button>
-                                            </div>
-                                        </div>
-                                    );
-                                }) : (
-                                    <div style={{ padding: "80px 40px", textAlign: "center", color: t.textSub, backgroundColor: t.cardBg, borderRadius: "24px", border: `2px dashed ${t.border}` }}>
-                                        <Calendar size={48} style={{ margin: "0 auto 20px", opacity: 0.2 }} />
-                                        <p style={{ fontSize: "16px", fontWeight: 700 }}>No events found</p>
-                                        <p style={{ fontSize: "14px", marginTop: "8px" }}>Try adjusting your search or creating a new event.</p>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    )}
 
                     {activeTab === "bookings" && (
                         <div className="space-y-6">
@@ -3394,7 +3616,36 @@ function AdminHomePage() {
                         </div>
                     )}
 
-                    {activeTab === "customers" && (
+                    {activeTab === "providers" && (
+                        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 px-4 lg:px-0">
+                                <div>
+                                    <h2 className="text-3xl font-black text-slate-900 tracking-tighter uppercase italic">Service Network</h2>
+                                    <p className="text-sm text-slate-500 font-medium">Manage professional service providers, turf owners, and specialized vendors.</p>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-1 gap-4 pb-20 px-4 lg:px-0">
+                                {serviceActive.map((org) => (
+                                    <div key={org.id} className="group relative bg-white rounded-[32px] border border-slate-100 p-6 shadow-sm hover:shadow-xl hover:shadow-slate-200 transition-all duration-500 flex flex-col md:flex-row items-center justify-between gap-6">
+                                        <div className="flex items-center gap-6">
+                                            <div className="w-16 h-16 bg-slate-900 rounded-[20px] flex items-center justify-center text-white shadow-lg group-hover:bg-indigo-600 group-hover:scale-105 transition-all duration-500 shrink-0">
+                                                <Briefcase size={24} />
+                                            </div>
+                                            <div className="overflow-hidden">
+                                                <h4 className="text-xl font-black text-slate-900 tracking-tight leading-tight mb-1 truncate">{org.business_name || org.name}</h4>
+                                                <p className="text-xs font-bold text-slate-400 truncate">{org.email}</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-3 w-full md:w-auto">
+                                            <button onClick={() => setActiveTab("turf_partners")} className="px-8 py-3 bg-slate-50 text-slate-600 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-900 hover:text-white transition-all whitespace-nowrap">Manage Assets</button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {(activeTab === "users" || activeTab === "customers") && (
                         <div className="px-8 lg:px-12 py-8 animate-in fade-in slide-in-from-bottom-6 duration-700">
                             {/* Header & Stats Shunts */}
                             <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-10 mb-12">
@@ -3551,7 +3802,12 @@ function AdminHomePage() {
                         </div>
                     )}
 
-                    {activeTab === "contact_settings" && localContact && (
+                    {activeTab === "contact_settings" && (
+                        contactLoading ? (
+                            <div className="flex items-center justify-center p-20">
+                                <RefreshCw className="animate-spin text-pink-500" size={40} />
+                            </div>
+                        ) : localContact && (
                         <div className="px-8 lg:px-12 py-8 animate-in fade-in slide-in-from-bottom-6 duration-700">
                             <div className="flex items-center justify-between mb-8">
                                 <div>
@@ -3559,13 +3815,20 @@ function AdminHomePage() {
                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Global Contact & Support Infrastructure</p>
                                 </div>
                                 <button 
+                                    disabled={upsertingContact}
                                     onClick={async () => {
-                                        await updateContactSettings(localContact);
-                                        showToast("Support Node Synchronized", "success");
+                                        try {
+                                            await upsertContactSettings({ ...localContact, id: 1 });
+                                            await refreshContact();
+                                            showToast("Support Node Synchronized", "success");
+                                        } catch (err) {
+                                            showToast("Sync Failed: " + (err.message || "Permission Denied"), "error");
+                                        }
                                     }}
-                                    className="px-8 py-3 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] italic shadow-xl shadow-slate-900/10 hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
+                                    className={`px-8 py-3 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] italic shadow-xl shadow-slate-900/10 hover:scale-105 active:scale-95 transition-all flex items-center gap-2 ${upsertingContact ? 'opacity-50 cursor-not-allowed' : ''}`}
                                 >
-                                    <Save size={16} /> Sync Configuration
+                                    <Save size={16} className={upsertingContact ? 'animate-spin' : ''} /> 
+                                    {upsertingContact ? 'Synchronizing...' : 'Sync Configuration'}
                                 </button>
                             </div>
 
@@ -3738,7 +4001,8 @@ function AdminHomePage() {
                                 </div>
                             </div>
                         </div>
-                    )}
+                    )
+                )}
 
                     {activeTab === "categories" && (
                         <div style={{ backgroundColor: t.cardBg, padding: "16px", borderRadius: "10px", border: `1px solid ${t.border}` }}>
@@ -4587,17 +4851,42 @@ function AdminHomePage() {
                         </div>
                     )}
 
-                    {activeTab === "checkout_footer" && (
-                        <AdminCheckoutFooter theme={theme} t={t} />
+
+
+                    {(activeTab === "kyc" || activeTab === "partner_requests") && (
+                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
+                            <div className="mb-8">
+                                <h2 className="text-3xl font-black text-slate-900 tracking-tighter uppercase italic leading-none mb-2">KYC Intelligence</h2>
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Identity Verification & Compliance Audit</p>
+                            </div>
+                             <AdminPartnerRequestsTable t={t} theme={theme} />
+                        </div>
                     )}
 
-                    {["all_org", "active_org", "banned_org", "email_unverified", "mobile_unverified", "kyc_unverified", "kyc_pending", "kyc_verified", "with_balance"].includes(activeTab) && (
+                    {activeTab === "service_requests" && (
+                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
+                            <div className="mb-8">
+                                <h2 className="text-3xl font-black text-slate-900 tracking-tighter uppercase italic leading-none mb-2">Professional Services</h2>
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Service Provider Onboarding</p>
+                            </div>
+                             <AdminServiceRequestsTable t={t} />
+                        </div>
+                    )}
+
+                    {activeTab === "audit_logs" && (
+                        <div className="p-12 text-center bg-white rounded-[48px] border-2 border-dashed border-slate-100 mx-8">
+                             <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6 text-slate-200"><Archive size={40} /></div>
+                             <h3 className="text-2xl font-black text-slate-900 mb-2">Audit Logs Repository</h3>
+                             <p className="text-sm font-medium text-slate-400 max-w-sm mx-auto uppercase tracking-widest">Platform-wide action history and security logs will be archived here.</p>
+                        </div>
+                    )}
+                    {(activeTab === "organisers" || ["all_org", "active_org", "banned_org", "kyc_pending", "kyc_verified", "with_balance", "email_unverified", "mobile_unverified", "kyc_unverified"].includes(activeTab)) && (
                         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 px-4 lg:px-0">
                             {/* Dashboard Header */}
                             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                                 <div>
                                     <h2 className="text-3xl font-black text-slate-900 tracking-tighter uppercase italic">
-                                        {activeTab === "all_org" ? "Partner Directory" :
+                                        {activeTab === "organisers" || activeTab === "all_org" ? "Partner Directory" :
                                          activeTab.replace(/_/g, ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
                                     </h2>
                                     <p className="text-sm text-slate-500 font-medium">Oversee professional organizers and event management partners.</p>
@@ -4617,7 +4906,7 @@ function AdminHomePage() {
                             {/* Cards Feed */}
                             <div className="flex flex-col gap-4 pb-20">
                                 {mappedOrganizers.filter(org => {
-                                    if (activeTab === "all_org") return true;
+                                    if (activeTab === "organisers" || activeTab === "all_org") return true;
                                     if (activeTab === "active_org") return ["Active", "KYC Completed", "KYC Verified"].includes(org.status);
                                     if (activeTab === "banned_org") return ["Banned", "Rejected"].includes(org.status);
                                     if (activeTab === "kyc_pending") return ["KYC Pending", "Start Onboarding", "NOT STARTED", "Not Started"].includes(org.status);
@@ -4686,10 +4975,15 @@ function AdminHomePage() {
                                                                     <button onClick={() => { setSelectedKycOrg(org); setOpenActionDropdown(null); }} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-blue-50 text-blue-600 text-xs font-black uppercase tracking-widest transition-colors text-left">
                                                                         <FileText size={16} /> View Documents
                                                                     </button>
-                                                                    <button onClick={() => { patchOrganizerMutation({ id: org.id, kyc_status: 'KYC Completed' }); setOpenActionDropdown(null); }} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-emerald-50 text-emerald-600 text-xs font-black uppercase tracking-widest transition-colors text-left">
+                                                                    <button onClick={() => { patchOrganizerMutation({ id: org.id, kyc_status: 'Approved' }); setOpenActionDropdown(null); }} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-emerald-50 text-emerald-600 text-xs font-black uppercase tracking-widest transition-colors text-left">
                                                                         <CheckCircle size={16} /> Approve KYC
                                                                     </button>
                                                                 </>
+                                                            )}
+                                                            {org.kyc_status === 'Approved' && (
+                                                                <button onClick={() => { patchOrganizerMutation({ id: org.id, kyc_status: 'Active' }); setOpenActionDropdown(null); }} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-indigo-50 text-indigo-600 text-xs font-black uppercase tracking-widest transition-colors text-left">
+                                                                    <Zap size={16} /> Activate Account
+                                                                </button>
                                                             )}
                                                             <button onClick={() => { patchOrganizerMutation({ id: org.id, kyc_status: org.kyc_status === 'Banned' ? 'Active' : 'Banned' }); setOpenActionDropdown(null); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-colors text-left ${org.kyc_status === 'Banned' ? 'hover:bg-emerald-50 text-emerald-600' : 'hover:bg-red-50 text-red-600'}`}>
                                                                 {org.kyc_status === 'Banned' ? <CheckCircle size={16} /> : <Slash size={16} />} 
@@ -4709,6 +5003,7 @@ function AdminHomePage() {
                             </div>
                         </div>
                     )}
+
 
 
 
@@ -4741,60 +5036,81 @@ function AdminHomePage() {
                             </div>
 
                             {/* Cards Grid */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 pb-20 px-4 lg:px-0">
+                            <div className="grid grid-cols-1 gap-4 pb-20 px-4 lg:px-0">
                                 {(activeTab === "service_active" ? serviceActive : serviceBanned).map((org) => (
-                                    <div key={org.id} className="group relative bg-white rounded-[40px] border border-slate-100 p-8 shadow-sm hover:shadow-2xl hover:shadow-slate-200 transition-all duration-500">
-                                        <div className="flex items-start justify-between mb-8">
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-16 h-16 bg-slate-900 rounded-[24px] flex items-center justify-center text-white shadow-xl shadow-slate-200 group-hover:bg-indigo-600 group-hover:scale-110 transition-all duration-500">
-                                                    <Briefcase size={28} />
-                                                </div>
-                                                <div className="overflow-hidden">
-                                                    <h4 className="text-lg font-black text-slate-900 tracking-tight leading-tight mb-1 truncate">
+                                    <div key={org.id} className="group relative bg-white rounded-[32px] border border-slate-100 p-6 shadow-sm hover:shadow-xl hover:shadow-slate-200 transition-all duration-500 flex flex-col md:flex-row items-center gap-6">
+                                        <div className="flex items-center gap-6 flex-1">
+                                            <div className="w-16 h-16 bg-slate-900 rounded-[20px] flex items-center justify-center text-white shadow-lg group-hover:bg-indigo-600 transition-all shrink-0">
+                                                <Briefcase size={24} />
+                                            </div>
+                                            <div className="overflow-hidden">
+                                                <div className="flex items-center gap-3 mb-1">
+                                                    <h4 className="text-xl font-black text-slate-900 tracking-tight truncate">
                                                         {org.business_name || org.name || "Unnamed Provider"}
                                                     </h4>
+                                                    <span className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-[9px] font-black uppercase tracking-widest">
+                                                        {org.category || "Professional"}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-center gap-4">
                                                     <div className="flex items-center gap-2 text-slate-400">
                                                         <Mail size={12} />
-                                                        <p className="text-[11px] font-bold truncate max-w-[150px]">
+                                                        <p className="text-[11px] font-bold">
                                                             {org.profiles?.email || org.email || "No Contact Email"}
+                                                        </p>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className={`w-2 h-2 rounded-full ${activeTab === 'service_active' ? 'bg-emerald-500' : 'bg-red-500'}`} />
+                                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                                            {activeTab === 'service_active' ? 'Active' : 'Banned'}
                                                         </p>
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div className="flex flex-col items-end gap-2">
-                                                <span className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-[9px] font-black uppercase tracking-widest">
-                                                    {org.category || "Professional"}
-                                                </span>
-                                            </div>
                                         </div>
 
-                                        <div className="p-4 bg-slate-50 rounded-[24px] mb-8 group-hover:bg-indigo-50/30 transition-colors">
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-2">
-                                                    <Activity size={14} className="text-slate-400" />
-                                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Operational Status</p>
-                                                </div>
-                                                <span className={`w-2 h-2 rounded-full ${activeTab === 'service_active' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]'}`} />
-                                            </div>
-                                        </div>
-
-                                        <div className="flex items-center gap-3">
+                                        <div className="flex items-center gap-3 w-full md:w-auto">
                                             {activeTab === "service_active" ? (
                                                 <button 
-                                                    onClick={() => supabase.from('vendors').update({ kyc_status: "Banned", is_approved: false }).eq('id', org.id)} 
-                                                    className="flex-1 py-3 bg-red-50 text-red-600 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all shadow-sm"
+                                                    onClick={() => updateVendorMutation({ id: org.id, kyc_status: "Banned", is_approved: false })} 
+                                                    className="px-6 py-3 bg-red-50 text-red-600 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all shadow-sm whitespace-nowrap"
                                                 >
-                                                    Suspend Access
+                                                    Suspend
                                                 </button>
                                             ) : (
                                                 <button 
-                                                    onClick={() => supabase.from('vendors').update({ kyc_status: "Active", is_approved: true }).eq('id', org.id)} 
-                                                    className="flex-1 py-3 bg-emerald-50 text-emerald-600 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-500 hover:text-white transition-all shadow-sm"
+                                                    onClick={() => updateVendorMutation({ id: org.id, kyc_status: "Active", is_approved: true })} 
+                                                    className="px-6 py-3 bg-emerald-50 text-emerald-600 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-500 hover:text-white transition-all shadow-sm whitespace-nowrap"
                                                 >
-                                                    Re-Activate Provider
+                                                    Activate
                                                 </button>
                                             )}
-                                            <button className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-400 hover:bg-slate-900 hover:text-white transition-all">
+                                            
+                                            <button 
+                                                onClick={() => { setEditingVendor(org); setIsEditVendorModalOpen(true); }}
+                                                className="w-12 h-12 bg-slate-50 text-slate-400 rounded-2xl flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all shrink-0"
+                                                title="Edit Provider"
+                                            >
+                                                <Edit size={18} />
+                                            </button>
+
+                                            <button 
+                                                onClick={() => { setSelectedUserForPassword(org); setIsPasswordResetModalOpen(true); }}
+                                                className="w-12 h-12 bg-slate-50 text-slate-400 rounded-2xl flex items-center justify-center hover:bg-amber-500 hover:text-white transition-all shrink-0"
+                                                title="Password Settings"
+                                            >
+                                                <Key size={18} />
+                                            </button>
+                                            
+                                            <button 
+                                                onClick={() => { if(confirm("Permanently remove this service provider?")) removeVendor({ id: org.id }); }}
+                                                className="w-12 h-12 bg-slate-50 text-slate-400 rounded-2xl flex items-center justify-center hover:bg-red-500 hover:text-white transition-all shrink-0"
+                                                title="Delete Provider"
+                                            >
+                                                <Trash2 size={18} />
+                                            </button>
+
+                                            <button className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-400 hover:bg-slate-900 hover:text-white transition-all shrink-0">
                                                 <ChevronRight size={20} />
                                             </button>
                                         </div>
@@ -4813,15 +5129,6 @@ function AdminHomePage() {
                         </div>
                     )}
 
-
-                    {activeTab === "partner_requests" && (
-                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
-                                <h3 style={{ fontSize: "20px", fontWeight: 900, color: t.textMain }}>Partner Requests</h3>
-                            </div>
-                             <AdminPartnerRequestsTable t={t} router={router} theme={theme} />
-                        </div>
-                    )}
 
                     {activeTab === "send_notif" && (
                         <div style={{ maxWidth: "800px" }}>
@@ -6883,12 +7190,12 @@ function AdminHomePage() {
                             </div>
                             
                             <div style={{ overflowX: "auto" }}>
-                                <AdminMeetingsTable t={t} router={router} />
+                                <AdminMeetingsTable t={t} />
                             </div>
                         </div>
                     )}
 
-                    {(["dashboard", "banner_ads", "revenue", "payout_requests", "fee_settings", "exclusive_settings", "email_broadcast", "careers", "subscribers", "subscriptions", "turf_partners", "turf_active", "turf_banned", "branding", "categories", "subnav", "events_settings", "event_partners", "pages", "sections", "all_org", "active_org", "banned_org", "email_unverified", "mobile_unverified", "kyc_unverified", "kyc_pending", "kyc_verified", "with_balance", "org_requests", "partner_requests", "service_active", "service_banned", "send_notif", "payment_settings", "ticket_settings", "comm_hub", "email_settings", "email_templates", "disclaimer_settings", "sso_settings", "api_settings", "meta_management", "all_events", "customers", "bookings", "all_turfs", "turf_active", "turf_banned", "turf_bookings", "pool_bookings", "gst", "coupons", "promotions", "financials", "support_tickets", "branding_partners", "hero", "video", "video_banner", "mobile_banners", "site_branding", "memories", "copyright", "meeting_settings", "admin_management", "ad_popups", "meetings", "checkout_footer", "careers_admin", "careers_banner", "contact_inquiries", "contact_settings"].includes(activeTab)) ? null : (
+                    {(["dashboard", "banner_ads", "revenue", "payout_requests", "fee_settings", "exclusive_settings", "email_broadcast", "careers", "subscribers", "subscriptions", "turf_partners", "turf_active", "turf_banned", "branding", "categories", "subnav", "events_settings", "event_partners", "pages", "sections", "all_org", "active_org", "banned_org", "email_unverified", "mobile_unverified", "kyc_unverified", "kyc_pending", "kyc_verified", "with_balance", "org_requests", "partner_requests", "service_active", "service_banned", "send_notif", "payment_settings", "ticket_settings", "comm_hub", "email_settings", "email_templates", "disclaimer_settings", "sso_settings", "api_settings", "meta_management", "all_events", "tournaments", "marathons", "customers", "bookings", "all_turfs", "turf_active", "turf_banned", "turf_bookings", "pool_bookings", "gst", "coupons", "promotions", "financials", "support_tickets", "branding_partners", "hero", "video", "video_banner", "mobile_banners", "site_branding", "memories", "copyright", "meeting_settings", "admin_management", "ad_popups", "meetings", "checkout_footer", "careers_admin", "careers_banner", "contact_inquiries", "contact_settings", "scanner_monitor", "fraud_dashboard", "flash_deals", "audit_logs"].includes(activeTab)) ? null : (
                         <div style={{ backgroundColor: t.cardBg, padding: "60px 24px", textAlign: "center", borderRadius: "10px", border: `1px solid ${t.border}` }}>
                             <h2 style={{ fontSize: "20px", fontWeight: 800, color: t.textMain }}>{activeTab.replace(/_/g, ' ').toUpperCase()}</h2>
                             <p style={{ color: t.textSub, marginTop: "8px", maxWidth: "350px", margin: "8px auto", fontSize: "14px" }}>This management module is currently being configured. You will be able to manage these settings shortly.</p>
@@ -7393,6 +7700,137 @@ function AdminHomePage() {
 
 
 
+                    {isEditVendorModalOpen && editingVendor && (
+                        <div style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", backgroundColor: "rgba(0,0,0,0.6)", zIndex: 1001, display: "flex", alignItems: "center", justifyContent: "center", padding: "24px" }}>
+                            <div style={{ backgroundColor: theme === 'light' ? '#fff' : '#0f172a', padding: "32px", borderRadius: "24px", width: "100%", maxWidth: "500px", border: `1px solid ${t.border}`, boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)" }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "32px" }}>
+                                    <div>
+                                        <h3 style={{ fontSize: "24px", fontWeight: 900, margin: 0, color: t.textMain }}>Edit Service Provider</h3>
+                                        <p style={{ fontSize: "13px", color: t.textSub, marginTop: "4px" }}>Modify business identity and service category</p>
+                                    </div>
+                                    <button onClick={() => setIsEditVendorModalOpen(false)} style={{ background: "none", border: "none", color: t.textSub, cursor: "pointer" }}><X size={20} /></button>
+                                </div>
+                                <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: t.textSub, marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Business Name</label>
+                                        <input
+                                            type="text"
+                                            value={editingVendor.business_name || ""}
+                                            onChange={(e) => setEditingVendor({ ...editingVendor, business_name: e.target.value })}
+                                            style={{ width: "100%", padding: "12px", borderRadius: "12px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "14px", fontWeight: 500 }}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: t.textSub, marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Service Category</label>
+                                        <select
+                                            value={editingVendor.category || ""}
+                                            onChange={(e) => setEditingVendor({ ...editingVendor, category: e.target.value })}
+                                            style={{ width: "100%", padding: "12px", borderRadius: "12px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "14px", fontWeight: 500 }}
+                                        >
+                                            <option value="">Select Category</option>
+                                            <option value="Mehendi Artist">Mehendi Artist</option>
+                                            <option value="Photographer/Studio">Photographer/Studio</option>
+                                            <option value="Makeup Artist">Makeup Artist</option>
+                                            <option value="Personal Service">Personal Service</option>
+                                            <option value="Artist">Artist</option>
+                                            <option value="Turf Partner">Turf Partner</option>
+                                        </select>
+                                    </div>
+                                    <div style={{ display: "flex", gap: "16px", marginTop: "16px" }}>
+                                        <button onClick={() => setIsEditVendorModalOpen(false)} style={{ flex: 1, padding: "14px", borderRadius: "12px", border: `1px solid ${t.border}`, backgroundColor: "transparent", color: t.textMain, fontWeight: 700, cursor: "pointer" }}>Cancel</button>
+                                        <button
+                                            onClick={async () => {
+                                                await updateVendorMutation({
+                                                    id: editingVendor.id,
+                                                    business_name: editingVendor.business_name,
+                                                    category: editingVendor.category
+                                                });
+                                                setIsEditVendorModalOpen(false);
+                                                showToast("Service provider updated!", "success");
+                                                if (refreshServiceProviders) refreshServiceProviders();
+                                            }}
+                                            style={{ flex: 1, padding: "14px", borderRadius: "12px", border: "none", backgroundColor: "#3b82f6", color: "#fff", fontWeight: 800, cursor: "pointer", boxShadow: "0 10px 15px -3px rgba(59, 130, 246, 0.3)" }}
+                                        >
+                                            Save Changes
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {isPasswordResetModalOpen && selectedUserForPassword && (
+                        <div style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", backgroundColor: "rgba(0,0,0,0.6)", zIndex: 1001, display: "flex", alignItems: "center", justifyContent: "center", padding: "24px" }}>
+                            <div style={{ backgroundColor: theme === 'light' ? '#fff' : '#0f172a', padding: "32px", borderRadius: "24px", width: "100%", maxWidth: "450px", border: `1px solid ${t.border}`, boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)" }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+                                    <div>
+                                        <h3 style={{ fontSize: "20px", fontWeight: 900, margin: 0, color: t.textMain }}>Password Settings</h3>
+                                        <p style={{ fontSize: "12px", color: t.textSub, marginTop: "4px" }}>Manage access for {selectedUserForPassword.business_name || selectedUserForPassword.name}</p>
+                                    </div>
+                                    <button onClick={() => setIsPasswordResetModalOpen(false)} style={{ background: "none", border: "none", color: t.textSub, cursor: "pointer" }}><X size={20} /></button>
+                                </div>
+                                
+                                <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+                                    <div style={{ padding: "20px", borderRadius: "16px", backgroundColor: theme === 'light' ? '#f8fafc' : '#1e293b', border: `1px solid ${t.border}` }}>
+                                        <h4 style={{ fontSize: "13px", fontWeight: 800, color: t.textMain, marginBottom: "12px", display: "flex", alignItems: "center", gap: "8px" }}><Mail size={16} /> Send Reset Link</h4>
+                                        <p style={{ fontSize: "11px", color: t.textSub, marginBottom: "16px" }}>Sends a secure recovery link to <strong>{selectedUserForPassword.profiles?.email || selectedUserForPassword.email}</strong> via Microsoft 365.</p>
+                                        <button 
+                                            onClick={async () => {
+                                                try {
+                                                    const res = await fetch('/api/admin/action', {
+                                                        method: 'POST',
+                                                        headers: { 'Content-Type': 'application/json' },
+                                                        body: JSON.stringify({ action: 'send-reset-link', data: { email: selectedUserForPassword.profiles?.email || selectedUserForPassword.email } })
+                                                    });
+                                                    if (!res.ok) throw new Error("Failed to send link");
+                                                    showToast("Reset link sent successfully!", "success");
+                                                } catch (err) {
+                                                    showToast(err.message, "error");
+                                                }
+                                            }}
+                                            style={{ width: "100%", padding: "12px", borderRadius: "10px", backgroundColor: "#4f46e5", color: "white", fontWeight: 700, border: "none", cursor: "pointer" }}
+                                        >
+                                            Send Recovery Email
+                                        </button>
+                                    </div>
+
+                                    <div style={{ padding: "20px", borderRadius: "16px", backgroundColor: theme === 'light' ? '#fff' : '#0f172a', border: `1px solid ${t.border}` }}>
+                                        <h4 style={{ fontSize: "13px", fontWeight: 800, color: t.textMain, marginBottom: "12px", display: "flex", alignItems: "center", gap: "8px" }}><Lock size={16} /> Manual Override</h4>
+                                        <p style={{ fontSize: "11px", color: t.textSub, marginBottom: "12px" }}>Directly set a new password. The user will be forced to change it on next login.</p>
+                                        <input 
+                                            type="text" 
+                                            placeholder="Enter new password"
+                                            value={newManualPassword}
+                                            onChange={(e) => setNewManualPassword(e.target.value)}
+                                            style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "13px", marginBottom: "12px" }}
+                                        />
+                                        <button 
+                                            disabled={!newManualPassword}
+                                            onClick={async () => {
+                                                try {
+                                                    const res = await fetch('/api/admin/action', {
+                                                        method: 'POST',
+                                                        headers: { 'Content-Type': 'application/json' },
+                                                        body: JSON.stringify({ action: 'reset-password-manual', data: { userId: selectedUserForPassword.id, newPassword: newManualPassword } })
+                                                    });
+                                                    if (!res.ok) throw new Error("Failed to reset password");
+                                                    showToast("Password updated successfully!", "success");
+                                                    setNewManualPassword("");
+                                                    setIsPasswordResetModalOpen(false);
+                                                } catch (err) {
+                                                    showToast(err.message, "error");
+                                                }
+                                            }}
+                                            style={{ width: "100%", padding: "12px", borderRadius: "10px", backgroundColor: "#10b981", color: "white", fontWeight: 700, border: "none", cursor: "pointer", opacity: newManualPassword ? 1 : 0.5 }}
+                                        >
+                                            Update Password
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {activeTab === "mobile_banners" && <MobileBannersAdmin theme={theme} t={t} />}
 
                     {partnerModal && (
@@ -7589,5 +8027,3 @@ function AdminHomePage() {
         </div>
     );
 }
-
-

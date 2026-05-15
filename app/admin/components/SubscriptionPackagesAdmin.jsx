@@ -8,11 +8,17 @@ import {
     AlertTriangle, Shield, CreditCard, Users, Layout,
     ArrowRight, Info, Settings, Clock, BarChart3,
     Smartphone, Search, Filter, Mail, Bell, Activity,
-    History, DollarSign
+    History, DollarSign, RefreshCw
 } from "lucide-react";
 
 export default function SubscriptionPackagesAdmin({ theme, t }) {
-    const { data: packages = [], loading, refresh } = useSupabaseQuery('staff_packages');
+    const { data: packagesData = [], loading, refresh } = useSupabaseQuery('staff_packages');
+    const packages = packagesData.length > 0 ? packagesData : [
+        { package_name: 'Free Plan', staff_limit: 3, monthly_price: 0, gst_percentage: 0, discount_percentage: 0, features: { offline_scan: false, multi_gate: false, analytics: false, duplicate_validation: true }, is_active: true },
+        { package_name: 'Starter Plan', staff_limit: 10, monthly_price: 999, gst_percentage: 18, discount_percentage: 0, features: { offline_scan: true, multi_gate: true, analytics: false, duplicate_validation: true }, is_active: true },
+        { package_name: 'Professional Plan', staff_limit: 25, monthly_price: 2999, gst_percentage: 18, discount_percentage: 0, features: { offline_scan: true, multi_gate: true, analytics: true, duplicate_validation: true }, is_active: true },
+        { package_name: 'Enterprise Plan', staff_limit: 9999, monthly_price: 9999, gst_percentage: 18, discount_percentage: 0, features: { offline_scan: true, multi_gate: true, analytics: true, duplicate_validation: true, device_monitoring: true }, is_active: true }
+    ];
     const { data: payments = [], loading: loadingPayments } = useSupabaseQuery('subscription_payments', (q) => q.order('created_at', { ascending: false }), [], { select: "*, organiser:profiles(full_name, email, phone)" });
     const { data: logs = [], loading: loadingLogs } = useSupabaseQuery('subscription_logs', (q) => q.order('created_at', { ascending: false }));
     const [upsertPackage] = useSupabaseMutation('staff_packages', 'upsert');
@@ -115,31 +121,51 @@ export default function SubscriptionPackagesAdmin({ theme, t }) {
                             <h2 className="text-2xl font-black text-slate-900 tracking-tight dark:text-white">Dynamic Pricing Control</h2>
                             <p className="text-sm text-slate-500 font-medium">Manage monthly staff subscription plans and feature limits</p>
                         </div>
-                        <button 
-                            onClick={() => {
-                                setEditingId(null);
-                                setFormData({
-                                    package_name: "",
-                                    monthly_price: 0,
-                                    staff_limit: 3,
-                                    gst_percentage: 18,
-                                    discount_percentage: 0,
-                                    duration_days: 30,
-                                    trial_days: 0,
-                                    features: { offline_scan: false, multi_gate: false, analytics: false, duplicate_validation: true, device_monitoring: false },
-                                    is_active: true
-                                });
-                                setShowModal(true);
-                            }}
-                            className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-2xl font-bold text-sm shadow-xl hover:scale-105 active:scale-95 transition-all dark:bg-pink-600"
-                        >
-                            <Plus size={18} /> Create New Plan
-                        </button>
+                        <div className="flex gap-4">
+                            {packagesData.length === 0 && (
+                                <button 
+                                    onClick={async () => {
+                                        try {
+                                            for (const pkg of packages) {
+                                                await upsertPackage(pkg);
+                                            }
+                                            showToast("System Packages Synchronized", "success");
+                                            refresh();
+                                        } catch (err) {
+                                            showToast("Sync Failed: " + err.message, "error");
+                                        }
+                                    }}
+                                    className="flex items-center gap-2 px-6 py-3 bg-amber-500 text-white rounded-2xl font-bold text-sm shadow-xl hover:scale-105 active:scale-95 transition-all"
+                                >
+                                    <RefreshCw size={18} /> Seed System Packages
+                                </button>
+                            )}
+                            <button 
+                                onClick={() => {
+                                    setEditingId(null);
+                                    setFormData({
+                                        package_name: "",
+                                        monthly_price: 0,
+                                        staff_limit: 3,
+                                        gst_percentage: 18,
+                                        discount_percentage: 0,
+                                        duration_days: 30,
+                                        trial_days: 0,
+                                        features: { offline_scan: false, multi_gate: false, analytics: false, duplicate_validation: true, device_monitoring: false },
+                                        is_active: true
+                                    });
+                                    setShowModal(true);
+                                }}
+                                className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-2xl font-bold text-sm shadow-xl hover:scale-105 active:scale-95 transition-all dark:bg-pink-600"
+                            >
+                                <Plus size={18} /> Create New Plan
+                            </button>
+                        </div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                         {packages.map((pkg) => (
-                            <div key={pkg.id} className="bg-white rounded-3xl p-6 border border-slate-100 shadow-xl shadow-slate-200/50 flex flex-col dark:bg-slate-800 dark:border-slate-700 dark:shadow-none">
+                            <div key={pkg.id || pkg.package_name} className="bg-white rounded-3xl p-6 border border-slate-100 shadow-xl shadow-slate-200/50 flex flex-col dark:bg-slate-800 dark:border-slate-700 dark:shadow-none">
                                 <div className="flex justify-between items-start mb-4">
                                     <div className={`p-3 rounded-2xl ${pkg.monthly_price === 0 ? 'bg-slate-100 text-slate-500' : 'bg-pink-100 text-pink-500'}`}>
                                         <Zap size={24} fill={pkg.monthly_price > 0 ? "currentColor" : "none"} />

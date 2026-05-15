@@ -121,61 +121,70 @@ export default function SignInPage() {
     const getRedirectDestination = (user, redirectPath) => {
         if (!user) return "/";
         
-        // CRITICAL SECURITY OVERRIDE: If password change is requested, force it immediately
+        // Normalize role
+        const role = user?.role?.toLowerCase();
+
+        // 1. CRITICAL SECURITY OVERRIDE: Password change mandatory
         if (user.is_temporary_password || user.force_password_change) {
             return "/change-password";
         }
 
-        // Determine redirect: prioritize explicit redirectPath if valid
+        // 2. Role-based Default Destinations (Primary fallbacks)
+        const getRoleDefault = (r) => {
+            if (r === 'admin' || r === 'super_admin' || r === 'system_admin') return "/admin";
+            if (r === 'staff') return "/pwa-scan";
+            if (r === 'organiser') return "/organiser";
+            if (r === 'vendor' || r === 'branding_partner') return "/vendor/dashboard";
+            return "/profile";
+        };
+
+        // 3. Decode and Validate Redirect Path
         let decodedRedirect = redirectPath ? decodeURIComponent(redirectPath) : null;
-        const isInvalidRedirect = !decodedRedirect || decodedRedirect.includes("/signin") || decodedRedirect.includes("/signup");
+        if (decodedRedirect && decodedRedirect.toLowerCase().startsWith("/organiser")) {
+            decodedRedirect = "/organiser";
+        }
+        
+        
+        // Paths considered "generic" or "invalid" that should trigger role-based defaults
+        const isGeneric = !decodedRedirect || 
+                         decodedRedirect === "/" || 
+                         decodedRedirect === "" || 
+                         decodedRedirect.includes("/signin") || 
+                         decodedRedirect.includes("/signup");
 
-        let destination = isInvalidRedirect ? "/" : decodedRedirect;
+        if (isGeneric) {
+            return getRoleDefault(role);
+        }
 
-        // Ensure role is normalized for comparison
-        const role = user?.role?.toLowerCase();
-
-        // Security: Validate authorization for the target destination
-        const isAdminPath = destination?.startsWith("/admin");
-        const isBrandingPath = destination?.startsWith("/branding");
-        const isOrganiserPath = destination?.startsWith("/organiser");
-        const isVendorPath = destination?.startsWith("/vendor");
+        // 4. Security & Authorization check for specific destinations
+        const destination = decodedRedirect;
+        const isAdminPath = destination.startsWith("/admin");
+        const isBrandingPath = destination.startsWith("/branding");
+        const isOrganiserPath = destination.startsWith("/organiser");
+        const isVendorPath = destination.startsWith("/vendor");
 
         const isAuthorized = 
-            (!isAdminPath || role === "admin" || role === "super_admin" || role === "system_admin") &&
-            (!isBrandingPath || role === "branding_partner" || role === "admin" || role === "super_admin" || role === "system_admin") &&
+            (!isAdminPath || ["admin", "super_admin", "system_admin"].includes(role)) &&
+            (!isBrandingPath || ["branding_partner", "admin", "super_admin", "system_admin"].includes(role)) &&
             (!isOrganiserPath || ["organiser", "staff", "admin", "super_admin", "system_admin"].includes(role)) &&
             (!isVendorPath || ["vendor", "organiser", "admin", "super_admin", "system_admin"].includes(role));
 
-        // USER SPECIFIC OVERRIDES (MANDATORY)
-        // 2. Normal users from events page go to profile
-        if ((role === 'public' || role === 'user') && destination?.includes('/events')) {
+        // If trying to access a restricted path without authorization, go to default
+        if (!isAuthorized) {
+            console.warn(`SignInPage: Unauthorized access attempt to ${destination} for role ${role}. Redirecting to default.`);
+            return getRoleDefault(role);
+        }
+
+        // 5. Special UI/UX Overrides
+        // Normal users coming from event-related pages might be better off on their profile
+        if ((role === 'public' || role === 'user') && destination.includes('/events')) {
             return "/profile";
         }
 
-        // Apply role-based defaults (ONLY if no specific destination is requested)
-        if (isInvalidRedirect) {
-            if (role === 'admin' || role === 'super_admin' || role === 'system_admin') {
-                return "/admin";
-            } else if (role === 'staff') {
-                return "/pwa-scan";
-            } else if (role === 'organiser') {
-                return "/organiser";
-            } else {
-                return "/profile";
-            }
-        }
-
-        if (isInvalidRedirect || !isAuthorized) {
-            if (role === 'admin' || role === 'super_admin' || role === 'system_admin') {
-                return "/admin";
-            } else if (role === 'staff') {
-                return "/pwa-scan";
-            } else if (role === 'organiser') {
-                return "/organiser";
-            } else {
-                return "/profile";
-            }
+        // If an organiser is logging in but was previously on a generic page (like home or profile),
+        // we should probably steer them to their dashboard anyway for better UX.
+        if (role === 'organiser' && (destination === '/' || destination === '/profile')) {
+            return "/organiser";
         }
 
         return destination;
@@ -231,21 +240,26 @@ export default function SignInPage() {
     const [otpEnabled, setOtpEnabled] = useState(false);
 
     // SSO configurations fetched from system settings
-    const [ssoConfigs, setSsoConfigs] = useState({ facebook: false, google: false });
+    // SSO configurations: Default Google to true to ensure it shows up immediately
+    const [ssoConfigs, setSsoConfigs] = useState({ facebook: false, google: true });
 
     useEffect(() => {
         const checkConfigs = async () => {
-            // Check OTP
-            const { data: otpData } = await supabase.from('communicationSettings').select('value').eq('key', 'otp_settings').maybeSingle();
-            if (otpData?.value?.enabled) setOtpEnabled(true);
+            try {
+                // Check OTP
+                const { data: otpData } = await supabase.from('communicationSettings').select('value').eq('key', 'otp_settings').maybeSingle();
+                if (otpData?.value?.enabled) setOtpEnabled(true);
 
-            // Check SSO
-            const { data: ssoData } = await supabase.from('sso_settings').select('*').maybeSingle();
-            if (ssoData) {
-                setSsoConfigs({
-                    google: !!ssoData.google_enabled,
-                    facebook: !!ssoData.facebook_enabled
-                });
+                // Check SSO
+                const { data: ssoData } = await supabase.from('sso_settings').select('*').maybeSingle();
+                if (ssoData) {
+                    setSsoConfigs({
+                        google: ssoData.google_enabled !== false, // Show if not explicitly false
+                        facebook: !!ssoData.facebook_enabled
+                    });
+                }
+            } catch (err) {
+                console.warn("Could not fetch auth configs, using defaults:", err);
             }
         };
         checkConfigs();

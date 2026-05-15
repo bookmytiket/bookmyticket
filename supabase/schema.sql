@@ -329,7 +329,7 @@ CREATE TABLE public.admins (
 
 CREATE TABLE public.otps (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    email TEXT NOT NULL,
+    identifier TEXT NOT NULL UNIQUE,
     code TEXT NOT NULL,
     expires_at TIMESTAMPTZ NOT NULL,
     purpose TEXT NOT NULL, -- 'signup', 'login', 'reset'
@@ -533,6 +533,7 @@ ALTER TABLE public.ad_popups ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.mobile_video_banners ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.memories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.failed_login_attempts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.otps ENABLE ROW LEVEL SECURITY;
 
 -- 1. Profiles Policies
 CREATE POLICY "Public profiles are viewable by everyone." ON public.profiles FOR SELECT USING (true);

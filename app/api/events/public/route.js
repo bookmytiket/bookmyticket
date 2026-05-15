@@ -66,9 +66,10 @@ export async function GET(request) {
 
         // 2. Fetch related data in parallel
         // Support both old (id = event_id) and new (event_id column) schemas
-        const [tournamentsRes, marathonsRes] = await Promise.all([
+        const [tournamentsRes, marathonsRes, tourneyCategoriesRes] = await Promise.all([
             supabase.from('tournament_events').select('*').in('event_id', eventIds),
-            supabase.from('marathon_events').select('*').in('event_id', eventIds)
+            supabase.from('marathon_config').select('*').in('event_id', eventIds),
+            supabase.from('tournament_categories').select('*').in('event_id', eventIds)
         ]);
 
         // Fallback for tables using shared UUID as PK (id = event_id)
@@ -80,14 +81,17 @@ export async function GET(request) {
 
         let marathons = marathonsRes.data || [];
         if (marathons.length === 0) {
-            const { data } = await supabase.from('marathon_events').select('*').in('id', eventIds);
+            const { data } = await supabase.from('marathon_config').select('*').in('id', eventIds);
             if (data) marathons = data;
         }
+
+        const tourneyCategories = tourneyCategoriesRes.data || [];
 
         // 3. Strict mapping
         const enrichedEvents = organiserEvents.map(event => {
             const tournament = tournaments.find(t => (t.event_id === event.id || t.id === event.id)) || null;
             const marathon = marathons.find(m => (m.event_id === event.id || m.id === event.id)) || null;
+            const categories = tourneyCategories.filter(c => c.event_id === event.id);
 
             // Hydration: prioritize specific table data for price/banner if parent is generic
             let price = event.price || 0;
@@ -95,7 +99,12 @@ export async function GET(request) {
             let venue = event.venue;
 
             if (tournament) {
-                price = tournament.registration_fee || price;
+                // If there are categories, the "starting price" is the min category fee
+                if (categories.length > 0) {
+                    price = Math.min(...categories.map(c => Number(c.category_fee) || 0));
+                } else {
+                    price = Number(tournament.registration_fee) || price;
+                }
                 img = tournament.banner_image || img;
                 venue = tournament.venue || venue;
             } else if (marathon) {
@@ -115,11 +124,12 @@ export async function GET(request) {
 
             return {
                 ...event,
-                tournament_data: tournament,
+                tournament_data: tournament ? { ...tournament, categories } : null,
                 marathon_data: marathon,
                 img,
                 price,
                 venue,
+                registration_end_date: tournament?.registration_end_at || tournament?.registration_end_date || null,
                 city: event.city || tournament?.city || marathon?.city,
                 district: event.district || tournament?.district || marathon?.district,
                 category: event.category || (isTournament ? 'Tournament' : (isMarathon ? 'Marathon' : event.category))

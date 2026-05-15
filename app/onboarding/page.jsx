@@ -6,18 +6,21 @@ import { supabase } from "@/lib/supabase";
 import { 
     Upload, CheckCircle, ShieldCheck, FileText, Banknote, 
     Building2, User, ArrowRight, Loader2, AlertCircle, 
-    FileUp, Check, X, ArrowLeft, Layout, LogOut
+    FileUp, Check, X, ArrowLeft, Layout, LogOut, ChevronDown
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/context/ToastContext";
 
 export default function OnboardingPage() {
-    const { user, loading: authLoading } = useAuth();
+    const { user, loading: authLoading, fetchAndSetUser } = useAuth();
     const router = useRouter();
     const { showToast } = useToast();
 
     const [step, setStep] = useState(1);
+    const [activeStep, setActiveStep] = useState(1);
+    const [dropdownOpen, setDropdownOpen] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [kycData, setKycData] = useState(null);
 
@@ -52,11 +55,27 @@ export default function OnboardingPage() {
             return;
         }
 
-        const kycStatus = (user?.kyc_status || "").toLowerCase();
-        const isApproved = ["approved", "active", "kyc completed", "kyc verified"].includes(kycStatus) || user?.is_approved === true;
+        if (user && ["admin", "super_admin", "system_admin"].includes(user.role)) {
+            router.push("/admin");
+            return;
+        }
+
+        const kycStatus = (user?.kyc_status || user?.kyc_details?.status || "").toLowerCase();
+        const isApproved = ["approved", "active", "kyc completed", "kyc verified"].includes(kycStatus) || 
+                          user?.is_approved === true || 
+                          (user?.kyc_details?.status || "").toLowerCase() === "active";
+        
+        console.log("Onboarding Check:", { kycStatus, isApproved, role: user?.role, kyc_status_raw: user?.kyc_status, details_status: user?.kyc_details?.status });
+
         if (user && isApproved) {
+            console.log("Redirecting to /organiser...");
             router.push("/organiser");
             return;
+        }
+
+        // If not approved, force a profile refresh to catch any recent admin approvals
+        if (user && !isApproved && !loading) {
+            fetchAndSetUser(user);
         }
 
         if (user) {
@@ -78,6 +97,7 @@ export default function OnboardingPage() {
         if (!user) return;
         setLoading(true);
         try {
+            // Speed up load by only fetching what is needed for initialization
             const { data, error } = await supabase
                 .from("kyc_details")
                 .select("*")
@@ -86,8 +106,12 @@ export default function OnboardingPage() {
             
             if (data) {
                 setKycData(data);
-                // If already submitted and pending review, show status page
-                if (data.status === "Submitted" || data.status === "Under Review") {
+                // Pre-fill category if it was previously selected
+                if (data.business_category) {
+                    setForm(prev => ({ ...prev, category: data.business_category }));
+                }
+                // If already submitted, skip to review step
+                if (data.status === "Submitted" || data.status === "Under Review" || data.status === "Pending") {
                     setStep(5);
                 }
             }
@@ -159,6 +183,7 @@ export default function OnboardingPage() {
                 id: user.id,
                 org_name: form.orgName,
                 contact_person: form.contactPerson,
+                business_category: form.category,
                 id_proof_url: idProofUrl,
                 business_proof_url: businessProofUrl,
                 address_proof_url: addressProofUrl,
@@ -387,7 +412,36 @@ export default function OnboardingPage() {
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    <div className="space-y-3 md:col-span-2">
+                                    <div className="space-y-3 relative">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Business Category</label>
+                                        <div 
+                                            onClick={() => setDropdownOpen(!dropdownOpen)}
+                                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 flex justify-between items-center cursor-pointer hover:bg-white hover:border-purple-500 transition-all shadow-sm"
+                                        >
+                                            <span className={`text-sm font-bold ${form.category ? 'text-slate-900' : 'text-slate-400'}`}>
+                                                {form.category || "Select Category"}
+                                            </span>
+                                            <ChevronDown size={16} className={`text-slate-400 transition-transform duration-300 ${dropdownOpen ? 'rotate-180' : ''}`} />
+                                        </div>
+
+                                        {dropdownOpen && (
+                                            <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-100 rounded-2xl shadow-2xl z-50 py-2 animate-in fade-in zoom-in-95 duration-200">
+                                                {["Individual / Proprietorship", "Pvt Ltd Company", "Partnership Firm", "Professional Organiser", "Other"].map((cat) => (
+                                                    <div 
+                                                        key={cat}
+                                                        onClick={() => {
+                                                            setForm({...form, category: cat});
+                                                            setDropdownOpen(false);
+                                                        }}
+                                                        className="px-5 py-3 hover:bg-purple-50 text-slate-700 text-sm font-bold cursor-pointer transition-colors"
+                                                    >
+                                                        {cat}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="space-y-3">
                                         <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Business PAN</label>
                                         <input 
                                             className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 focus:bg-white focus:border-[#f84464] focus:ring-4 focus:ring-[#f84464]/5 outline-none transition-all font-bold uppercase text-slate-900 text-sm"
@@ -493,12 +547,13 @@ export default function OnboardingPage() {
                                     
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                                         <SummaryItem label="Business Entity" value={form.orgName} />
+                                        <SummaryItem label="Category" value={form.category} />
                                         <SummaryItem label="Representative" value={form.contactPerson} />
                                         <SummaryItem label="PAN Number" value={form.panNumber} />
-                                        <SummaryItem label="Settlement" value={form.bankName} />
                                         <div className="md:col-span-2 lg:col-span-3">
                                             <SummaryItem label="Registered Address" value={form.address} />
                                         </div>
+                                        <SummaryItem label="Settlement" value={form.bankName} />
                                         <SummaryItem label="Account No" value={`****${form.accountNumber.slice(-4)}`} />
                                     </div>
                                 </div>

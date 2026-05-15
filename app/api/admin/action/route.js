@@ -69,14 +69,24 @@ export async function POST(request) {
       return NextResponse.json({ error: "Invalid session" }, { status: 401 });
     }
 
-    // Check against admins table
+    // Check against either admin registry used across the app.
     const { data: isAdmin, error: adminCheckError } = await supabaseAdmin
       .from('admins')
       .select('id')
       .eq('id', requester.id)
-      .single();
+      .maybeSingle();
 
-    if (adminCheckError || !isAdmin) {
+    const { data: isPlatformAdmin, error: platformAdminCheckError } = await supabaseAdmin
+      .from('platform_admins')
+      .select('id')
+      .eq('id', requester.id)
+      .maybeSingle();
+
+    if ((adminCheckError && adminCheckError.code !== 'PGRST116') || (platformAdminCheckError && platformAdminCheckError.code !== 'PGRST116')) {
+      throw (adminCheckError || platformAdminCheckError);
+    }
+
+    if (!isAdmin && !isPlatformAdmin) {
       console.warn(`Unauthorized admin action attempt by user ${requester.id}`);
       return NextResponse.json({ error: "Unauthorized. Admin privileges required." }, { status: 403 });
     }
@@ -322,38 +332,155 @@ export async function POST(request) {
 
     if (action === "verify-kyc") {
       const { requestId, organiserId, status, reason } = data;
+      const now = new Date().toISOString();
+      const isApproved = status === 'Approved';
+
+      if (!organiserId) {
+        throw new Error("organiserId is required");
+      }
+
+      const { data: kycRecord, error: kycFetchError } = await supabaseAdmin
+        .from("kyc_details")
+        .select("*")
+        .eq("id", organiserId)
+        .maybeSingle();
+
+      if (kycFetchError) throw kycFetchError;
+
+      const { data: profileRecord, error: profileFetchError } = await supabaseAdmin
+        .from("profiles")
+        .select("id, email, full_name")
+        .eq("id", organiserId)
+        .maybeSingle();
+
+      if (profileFetchError) throw profileFetchError;
       
       // Update kyc_details table
-      await supabaseAdmin
+      const { error: kycUpdateError } = await supabaseAdmin
         .from("kyc_details")
         .update({
           status,
           rejection_reason: reason,
-          verified_at: status === 'Approved' ? new Date().toISOString() : null,
-          updated_at: new Date().toISOString()
+          verified_at: isApproved ? now : null,
+          updated_at: now
         })
         .eq("id", organiserId);
 
-      // Update organisers table
-      await supabaseAdmin
+      if (kycUpdateError) throw kycUpdateError;
+
+      const organiserPayload = {
+        id: organiserId,
+        business_name: kycRecord?.org_name || kycRecord?.contact_person || "Verified Organiser",
+        type: "event_organiser",
+        kyc_status: status,
+        is_approved: isApproved,
+        kyc_details: kycRecord || {},
+        force_password_change: false,
+        updated_at: now
+      };
+
+      // Upsert organiser access so a verified KYC immediately unlocks /organiser.
+      const { error: organiserError } = await supabaseAdmin
         .from("organisers")
-        .update({
-          kyc_status: status,
-          is_approved: status === 'Approved',
-          updated_at: new Date().toISOString()
-        })
-        .eq("id", organiserId);
+        .upsert(organiserPayload);
+
+      if (organiserError) throw organiserError;
+
+      if (isApproved) {
+        const profileName = kycRecord?.contact_person || kycRecord?.org_name || profileRecord?.full_name || null;
+        const profilePayload = {
+          id: organiserId,
+          role: "organiser",
+          ...(profileName ? { full_name: profileName } : {}),
+          force_password_change: false,
+          is_temporary_password: false,
+          updated_at: now
+        };
+
+        const { error: profileError } = await supabaseAdmin
+          .from("profiles")
+          .update(profilePayload)
+          .eq("id", organiserId);
+
+        // Some deployments may not have the newer password flags yet.
+        if (profileError && profileError.code === "42703") {
+          const { error: retryProfileError } = await supabaseAdmin
+            .from("profiles")
+            .update({
+              role: "organiser",
+              ...(profileName ? { full_name: profileName } : {}),
+              updated_at: now
+            })
+            .eq("id", organiserId);
+          if (retryProfileError) throw retryProfileError;
+        } else if (profileError) {
+          throw profileError;
+        }
+      }
 
       // Update partner_requests table if exists
-      if (requestId) {
+      if (requestId || profileRecord?.email) {
         await supabaseAdmin
           .from("partner_requests")
           .update({
-            status: status === 'Approved' ? "Access Granted" : "KYC Rejected",
+            status: isApproved ? "Access Granted" : "KYC Rejected",
             kyc_status: status,
-            updated_at: new Date().toISOString()
+            updated_at: now
           })
-          .eq("id", requestId);
+          .match(requestId ? { id: requestId } : { email: profileRecord.email });
+      }
+
+      return NextResponse.json({ success: true, organiserId, accessGranted: isApproved });
+    }
+
+    if (action === "reset-password-manual") {
+      const { userId, newPassword } = data;
+      if (!userId || !newPassword) throw new Error("User ID and New Password are required");
+
+      const { error } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+        password: newPassword
+      });
+      if (error) throw error;
+      
+      // Update profile to mark as temporary/force change
+      await supabaseAdmin.from('profiles').update({ 
+        is_temporary_password: true,
+        force_password_change: true,
+        updated_at: new Date().toISOString()
+      }).eq('id', userId);
+
+      return NextResponse.json({ success: true });
+    }
+
+    if (action === "send-reset-link") {
+      const { email } = data;
+      if (!email) throw new Error("Email is required");
+
+      const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
+        type: 'recovery',
+        email: email,
+        options: { redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://bookmyticket.net'}/auth/reset-password` }
+      });
+      
+      if (linkError) throw linkError;
+
+      // Send via M365 if config exists
+      const { data: m365ConfigRecord } = await supabaseAdmin.from('system_config').select('config').eq('key', 'm365_email_config').maybeSingle();
+      if (m365ConfigRecord?.config) {
+        const m365Config = m365ConfigRecord.config;
+        const resetLink = linkData.properties.action_link;
+        const emailContent = `
+          <div style="font-family: sans-serif; padding: 20px; color: #334155;">
+            <h2 style="color: #1e293b;">Password Reset Request</h2>
+            <p>An administrator has initiated a password reset for your BookMyTicket account.</p>
+            <p>Click the button below to securely set your new password:</p>
+            <div style="margin: 30px 0;">
+              <a href="${resetLink}" style="padding: 14px 28px; background: #4f46e5; color: white; text-decoration: none; border-radius: 12px; font-weight: bold; display: inline-block;">Reset My Password</a>
+            </div>
+            <p style="font-size: 12px; color: #64748b;">This link will expire in 24 hours. If you did not request this, please ignore this email.</p>
+          </div>
+        `;
+        await sendM365Email(m365Config, m365Config.from_email || m365Config.fromEmail, email, "Password Reset - BookMyTicket", emailContent);
       }
 
       return NextResponse.json({ success: true });
@@ -366,4 +493,3 @@ export async function POST(request) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
-

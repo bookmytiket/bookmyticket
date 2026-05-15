@@ -161,7 +161,7 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
             // Fetch from both tables to ensure full data coverage
             const [cRes, mRes, eRes] = await Promise.all([
                 supabase.from('marathon_categories').select('*').eq('marathon_id', marathonId).order('distance_km', { ascending: true }),
-                supabase.from('marathon_events').select('*').eq('id', marathonId).maybeSingle(),
+                supabase.from('marathon_config').select('*').eq('id', marathonId).maybeSingle(),
                 supabase.from('events').select('*').eq('id', marathonId).maybeSingle()
             ]);
 
@@ -419,7 +419,7 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
                 marathon_id = data.id;
             }
             
-            // 2. Upsert into 'marathon_events' (creates or updates in one operation)
+            // 2. Upsert into 'marathon_config' (creates or updates in one operation)
             const marathonPayload = {
                 id: marathon_id,
                 organiser_id: user.id,
@@ -451,10 +451,10 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
             };
 
             const { error: mError } = await supabase
-                .from('marathon_events')
+                .from('marathon_config')
                 .upsert(marathonPayload, { onConflict: 'id' });
             if (mError) {
-                console.warn("[MarathonForm] marathon_events upsert error:", mError.message);
+                console.warn("[MarathonForm] marathon_config upsert error:", mError.message);
                 // Don't throw — events table update is the primary record
             }
 

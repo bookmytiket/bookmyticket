@@ -120,7 +120,14 @@ export default function BecomePartnerModal({ isOpen, onClose }) {
         type: "",
         category: "",
         role: "Individual",
-        remarks: ""
+        remarks: "",
+        // Professional Service specifics
+        businessName: "",
+        serviceType: "",
+        city: "",
+        experience: "",
+        portfolioLink: "",
+        coverageArea: ""
     });
 
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -143,9 +150,15 @@ export default function BecomePartnerModal({ isOpen, onClose }) {
         e.preventDefault();
         setErrorMsg("");
 
-        if (!form.firstName || !form.lastName || !form.email || !form.phone || !form.type || !form.category) {
+        if (!form.firstName || !form.email || !form.phone || !form.type || !form.category) {
             setErrorMsg("Please fill in all required fields.");
             return;
+        }
+        if (form.type === "professional_service") {
+            if (!form.businessName || !form.serviceType || !form.city) {
+                setErrorMsg("Please fill in Business Name, Service Type, and City.");
+                return;
+            }
         }
 
         setIsSubmitting(true);
@@ -355,9 +368,44 @@ export default function BecomePartnerModal({ isOpen, onClose }) {
                             />
                         </div>
 
+                        {form.type === "professional_service" && (
+                            <>
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "12px" }}>
+                                    <div>
+                                        <label className="partner-label">Business / Brand Name <span style={{color:"#f84464"}}>*</span></label>
+                                        <input name="businessName" value={form.businessName} onChange={handleChange} className="partner-input" placeholder="Your Business Name" required />
+                                    </div>
+                                    <div>
+                                        <label className="partner-label">Service Type <span style={{color:"#f84464"}}>*</span></label>
+                                        <input name="serviceType" value={form.serviceType} onChange={handleChange} className="partner-input" placeholder="e.g. Bridal Mehendi" required />
+                                    </div>
+                                </div>
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "12px" }}>
+                                    <div>
+                                        <label className="partner-label">City / Location <span style={{color:"#f84464"}}>*</span></label>
+                                        <input name="city" value={form.city} onChange={handleChange} className="partner-input" placeholder="e.g. Mumbai" required />
+                                    </div>
+                                    <div>
+                                        <label className="partner-label">Experience</label>
+                                        <input name="experience" value={form.experience} onChange={handleChange} className="partner-input" placeholder="e.g. 5 Years" />
+                                    </div>
+                                </div>
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "12px" }}>
+                                    <div>
+                                        <label className="partner-label">Portfolio / Social Link</label>
+                                        <input name="portfolioLink" value={form.portfolioLink} onChange={handleChange} className="partner-input" placeholder="Instagram/Website URL" />
+                                    </div>
+                                    <div>
+                                        <label className="partner-label">Coverage Area</label>
+                                        <input name="coverageArea" value={form.coverageArea} onChange={handleChange} className="partner-input" placeholder="e.g. Pan India" />
+                                    </div>
+                                </div>
+                            </>
+                        )}
+
                         <div style={{ marginBottom: "12px" }}>
-                            <label className="partner-label">Remarks</label>
-                            <textarea name="remarks" value={form.remarks} onChange={handleChange} className="partner-input" placeholder="Tell us about your services or events..." rows={2} style={{ resize: "none" }} />
+                            <label className="partner-label">{form.type === "professional_service" ? "Description" : "Remarks"}</label>
+                            <textarea name="remarks" value={form.remarks} onChange={handleChange} className="partner-input" placeholder="Tell us about your services..." rows={2} style={{ resize: "none" }} />
                         </div>
 
                         <button type="submit" disabled={isSubmitting} style={{

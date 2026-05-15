@@ -225,46 +225,19 @@ export function AuthProvider({ children }) {
             if (adminRecord) {
                 role = (adminRecord.role || 'admin').toLowerCase().replace(/\s+/g, '_');
                 specializedData = adminRecord;
-            } else if (brandRecord && (role === 'public' || role === 'branding_partner')) {
-                // Only promote to branding_partner if they aren't already a higher role
-                // and if they don't want to remain a public user (usually partners have 'branding_partner' role in profiles)
-                if (profile?.role === 'branding_partner') {
-                    role = 'branding_partner';
-                    specializedData = brandRecord;
-                }
-            } else if (role === 'organiser' || role === 'staff' || organiserRecord) {
-                // Promoted role logic: If they have a record in the vendors table OR are already an organiser
-                if (role !== 'admin' && role !== 'super_admin' && role !== 'staff') {
-                    role = 'organiser';
-                }
-                specializedData = { ...(vendorRecord || {}), ...(organiserRecord || {}) };
-            } else if ((vendorRecord || providerRecord) && (role === 'public' || role === 'vendor')) {
-                if (profile?.role === 'vendor' || role === 'vendor') {
-                    role = 'vendor';
-                    let finalProviderData = providerRecord;
-                    if (!providerRecord && vendorRecord) {
-                        const { data: newProvider, error: insertError } = await supabase
-                            .from('service_providers')
-                            .insert({
-                                id: supabaseUser.id,
-                                organiser_id: supabaseUser.id,
-                                business_name: vendorRecord.business_name || profile?.full_name || supabaseUser.email?.split('@')[0],
-                                category: vendorRecord.category || 'Professional Service',
-                                status: 'active',
-                                advanced_settings: { blocked_dates: [] }
-                            })
-                            .select()
-                            .single();
-                        
-                        if (!insertError) finalProviderData = newProvider;
-                    }
-                    specializedData = { ...(vendorRecord || {}), ...(finalProviderData || {}) };
-                }
-            } else if (role === 'staff') {
+            } else if (organiserRecord) {
+                // ORGANISER takes priority over Vendor
+                role = 'organiser';
+                specializedData = { ...(vendorRecord || {}), ...(providerRecord || {}), ...organiserRecord };
+            } else if (role === 'staff' || specializedData?.role === 'staff') {
+                role = 'staff';
                 try {
                     const { data } = await supabase.from('staff').select('*').eq('id', supabaseUser.id).maybeSingle();
                     if (data) specializedData = data;
                 } catch (_) {}
+            } else if (vendorRecord || providerRecord) {
+                role = 'vendor';
+                specializedData = { ...(vendorRecord || {}), ...(providerRecord || {}) };
             }
 
             const userData = {
@@ -277,6 +250,19 @@ export function AuthProvider({ children }) {
                 is_temporary_password: profile?.is_temporary_password || specializedData?.is_temporary_password || false,
                 role,
             };
+
+            // ENFORCE BANNED STATUS
+            const isBanned = 
+                (userData.kyc_status || "").toLowerCase() === 'banned' || 
+                (userData.status || "").toLowerCase() === 'banned';
+
+            if (isBanned && role !== 'admin') {
+                console.warn("AuthContext: User is banned. Terminating session.");
+                setUser(null);
+                localStorage.removeItem("user");
+                supabase.auth.signOut();
+                return null;
+            }
 
             setUser(userData);
             localStorage.setItem("user", JSON.stringify(userData));
@@ -311,10 +297,10 @@ export function AuthProvider({ children }) {
                 // Update user_locations for shared tracking with mobile
                 if (hierarchy) {
                     const [countryRes, stateRes, districtRes, cityRes] = await Promise.all([
-                      hierarchy.country ? supabase.from('countries').select('id').eq('name', hierarchy.country).maybeSingle() : Promise.resolve({ data: null }),
-                      hierarchy.state ? supabase.from('states').select('id').eq('name', hierarchy.state).maybeSingle() : Promise.resolve({ data: null }),
-                      hierarchy.district ? supabase.from('districts').select('id').eq('name', hierarchy.district).maybeSingle() : Promise.resolve({ data: null }),
-                      hierarchy.city ? supabase.from('cities').select('id').eq('name', hierarchy.city).maybeSingle() : Promise.resolve({ data: null }),
+                        hierarchy.country ? supabase.from('countries').select('id').eq('name', hierarchy.country).maybeSingle() : Promise.resolve({ data: null }),
+                        hierarchy.state ? supabase.from('states').select('id').eq('name', hierarchy.state).maybeSingle() : Promise.resolve({ data: null }),
+                        hierarchy.district ? supabase.from('districts').select('id').eq('name', hierarchy.district).maybeSingle() : Promise.resolve({ data: null }),
+                        hierarchy.city ? supabase.from('cities').select('id').eq('name', hierarchy.city).maybeSingle() : Promise.resolve({ data: null }),
                     ]);
 
                     await supabase.from('user_locations').upsert({
@@ -397,6 +383,16 @@ export function AuthProvider({ children }) {
             }
 
             if (userData) {
+                // ENFORCE BANNED STATUS
+                const isBanned = 
+                    (userData.kyc_status || "").toLowerCase() === 'banned' || 
+                    (userData.status || "").toLowerCase() === 'banned';
+
+                if (isBanned && userData.role !== 'admin') {
+                    await logout();
+                    return { success: false, error: "Your account has been restricted. Please contact support." };
+                }
+
                 return { success: true, user: userData };
             }
             return { success: false, error: "Profile not found" };
@@ -435,7 +431,7 @@ export function AuthProvider({ children }) {
     };
 
     return (
-        <AuthContext.Provider value={{ user, login, logout, loginWithGoogle, loading, selectedCity, selectedDistrict, updateCity, locationHierarchy }}>
+        <AuthContext.Provider value={{ user, login, logout, loginWithGoogle, loading, selectedCity, selectedDistrict, updateCity, locationHierarchy, fetchAndSetUser }}>
             {children}
         </AuthContext.Provider>
     );

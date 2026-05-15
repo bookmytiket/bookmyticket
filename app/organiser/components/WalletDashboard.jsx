@@ -22,6 +22,7 @@ export default function WalletDashboard({ user, providerType = 'organiser' }) {
     const [wallet, setWallet] = useState(null);
     const [transactions, setTransactions] = useState([]);
     const [withdrawRequests, setWithdrawRequests] = useState([]);
+    const [bankDetails, setBankDetails] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showWithdrawModal, setShowWithdrawModal] = useState(false);
     const [withdrawAmount, setWithdrawAmount] = useState('');
@@ -93,6 +94,14 @@ export default function WalletDashboard({ user, providerType = 'organiser' }) {
                 .order('created_at', { ascending: false });
             
             setWithdrawRequests(wrData || []);
+
+            // Fetch Bank Details
+            const { data: bankData } = await supabase
+                .from('organiser_bank_details')
+                .select('*')
+                .eq('organiser_id', user.id);
+            
+            setBankDetails(bankData || []);
         } catch (err) {
             console.error("Wallet Fetch Error:", err);
         } finally {
@@ -117,12 +126,16 @@ export default function WalletDashboard({ user, providerType = 'organiser' }) {
         const walletTable = providerType === 'organiser' ? 'organiser_wallet' : 'provider_wallet';
 
         try {
+            const defaultBank = bankDetails.find(b => b.is_default) || bankDetails[0];
+            
             // 1. Insert Withdraw Request
             const { error: requestErr } = await supabase.from('withdraw_requests').insert([{
                 [idColumn]: user.id,
                 amount: amount,
                 payout_details: { notes: withdrawNotes },
-                status: 'pending'
+                status: 'pending',
+                bank_details_id: defaultBank?.id,
+                payment_method: defaultBank?.payment_type || 'bank'
             }]);
 
             if (requestErr) throw requestErr;
@@ -210,20 +223,25 @@ export default function WalletDashboard({ user, providerType = 'organiser' }) {
 
                 <div className="bg-white rounded-[40px] p-8 border border-slate-100 shadow-sm flex flex-col justify-between">
                     <div>
-                        <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-500 mb-6">
-                            <Clock size={24} />
+                        <div className="flex justify-between items-start mb-6">
+                            <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-500">
+                                <Landmark size={24} />
+                            </div>
+                            <span className="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full text-[9px] font-black uppercase tracking-widest">Linked</span>
                         </div>
-                        <p className="text-[11px] font-black uppercase tracking-widest text-slate-400 mb-1">Pending Payouts</p>
-                        <h3 className="text-2xl font-black text-slate-900">
-                            ₹{withdrawRequests.filter(r => r.status === 'pending').reduce((acc, r) => acc + r.amount, 0).toLocaleString('en-IN')}
-                        </h3>
+                        <p className="text-[11px] font-black uppercase tracking-widest text-slate-400 mb-1">Settlement Account</p>
+                        {bankDetails.length > 0 ? (
+                            <div>
+                                <h3 className="text-lg font-black text-slate-900">{bankDetails[0].bank_name || 'Bank Account'}</h3>
+                                <p className="text-xs font-bold text-slate-500">•••• {bankDetails[0].account_number?.slice(-4)}</p>
+                            </div>
+                        ) : (
+                            <p className="text-sm font-bold text-slate-400">No bank account linked</p>
+                        )}
                     </div>
-                    <div className="mt-6 pt-6 border-t border-slate-50">
-                        <div className="flex items-center justify-between text-[11px] font-bold text-slate-500">
-                            <span>Last Withdrawal</span>
-                            <span>{withdrawRequests.length > 0 ? new Date(withdrawRequests[0].created_at).toLocaleDateString() : 'None'}</span>
-                        </div>
-                    </div>
+                    <button className="mt-6 w-full py-3 bg-slate-50 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-100 transition-all">
+                        Change Account
+                    </button>
                 </div>
             </div>
 

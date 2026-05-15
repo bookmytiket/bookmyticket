@@ -44,8 +44,42 @@ const DataService = {
     // Consistent filtering: status != 'draft', 'inactive', 'expired'
     return (data || []).filter(ev => {
       const status = String(ev.status || '').toLowerCase();
-      return !['draft', 'inactive', 'expired'].includes(status);
+      const publishStatus = String(ev.publish_status || '').toLowerCase();
+      return !['draft', 'inactive', 'expired'].includes(status) || publishStatus === 'published';
     });
+  },
+
+  /**
+   * Fetches events for a specific organiser with full ownership resolution.
+   */
+  async getOrganiserEvents(userId: string) {
+    // 1. Resolve true organiser ID
+    let { data: organiser } = await supabase
+      .from('organisers')
+      .select('id')
+      .eq('id', userId)
+      .maybeSingle();
+
+    if (!organiser) {
+      const { data: altOrg } = await supabase
+        .from('organisers')
+        .select('id')
+        .eq('auth_user_id', userId)
+        .maybeSingle();
+      if (altOrg) organiser = altOrg;
+    }
+
+    const targetId = organiser?.id || userId;
+
+    // 2. Fetch scoped events
+    const { data, error } = await supabase
+      .from('events')
+      .select('*')
+      .eq('organiser_id', targetId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
   },
 
   /**

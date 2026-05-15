@@ -128,6 +128,12 @@ export default function HomeScreen() {
   const colors = Colors[colorScheme];
   const router = useRouter();
   const { signOut, user, role } = useAuth();
+
+  // Fetch Data with Realtime Sync
+  const { data: banners, refresh: refreshBanners } = useSupabaseQuery('branding_banners', (q) => q.eq('status', 'Active'), [], { realtime: true });
+  const { data: couponsRaw, refresh: refreshCoupons } = useSupabaseQuery('branding_coupons', (q) => q.eq('status', 'Active'), [], { realtime: true });
+  const { data: memoriesData, refresh: refreshMemories } = useSupabaseQuery('memories', (q) => q, [], { realtime: true });
+
   const [searchQuery, setSearchQuery] = useState('');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [currentPromoIndex, setCurrentPromoIndex] = useState(0);
@@ -200,9 +206,7 @@ export default function HomeScreen() {
   };
 
   // Fetch Data with Realtime Sync
-  const { data: banners, refresh: refreshBanners } = useSupabaseQuery('branding_banners', (q) => q.eq('status', 'Active'), [], { realtime: true });
-  const { data: couponsRaw, refresh: refreshCoupons } = useSupabaseQuery('branding_coupons', (q) => q.eq('status', 'Active'), [], { realtime: true });
-  const { data: memoriesData, refresh: refreshMemories } = useSupabaseQuery('memories', (q) => q, [], { realtime: true });
+
   const [apiEvents, setApiEvents] = useState<any[]>([]);
   const [eventsLoading, setEventsLoading] = useState(true);
 
@@ -235,12 +239,8 @@ export default function HomeScreen() {
       unsubMarathon();
     };
   }, [fetchUnifiedEvents]);
-
-  const { data: banners, refresh: refreshBanners } = useSupabaseQuery('branding_banners', (q) => q.eq('status', 'Active'), [], { realtime: true });
-  const { data: couponsRaw, refresh: refreshCoupons } = useSupabaseQuery('branding_coupons', (q) => q.eq('status', 'Active'), [], { realtime: true });
-  const { data: memoriesData, refresh: refreshMemories } = useSupabaseQuery('memories', (q) => q, [], { realtime: true });
   
-  const events = useMemo(() => {
+   const events = useMemo(() => {
     return apiEvents.map(ev => ({
         ...ev,
         // Ensure compatibility with mobile EventCard

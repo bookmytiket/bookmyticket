@@ -25,23 +25,37 @@ export default function RevenueDashboard({ t, theme }) {
 
     useEffect(() => {
         fetchRevenueStats();
+
+        // Realtime sync for revenue audit
+        const channel = supabase
+            .channel('admin-revenue-stream')
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'platform_revenue' }, () => {
+                fetchRevenueStats();
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
     }, []);
 
     const fetchRevenueStats = async () => {
         setLoading(true);
         try {
             // Fetch platform revenue stats
-            const { data: revData } = await supabase
+            const { data: revData, error } = await supabase
                 .from('platform_revenue')
                 .select('*')
                 .order('created_at', { ascending: false });
 
+            if (error) throw error;
+
             if (revData) {
-                const totalRev = revData.reduce((acc, curr) => acc + (curr.total_revenue || 0), 0);
-                const totalFee = revData.reduce((acc, curr) => acc + (curr.platform_fee || 0), 0);
-                const totalGst = revData.reduce((acc, curr) => acc + (curr.gst_amount || 0), 0);
-                const totalPartner = revData.reduce((acc, curr) => acc + (curr.partner_share || 0), 0);
-                const totalNet = revData.reduce((acc, curr) => acc + (curr.net_platform_revenue || 0), 0);
+                const totalRev = revData.reduce((acc, curr) => acc + (Number(curr.total_revenue) || 0), 0);
+                const totalFee = revData.reduce((acc, curr) => acc + (Number(curr.platform_fee) || 0), 0);
+                const totalGst = revData.reduce((acc, curr) => acc + (Number(curr.gst_amount) || 0), 0);
+                const totalPartner = revData.reduce((acc, curr) => acc + (Number(curr.partner_share) || 0), 0);
+                const totalNet = revData.reduce((acc, curr) => acc + (Number(curr.net_platform_revenue) || 0), 0);
 
                 setStats({
                     totalRevenue: totalRev,
@@ -49,7 +63,7 @@ export default function RevenueDashboard({ t, theme }) {
                     totalGst: totalGst,
                     totalPartner: totalPartner,
                     totalNet: totalNet,
-                    recentTransactions: revData.slice(0, 10)
+                    recentTransactions: revData.slice(0, 20) // Show more for admin visibility
                 });
             }
         } catch (err) {

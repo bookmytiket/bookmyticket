@@ -120,7 +120,7 @@ export default function EventCard({ event, onPress }: EventCardProps) {
           <View style={styles.footer}>
             <View style={[styles.priceBadge, { backgroundColor: colors.tint + '10' }]}>
               <Text style={[styles.priceText, { color: colors.tint }]}>
-                {event.is_free || event.type === 'Free' ? "FREE" : "BOOK"}
+                {event.is_free || event.type === 'Free' || event.price === 0 ? "FREE" : `₹${event.price || event.tournament_data?.registration_fee || "BOOK"}`}
               </Text>
             </View>
             <View style={[styles.typeBadge, { backgroundColor: colors.background }]}>

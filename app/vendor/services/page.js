@@ -183,174 +183,141 @@ export default function ServicesPage() {
 
 function TurfServiceManagement({ user, vendorId, profile }) {
     const { showToast } = useToast();
-    const { data: turfs = [] } = useSupabaseQuery('turfs', (q) => 
-        q.eq('organiser_id', vendorId)
-    , [vendorId]);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [selectedTurf, setSelectedTurf] = useState(null);
+    const [view, setView] = useState("grid");
+    const [activeTab, setActiveTab] = useState("basic");
+
+    const { data: turfs = [], reload: reloadTurfs } = useSupabaseQuery('turfs', (q) => 
+        q.eq('partner_id', user?.id).order('created_at', { ascending: false })
+    , [user?.id]);
 
     const [createTurf] = useSupabaseMutation('turfs', 'insert');
     const [updateTurf] = useSupabaseMutation('turfs', 'update', (q, p) => q.eq('id', p.id));
     const [deleteTurf] = useSupabaseMutation('turfs', 'delete', (q, p) => q.eq('id', p.id));
-    
-    const [selectedTurf, setSelectedTurf] = useState(null);
-    const [showAddModal, setShowAddModal] = useState(false);
-    
+
     const initialForm = {
         name: "",
         description: "",
-        location: "",
-        city: "",
         address: "",
-        price_per_hour: 1000,
-        advance_amount: 200,
-        pricing_type: "flat",
-        max_capacity: 20,
-        price_per_person: 0,
-        pricing_tiers: [
-            { min: 1, max: 5, price: 1000 },
-            { min: 6, max: 10, price: 1800 }
-        ],
-        images: [""],
+        city: "",
+        sports_supported: [],
         amenities: [],
+        opening_time: "06:00",
+        closing_time: "23:00",
+        images: [""],
+        promo_video_url: "",
+        rules_and_policies: "",
+        parking_details: "",
         status: "active"
     };
 
     const [formData, setFormData] = useState(initialForm);
 
-    const [isSaving, setIsSaving] = useState(false);
+    const handleOpenModal = (turf = null) => {
+        setActiveTab("basic");
+        if (turf) {
+            setSelectedTurf(turf);
+            setFormData({ ...initialForm, ...turf, images: turf.images?.length > 0 ? [...turf.images] : [""] });
+        } else {
+            setSelectedTurf(null);
+            setFormData(initialForm);
+        }
+        setIsModalOpen(true);
+    };
 
     const handleSave = async (e) => {
         e.preventDefault();
-        if (isSaving) return;
-        
-        setIsSaving(true);
         try {
-            const payload = {
-                ...formData,
-                images: formData.images.filter(img => img.trim() !== ""),
-                organiser_id: vendorId,
-            };
-
-            if (selectedTurf?.id) {
+            const payload = { ...formData, partner_id: user.id, images: formData.images.filter(img => img.trim() !== "") };
+            if (selectedTurf) {
                 await updateTurf({ ...payload, id: selectedTurf.id });
+                showToast("Configuration synchronized", "success");
             } else {
-                const result = await createTurf(payload);
-                if (!result.success) throw result.error || new Error("Deployment failed");
+                await createTurf(payload);
+                showToast("Facility deployed", "success");
             }
-
-            setShowAddModal(false);
-            setFormData(initialForm);
-            setSelectedTurf(null);
-            showToast(selectedTurf ? "Configuration updated!" : "Facility deployed successfully!", "success");
+            setIsModalOpen(false);
+            reloadTurfs();
         } catch (err) {
-            console.error("Deployment error:", err);
-            showToast(err.message || "Deployment failed", "error");
-        } finally {
-            setIsSaving(false);
+            showToast(err.message, "error");
         }
-    };
-
-    const handleDelete = async (id) => {
-        if (confirm("Are you sure you want to delete this facility?")) {
-            try {
-                await deleteTurf({ id });
-                showToast("Facility deleted", "info");
-            } catch (err) {
-                showToast("Failed to delete facility", "error");
-            }
-        }
-    };
-
-    const openEdit = (turf) => {
-        setSelectedTurf(turf);
-        setFormData({
-            name: turf.name,
-            description: turf.description || "",
-            location: turf.location || "",
-            city: turf.city || "",
-            address: turf.address || "",
-            price_per_hour: turf.price_per_hour,
-            advance_amount: turf.advance_amount || 0,
-            pricing_type: turf.pricing_type || "flat",
-            max_capacity: turf.max_capacity || 20,
-            price_per_person: turf.price_per_person || 0,
-            pricing_tiers: turf.pricing_tiers || [],
-            images: turf.images?.length > 0 ? [...turf.images] : [""],
-            amenities: turf.amenities || [],
-            status: turf.status
-        });
-        setShowAddModal(true);
     };
 
     return (
-        <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-10">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                <div className="space-y-2">
-                    <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-2xl bg-emerald-600 flex items-center justify-center text-white shadow-xl shadow-emerald-200">
-                            <MapPin size={24} />
-                        </div>
-                        <h1 className="text-4xl font-black text-slate-900 tracking-tighter italic uppercase">Turf Manager</h1>
+        <div className="space-y-12 animate-in slide-in-from-bottom-8 duration-1000">
+            {/* Header */}
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8">
+                <div className="flex items-center gap-6">
+                    <div className="w-16 h-16 rounded-[1.8rem] bg-[#1A1C2E] flex items-center justify-center text-white shadow-xl shadow-slate-200 shrink-0">
+                        <LayoutGrid size={28} />
                     </div>
-                    <p className="text-slate-500 text-sm font-medium pl-15">Deploy and manage your sporting facilities</p>
+                    <div>
+                        <h2 className="text-4xl font-black text-[#1A1C2E] tracking-tighter uppercase italic leading-none">TURF MANAGER</h2>
+                        <p className="text-slate-400 font-bold text-sm mt-2 uppercase tracking-widest">Architectural management hub</p>
+                    </div>
                 </div>
-                <button 
-                    onClick={() => { setFormData(initialForm); setSelectedTurf(null); setShowAddModal(true); }}
-                    className="px-8 py-4 bg-slate-900 text-white rounded-[2rem] text-xs font-black uppercase tracking-widest flex items-center gap-3 hover:bg-black transition-all shadow-2xl shadow-slate-200"
-                >
-                    <Plus size={18} /> Deploy New Turf
-                </button>
+                
+                <div className="flex items-center gap-6">
+                    <button 
+                        onClick={() => handleOpenModal()}
+                        className="px-10 py-5 bg-gradient-to-r from-[#f84464] to-[#c026d3] text-white rounded-[2rem] text-[11px] font-black uppercase tracking-widest flex items-center gap-4 hover:scale-[1.02] active:scale-95 transition-all shadow-2xl shadow-pink-100"
+                    >
+                        <Plus size={20} strokeWidth={3} />
+                        DEPLOY NEW FACILITY
+                    </button>
+                </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {/* List Section */}
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-12">
                 {turfs.map((turf) => (
-                    <div key={turf.id} className="bg-white rounded-[2.5rem] border border-slate-100 overflow-hidden shadow-sm hover:shadow-xl transition-all">
-                        <div className="aspect-video bg-slate-100 relative">
-                            {turf.images?.[0] ? (
-                                <img src={turf.images[0]} className="w-full h-full object-cover" />
-                            ) : (
-                                <div className="w-full h-full flex items-center justify-center text-slate-300"><Camera size={40} /></div>
-                            )}
+                    <div key={turf.id} className="bg-white rounded-[3.5rem] border border-slate-50 overflow-hidden shadow-sm hover:shadow-2xl hover:border-pink-50 transition-all group">
+                        <div className="aspect-[4/3] w-full bg-slate-50 relative overflow-hidden shrink-0 rounded-[2.5rem]">
+                            {turf.images?.[0] ? <img src={turf.images[0]} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" /> : <div className="w-full h-full flex items-center justify-center text-slate-200"><Camera size={48} /></div>}
                         </div>
-                        <div className="p-6 space-y-4">
-                            <h3 className="text-xl font-black text-slate-900 uppercase truncate">{turf.name}</h3>
-                            <div className="flex items-center gap-4 text-[10px] font-black uppercase text-slate-400">
-                                <span>{turf.city}</span>
-                                <span>₹{turf.price_per_hour}/hr</span>
-                            </div>
-                            <div className="pt-4 flex items-center gap-2">
-                                <button onClick={() => openEdit(turf)} className="flex-1 py-3 bg-slate-50 text-slate-900 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 hover:text-white transition-all">Edit</button>
-                                <button onClick={() => handleDelete(turf.id)} className="p-3 bg-slate-50 text-red-400 rounded-xl hover:bg-red-50 transition-all"><Trash2 size={16} /></button>
+                        <div className="p-10 space-y-8 flex-1">
+                            <div className="flex items-center justify-between">
+                                <h3 className="text-2xl font-black text-[#1A1C2E] tracking-tighter uppercase italic truncate">{turf.name}</h3>
+                                <div className="flex gap-3">
+                                    <button onClick={() => handleOpenModal(turf)} className="p-3 bg-slate-50 text-slate-300 rounded-2xl hover:bg-[#1A1C2E] hover:text-white transition-all shadow-sm"><Edit3 size={18} /></button>
+                                    <button onClick={() => { if(confirm("Terminate this facility?")) deleteTurf({ id: turf.id }).then(reloadTurfs); }} className="p-3 bg-slate-50 text-red-200 rounded-2xl hover:bg-red-500 hover:text-white transition-all shadow-sm"><Trash2 size={18} /></button>
+                                </div>
                             </div>
                         </div>
                     </div>
                 ))}
             </div>
 
-            {showAddModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-10 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
-                    <div className="bg-white w-full max-w-4xl rounded-[3rem] shadow-2xl overflow-hidden my-auto">
-                        <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                            <h2 className="text-2xl font-black text-slate-900 uppercase italic">Facility Configuration</h2>
-                            <button onClick={() => setShowAddModal(false)} className="p-2 hover:bg-white rounded-full transition-all"><X size={24} /></button>
+            {/* Modal */}
+            {isModalOpen && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-10 bg-[#1A1C2E]/60 backdrop-blur-md overflow-y-auto">
+                    <div className="bg-white w-full max-w-5xl rounded-[4rem] shadow-2xl overflow-hidden my-auto animate-in zoom-in-95 duration-300 relative">
+                        <button onClick={() => setIsModalOpen(false)} className="absolute top-10 right-10 p-4 bg-slate-50 rounded-2xl hover:bg-red-50 hover:text-red-500 transition-all z-20"><X size={24} /></button>
+                        <div className="flex">
+                            <div className="w-64 bg-slate-50 p-10 space-y-3 hidden lg:block">
+                                {["basic", "media", "policies", "amenities"].map((tab) => (
+                                    <button key={tab} onClick={() => setActiveTab(tab)} className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all ${activeTab === tab ? 'bg-[#1A1C2E] text-white shadow-xl' : 'text-slate-300 hover:text-[#1A1C2E]'}`}>{tab.toUpperCase()}</button>
+                                ))}
+                            </div>
+                            <div className="flex-1 p-16 md:p-24 space-y-12">
+                                <form onSubmit={handleSave} className="space-y-12 h-[50vh] overflow-y-auto scrollbar-hide px-2">
+                                    {activeTab === 'basic' && (
+                                        <div className="space-y-10">
+                                            <div className="grid grid-cols-2 gap-10">
+                                                <input className="w-full bg-slate-50 p-6 rounded-[1.8rem] text-sm font-black border-none" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="FACILITY NAME" required />
+                                                <input className="w-full bg-slate-50 p-6 rounded-[1.8rem] text-sm font-black border-none" value={formData.city} onChange={e => setFormData({...formData, city: e.target.value})} placeholder="CITY HUB" required />
+                                            </div>
+                                            <textarea className="w-full bg-slate-50 p-6 rounded-[1.8rem] text-sm font-black border-none" rows={3} value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} placeholder="FULL ADDRESS" required />
+                                        </div>
+                                    )}
+                                    <div className="pt-12 flex justify-end gap-6">
+                                        <button type="button" onClick={() => setIsModalOpen(false)} className="px-12 py-6 bg-slate-50 text-slate-300 rounded-[2rem] text-[10px] font-black uppercase tracking-widest hover:text-slate-900 transition-all">ABORT</button>
+                                        <button type="submit" className="px-20 py-6 bg-[#1A1C2E] text-white rounded-[2rem] text-[11px] font-black uppercase tracking-widest shadow-2xl shadow-slate-200 hover:bg-black transition-all">COMMIT DEPLOYMENT</button>
+                                    </div>
+                                </form>
+                            </div>
                         </div>
-                        <form onSubmit={handleSave} className="p-8 space-y-8 max-h-[70vh] overflow-y-auto">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                <div className="space-y-4">
-                                    <label className="text-[10px] font-black uppercase text-slate-400">Facility Name</label>
-                                    <input className="w-full bg-slate-50 p-4 rounded-2xl text-sm font-bold border-none" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} required />
-                                </div>
-                                <div className="space-y-4">
-                                    <label className="text-[10px] font-black uppercase text-slate-400">City</label>
-                                    <input className="w-full bg-slate-50 p-4 rounded-2xl text-sm font-bold border-none" value={formData.city} onChange={e => setFormData({...formData, city: e.target.value})} required />
-                                </div>
-                            </div>
-                            <div className="flex justify-end gap-4 pt-8">
-                                <button type="button" onClick={() => setShowAddModal(false)} className="px-8 py-4 text-slate-500 font-black uppercase text-[10px]">Cancel</button>
-                                <button type="submit" disabled={isSaving} className="px-12 py-4 bg-emerald-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-emerald-200">
-                                    {isSaving ? "Saving..." : "Deploy Facility"}
-                                </button>
-                            </div>
-                        </form>
                     </div>
                 </div>
             )}

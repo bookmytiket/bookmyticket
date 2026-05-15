@@ -295,18 +295,26 @@ export default function EventDetailClient({ id }) {
                                                 </div>
                                             </div>
 
-                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                                            <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
                                                 <div className="p-5 bg-white/5 rounded-3xl border border-white/5">
                                                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Format</p>
                                                     <p className="text-sm font-black text-white uppercase">{tournamentDetails.tournament_format}</p>
                                                 </div>
                                                 <div className="p-5 bg-white/5 rounded-3xl border border-white/5">
                                                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Team Size</p>
-                                                    <p className="text-sm font-black text-white">{tournamentDetails.min_team_size}-{tournamentDetails.max_team_size} Players</p>
+                                                    <p className="text-sm font-black text-white">{tournamentDetails.min_players || tournamentDetails.min_team_size}-{tournamentDetails.max_players || tournamentDetails.max_team_size} Players</p>
                                                 </div>
                                                 <div className="p-5 bg-white/5 rounded-3xl border border-white/5">
-                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Registered</p>
-                                                    <p className="text-sm font-black text-pink-400">{registeredTeams?.length || 0} Teams</p>
+                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Audience</p>
+                                                    <p className="text-sm font-black text-emerald-400 uppercase">{tournamentDetails.audience_free_access ? "Free Entry" : "Ticketed"}</p>
+                                                </div>
+                                                <div className="p-5 bg-white/5 rounded-3xl border border-white/5">
+                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Reg. Ends</p>
+                                                    <p className="text-sm font-black text-pink-400">
+                                                        {(tournamentDetails.registration_end_at || tournamentDetails.registration_end_date) 
+                                                            ? new Date(tournamentDetails.registration_end_at || tournamentDetails.registration_end_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) 
+                                                            : "TBA"}
+                                                    </p>
                                                 </div>
                                                 <div className="p-5 bg-white/5 rounded-3xl border border-white/5">
                                                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Prize Pool</p>
@@ -416,8 +424,12 @@ export default function EventDetailClient({ id }) {
                             <div className="mt-12 p-8 bg-slate-900 rounded-[32px] text-white">
                                 <h2 className="text-xs font-black text-slate-400 uppercase tracking-[0.3em] mb-6">Organised By</h2>
                                 <div className="flex items-center gap-5">
-                                    <div className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center text-2xl font-black">
-                                        {(parsedConfig?.organiser_name || event.organiser || "O")[0]}
+                                    <div className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center text-2xl font-black overflow-hidden">
+                                        {organiserData?.avatar_url ? (
+                                            <img src={organiserData.avatar_url} alt={event.organiser} className="w-full h-full object-cover" />
+                                        ) : (
+                                            (parsedConfig?.organiser_name || event.organiser || "O")[0]
+                                        )}
                                     </div>
                                     <div>
                                         <h3 className="text-xl font-black uppercase tracking-tight">{parsedConfig?.organiser_name || event.organiser || "Ticket9 Partner"}</h3>

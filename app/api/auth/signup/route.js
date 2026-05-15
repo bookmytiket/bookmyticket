@@ -30,7 +30,7 @@ export async function POST(request) {
         const { data: otpCheck } = await supabaseAdmin
             .from('otps')
             .select('id')
-            .eq('email', email.trim().toLowerCase())
+            .eq('identifier', email.trim().toLowerCase())
             .eq('purpose', 'signup')
             .maybeSingle();
         
