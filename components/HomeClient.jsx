@@ -14,7 +14,7 @@ import VirtualEvents from '@/components/VirtualEvents';
 import VenueEventCard from '@/components/VenueEventCard';
 import TournamentCard from '@/components/TournamentCard';
 import SubscriptionBanner from '@/components/SubscriptionBanner';
-import SubnavMarquee from '@/components/SubnavMarquee';
+
 import Footer from '@/components/Footer';
 import { Trophy, Zap, TrendingUp, Map as MapIcon, Calendar as CalendarIcon, Activity } from 'lucide-react';
 import { MEMORIES, FEATURED_ORGANISERS, HERO_BANNER_SLIDES, BRAND_COUPONS } from '@/app/data/homeEvents';
@@ -605,9 +605,7 @@ function HomeClient() {
         `}</style>
 
 
-        {/* Search & Category Filter Results Section */}
 
-        <SubnavMarquee />
 
 
 
