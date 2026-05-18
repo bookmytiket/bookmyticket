@@ -302,6 +302,7 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
         const base = postEvent.dynamic_config || {};
         return {
             ...base,
+            organiser_name: base.organiser_name || "",
             basicInfo: {
                 eligibility: "Open to All",
                 organizerContact: "",
@@ -581,6 +582,7 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                             options={["Open to All", "Tamil Nadu Only", "Students Only", "Corporate Only", "Invite Only"]}
                             onChange={(v) => updateConfig('basicInfo', { ...config.basicInfo, eligibility: v })}
                         />
+                        {renderInput("Organizer Name", config.organiser_name, (v) => updateConfig('organiser_name', v), "text", "e.g., Ticket9 Partner")}
                         {renderInput("Organizer Contact", config.basicInfo.organizerContact, (v) => updateConfig('basicInfo', { ...config.basicInfo, organizerContact: v }), "text", "Phone or Email")}
                     </div>
 

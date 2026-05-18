@@ -72,6 +72,7 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
         whatsapp_link: "",
         support_number: "",
         terms: "",
+        organiser_name: "",
         status: "Draft"
     });
 
@@ -214,6 +215,7 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
                 whatsapp_link: source.whatsapp_link || "",
                 support_number: source.support_number || "",
                 terms: source.terms || dynCfg.terms || "",
+                organiser_name: dynCfg.organiser_name || "",
                 status: source.status || "Draft"
             });
 
@@ -396,6 +398,7 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
                     registrationEnd: eventData.reg_end_date, // For countdown timer
                     faqs: faqs,
                     terms: eventData.terms,
+                    organiser_name: eventData.organiser_name,
                     reg_dates: {
                         start: eventData.reg_start_date,
                         end: eventData.reg_end_date
@@ -682,6 +685,15 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
                                 placeholder="e.g. Run For A Cause"
                                 value={eventData.subtitle}
                                 onChange={e => setEventData(p => ({ ...p, subtitle: e.target.value }))}
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-widest mb-2 pl-1">Organised By (Name)</label>
+                            <input 
+                                className="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl text-sm font-black text-slate-900 placeholder:text-slate-400"
+                                placeholder="e.g. Ticket9 Partner"
+                                value={eventData.organiser_name}
+                                onChange={e => setEventData(p => ({ ...p, organiser_name: e.target.value }))}
                             />
                         </div>
                         <div className="grid grid-cols-2 gap-4 md:col-span-2">

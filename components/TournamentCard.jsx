@@ -21,36 +21,36 @@ export default function TournamentCard({ event }) {
                 <img
                     src={event.img || "https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=800&q=80"}
                     alt={event.title}
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                 />
                 
                 {/* Overlay Badges */}
-                <div className="absolute top-6 left-6 flex flex-col gap-2">
-                    <div className="px-4 py-2 bg-white/90 backdrop-blur-md rounded-2xl flex items-center gap-2 shadow-xl border border-white/20">
-                        <Trophy size={14} className="text-pink-600" />
-                        <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest">{tournament.sport_type || event.sportType || "Tournament"}</span>
+                <div className="absolute top-4 left-4 flex flex-col gap-2">
+                    <div className="px-3 py-1.5 bg-white/90 backdrop-blur-md rounded-2xl flex items-center gap-1.5 shadow-xl border border-white/20">
+                        <Trophy size={12} className="text-pink-600" />
+                        <span className="text-[9px] font-black text-slate-900 uppercase tracking-widest">{tournament.sport_type || event.sportType || "Tournament"}</span>
                     </div>
                 </div>
 
                 {/* Free Entry Badge */}
                 {isFreeAudience && (
-                    <div className="absolute bottom-6 left-6 px-4 py-2 bg-emerald-500 text-white rounded-2xl flex items-center gap-2 shadow-xl animate-pulse">
-                        <CheckCircle2 size={14} />
-                        <span className="text-[9px] font-black uppercase tracking-widest">Audience Free Entry</span>
+                    <div className="absolute bottom-4 left-4 px-3 py-1.5 bg-emerald-500 text-white rounded-2xl flex items-center gap-1.5 shadow-xl animate-pulse">
+                        <CheckCircle2 size={12} />
+                        <span className="text-[8px] font-black uppercase tracking-widest">Audience Free Entry</span>
                     </div>
                 )}
 
                 {/* Live Status */}
-                <div className="absolute top-6 right-6 px-4 py-2 bg-pink-600 text-white rounded-2xl flex items-center gap-2 shadow-xl">
+                <div className="absolute top-4 right-4 px-3 py-1.5 bg-pink-600 text-white rounded-2xl flex items-center gap-1.5 shadow-xl">
                     <div className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
-                    <span className="text-[9px] font-black uppercase tracking-widest">Registration Open</span>
+                    <span className="text-[8px] font-black uppercase tracking-widest">Registration Open</span>
                 </div>
 
                 {/* Registration End Date Badge */}
                 {registrationEndDate && (
-                    <div className="absolute bottom-6 right-6 px-4 py-2 bg-slate-900/80 backdrop-blur-md text-white rounded-2xl flex items-center gap-2 border border-white/10 shadow-2xl">
-                        <Calendar size={12} className="text-pink-400" />
-                        <span className="text-[8px] font-black uppercase tracking-widest">Ends: {new Date(registrationEndDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</span>
+                    <div className="absolute bottom-4 right-4 px-3 py-1.5 bg-slate-900/80 backdrop-blur-md text-white rounded-2xl flex items-center gap-1.5 border border-white/10 shadow-2xl">
+                        <Calendar size={10} className="text-pink-400" />
+                        <span className="text-[7px] font-black uppercase tracking-widest">Ends: {new Date(registrationEndDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</span>
                     </div>
                 )}
             </div>
@@ -88,7 +88,7 @@ export default function TournamentCard({ event }) {
                             <Zap size={14} />
                             <span className="text-[8px] font-black uppercase tracking-widest">Team Fee</span>
                         </div>
-                        <p className="text-sm font-black text-slate-900">₹{tournament.registration_fee || event.price || "Free"}</p>
+                        <p className="text-sm font-black text-slate-900">₹{event.price || tournament.registration_fee || "Free"}</p>
                     </div>
                 </div>
 

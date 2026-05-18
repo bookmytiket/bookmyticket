@@ -199,6 +199,7 @@ const SportsEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEditi
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-10 pt-6">
                         {renderInput("Event Name*", postEvent.title, (v) => setPostEvent(p => ({ ...p, title: v })), "text", "e.g. Pro Cricket League 2026", true)}
+                        {renderInput("Organised By (Name)", postEvent.organiser_name, (v) => setPostEvent(p => ({ ...p, organiser_name: v })), "text", "e.g. Ticket9 Partner")}
                         {renderInput("Sport Name*", postEvent.sportName, (v) => setPostEvent(p => ({ ...p, sportName: v })), "text", "e.g. Cricket, Football")}
                         {renderInput("Age Category", postEvent.ageGroup, (v) => setPostEvent(p => ({ ...p, ageGroup: v })), "text", "e.g. U-19, Open")}
 

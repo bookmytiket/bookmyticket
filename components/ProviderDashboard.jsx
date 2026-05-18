@@ -186,7 +186,8 @@ export default function ProviderDashboard() {
                         </button>
                         <div>
                             <h1 className="text-xl md:text-3xl font-black text-[#1A1C2E] italic tracking-tighter uppercase leading-none">{viewMode === 'config' ? 'CONFIG' : activeTab.toUpperCase()}</h1>
-                        <p className="text-[10px] font-bold text-slate-300 uppercase tracking-[0.4em] mt-3">SYSTEM NODE // PROFESSIONAL-V1</p>
+                            <p className="text-[10px] font-bold text-slate-300 uppercase tracking-[0.4em] mt-3">SYSTEM NODE // PROFESSIONAL-V1</p>
+                        </div>
                     </div>
 
                     <div className="flex items-center gap-8">
@@ -323,7 +324,7 @@ export default function ProviderDashboard() {
                                             onClick={() => { setServiceForm({ service_name: "", description: "", pricing: "", status: "Published" }); setSelectedService(null); setViewMode("config"); }}
                                             className="px-6 md:px-10 py-3 md:py-5 bg-[#1A1C2E] text-white rounded-[2rem] text-[10px] md:text-[11px] font-black uppercase tracking-widest flex items-center gap-2 md:gap-4 hover:scale-105 transition-all shadow-2xl"
                                         >
-                                            <Plus size={16} md:size={20} strokeWidth={3} /> <span className="hidden sm:inline">ADD NEW SERVICE</span><span className="sm:hidden">ADD</span>
+                                            <Plus size={18} strokeWidth={3} /> <span className="hidden sm:inline">ADD NEW SERVICE</span><span className="sm:hidden">ADD</span>
                                         </button>
                                     </div>
 

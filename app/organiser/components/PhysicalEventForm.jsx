@@ -203,6 +203,7 @@ const PhysicalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEdi
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                         {renderInput("Event Name*", postEvent.title, (v) => setPostEvent(p => ({ ...p, title: v })), "text", "Enter high-impact name", true)}
                         {renderInput("Subtitle / Tagline", postEvent.subtitle, (v) => setPostEvent(p => ({ ...p, subtitle: v })), "text", "Short catchphrase")}
+                        {renderInput("Organised By (Name)", postEvent.organiser_name, (v) => setPostEvent(p => ({ ...p, organiser_name: v })), "text", "e.g., Ticket9 Partner")}
                         <CustomSelect 
                             label="Category*"
                             value={postEvent.category}

@@ -1184,6 +1184,7 @@ function OrganiserPanel() {
             endTime: ev.end_time || ev.endTime || "",
             expiryDate: ev.expiry_date || ev.expiryDate || "",
             eventStatus: ev.status || "published",
+            organiser_name: ev.dynamic_config?.organiser_name || ev.organiser_name || "",
             // Hydrate Tournament specific data
             registrationEndDate:
               ev.tournament_events?.[0]?.registration_end_at ||
@@ -2133,6 +2134,7 @@ function OrganiserPanel() {
   ];
   const getInitialPostEvent = () => ({
     title: "",
+    organiser_name: "",
     subtitle: "",
     category: "Concert",
     type: "Physical Event",
@@ -2607,6 +2609,7 @@ function OrganiserPanel() {
         prices.length > 0
           ? Math.min(...prices)
           : Number(
+              (postEvent.type === "Tournament" || postEvent.type === "Tournament Event" ? postEvent.registrationFee : undefined) ||
               postEvent.price ||
                 postEvent.normalTicketPrice ||
                 postEvent.registrationFee,
@@ -2812,6 +2815,7 @@ function OrganiserPanel() {
       video_trailer_url: postEvent.videoTrailerUrl || undefined,
       dynamic_config: {
         ...(postEvent.dynamic_config || {}),
+        organiser_name: postEvent.organiser_name || (postEvent.dynamic_config && postEvent.dynamic_config.organiser_name) || undefined,
         marathonCategories: postEvent.marathonCategories || [],
         form_fields:
           postEvent.dynamic_config?.form_fields ||
@@ -6868,6 +6872,9 @@ function OrganiserPanel() {
                                                 ev.banner_preview ||
                                                 ev.bannerPreview ||
                                                 ev.img, // Used by Sports/Universal forms
+                                              organiser_name:
+                                                ev.dynamic_config?.organiser_name ||
+                                                ev.organiser_name || "",
                                             });
                                             if (ev.type === "Marathon") {
                                               setEditingMarathonId(ev.id);

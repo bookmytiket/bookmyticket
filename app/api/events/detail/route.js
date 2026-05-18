@@ -21,7 +21,7 @@ export async function GET(request) {
     try {
         const { data: event, error } = await supabase
             .from('events')
-            .select('*')
+            .select('*, tournament_events!event_id(*), marathon_config!event_id(*), tournament_categories!event_id(*)')
             .eq('id', id)
             .maybeSingle();
 

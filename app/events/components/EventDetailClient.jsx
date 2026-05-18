@@ -107,9 +107,8 @@ export default function EventDetailClient({ id }) {
     const isMarathon = rawEvent?.type === 'Marathon';
     const isTournament = rawEvent?.type === 'Tournament' || rawEvent?.type === 'Tournament Event';
     
-    const { data: tournamentDetails } = useSupabaseQuery('tournament_events', (q) => 
-        q.select('*').eq('id', id).maybeSingle()
-    , [id], { enabled: isTournament });
+    // Extract tournament details directly from server-fetched payload to bypass RLS issues for anon visitors
+    const tournamentDetails = rawEvent?.tournament_events?.[0] || null;
 
     const { data: registeredTeams } = useSupabaseQuery('tournament_teams', (q) => 
         q.select('*').eq('tournament_event_id', tournamentDetails?.id || id)
@@ -200,9 +199,19 @@ export default function EventDetailClient({ id }) {
             }));
         }
         if (isTournament) {
-            // Priority 1: tournamentDetails from re-fetch
-            // Priority 2: sports_details from already-loaded rawEvent (Prevents race condition flicker)
-            const fee = Number(tournamentDetails?.registration_fee || event?.dynamic_config?.sports_details?.registration_fee || event?.price || 0);
+            if (rawEvent?.tournament_categories?.length > 0) {
+                return rawEvent.tournament_categories.map(c => ({
+                    id: c.id,
+                    name: c.category_name,
+                    price: Number(c.category_fee) || 0,
+                    maxTeams: c.max_teams
+                }));
+            }
+            
+            // Priority 1: event.price (computed min category fee or registration fee)
+            // Priority 2: tournamentDetails.registration_fee
+            // Priority 3: dynamic_config
+            const fee = Number(event?.price || tournamentDetails?.registration_fee || event?.dynamic_config?.sports_details?.registration_fee || 0);
             return [{
                 id: tournamentDetails?.id || event?.id,
                 name: "Team Registration",
