@@ -289,9 +289,21 @@ function HomeClient() {
 
   // Keep other queries for branding, etc.
   const { data: brandingRaw } = useSupabaseQuery('site_branding', (q) => q, [], { realtime: false });
+  const { data: serviceProvidersRaw } = useSupabaseQuery('professional_service_profiles', (q) => q.eq('active_status', true), []);
 
-
-  // Professional services removed from event discovery feed
+  const serviceProviders = useMemo(() => {
+    if (!serviceProvidersRaw) return [];
+    let list = serviceProvidersRaw;
+    if (selectedCity && selectedCity !== "All Cities" && selectedCity !== "India") {
+      list = list.filter(p => p.city && p.city.toLowerCase() === selectedCity.toLowerCase());
+    }
+    return list.map(pro => ({
+      ...pro,
+      business_name: pro.business_name || pro.full_name,
+      image_url: pro.profile_image,
+      advanced_settings: JSON.stringify({ rating: pro.rating || "5.0" }),
+    }));
+  }, [serviceProvidersRaw, selectedCity]);
 
 
   const allLiveEvents = useMemo(() => {
@@ -827,7 +839,66 @@ function HomeClient() {
             {/* 5) Exclusive Events */}
             <ExclusiveEvents events={exclusiveEventsList} />
 
-            {/* Marketplace and Services removed from main event discovery feed */}
+            {/* Professional Services Section */}
+            <section id="services" style={{ width: '100%', maxWidth: '1240px', margin: '0 auto', padding: '40px 20px' }}>
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center', 
+                marginBottom: '32px',
+                gap: '12px',
+                flexWrap: 'nowrap'
+              }}>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <h2 style={{ 
+                    fontSize: isMobile ? '20px' : '28px', 
+                    fontWeight: 900, 
+                    color: '#111827', 
+                    margin: '0', 
+                    letterSpacing: '-0.04em', 
+                    lineHeight: 1.1, 
+                    fontFamily: 'var(--font-heading)',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis'
+                  }}>
+                    Professional <span style={{
+                      background: 'linear-gradient(135deg, #f84464 0%, #c026d3 100%)',
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent',
+                      display: 'inline-block'
+                    }}>Services</span>
+                  </h2>
+                  <p style={{ color: '#9ca3af', fontSize: '13px', margin: '4px 0 0', fontWeight: 500 }}>Top rated artists and studios for your special occasions</p>
+                </div>
+                <Link href="/services" style={{ 
+                  padding: isMobile ? '6px 12px' : '10px 20px',
+                  background: '#fff',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '10px',
+                  color: '#f84464', 
+                  fontWeight: 800, 
+                  fontSize: isMobile ? '12px' : '14px', 
+                  textDecoration: 'none',
+                  transition: 'all 0.2s',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = '#f84464';
+                  e.currentTarget.style.background = '#fff1f2';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = '#e2e8f0';
+                  e.currentTarget.style.background = '#fff';
+                }}
+                >
+                  View all →
+                </Link>
+              </div>
+              <ServiceCategories />
+            </section>
 
 
             {/* --- DYNAMIC & ATTRACTIVE DISCOVERY SECTION (PINK & PURPLE UI) --- */}
@@ -1056,7 +1127,8 @@ function HomeClient() {
             {/* 6) Virtual Events */}
             <VirtualEvents events={normalizedOrgEvents} />
 
-            {/* Professional Services section removed as per requirement */}
+            {/* Top Rated Professional Services */}
+            <TopRatedServices professionals={serviceProviders} />
 
             {/* Branding & Others removed */}
 
