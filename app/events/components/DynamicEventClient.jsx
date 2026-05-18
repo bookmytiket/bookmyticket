@@ -342,7 +342,7 @@ export default function DynamicEventClient({ event }) {
             return;
         }
 
-        const packageParam = `&package=${encodeURIComponent(selectedCategory.name)}`;
+        const packageParam = `&package=${encodeURIComponent(selectedCategory.category_name || selectedCategory.title || selectedCategory.name || '')}`;
         const regDataParam = `&regData=${encodeURIComponent(JSON.stringify(formData))}`;
         const priceParam = `&price=${calculatedPrice}`;
         router.push(`/events/book/checkout?id=${event.id}${packageParam}${regDataParam}${priceParam}&qty=${quantity}`);

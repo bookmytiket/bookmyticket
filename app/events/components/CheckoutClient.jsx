@@ -46,7 +46,7 @@ export default function CheckoutClient({ id }) {
     const router = useRouter();
     
     const { data: rawEvent, loading: eventLoading } = useSupabaseQuery('events', (q) => 
-        q.select('*').eq('id', id).maybeSingle()
+        q.eq('id', id).maybeSingle()
     , [id]);
 
     const { data: rawFeeSettings } = useSupabaseQuery('fee_settings', (q) => q.limit(1).maybeSingle(), []);
