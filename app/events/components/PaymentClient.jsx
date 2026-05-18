@@ -52,7 +52,21 @@ export default function PaymentClient({ id: eventId, bookingId: propBookingId })
                 console.error('Error fetching event details:', err);
             });
     }, [eventId]);
-    const { data: gateways } = useSupabaseQuery('payment_gateways', (q) => q, []);
+    const [gateways, setGateways] = useState([]);
+
+    useEffect(() => {
+        fetch('/api/payment/gateways')
+            .then(res => {
+                if (!res.ok) throw new Error('Failed to fetch payment gateways');
+                return res.json();
+            })
+            .then(data => {
+                setGateways(data);
+            })
+            .catch(err => {
+                console.error('Error fetching payment gateways:', err);
+            });
+    }, []);
 
     useEffect(() => {
         if (!bookingId) return;
