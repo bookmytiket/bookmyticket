@@ -530,7 +530,7 @@ function HomeClient() {
 
   return (
     <>
-      <main style={{ minHeight: '100vh', backgroundColor: '#FAF9F6', color: '#111827', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: isMobile ? '192px' : 'var(--header-h)' }}>
+      <main style={{ minHeight: '100vh', backgroundColor: '#FAF9F6', color: '#111827', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: isMobile ? '160px' : 'var(--header-h)' }}>
         
         {/* Community Trust: Public Reviews Banner */}
         {/* Moved PublicReviewsBanner below for better flow */}
@@ -658,11 +658,7 @@ function HomeClient() {
             </div>
 
             {filteredEvents.length > 0 ? (
-              <div className="event-grid-adaptive" style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
-                gap: '12px'
-              }}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
                 {filteredEvents.map(ev => (
                   <TicketCard key={ev.id} event={ev} router={router} />
                 ))}
@@ -721,11 +717,7 @@ function HomeClient() {
                         </div>
                     </div>
                     
-                    <div style={{ 
-                        display: "grid", 
-                        gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", 
-                        gap: "32px" 
-                    }}>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                         {sportsTournamentsList.slice(0, 4).map(event => (
                             <TournamentCard key={event.id} event={event} />
                         ))}
@@ -766,11 +758,7 @@ function HomeClient() {
                     </div>
                 </div>
                 
-                <div style={{ 
-                    display: "grid", 
-                    gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", 
-                    gap: "24px" 
-                }}>
+                <div className="grid grid-cols-1 min-[480px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
                     {apiLoading ? (
                         <div style={{ gridColumn: '1 / -1', padding: '40px', textAlign: 'center', color: '#9ca3af' }}>
                             <div className="w-8 h-8 border-2 border-pink-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
@@ -802,11 +790,7 @@ function HomeClient() {
                     <p style={{ color: '#9ca3af', fontSize: '13px', margin: 0, fontWeight: 500 }}>Discover everything happening in {selectedCity}</p>
                 </div>
                 
-                <div style={{ 
-                    display: "grid", 
-                    gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", 
-                    gap: "24px" 
-                }}>
+                <div className="grid grid-cols-1 min-[480px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
                     {filteredEvents.length > 0 ? (
                         filteredEvents.slice(0, 8).map(event => (
                             <TicketCard key={event.id} event={event} router={router} />
@@ -850,7 +834,7 @@ function HomeClient() {
 
             {/* --- DYNAMIC & ATTRACTIVE DISCOVERY SECTION (PINK & PURPLE UI) --- */}
             <section style={{ width: '100%', padding: '60px 20px', background: 'linear-gradient(180deg, #fafbfc 0%, #ffffff 100%)', position: 'relative', overflow: 'hidden' }}>
-                <div style={{ maxW: '1100px', margin: '0 auto', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.1fr 1fr', gap: '40px', position: 'relative', zIndex: 10 }}>
+                <div className="max-w-[1100px] mx-auto grid grid-cols-1 md:grid-cols-2 gap-10 relative z-10">
                     
                     {/* Left: Top Categories */}
                     <div>
@@ -863,7 +847,7 @@ function HomeClient() {
                             </h2>
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+                        <div className="grid grid-cols-2 gap-3 sm:gap-4">
                             {[
                                 { name: 'Music', icon: '🎵', color: '#f84464' },
                                 { name: 'Sports', icon: '🏆', color: '#8b5cf6' },

@@ -586,6 +586,10 @@ nextjs-portal {
   padding: 0 40px;
 }
 
+.header-scrolled .show-mobile {
+  display: none !important;
+}
+
 .header-scrolled .subnav-link,
 .header-scrolled .subnav-cat,
 .header-scrolled .subnav-action,

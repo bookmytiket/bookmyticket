@@ -125,11 +125,11 @@ export default function MobileBottomNav() {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          height: 85px;
+          height: 70px;
           max-width: 100%;
           margin: 0 auto;
-          padding: 0 25px; /* More side padding */
-          gap: 35px; /* Even larger gap */
+          padding: 0 10px;
+          gap: 5px;
         }
 
         .nav-item {
@@ -142,7 +142,7 @@ export default function MobileBottomNav() {
           height: 100%;
           transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
           padding-top: 5px;
-          min-width: 50px;
+          flex: 1;
         }
 
         .nav-item.active {
@@ -165,23 +165,23 @@ export default function MobileBottomNav() {
         }
 
         .nav-item-action {
-          flex: 1.5; /* More space for center button */
+          flex: 1.2;
           display: flex;
           justify-content: center;
           position: relative;
         }
 
         .book-now-floating {
-          width: 72px; /* Larger button */
-          height: 72px;
+          width: 56px;
+          height: 56px;
           border-radius: 50%;
           background: linear-gradient(135deg, #f844a4 0%, #a855f7 100%);
-          border: 5px solid #fff;
-          box-shadow: 0 10px 25px rgba(248, 68, 164, 0.45);
+          border: 4px solid #fff;
+          box-shadow: 0 8px 20px rgba(248, 68, 164, 0.4);
           display: flex;
           align-items: center;
           justify-content: center;
-          transform: translateY(-25px);
+          transform: translateY(-20px);
           cursor: pointer;
           transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
@@ -199,7 +199,7 @@ export default function MobileBottomNav() {
 
         .book-now-text {
           color: #fff;
-          font-size: 12px;
+          font-size: 10px;
           font-weight: 900;
           text-transform: uppercase;
           letter-spacing: 0.5px;
@@ -207,10 +207,10 @@ export default function MobileBottomNav() {
 
         .book-now-subtext {
           color: rgba(255, 255, 255, 0.95);
-          font-size: 9px;
+          font-size: 8px;
           font-weight: 800;
           text-transform: uppercase;
-          margin-top: 2px;
+          margin-top: 1px;
         }
       `}</style>
     </nav>

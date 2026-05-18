@@ -163,7 +163,7 @@ export default function VideoHeroBanner() {
             height: isMobile ? "auto" : "70vh",
             minHeight: isMobile ? "520px" : "600px",
             maxHeight: isMobile ? "none" : "800px",
-            paddingTop: isMobile ? "60px" : "0",
+            paddingTop: "0",
             paddingBottom: isMobile ? "40px" : "0",
             display: "flex",
             alignItems: "center",
