@@ -50,10 +50,26 @@ function getCatColor(name) {
 export default function EventBookClient({ id }) {
     const { user, loading: authLoading } = useAuth();
     const router = useRouter();
-    
-    const { data: rawEvent, loading: eventLoading } = useSupabaseQuery('events', (q) => 
-        q.select('*').eq('id', id).maybeSingle()
-    , [id]);
+    const [rawEvent, setRawEvent] = useState(null);
+    const [eventLoading, setEventLoading] = useState(true);
+
+    useEffect(() => {
+        if (!id) return;
+        setEventLoading(true);
+        fetch(`/api/events/detail?id=${id}`)
+            .then(res => {
+                if (!res.ok) throw new Error('Failed to fetch event');
+                return res.json();
+            })
+            .then(data => {
+                setRawEvent(data);
+                setEventLoading(false);
+            })
+            .catch(err => {
+                console.error('Error fetching event details:', err);
+                setEventLoading(false);
+            });
+    }, [id]);
 
     const [storageLoaded, setStorageLoaded] = useState(false);
     const [quantity, setQuantity] = useState(1);

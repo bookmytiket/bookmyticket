@@ -36,11 +36,22 @@ export default function PaymentClient({ id: eventId, bookingId: propBookingId })
         [bookingId],
         { enabled: !!bookingId }
     );
-    const { data: event } = useSupabaseQuery('events', (q) => 
-        q.eq('id', eventId).single(),
-        [eventId],
-        { enabled: !!eventId }
-    );
+    const [event, setEvent] = useState(null);
+
+    useEffect(() => {
+        if (!eventId) return;
+        fetch(`/api/events/detail?id=${eventId}`)
+            .then(res => {
+                if (!res.ok) throw new Error('Failed to fetch event');
+                return res.json();
+            })
+            .then(data => {
+                setEvent(data);
+            })
+            .catch(err => {
+                console.error('Error fetching event details:', err);
+            });
+    }, [eventId]);
     const { data: gateways } = useSupabaseQuery('payment_gateways', (q) => q, []);
 
     useEffect(() => {

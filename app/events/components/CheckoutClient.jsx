@@ -44,10 +44,26 @@ export default function CheckoutClient({ id }) {
     const { user } = useAuth();
     const searchParams = useSearchParams();
     const router = useRouter();
-    
-    const { data: rawEvent, loading: eventLoading } = useSupabaseQuery('events', (q) => 
-        q.eq('id', id).maybeSingle()
-    , [id]);
+    const [rawEvent, setRawEvent] = useState(null);
+    const [eventLoading, setEventLoading] = useState(true);
+
+    useEffect(() => {
+        if (!id) return;
+        setEventLoading(true);
+        fetch(`/api/events/detail?id=${id}`)
+            .then(res => {
+                if (!res.ok) throw new Error('Failed to fetch event');
+                return res.json();
+            })
+            .then(data => {
+                setRawEvent(data);
+                setEventLoading(false);
+            })
+            .catch(err => {
+                console.error('Error fetching event detail:', err);
+                setEventLoading(false);
+            });
+    }, [id]);
 
     const { data: rawFeeSettings } = useSupabaseQuery('fee_settings', (q) => q.limit(1).maybeSingle(), []);
     const [siteBranding, setSiteBranding] = useState(null);
