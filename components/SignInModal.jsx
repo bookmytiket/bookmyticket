@@ -21,60 +21,21 @@ export default function SignInModal({ isOpen, onClose }) {
 
     return (
         <div
-            className="modal-backdrop"
+            className="modal-backdrop fixed inset-0 z-[10000] flex items-center justify-center bg-black/60 p-4"
             onClick={onClose}
-            style={{
-                zIndex: 10000,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                background: "rgba(0,0,0,0.6)",
-                position: "fixed",
-                inset: 0
-            }}
         >
             <div
-                className="signin-modal"
+                className="signin-modal relative bg-white w-full max-w-[420px] rounded-2xl p-6 md:p-8 flex flex-col shadow-2xl min-h-[480px]"
                 onClick={(e) => e.stopPropagation()}
-                style={{
-                    background: "#fff",
-                    width: "100%",
-                    maxWidth: "420px",
-                    borderRadius: "8px",
-                    padding: "32px 32px 24px",
-                    position: "relative",
-                    boxShadow: "0 15px 40px rgba(0,0,0,0.25)",
-                    fontFamily: "'Roboto', 'Inter', sans-serif",
-                    minHeight: "480px",
-                    display: "flex",
-                    flexDirection: "column"
-                }}
             >
                 <button
                     onClick={onClose}
-                    style={{
-                        position: "absolute",
-                        top: "16px",
-                        right: "16px",
-                        background: "none",
-                        border: "none",
-                        fontSize: "20px",
-                        cursor: "pointer",
-                        color: "#6b7280",
-                        fontWeight: "300",
-                        zIndex: 10
-                    }}
+                    className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 bg-slate-50 hover:bg-slate-100 rounded-full w-8 h-8 flex items-center justify-center transition-colors z-10"
                 >✕</button>
 
-                <h2 style={{
-                    textAlign: "center",
-                    marginBottom: "36px",
-                    fontSize: "18px",
-                    fontWeight: "600",
-                    color: "#333"
-                }}>Get Started</h2>
+                <h2 className="text-center mb-8 text-xl font-black text-[#1A1C2E] uppercase tracking-tighter">Get Started</h2>
 
-                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                <div className="flex flex-col gap-3">
                     <button 
                         className="auth-btn"
                         onClick={async () => {
@@ -112,26 +73,20 @@ export default function SignInModal({ isOpen, onClose }) {
                     </button>
                 </div>
 
-                <div style={{ textAlign: "center", margin: "24px 0", color: "#999", fontSize: "12px", position: "relative" }}>
-                    <span style={{ background: "#fff", padding: "0 10px", position: "relative", zIndex: 1 }}>OR</span>
-                    <div style={{ position: "absolute", top: "50%", left: 0, right: 0, height: "1px", background: "#eee" }}></div>
+                <div className="text-center my-6 text-slate-400 text-xs relative flex items-center justify-center">
+                    <div className="absolute inset-x-0 h-px bg-slate-100"></div>
+                    <span className="bg-white px-3 relative z-10 font-bold uppercase tracking-widest text-[9px]">OR</span>
                 </div>
 
-                <div style={{ position: "relative", marginBottom: "30px" }}>
-                    <div style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "12px",
-                        borderBottom: "1px solid #ddd",
-                        paddingBottom: "8px",
-                    }}>
+                <div className="relative mb-8">
+                    <div className="flex items-center gap-3 border-b border-slate-200 pb-2">
                         <div
                             onClick={() => setShowCountryList(!showCountryList)}
-                            style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "14px", fontWeight: "500", color: "#333", cursor: "pointer" }}
+                            className="flex items-center gap-2 text-sm font-bold text-slate-700 cursor-pointer"
                         >
-                            <img src={country.flag} alt={country.name} style={{ width: "20px" }} />
+                            <img src={country.flag} alt={country.name} className="w-5" />
                             <span>{country.code}</span>
-                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" style={{ transform: showCountryList ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}><polyline points="6 9 12 15 18 9" /></svg>
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className={`transition-transform duration-200 ${showCountryList ? 'rotate-180' : ''}`}><polyline points="6 9 12 15 18 9" /></svg>
                         </div>
                         <input
                             type="tel"
@@ -142,7 +97,7 @@ export default function SignInModal({ isOpen, onClose }) {
                                 const val = e.target.value.replace(/\D/g, "");
                                 if (val.length <= country.len) setPhone(val);
                             }}
-                            style={{ flex: 1, border: "none", outline: "none", fontSize: "14px", color: "#333" }}
+                            className="flex-1 border-none outline-none text-sm font-black text-slate-900 bg-transparent placeholder-slate-300 w-full"
                         />
                     </div>
 
@@ -175,13 +130,7 @@ export default function SignInModal({ isOpen, onClose }) {
                 </div>
 
                 <div
-                    style={{
-                        marginTop: "auto",
-                        opacity: isPhoneValid ? 1 : 0,
-                        visibility: isPhoneValid ? "visible" : "hidden",
-                        transform: isPhoneValid ? "translateY(0)" : "translateY(10px)",
-                        transition: "all 0.3s ease-in-out"
-                    }}
+                    className={`mt-auto transition-all duration-300 ${isPhoneValid ? 'opacity-100 visible translate-y-0' : 'opacity-0 invisible translate-y-2'}`}
                 >
                     <button
                         onClick={async () => {
@@ -203,33 +152,15 @@ export default function SignInModal({ isOpen, onClose }) {
                                 }
                             }
                         }}
-                        style={{
-                            width: "100%",
-                            padding: "14px",
-                            borderRadius: "8px",
-                            border: "none",
-                            background: "#f84464", // BMS pink/red color
-                            color: "#fff",
-                            fontWeight: "600",
-                            fontSize: "15px",
-                            cursor: "pointer",
-                            marginBottom: "20px",
-                            boxShadow: "0 4px 12px rgba(248, 68, 100, 0.2)"
-                        }}
+                        className="w-full py-4 bg-gradient-to-r from-[#f84464] to-[#c026d3] text-white font-black uppercase tracking-widest text-[11px] rounded-2xl shadow-xl shadow-pink-500/20 hover:scale-[1.02] active:scale-95 transition-all mb-4"
                     >
                         Continue
                     </button>
                 </div>
 
-                <p style={{
-                    textAlign: "center",
-                    fontSize: "11px",
-                    color: "#999",
-                    lineHeight: "1.5",
-                    margin: "0 0 16px 0"
-                }}>
+                <p className="text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-relaxed">
                     By continuing, you agree to our <br />
-                    <a href="#" style={{ color: "#333", textDecoration: "underline" }}>Terms of Service</a> & <a href="#" style={{ color: "#333", textDecoration: "underline" }}>Privacy Policy</a>
+                    <a href="#" className="text-slate-900 underline underline-offset-4 hover:text-pink-500 transition-colors">Terms of Service</a> & <a href="#" className="text-slate-900 underline underline-offset-4 hover:text-pink-500 transition-colors">Privacy Policy</a>
                 </p>
             </div>
 

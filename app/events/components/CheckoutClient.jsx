@@ -9,7 +9,7 @@ import {
     Calendar, MapPin, Video, CheckCircle2, Ticket, 
     ShieldCheck, CreditCard, ChevronLeft, Info, 
     ArrowRight, Mail, Phone, User, ExternalLink,
-    Star, Sparkles, Download, Home, MessageSquare, X, Plus, Minus
+    Star, Sparkles, Download, Home, MessageSquare, X, Plus, Minus, ChevronDown
 } from 'lucide-react';
 
 import { HOME_EVENTS } from '@/app/data/homeEvents';
@@ -579,7 +579,7 @@ export default function CheckoutClient({ id }) {
                                 </div>
                             </div>
 
-                            <div className="flex-1 p-6 lg:p-8 bg-white flex flex-col items-center justify-center">
+                            <div className="flex-1 p-4 md:p-6 lg:p-8 bg-white flex flex-col items-center justify-center">
                                 <div className="max-w-[550px] w-full space-y-4">
                                     <div className="space-y-3">
                                         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -601,19 +601,19 @@ export default function CheckoutClient({ id }) {
                                                 ))}
                                             </div>
                                         ) : (
-                                            <div className="bg-slate-50 p-3 rounded-[1.5rem] border border-slate-100 flex items-center justify-between shadow-inner">
-                                                <div className="space-y-1.5">
-                                                    <span className="text-[16px] font-black text-slate-900 uppercase tracking-tight leading-none block">{selectedPackageName || "Ticket"}</span>
+                                            <div className="bg-slate-50 p-3 md:p-4 rounded-[1.5rem] border border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between shadow-inner gap-3 sm:gap-0">
+                                                <div className="space-y-1.5 text-center sm:text-left">
+                                                    <span className="text-[14px] md:text-[16px] font-black text-slate-900 uppercase tracking-tight leading-none block break-words">{selectedPackageName || "Ticket"}</span>
                                                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Base Category</span>
                                                 </div>
-                                                <div className="flex items-center gap-6">
-                                                    <div className="flex items-center gap-4 bg-white border border-slate-200 rounded-xl px-4 py-2 shadow-sm">
+                                                <div className="flex items-center justify-between sm:justify-end gap-4 md:gap-6 w-full sm:w-auto">
+                                                    <div className="flex items-center gap-2 md:gap-4 bg-white border border-slate-200 rounded-xl px-2 md:px-4 py-2 shadow-sm shrink-0">
                                                         <button onClick={() => setQty(Math.max(1, qty - 1))} className="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-pink-500 transition-colors bg-slate-50 rounded-lg"><Minus size={12} /></button>
                                                         <span className="text-sm text-slate-900 font-black min-w-[20px] text-center">{qty}</span>
                                                         <button onClick={() => setQty(qty + 1)} className="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-pink-500 transition-colors bg-slate-50 rounded-lg"><Plus size={12} /></button>
                                                     </div>
-                                                    <div className="text-right">
-                                                        <span className="text-xl font-black text-slate-900 tracking-tighter">₹{baseAmount.toFixed(2)}</span>
+                                                    <div className="text-right shrink-0">
+                                                        <span className="text-[16px] md:text-xl font-black text-slate-900 tracking-tighter">₹{baseAmount.toFixed(2)}</span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -622,31 +622,73 @@ export default function CheckoutClient({ id }) {
 
                                     <div className="space-y-4">
                                         {!appliedCoupon ? (
-                                            <div className="space-y-3">
+                                            <div className="space-y-3 relative">
                                                 <div className="flex gap-2">
                                                     <input 
                                                         type="text" 
                                                         value={couponCode}
                                                         onChange={(e) => setCouponCode(e.target.value)}
                                                         placeholder="Coupon Code"
-                                                        className="flex-1 px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-[11px] font-bold outline-none uppercase focus:ring-1 focus:ring-pink-500 transition-all"
+                                                        className="flex-1 px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-[11px] font-bold outline-none uppercase focus:ring-1 focus:ring-pink-500 transition-all w-full min-w-0"
                                                     />
                                                     <button 
                                                         onClick={handleApplyCoupon}
                                                         disabled={isValidatingCoupon || !couponCode}
-                                                        className="px-6 py-3 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 disabled:opacity-50 transition-all shadow-lg"
+                                                        className="px-4 md:px-6 py-3 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 disabled:opacity-50 transition-all shadow-lg shrink-0"
                                                     >
                                                         Apply
                                                     </button>
                                                 </div>
                                                 {validCoupons.length > 0 && (
                                                     <button 
-                                                        onClick={() => setShowCouponsModal(true)}
-                                                        className="text-[10px] font-black text-pink-500 uppercase tracking-widest hover:underline w-full text-left pl-1"
+                                                        onClick={() => setShowCouponsModal(!showCouponsModal)}
+                                                        className="text-[10px] font-black text-pink-500 uppercase tracking-widest hover:underline w-full text-left pl-1 flex items-center gap-1"
                                                     >
-                                                        View All Offers
+                                                        View All Offers <ChevronDown size={12} className={`transition-transform ${showCouponsModal ? 'rotate-180' : ''}`} />
                                                     </button>
                                                 )}
+                                                
+                                                <AnimatePresence>
+                                                    {showCouponsModal && validCoupons.length > 0 && (
+                                                        <motion.div
+                                                            initial={{ opacity: 0, y: -5 }}
+                                                            animate={{ opacity: 1, y: 0 }}
+                                                            exit={{ opacity: 0, y: -5 }}
+                                                            className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-xl border border-slate-100 z-50 overflow-hidden"
+                                                        >
+                                                            <div className="max-h-60 overflow-y-auto custom-scrollbar p-2 space-y-2">
+                                                                {validCoupons.map((coupon) => (
+                                                                    <button
+                                                                        key={coupon.id}
+                                                                        onClick={() => {
+                                                                            setCouponCode(coupon.code);
+                                                                            setShowCouponsModal(false);
+                                                                            handleApplyCoupon(coupon.code);
+                                                                        }}
+                                                                        className="w-full text-left p-3 bg-slate-50 hover:bg-pink-50 rounded-xl border border-slate-100 hover:border-pink-200 transition-all flex items-center justify-between group"
+                                                                    >
+                                                                        <div>
+                                                                            <div className="flex items-center gap-2 mb-1">
+                                                                                <span className="text-[11px] font-black text-slate-900 uppercase tracking-widest bg-white px-2 py-0.5 rounded-md border border-slate-200 group-hover:border-pink-200 transition-colors">
+                                                                                    {coupon.code}
+                                                                                </span>
+                                                                                <span className="text-[9px] font-bold text-emerald-500 uppercase tracking-widest">
+                                                                                    Active
+                                                                                </span>
+                                                                            </div>
+                                                                            <p className="text-[11px] font-bold text-slate-500">
+                                                                                Save ₹{coupon.value} on total value
+                                                                            </p>
+                                                                        </div>
+                                                                        <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center shadow-sm text-slate-300 group-hover:text-pink-500 transition-colors shrink-0">
+                                                                            <ArrowRight size={14} />
+                                                                        </div>
+                                                                    </button>
+                                                                ))}
+                                                            </div>
+                                                        </motion.div>
+                                                    )}
+                                                </AnimatePresence>
                                             </div>
                                         ) : (
                                             <div className="flex items-center justify-between p-3 bg-emerald-50 rounded-xl border border-emerald-100 border-dashed">
@@ -664,7 +706,7 @@ export default function CheckoutClient({ id }) {
                                     <div className="space-y-2 pt-3 border-t border-slate-100">
                                         <div className="flex justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest">
                                             <span>Sub Total</span>
-                                            <span className="text-slate-900">₹{(qty * baseAmount).toFixed(2)}</span>
+                                            <span className="text-slate-900">₹{baseAmount.toFixed(2)}</span>
                                         </div>
                                         <div className="flex justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest">
                                             <span>Platform Fee</span>
@@ -796,82 +838,7 @@ export default function CheckoutClient({ id }) {
                 type="event"
             />
 
-            <AnimatePresence>
-                {showCouponsModal && (
-                    <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-md">
-                        <motion.div 
-                            initial={{ scale: 0.9, opacity: 0, y: 20 }}
-                            animate={{ scale: 1, opacity: 1, y: 0 }}
-                            exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                            className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-100 flex flex-col max-h-[80vh]"
-                        >
-                            <div className="p-8 border-b border-slate-50 flex items-center justify-between bg-slate-50/50">
-                                <div>
-                                    <h3 className="text-xl font-black text-slate-900 tracking-tight">
-                                        Available <span className="text-pink-500">Offers</span>
-                                    </h3>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Select a coupon to apply</p>
-                                </div>
-                                <button 
-                                    onClick={() => setShowCouponsModal(false)}
-                                    className="w-10 h-10 flex items-center justify-center bg-white rounded-full shadow-sm hover:bg-slate-50 transition-all text-slate-400"
-                                >
-                                    <X size={18} />
-                                </button>
-                            </div>
 
-                            <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
-                                {validCoupons.length === 0 ? (
-                                    <div className="py-12 text-center space-y-4">
-                                        <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center text-slate-300 mx-auto">
-                                            <Ticket size={32} />
-                                        </div>
-                                        <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">No active coupons available</p>
-                                    </div>
-                                ) : (
-                                    validCoupons.map((coupon) => (
-                                        <button
-                                            key={coupon.id}
-                                            onClick={() => {
-                                                setCouponCode(coupon.code);
-                                                setShowCouponsModal(false);
-                                                handleApplyCoupon(coupon.code);
-                                            }}
-                                            className="w-full group text-left p-6 bg-slate-50 hover:bg-pink-50 rounded-3xl border border-slate-100 hover:border-pink-200 transition-all space-y-3 relative overflow-hidden"
-                                        >
-                                            <div className="flex items-center justify-between relative z-10">
-                                                <div className="px-3 py-1 bg-white rounded-lg border border-slate-200 text-[10px] font-black text-slate-900 uppercase tracking-widest group-hover:border-pink-200 transition-colors">
-                                                    {coupon.code}
-                                                </div>
-                                                <div className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">
-                                                    Active Offer
-                                                </div>
-                                            </div>
-                                            <div className="relative z-10">
-                                                <p className="text-lg font-black text-slate-900 leading-tight group-hover:text-pink-600 transition-colors">
-                                                    Save ₹{coupon.value}
-                                                </p>
-                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-                                                    Applied on total value
-                                                </p>
-                                            </div>
-                                            <div className="absolute top-0 right-0 w-24 h-24 bg-pink-500/5 rounded-full -mr-12 -mt-12 group-hover:bg-pink-500/10 transition-colors" />
-                                        </button>
-                                    ))
-                                )}
-                            </div>
-                            <div className="p-6 bg-slate-50/50 border-t border-slate-50">
-                                <button 
-                                    onClick={() => setShowCouponsModal(false)}
-                                    className="w-full py-4 bg-white border border-slate-200 rounded-2xl text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] hover:bg-slate-50 transition-all"
-                                >
-                                    Cancel
-                                </button>
-                            </div>
-                        </motion.div>
-                    </div>
-                )}
-            </AnimatePresence>
             <Footer />
         </main>
     );

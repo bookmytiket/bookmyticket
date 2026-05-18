@@ -25,6 +25,7 @@ export default function ProviderDashboard() {
     const [bookings, setBookings] = useState([]);
     const [services, setServices] = useState([]);
     const [wallet, setWallet] = useState(null);
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     
     // Form States
     const [selectedService, setSelectedService] = useState(null);
@@ -122,8 +123,23 @@ export default function ProviderDashboard() {
 
     return (
         <div className="min-h-screen bg-[#FDFDFF] flex font-sans">
+            {/* Mobile Overlay */}
+            {isSidebarOpen && (
+                <div 
+                    className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 md:hidden"
+                    onClick={() => setIsSidebarOpen(false)}
+                />
+            )}
+
             {/* Modern Sidebar */}
-            <aside className="fixed inset-y-0 left-0 z-50 bg-[#1A1C2E] w-80 overflow-y-auto overflow-x-hidden shadow-2xl flex flex-col p-8 custom-scrollbar">
+            <aside className={`fixed inset-y-0 left-0 z-50 bg-[#1A1C2E] w-72 md:w-80 overflow-y-auto overflow-x-hidden shadow-2xl flex flex-col p-6 md:p-8 custom-scrollbar transform transition-transform duration-300 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
+                {/* Mobile Close Button */}
+                <button 
+                    className="absolute top-6 right-6 text-slate-400 hover:text-white md:hidden"
+                    onClick={() => setIsSidebarOpen(false)}
+                >
+                    <X size={24} />
+                </button>
                 <div className="mb-10 px-4">
                     <div className="w-12 h-12 bg-gradient-to-tr from-pink-500 to-purple-600 rounded-2xl flex items-center justify-center text-white font-black text-2xl italic shadow-lg">
                         {provider.business_name?.[0].toUpperCase() || "P"}
@@ -142,7 +158,7 @@ export default function ProviderDashboard() {
                     ].map((item) => (
                         <button
                             key={item.id}
-                            onClick={() => { setActiveTab(item.id); setViewMode("list"); }}
+                            onClick={() => { setActiveTab(item.id); setViewMode("list"); setIsSidebarOpen(false); }}
                             className={`w-full flex items-center gap-4 px-6 py-4 rounded-[1.5rem] transition-all group relative ${activeTab === item.id ? 'bg-gradient-to-r from-[#f84464] to-[#c026d3] text-white shadow-xl shadow-pink-500/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
                         >
                             <item.icon size={18} className={activeTab === item.id ? 'text-white' : 'group-hover:scale-110 transition-transform'} strokeWidth={activeTab === item.id ? 3 : 2} />
@@ -159,10 +175,17 @@ export default function ProviderDashboard() {
             </aside>
 
             {/* Main Content Area */}
-            <main className="flex-1 ml-80 flex flex-col">
-                <header className="h-24 flex items-center justify-between px-10 sticky top-0 bg-white/70 backdrop-blur-3xl z-40 border-b border-slate-50">
-                    <div>
-                        <h1 className="text-3xl font-black text-[#1A1C2E] italic tracking-tighter uppercase leading-none">{viewMode === 'config' ? 'CONFIG' : activeTab.toUpperCase()}</h1>
+            <main className="flex-1 md:ml-80 flex flex-col w-full min-w-0">
+                <header className="h-20 md:h-24 flex items-center justify-between px-6 md:px-10 sticky top-0 bg-white/80 backdrop-blur-3xl z-30 border-b border-slate-100">
+                    <div className="flex items-center gap-4">
+                        <button 
+                            className="p-2 -ml-2 text-slate-600 md:hidden hover:bg-slate-100 rounded-xl transition-colors"
+                            onClick={() => setIsSidebarOpen(true)}
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                        </button>
+                        <div>
+                            <h1 className="text-xl md:text-3xl font-black text-[#1A1C2E] italic tracking-tighter uppercase leading-none">{viewMode === 'config' ? 'CONFIG' : activeTab.toUpperCase()}</h1>
                         <p className="text-[10px] font-bold text-slate-300 uppercase tracking-[0.4em] mt-3">SYSTEM NODE // PROFESSIONAL-V1</p>
                     </div>
 
@@ -182,7 +205,7 @@ export default function ProviderDashboard() {
                     </div>
                 </header>
 
-                <div className="px-10 py-8 space-y-10 w-full animate-in slide-in-from-bottom-8 duration-700">
+                <div className="px-4 md:px-10 py-6 md:py-8 space-y-8 md:space-y-10 w-full animate-in slide-in-from-bottom-8 duration-700 max-w-[100vw]">
                     {/* CONFIG VIEW (INLINE) */}
                     {viewMode === "config" ? (
                         <div className="space-y-10 animate-in slide-in-from-right-8 duration-700">
@@ -194,7 +217,7 @@ export default function ProviderDashboard() {
                             </div>
 
                             <div className="bg-white rounded-[3rem] shadow-2xl border border-slate-50 overflow-hidden">
-                                <form onSubmit={handleServiceAction} className="p-8 space-y-8">
+                                <form onSubmit={handleServiceAction} className="p-4 md:p-8 space-y-8">
                                     <div className="space-y-3">
                                         <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-2">SERVICE DESIGNATION</label>
                                         <input className="w-full bg-slate-50 p-4 rounded-2xl text-sm font-black border-none focus:ring-4 focus:ring-pink-500/5 transition-all text-[#1A1C2E]" value={serviceForm.service_name} onChange={e => setServiceForm({...serviceForm, service_name: e.target.value})} placeholder="e.g. PROFESSIONAL WEDDING PHOTOGRAPHY" required />
@@ -216,10 +239,10 @@ export default function ProviderDashboard() {
                                         <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-2">MISSION DESCRIPTION</label>
                                         <textarea className="w-full bg-slate-50 p-4 rounded-2xl text-sm font-black border-none focus:ring-4 focus:ring-pink-500/5 transition-all text-[#1A1C2E]" rows={4} value={serviceForm.description} onChange={e => setServiceForm({...serviceForm, description: e.target.value})} placeholder="Outline the service scope and deliverables..." required />
                                     </div>
-                                    <div className="pt-6 flex justify-end gap-6">
-                                        <button type="button" onClick={() => setViewMode("list")} className="px-12 py-6 bg-slate-50 text-slate-400 rounded-[2rem] text-[10px] font-black uppercase tracking-widest hover:text-slate-900 transition-all">ABORT</button>
-                                        <button type="submit" className="px-20 py-6 bg-gradient-to-r from-[#f84464] to-[#c026d3] text-white rounded-[2rem] text-[11px] font-black uppercase tracking-widest shadow-2xl shadow-pink-500/20 hover:scale-105 transition-all">
-                                            <Save size={18} className="inline mr-3" strokeWidth={3} /> COMMIT SERVICE
+                                    <div className="pt-6 flex flex-col sm:flex-row justify-end gap-4 md:gap-6">
+                                        <button type="button" onClick={() => setViewMode("list")} className="w-full sm:w-auto px-6 md:px-12 py-4 md:py-6 bg-slate-50 text-slate-400 rounded-[2rem] text-[10px] font-black uppercase tracking-widest hover:text-slate-900 transition-all">ABORT</button>
+                                        <button type="submit" className="w-full sm:w-auto px-8 md:px-20 py-4 md:py-6 bg-gradient-to-r from-[#f84464] to-[#c026d3] text-white rounded-[2rem] text-[11px] font-black uppercase tracking-widest shadow-2xl shadow-pink-500/20 hover:scale-105 transition-all">
+                                            <Save size={18} className="inline mr-2 md:mr-3" strokeWidth={3} /> COMMIT SERVICE
                                         </button>
                                     </div>
                                 </form>
@@ -232,7 +255,7 @@ export default function ProviderDashboard() {
                                 <div className="space-y-12">
                                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-10">
                                         {stats.map((stat) => (
-                                            <div key={stat.label} className="bg-white rounded-[2.5rem] p-8 border border-slate-50 shadow-sm hover:shadow-2xl transition-all relative overflow-hidden group">
+                                            <div key={stat.label} className="bg-white rounded-[2.5rem] p-6 md:p-8 border border-slate-50 shadow-sm hover:shadow-2xl transition-all relative overflow-hidden group">
                                                 <div className="relative z-10 space-y-6">
                                                     <div className="flex items-center justify-between">
                                                         <div className={`w-14 h-14 ${stat.color} rounded-2xl flex items-center justify-center text-white shadow-xl transition-transform group-hover:rotate-12`}>
@@ -298,9 +321,9 @@ export default function ProviderDashboard() {
                                         <h3 className="text-3xl font-black text-[#1A1C2E] uppercase italic tracking-tighter leading-none">SERVICE CATALOG</h3>
                                         <button 
                                             onClick={() => { setServiceForm({ service_name: "", description: "", pricing: "", status: "Published" }); setSelectedService(null); setViewMode("config"); }}
-                                            className="px-10 py-5 bg-[#1A1C2E] text-white rounded-[2rem] text-[11px] font-black uppercase tracking-widest flex items-center gap-4 hover:scale-105 transition-all shadow-2xl"
+                                            className="px-6 md:px-10 py-3 md:py-5 bg-[#1A1C2E] text-white rounded-[2rem] text-[10px] md:text-[11px] font-black uppercase tracking-widest flex items-center gap-2 md:gap-4 hover:scale-105 transition-all shadow-2xl"
                                         >
-                                            <Plus size={20} strokeWidth={3} /> ADD NEW SERVICE
+                                            <Plus size={16} md:size={20} strokeWidth={3} /> <span className="hidden sm:inline">ADD NEW SERVICE</span><span className="sm:hidden">ADD</span>
                                         </button>
                                     </div>
 

@@ -784,14 +784,14 @@ export default function DynamicEventClient({ event }) {
                                     </div>
 
                                     {/* Coupon Section */}
-                                    <div className="pt-2 space-y-1">
+                                    <div className="pt-2 space-y-1 relative">
                                         <div className="flex justify-between items-center px-1">
                                             <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Have a coupon?</p>
                                             <button 
-                                                onClick={() => setShowCouponsModal(true)}
-                                                className="text-[8px] font-black text-[#ec4899] uppercase tracking-widest hover:underline"
+                                                onClick={() => setShowCouponsModal(!showCouponsModal)}
+                                                className="text-[8px] font-black text-[#ec4899] uppercase tracking-widest hover:underline flex items-center gap-1"
                                             >
-                                                View All
+                                                View All <ChevronDown size={10} className={`transition-transform ${showCouponsModal ? 'rotate-180' : ''}`} />
                                             </button>
                                         </div>
                                         <div className="relative group">
@@ -816,6 +816,55 @@ export default function DynamicEventClient({ event }) {
                                                 {isApplyingCoupon ? '...' : appliedCoupon ? 'Applied' : 'Apply'}
                                             </button>
                                         </div>
+                                        
+                                        <AnimatePresence>
+                                            {showCouponsModal && (
+                                                <motion.div
+                                                    initial={{ opacity: 0, y: -5 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    exit={{ opacity: 0, y: -5 }}
+                                                    className="absolute top-full left-0 right-0 mt-1 bg-white rounded-xl shadow-xl border border-slate-100 z-[60] overflow-hidden"
+                                                >
+                                                    <div className="max-h-56 overflow-y-auto custom-scrollbar p-2 space-y-1">
+                                                        {availableCoupons.length > 0 ? (
+                                                            availableCoupons.map((coupon, idx) => (
+                                                                <button
+                                                                    key={idx}
+                                                                    onClick={() => {
+                                                                        setCouponCode(coupon.code);
+                                                                        setShowCouponsModal(false);
+                                                                        setTimeout(() => handleApplyCoupon(), 100);
+                                                                    }}
+                                                                    className="w-full text-left p-3 bg-slate-50 hover:bg-pink-50 rounded-lg border border-slate-100 hover:border-pink-200 transition-all flex items-center justify-between group"
+                                                                >
+                                                                    <div>
+                                                                        <div className="flex items-center gap-2 mb-1">
+                                                                            <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest bg-white px-2 py-0.5 rounded border border-slate-200 group-hover:border-pink-200 transition-colors">
+                                                                                {coupon.code}
+                                                                            </span>
+                                                                            <span className="text-[8px] font-bold text-emerald-500 uppercase tracking-widest">
+                                                                                {coupon.type === 'percent' ? `${coupon.value}% OFF` : `₹${coupon.value} OFF`}
+                                                                            </span>
+                                                                        </div>
+                                                                        <p className="text-[9px] font-bold text-slate-500">
+                                                                            {coupon.description || `Applied on total value`}
+                                                                        </p>
+                                                                    </div>
+                                                                    <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center shadow-sm text-slate-300 group-hover:text-pink-500 transition-colors shrink-0">
+                                                                        <ArrowRight size={12} />
+                                                                    </div>
+                                                                </button>
+                                                            ))
+                                                        ) : (
+                                                            <div className="p-4 text-center">
+                                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">No active offers</p>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+
                                         {couponError && (
                                             <p className="text-[8px] font-bold text-rose-500 px-1">{couponError}</p>
                                         )}
@@ -973,101 +1022,7 @@ export default function DynamicEventClient({ event }) {
 
                 </div>
             </div>
-            {/* Coupons Modal */}
-            <AnimatePresence>
-                {showCouponsModal && (
-                    <motion.div 
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
-                        onClick={() => setShowCouponsModal(false)}
-                    >
-                        <motion.div 
-                            initial={{ scale: 0.9, opacity: 0, y: 20 }}
-                            animate={{ scale: 1, opacity: 1, y: 0 }}
-                            exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                            className="bg-white rounded-[2rem] w-full max-w-md overflow-hidden shadow-2xl"
-                            onClick={e => e.stopPropagation()}
-                        >
-                            <div className="p-8 border-b border-slate-50 flex justify-between items-center">
-                                <div className="space-y-1">
-                                    <h3 className="text-xl font-black text-slate-900 uppercase">Available Offers</h3>
-                                    <p className="text-[10px] font-black text-[#ec4899] uppercase tracking-widest">Exclusive deals for you</p>
-                                </div>
-                                <button 
-                                    onClick={() => setShowCouponsModal(false)}
-                                    className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 hover:text-slate-900 transition-all"
-                                >
-                                    <X size={20} />
-                                </button>
-                            </div>
 
-                            <div className="p-8 max-h-[60vh] overflow-y-auto space-y-4 custom-scrollbar">
-                                {availableCoupons.length > 0 ? (
-                                    availableCoupons.map((coupon, idx) => (
-                                        <div 
-                                            key={idx}
-                                            className="group relative p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl hover:border-[#ec4899]/30 transition-all cursor-pointer"
-                                            onClick={() => {
-                                                setCouponCode(coupon.code);
-                                                setShowCouponsModal(false);
-                                                // Automatically try applying it
-                                                setTimeout(() => handleApplyCoupon(), 100);
-                                            }}
-                                        >
-                                            <div className="flex justify-between items-start mb-4">
-                                                <div className="bg-white px-4 py-2 rounded-xl border border-slate-100 text-sm font-black text-[#ec4899] tracking-widest shadow-sm">
-                                                    {coupon.code}
-                                                </div>
-                                                <div className="text-right">
-                                                    <p className="text-lg font-black text-slate-900">
-                                                        {coupon.type === 'percent' ? `${coupon.value}% OFF` : `₹${coupon.value} OFF`}
-                                                    </p>
-                                                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Discount Value</p>
-                                                </div>
-                                            </div>
-                                            <div className="space-y-2">
-                                                <p className="text-xs font-bold text-slate-600 leading-tight">
-                                                    {coupon.description || `Get ${coupon.value}${coupon.type === 'percent' ? '%' : ' INR'} off on your booking.`}
-                                                </p>
-                                                <div className="flex items-center gap-4 pt-2">
-                                                    <div className="flex items-center gap-1.5 text-[8px] font-black text-slate-400 uppercase tracking-widest">
-                                                        <Trophy size={10} className="text-amber-500" /> Min {coupon.min_tickets || 1} Tix
-                                                    </div>
-                                                    {coupon.expiry_date && (
-                                                        <div className="flex items-center gap-1.5 text-[8px] font-black text-slate-400 uppercase tracking-widest">
-                                                            <Zap size={10} className="text-pink-500" /> Ends {new Date(coupon.expiry_date).toLocaleDateString()}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-                                            
-                                            <div className="absolute right-6 bottom-6 opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0">
-                                                <div className="text-[9px] font-black text-[#ec4899] uppercase tracking-widest flex items-center gap-1">
-                                                    Apply Now <CheckCircle2 size={12} />
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))
-                                ) : (
-                                    <div className="text-center py-12 px-6 bg-slate-50 rounded-3xl border border-dashed border-slate-200">
-                                        <Trophy size={48} className="mx-auto text-slate-300 mb-4 opacity-50" />
-                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">No coupons available</p>
-                                        <p className="text-[8px] font-medium text-slate-400 mt-1 italic">Check back later for exclusive offers</p>
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="p-8 bg-slate-50 border-t border-slate-100">
-                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">
-                                    Terms & Conditions apply to all promotional codes
-                                </p>
-                            </div>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
             <div className="pb-24"></div>
             <Footer />
         </main>

@@ -14114,8 +14114,8 @@ function OrganiserPanel() {
               </button>
             </div>
           )}
-          <header className="h-20 bg-white/80 backdrop-blur-2xl sticky top-0 z-40 border-b border-slate-100 flex items-center justify-between px-6 lg:px-10">
-            <div className="flex items-center gap-6">
+          <header className="h-20 bg-white/80 backdrop-blur-2xl sticky top-0 z-40 border-b border-slate-100 flex items-center justify-between px-4 md:px-6 lg:px-10">
+            <div className="flex items-center gap-4 md:gap-6">
               <button
                 onClick={() => setSidebarOpen(true)}
                 className="p-2.5 rounded-xl bg-slate-50 text-slate-600 md:hidden hover:bg-slate-100 transition-all border border-slate-100 shadow-sm"
@@ -14294,7 +14294,7 @@ function OrganiserPanel() {
               </div>
             </div>
           </header>
-          <main className="flex-1 p-6 lg:p-10 relative z-0 flex flex-col">
+          <main className="flex-1 p-4 md:p-6 lg:p-10 relative z-0 flex flex-col">
             <div className="flex-1">{renderTabContent()}</div>
             <footer className="mt-8 pt-6 border-t border-slate-100 text-center text-[10px] font-bold uppercase tracking-widest text-slate-600">
               Copyright ©2026. All Rights Reserved.
