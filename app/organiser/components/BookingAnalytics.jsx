@@ -75,7 +75,7 @@ export default function BookingAnalytics({ events = [], bookings = [], theme = '
     const stats = useMemo(() => {
         const filteredBookings = bookings.filter(b => {
             const matchesEvent = selectedEventId === 'all' || String(b.event_id) === String(selectedEventId);
-            const statusOk = ["Confirmed", "Scanned", "Pending"].includes(b.status);
+            const statusOk = ["Confirmed", "Scanned"].includes(b.status);
             return matchesEvent && statusOk;
         });
 
