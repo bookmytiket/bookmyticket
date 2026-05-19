@@ -948,12 +948,22 @@ const CouponManager = ({ t, theme }) => {
             };
             if (editingId) payload.id = editingId;
             
-            await upsertCoupon(payload);
-            showToast(`Coupon ${editingId ? 'updated' : 'created'} successfully`, "success");
-            setShowModal(false);
-            setEditingId(null);
-            setFormData({ code: '', type: 'percent', value: '', min_tickets: 1, usage_limit_per_user: 1, expiry_date: '', is_active: true });
-            refreshLegacy();
+            const res = await fetch('/api/admin/coupons', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            
+            if (data.success) {
+                showToast(`Coupon ${editingId ? 'updated' : 'created'} successfully`, "success");
+                setShowModal(false);
+                setEditingId(null);
+                setFormData({ code: '', type: 'percent', value: '', min_tickets: 1, usage_limit_per_user: 1, expiry_date: '', is_active: true });
+                refreshLegacy();
+            } else {
+                throw new Error(data.error);
+            }
         } catch (err) {
             showToast("Error saving coupon: " + err.message, "error");
         }
