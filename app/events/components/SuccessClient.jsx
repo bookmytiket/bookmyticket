@@ -3,15 +3,19 @@ import Footer from "@/components/Footer";
 
 import React, { useEffect, useState } from 'react';
 import { useSupabaseQuery } from '@/hooks/useSupabase';
-import { CheckCircle2, Home, Download, Share2, Ticket as TicketIcon, FileText } from 'lucide-react';
+import { CheckCircle2, Home, Download, Share2, Ticket as TicketIcon, FileText, Gift, Copy, Check, ExternalLink, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import DigitalTicket from '@/components/DigitalTicket';
 import DigitalInvoice from '@/components/DigitalInvoice';
 import confetti from 'canvas-confetti';
+import { supabase } from "@/lib/supabase";
 
 export default function SuccessClient({ eventId, bookingId }) {
     const [celebrated, setCelebrated] = useState(false);
     const [showInvoice, setShowInvoice] = useState(false);
+    const [rewards, setRewards] = useState([]);
+    const [rewardsLoading, setRewardsLoading] = useState(true);
+    const [copiedRewardId, setCopiedRewardId] = useState(null);
 
     const { data: booking, loading: bookingLoading } = useSupabaseQuery('bookings', (q) => 
         q.select('*, events(*)').eq('id', bookingId).single(),
@@ -37,6 +41,43 @@ export default function SuccessClient({ eventId, bookingId }) {
             })
             .catch(() => setBrandingLoading(false));
     }, []);
+
+    useEffect(() => {
+        if (!bookingId) return;
+        setRewardsLoading(true);
+        supabase
+            .from('user_coupon_rewards')
+            .select(`
+                id,
+                reward_status,
+                unlocked_at,
+                coupon_inventory:coupon_inventory_id (
+                    coupon_code,
+                    expires_at,
+                    partner_campaigns:campaign_id (
+                        campaign_name,
+                        offer_title,
+                        offer_description,
+                        redeem_url,
+                        partners:partner_id (
+                            name,
+                            logo_url
+                        )
+                    )
+                )
+            `)
+            .eq('booking_id', bookingId)
+            .then(({ data, error }) => {
+                if (!error && data) {
+                    setRewards(data);
+                }
+                setRewardsLoading(false);
+            })
+            .catch((err) => {
+                console.error("Error fetching rewards:", err);
+                setRewardsLoading(false);
+            });
+    }, [bookingId]);
 
     const eventLoading = false; // Placeholder if not defined
 
@@ -116,6 +157,92 @@ export default function SuccessClient({ eventId, bookingId }) {
                         {showInvoice ? "View E-Ticket" : "View Tax Invoice"}
                     </button>
                 </div>
+
+                {/* Unlocked Rewards */}
+                {rewards && rewards.length > 0 && (
+                    <div className="mb-12 bg-gradient-to-br from-pink-500/10 via-rose-500/5 to-amber-500/5 border border-pink-500/20 rounded-[2.5rem] p-6 md:p-8 shadow-xl backdrop-blur-md relative overflow-hidden">
+                        <div className="absolute top-0 right-0 p-4 opacity-10">
+                            <Gift size={120} className="text-pink-500" />
+                        </div>
+                        
+                        <div className="flex items-center gap-3 mb-6 relative">
+                            <div className="w-12 h-12 bg-pink-500 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-pink-500/30 animate-pulse">
+                                <Sparkles size={24} />
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Post-Payment Rewards Unlocked!</h3>
+                                <p className="text-xs font-bold text-pink-600 uppercase tracking-wider">Exclusive partner benefits for booking this event</p>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-6 relative">
+                            {rewards.map((reward) => {
+                                const inv = reward.coupon_inventory || {};
+                                const campaign = inv.partner_campaigns || {};
+                                const partner = campaign.partners || {};
+                                const isCopied = copiedRewardId === reward.id;
+
+                                return (
+                                    <div key={reward.id} className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                                        <div className="flex items-center gap-4">
+                                            {partner.logo_url ? (
+                                                <img src={partner.logo_url} alt={partner.name} className="w-16 h-16 rounded-2xl object-contain border border-slate-100 p-2 bg-slate-50 shrink-0" />
+                                            ) : (
+                                                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center text-slate-400 font-bold shrink-0">
+                                                    {partner.name?.substring(0, 2).toUpperCase() || 'P'}
+                                                </div>
+                                            )}
+                                            <div>
+                                                <span className="inline-block px-3 py-1 bg-rose-50 text-rose-600 rounded-full text-[9px] font-black uppercase tracking-widest mb-1.5 border border-rose-100">
+                                                    {partner.name || 'Partner Reward'}
+                                                </span>
+                                                <h4 className="text-lg font-black text-slate-900 leading-tight uppercase tracking-tight">{campaign.offer_title || 'Special Discount Offer'}</h4>
+                                                <p className="text-sm font-medium text-slate-500 mt-1">{campaign.offer_description || campaign.campaign_name}</p>
+                                                {inv.expires_at && (
+                                                    <p className="text-[10px] font-bold text-rose-500 uppercase tracking-wider mt-2">
+                                                        Expires: {new Date(inv.expires_at).toLocaleDateString()}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
+                                            {/* Coupon Code Copy Button */}
+                                            {inv.coupon_code && (
+                                                <div className="flex items-center border border-dashed border-pink-300 rounded-2xl overflow-hidden bg-pink-50/30 p-1 pl-3 shrink-0">
+                                                    <code className="text-sm font-black text-pink-600 tracking-wider pr-3">{inv.coupon_code}</code>
+                                                    <button 
+                                                        onClick={() => {
+                                                            navigator.clipboard.writeText(inv.coupon_code);
+                                                            setCopiedRewardId(reward.id);
+                                                            setTimeout(() => setCopiedRewardId(null), 2000);
+                                                        }}
+                                                        className="px-4 py-2.5 bg-white text-slate-700 hover:text-pink-600 rounded-xl border border-slate-100 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest transition-all shadow-sm"
+                                                    >
+                                                        {isCopied ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
+                                                        {isCopied ? "Copied!" : "Copy Code"}
+                                                    </button>
+                                                </div>
+                                            )}
+
+                                            {/* Redeem Link */}
+                                            {campaign.redeem_url && (
+                                                <a 
+                                                    href={campaign.redeem_url} 
+                                                    target="_blank" 
+                                                    rel="noopener noreferrer" 
+                                                    className="flex items-center justify-center gap-2 px-6 py-4 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all shrink-0 shadow-lg shadow-slate-900/10"
+                                                >
+                                                    Redeem Now <ExternalLink size={12} />
+                                                </a>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
 
                 {/* Quick Actions */}
                 <div className="flex flex-col md:flex-row items-center justify-center gap-4">

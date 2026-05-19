@@ -8546,6 +8546,11 @@ function AdminHomePage() {
 
                     {activeTab === "mobile_banners" && <MobileBannersAdmin theme={theme} t={t} />}
 
+                    {activeTab === "bulk_discounts" && (
+                        <BulkDiscountsAdmin />
+                    )}
+
+
                     {partnerModal && (
                         <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1001 }} onClick={closePartnerModal}>
                             <div style={{ backgroundColor: t.cardBg, width: "100%", maxWidth: "500px", borderRadius: "20px", padding: "32px", boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)", border: `1px solid ${t.border}`, position: "relative" }} onClick={e => e.stopPropagation()}>

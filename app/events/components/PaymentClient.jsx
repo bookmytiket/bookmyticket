@@ -123,42 +123,86 @@ export default function PaymentClient({ id: eventId, bookingId: propBookingId })
         };
     }, [bookingId, gateways, searchParams]);
 
+    const sessionToken = searchParams.get('sessionToken');
+
     const handleCashfree = async () => {
         if (!bookingId || !cashfree) return;
         setIsPaying(true);
         setPaymentStatus('processing');
 
         try {
-            // 1. Create Order via API
-            const response = await fetch('/api/cashfree/create-order', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    bookingId,
-                    amount: booking.total_price,
-                    customerName: booking.customer_details?.name || 'Customer',
-                    customerEmail: booking.customer_details?.email || 'customer@example.com',
-                    customerPhone: booking.customer_details?.phone || '9999999999',
-                    eventName: booking.event_name
-                })
-            });
+            let paymentSessionId = "";
+            let cfOrderId = "";
 
-            const data = await response.json();
-            if (data.error) throw new Error(data.details || data.error);
+            if (sessionToken) {
+                // 1. Create Gateway Order via Booking Session API
+                const response = await fetch('/api/booking-session/create-order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        sessionToken,
+                        gateway: "Cashfree"
+                    })
+                });
 
-            // 2. Open Cashfree Checkout in Modal for better UX
+                const data = await response.json();
+                if (!response.ok || !data.success) {
+                    throw new Error(data.error || "Cashfree order creation failed");
+                }
+                paymentSessionId = data.payment_session_id;
+                cfOrderId = data.cfOrderId || bookingId;
+            } else {
+                // Legacy non-session flow
+                const response = await fetch('/api/cashfree/create-order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        bookingId,
+                        amount: booking.total_price,
+                        customerName: booking.customer_details?.name || 'Customer',
+                        customerEmail: booking.customer_details?.email || 'customer@example.com',
+                        customerPhone: booking.customer_details?.phone || '9999999999',
+                        eventName: booking.event_name
+                    })
+                });
+
+                const data = await response.json();
+                if (data.error) throw new Error(data.details || data.error);
+                paymentSessionId = data.payment_session_id;
+                cfOrderId = bookingId;
+            }
+
+            // 2. Open Cashfree Checkout in Modal
             const checkoutOptions = {
-                paymentSessionId: data.payment_session_id,
+                paymentSessionId: paymentSessionId,
                 redirectTarget: "_modal", 
             };
 
             console.log("Opening Cashfree checkout...");
-            await cashfree.checkout(checkoutOptions).then((result) => {
+            await cashfree.checkout(checkoutOptions).then(async (result) => {
                 if (result.error) {
                     throw new Error(result.error.message);
                 }
-                if (result.redirect) {
-                    console.log("Redirecting to payment page...");
+                
+                // For modal redirect, handle success
+                if (sessionToken) {
+                    const verifyRes = await fetch('/api/booking-session/verify-payment', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            sessionToken,
+                            gateway: "Cashfree",
+                            cashfree_order_id: cfOrderId,
+                            cashfree_status: "SUCCESS"
+                        })
+                    });
+                    const verifyData = await verifyRes.json();
+                    if (verifyRes.ok && verifyData.success) {
+                        setPaymentStatus('success');
+                        setTimeout(() => {
+                            router.push(`/events/book/success?bookingId=${bookingId}&id=${eventId}&sessionToken=${sessionToken}`);
+                        }, 1500);
+                    }
                 }
             });
             
@@ -177,27 +221,48 @@ export default function PaymentClient({ id: eventId, bookingId: propBookingId })
 
         try {
             // 1. Load Razorpay Script
-            const res = await loadScript("https://checkout.razorpay.com/v1/checkout.js");
-            if (!res) throw new Error("Razorpay SDK failed to load.");
+            const resScript = await loadScript("https://checkout.razorpay.com/v1/checkout.js");
+            if (!resScript) throw new Error("Razorpay SDK failed to load.");
 
-            // 2. Create Order
-            const response = await fetch('/api/razorpay/create-order', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    id: bookingId,
-                    amount: booking.total_price,
-                    type: "booking"
-                })
-            });
+            let key_id = "";
+            let order = null;
 
-            const order = await response.json();
-            if (order.error) throw new Error(order.error);
+            if (sessionToken) {
+                // Create Gateway Order via Booking Session API
+                const response = await fetch('/api/booking-session/create-order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        sessionToken,
+                        gateway: "Razorpay"
+                    })
+                });
 
-            // 3. Open Razorpay Checkout
-            const rzpConfig = gateways?.find(g => g.name === "Razorpay")?.config;
-            const key_id = rzpConfig?.keyId || rzpConfig?.apiKey || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
-            
+                const data = await response.json();
+                if (!response.ok || !data.success) {
+                    throw new Error(data.error || "Razorpay order creation failed");
+                }
+                order = data.order;
+                key_id = data.keyId;
+            } else {
+                // Legacy non-session flow
+                const response = await fetch('/api/razorpay/create-order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        id: bookingId,
+                        amount: booking.total_price,
+                        type: "booking"
+                    })
+                });
+
+                order = await response.json();
+                if (order.error) throw new Error(order.error);
+
+                const rzpConfig = gateways?.find(g => g.name === "Razorpay")?.config;
+                key_id = rzpConfig?.keyId || rzpConfig?.apiKey || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
+            }
+
             if (!key_id) throw new Error("Razorpay Key ID is not configured. Please add it to Vercel or your Admin panel.");
 
             const options = {
@@ -205,32 +270,57 @@ export default function PaymentClient({ id: eventId, bookingId: propBookingId })
                 amount: order.amount,
                 currency: order.currency,
                 name: "BookMyTicket",
-                description: `Payment for ${booking.event_name}`,
+                description: `Payment for ${booking.event_name || event?.title}`,
                 image: "/logo.png",
                 order_id: order.id,
                 handler: async function (response) {
                     try {
                         // 4. Verify Payment
-                        const verifyRes = await fetch('/api/razorpay/verify', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                razorpay_order_id: response.razorpay_order_id,
-                                razorpay_payment_id: response.razorpay_payment_id,
-                                razorpay_signature: response.razorpay_signature,
-                                id: bookingId,
-                                type: "booking"
-                            })
-                        });
+                        if (sessionToken) {
+                            const verifyRes = await fetch('/api/booking-session/verify-payment', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    sessionToken,
+                                    gateway: "Razorpay",
+                                    razorpay_order_id: response.razorpay_order_id,
+                                    razorpay_payment_id: response.razorpay_payment_id,
+                                    razorpay_signature: response.razorpay_signature
+                                })
+                            });
 
-                        const verifyData = await verifyRes.json();
-                        if (verifyData.success) {
-                            setPaymentStatus('success');
-                            setTimeout(() => {
-                                router.push(`/events/book/success?bookingId=${bookingId}&id=${eventId}`);
-                            }, 1500);
+                            const verifyData = await verifyRes.json();
+                            if (verifyData.success) {
+                                setPaymentStatus('success');
+                                setTimeout(() => {
+                                    router.push(`/events/book/success?bookingId=${bookingId}&id=${eventId}&sessionToken=${sessionToken}`);
+                                }, 1500);
+                            } else {
+                                throw new Error(verifyData.error || "Verification failed");
+                            }
                         } else {
-                            throw new Error(verifyData.error || "Verification failed");
+                            // Legacy verification
+                            const verifyRes = await fetch('/api/razorpay/verify', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    razorpay_order_id: response.razorpay_order_id,
+                                    razorpay_payment_id: response.razorpay_payment_id,
+                                    razorpay_signature: response.razorpay_signature,
+                                    id: bookingId,
+                                    type: "booking"
+                                })
+                            });
+
+                            const verifyData = await verifyRes.json();
+                            if (verifyData.success) {
+                                setPaymentStatus('success');
+                                setTimeout(() => {
+                                    router.push(`/events/book/success?bookingId=${bookingId}&id=${eventId}`);
+                                }, 1500);
+                            } else {
+                                throw new Error(verifyData.error || "Verification failed");
+                            }
                         }
                     } catch (verifyErr) {
                         console.error("Verification Error:", verifyErr);
@@ -323,7 +413,7 @@ export default function PaymentClient({ id: eventId, bookingId: propBookingId })
             }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
                     <button 
-                        onClick={() => router.push(`/events/detail?id=${eventId}`)}
+                        onClick={() => router.back()}
                         style={{ 
                             display: 'flex', 
                             alignItems: 'center', 

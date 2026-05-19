@@ -40,17 +40,174 @@ function getEventById(id, convexEvents) {
     };
 }
 
-export default function CheckoutClient({ id }) {
+function parseCampaignOffer(campaign) {
+    const title = campaign.offer_title || "";
+    let discountType = "fixed";
+    let discountValue = 0;
+    let minOrder = 0;
+
+    // Parse discount value (e.g. Flat Rs.100 OFF, Flat 10% OFF, Save 15%)
+    const percentMatch = title.match(/(\d+)%/);
+    if (percentMatch) {
+        discountType = "percent";
+        discountValue = parseFloat(percentMatch[1]);
+    } else {
+        const rsMatch = title.match(/Rs\.?\s*(\d+)/i) || title.match(/(\d+)\s*OFF/i);
+        if (rsMatch) {
+            discountType = "fixed";
+            discountValue = parseFloat(rsMatch[1]);
+        }
+    }
+
+    // Parse minimum order value (e.g. on above ordder Rs.399, above 399, order 399)
+    const minMatch = title.match(/above\s+(?:ordder|order|value)?\s*(?:Rs\.?)?\s*(\d+)/i) || title.match(/>\s*(?:Rs\.?)?\s*(\d+)/i);
+    if (minMatch) {
+        minOrder = parseFloat(minMatch[1]);
+    }
+
+    return {
+        id: campaign.id,
+        code: campaign.campaign_name.replace(/[^a-zA-Z0-9]/g, "").toUpperCase(),
+        displayName: campaign.campaign_name,
+        type: discountType,
+        value: discountValue,
+        min_order: minOrder,
+        isCampaign: true,
+        campaign: campaign
+    };
+}
+
+export default function CheckoutClient({ id: propId, sessionToken }) {
     const { user } = useAuth();
     const searchParams = useSearchParams();
     const router = useRouter();
+    const [eventId, setEventId] = useState(propId);
+    const id = eventId;
     const [rawEvent, setRawEvent] = useState(null);
     const [eventLoading, setEventLoading] = useState(true);
+    const [sessionLoading, setSessionLoading] = useState(!!sessionToken);
+    const [sessionErrorMsg, setSessionErrorMsg] = useState('');
+
+    const [qty, setQty] = useState(1);
+    const [termsAccepted, setTermsAccepted] = useState(false);
+    const [appliedCoupon, setAppliedCoupon] = useState(null);
+    const [selectedSeats, setSelectedSeats] = useState([]);
+    const [selectedPackageName, setSelectedPackageName] = useState('');
+    const [regDataParam, setRegDataParam] = useState('');
+    const [participantParam, setParticipantParam] = useState('');
+    const [teamParam, setTeamParam] = useState('');
+    const [bookingType, setBookingType] = useState('standard');
+    const [ticketPrice, setTicketPrice] = useState(499);
 
     useEffect(() => {
-        if (!id) return;
+        if (!sessionToken) return;
+
+        const fetchSession = async () => {
+            setSessionLoading(true);
+            try {
+                const res = await fetch(`/api/booking-session?sessionToken=${sessionToken}`);
+                const data = await res.json();
+                if (!res.ok || !data.valid) {
+                    throw new Error(data.error || "Invalid booking session");
+                }
+                const session = data.session;
+                const participantData = session.participant_data || {};
+
+                setQty(participantData.quantity || 1);
+                setTermsAccepted(!!participantData.termsAccepted);
+                setEventId(session.event_id);
+                setSelectedSeats(participantData.selectedSeats || []);
+                setSelectedPackageName(session.package_id || '');
+                setBookingType(participantData.bookingType || 'standard');
+                setTicketPrice(Number(participantData.price) || Number(session.events?.price) || 499);
+
+                if (participantData.participant) {
+                    setParticipantParam(JSON.stringify(participantData.participant));
+                }
+                if (participantData.team) {
+                    setTeamParam(JSON.stringify(participantData.team));
+                }
+                
+                const currentSnapshot = session.pricing_snapshot || {};
+                if (currentSnapshot.appliedCouponCode) {
+                    setAppliedCoupon({
+                        code: currentSnapshot.appliedCouponCode,
+                        id: currentSnapshot.appliedCouponId,
+                        campaignId: currentSnapshot.appliedCampaignId,
+                        campaignCode: currentSnapshot.appliedCampaignCode,
+                        isCampaign: !!currentSnapshot.appliedCampaignId,
+                        value: Number(currentSnapshot.discountAmount) || 0,
+                        type: 'fixed'
+                    });
+                }
+                
+                if (session.events) {
+                    setRawEvent(session.events);
+                    setEventLoading(false);
+                }
+            } catch (err) {
+                console.error("Failed to load booking session:", err);
+                setSessionErrorMsg(err.message || "Your booking session has expired or is invalid. Please start again.");
+            } finally {
+                setSessionLoading(false);
+            }
+        };
+
+        const channel = supabase
+            .channel(`session_updates_${sessionToken}`)
+            .on(
+                'postgres_changes',
+                { event: 'UPDATE', schema: 'public', table: 'booking_sessions', filter: `id=eq.${sessionToken}` },
+                (payload) => {
+                    const session = payload.new;
+                    const participantData = session.participant_data || {};
+                    setQty(participantData.quantity || 1);
+                    setTermsAccepted(!!participantData.termsAccepted);
+                    
+                    const currentSnapshot = session.pricing_snapshot || {};
+                    if (currentSnapshot.appliedCouponCode) {
+                        setAppliedCoupon({
+                            code: currentSnapshot.appliedCouponCode,
+                            id: currentSnapshot.appliedCouponId,
+                            campaignId: currentSnapshot.appliedCampaignId,
+                            campaignCode: currentSnapshot.appliedCampaignCode,
+                            isCampaign: !!currentSnapshot.appliedCampaignId,
+                            value: Number(currentSnapshot.discountAmount) || 0,
+                            type: 'fixed'
+                        });
+                    } else {
+                        setAppliedCoupon(null);
+                    }
+                }
+            )
+            .subscribe();
+
+        fetchSession();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [sessionToken]);
+
+    useEffect(() => {
+        if (sessionToken) return; // Loaded via session
+        const seatsP = searchParams.get('seats');
+        if (seatsP) {
+            try { setSelectedSeats(JSON.parse(seatsP)); } catch {}
+        }
+        setQty(Math.max(1, parseInt(searchParams.get('qty') || '1', 10) || 1));
+        setSelectedPackageName(searchParams.get('package') || '');
+        setRegDataParam(searchParams.get('regData') || '');
+        setParticipantParam(searchParams.get('participant') || '');
+        setTeamParam(searchParams.get('team') || '');
+        setBookingType(searchParams.get('type') || 'standard');
+        setTicketPrice(parseFloat(searchParams.get('price') || '499'));
+    }, [searchParams, sessionToken]);
+
+    useEffect(() => {
+        if (!eventId || sessionToken) return;
         setEventLoading(true);
-        fetch(`/api/events/detail?id=${id}`)
+        fetch(`/api/events/detail?id=${eventId}`)
             .then(res => {
                 if (!res.ok) throw new Error('Failed to fetch event');
                 return res.json();
@@ -63,7 +220,7 @@ export default function CheckoutClient({ id }) {
                 console.error('Error fetching event detail:', err);
                 setEventLoading(false);
             });
-    }, [id]);
+    }, [eventId, sessionToken]);
 
     const { data: rawFeeSettings } = useSupabaseQuery('fee_settings', (q) => q.limit(1).maybeSingle(), []);
     const [siteBranding, setSiteBranding] = useState(null);
@@ -78,35 +235,26 @@ export default function CheckoutClient({ id }) {
         q.select('*').eq('is_active', true).order('created_at', { ascending: false }),
         []
     );
-    
-    const seatsParam = searchParams.get('seats');
-    const selectedSeats = useMemo(() => {
-        try { return seatsParam ? JSON.parse(seatsParam) : []; } catch { return []; }
-    }, [seatsParam]);
 
-    const ticketPriceParam = searchParams.get('price');
-    
-    const initialQty = Math.max(1, parseInt(searchParams.get('qty') || '1', 10) || 1);
-    const [qty, setQty] = useState(initialQty);
-    const selectedPackageName = searchParams.get('package');
-    const regDataParam = searchParams.get('regData');
-    const participantParam = searchParams.get('participant');
-    const teamParam = searchParams.get('team');
-    const bookingType = searchParams.get('type');
-
+    const { data: mappedCampaigns } = useSupabaseQuery(
+        'event_coupon_mapping',
+        (q) => q.eq('event_id', id).eq('is_enabled', true),
+        [id],
+        { select: '*, partner_campaigns(*, partners(*))' }
+    );
     const [storageLoaded, setStorageLoaded] = useState(false);
     const [feeSettings, setFeeSettings] = useState(DEFAULT_FEE_SETTINGS);
     const [bookingDone, setBookingDone] = useState(false);
     const [lastBooking, setLastBooking] = useState(null);
     const [showTermsModal, setShowTermsModal] = useState(false);
-    const [termsAccepted, setTermsAccepted] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
     const [notification, setNotification] = useState(null);
     const [couponCode, setCouponCode] = useState('');
-    const [appliedCoupon, setAppliedCoupon] = useState(null);
     const [couponError, setCouponError] = useState('');
     const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
     const [showCouponsModal, setShowCouponsModal] = useState(false);
+    const [showFeesDropdown, setShowFeesDropdown] = useState(false);
+
     
     const event = useMemo(() => {
         if (!rawEvent) return null;
@@ -120,26 +268,73 @@ export default function CheckoutClient({ id }) {
             location: rawEvent.location || rawEvent.venue || rawEvent.address || 'Venue',
         };
     }, [rawEvent]);
-
-    const ticketPrice = useMemo(() => {
-        if (ticketPriceParam) return parseFloat(ticketPriceParam);
-        return event?.price ?? 499;
-    }, [ticketPriceParam, event?.price]);
     
 
+    const baseAmount = useMemo(() => {
+        if (selectedSeats.length > 0) {
+            return selectedSeats.reduce((s, seat) => s + (seat.isFree ? 0 : Number(seat.price) || 0), 0);
+        }
+        return ticketPrice * qty;
+    }, [selectedSeats, ticketPrice, qty]);
+
     const validCoupons = useMemo(() => {
-        if (!availableCoupons) return [];
-        return availableCoupons.filter(c => {
-            if (c.expiry_date && new Date(c.expiry_date) < new Date()) return false;
-            if (c.applicable_events && c.applicable_events.length > 0) {
-                if (!c.applicable_events.includes(id)) return false;
-            }
-            if (qty < (c.min_tickets || 1)) return false;
-            if (c.max_tickets && qty > c.max_tickets) return false;
-            
-            return true;
-        });
-    }, [availableCoupons, id, qty]);
+        const list = [];
+        
+        // 1. Add standard coupons from coupons table
+        if (availableCoupons) {
+            availableCoupons.forEach(c => {
+                if (c.expiry_date && new Date(c.expiry_date) < new Date()) return;
+                if (c.applicable_events && c.applicable_events.length > 0) {
+                    if (!c.applicable_events.includes(id)) return;
+                }
+                if (qty < (c.min_tickets || 1)) return;
+                if (c.max_tickets && qty > c.max_tickets) return;
+                
+                list.push({
+                    id: c.id,
+                    code: c.code,
+                    type: c.type,
+                    value: c.value,
+                    min_tickets: c.min_tickets,
+                    max_tickets: c.max_tickets,
+                    isCampaign: false
+                });
+            });
+        }
+
+        // 2. Add mapped campaigns
+        if (mappedCampaigns) {
+            mappedCampaigns.forEach(map => {
+                const pc = map.partner_campaigns;
+                if (!pc || !pc.is_active) return;
+                
+                const today = new Date().toISOString().split('T')[0];
+                if (pc.start_date && pc.start_date > today) return;
+                if (pc.end_date && pc.end_date < today) return;
+
+                // Parse campaign offer details
+                const parsed = parseCampaignOffer(pc);
+                
+                // Enforce minimum order value
+                if (baseAmount < parsed.min_order) return;
+
+                list.push({
+                    id: pc.id,
+                    code: parsed.code,
+                    displayName: parsed.displayName,
+                    type: parsed.type,
+                    value: parsed.value,
+                    min_order: parsed.min_order,
+                    isCampaign: true,
+                    offerTitle: pc.offer_title,
+                    partnerName: pc.partners?.name || '',
+                    partnerLogo: pc.partners?.logo_url || ''
+                });
+            });
+        }
+        
+        return list;
+    }, [availableCoupons, mappedCampaigns, id, qty, baseAmount]);
 
     useEffect(() => {
         if (notification) {
@@ -170,17 +365,67 @@ export default function CheckoutClient({ id }) {
     
     useEffect(() => {
         if (appliedCoupon) {
-            if (qty < (appliedCoupon.min_tickets || 1)) {
-                setAppliedCoupon(null);
-                setCouponError(`Minimum ${appliedCoupon.min_tickets} tickets required for this coupon`);
-                setNotification({ message: `Coupon removed: Minimum ${appliedCoupon.min_tickets} tickets required`, type: 'info' });
-            } else if (appliedCoupon.max_tickets && qty > appliedCoupon.max_tickets) {
-                setAppliedCoupon(null);
-                setCouponError(`Maximum ${appliedCoupon.max_tickets} tickets allowed for this coupon`);
-                setNotification({ message: `Coupon removed: Maximum ${appliedCoupon.max_tickets} tickets allowed`, type: 'info' });
+            if (appliedCoupon.isCampaign) {
+                if (baseAmount < (appliedCoupon.min_order || 0)) {
+                    setAppliedCoupon(null);
+                    setCouponError(`Minimum order value ₹${appliedCoupon.min_order} required for this offer`);
+                    setNotification({ message: `Offer removed: Minimum order value ₹${appliedCoupon.min_order} required`, type: 'info' });
+                }
+            } else {
+                if (qty < (appliedCoupon.min_tickets || 1)) {
+                    setAppliedCoupon(null);
+                    setCouponError(`Minimum ${appliedCoupon.min_tickets} tickets required for this coupon`);
+                    setNotification({ message: `Coupon removed: Minimum ${appliedCoupon.min_tickets} tickets required`, type: 'info' });
+                } else if (appliedCoupon.max_tickets && qty > appliedCoupon.max_tickets) {
+                    setAppliedCoupon(null);
+                    setCouponError(`Maximum ${appliedCoupon.max_tickets} tickets allowed for this coupon`);
+                    setNotification({ message: `Coupon removed: Maximum ${appliedCoupon.max_tickets} tickets allowed`, type: 'info' });
+                }
             }
         }
-    }, [qty, appliedCoupon]);
+    }, [qty, baseAmount, appliedCoupon]);
+
+    // Auto-apply best bulk discount
+    useEffect(() => {
+        if (!validCoupons) return;
+        
+        // Find all applicable bulk auto coupons
+        const applicableBulkCoupons = validCoupons.filter(c => c.code.startsWith('BULK_AUTO_'));
+        
+        if (applicableBulkCoupons.length > 0) {
+            // Find the one that gives the maximum discount
+            let bestCoupon = null;
+            let maxDiscount = 0;
+            
+            applicableBulkCoupons.forEach(coupon => {
+                let currentDiscount = 0;
+                if (coupon.type === 'percent') {
+                    currentDiscount = (baseAmount * coupon.value) / 100;
+                } else {
+                    currentDiscount = coupon.value;
+                }
+                
+                if (currentDiscount > maxDiscount) {
+                    maxDiscount = currentDiscount;
+                    bestCoupon = coupon;
+                }
+            });
+            
+            if (bestCoupon) {
+                // Only override if no coupon is applied OR if the currently applied coupon is a worse bulk coupon
+                if (!appliedCoupon || (appliedCoupon.code.startsWith('BULK_AUTO_') && appliedCoupon.id !== bestCoupon.id)) {
+                    setAppliedCoupon({...bestCoupon, displayName: bestCoupon.displayName || 'Bulk Booking Discount'});
+                    setNotification({ message: `Bulk Discount Applied Successfully!`, type: 'success' });
+                }
+            }
+        } else {
+            // If qty decreased and a bulk discount is no longer valid, we should remove it
+            if (appliedCoupon && appliedCoupon.code.startsWith('BULK_AUTO_')) {
+                setAppliedCoupon(null);
+                setNotification({ message: `Bulk Discount removed as requirements are no longer met`, type: 'info' });
+            }
+        }
+    }, [validCoupons, baseAmount, qty]);
 
     useEffect(() => {
         if (isSuccess && existingBooking && existingBooking.status === "Confirmed") {
@@ -204,12 +449,6 @@ export default function CheckoutClient({ id }) {
         }
     }, [isSuccess, existingBooking, event]);
 
-    const baseAmount = useMemo(() => {
-        if (selectedSeats.length > 0) {
-            return selectedSeats.reduce((s, seat) => s + (seat.isFree ? 0 : Number(seat.price) || 0), 0);
-        }
-        return ticketPrice * qty;
-    }, [selectedSeats, ticketPrice, qty]);
 
     const { data: organiserData } = useSupabaseQuery('organisers', (q) => q.eq('id', event?.organiser_id || event?.organiserId).single(), [event?.organiser_id, event?.organiserId]);
 
@@ -235,13 +474,73 @@ export default function CheckoutClient({ id }) {
         return getFeeBreakdown(discountedBase, resolvedFeeSettings);
     }, [baseAmount, discountAmount, resolvedFeeSettings]);
 
+    const handleQtyChange = async (newQty) => {
+        if (newQty < 1) return;
+        setQty(newQty);
+        if (sessionToken) {
+            try {
+                await fetch('/api/booking-session/update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sessionToken, quantity: newQty })
+                });
+                await fetch(`/api/booking-session/pricing?sessionToken=${sessionToken}`);
+            } catch (err) {
+                console.error("Failed to update quantity in session:", err);
+            }
+        }
+    };
+
     const handleApplyCoupon = async (directCode = null) => {
         const codeToUse = (typeof directCode === 'string' ? directCode : couponCode).trim().toUpperCase();
         if (!codeToUse || !user || !event) return;
         
         setIsValidatingCoupon(true);
         setCouponError('');
+
+        if (sessionToken) {
+            try {
+                const res = await fetch('/api/booking-session/apply-coupon', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sessionToken, code: codeToUse })
+                });
+                const data = await res.json();
+                if (data.success && data.pricing) {
+                    const pricing = data.pricing;
+                    setAppliedCoupon({
+                        code: pricing.appliedCouponCode,
+                        id: pricing.appliedCouponId,
+                        campaignId: pricing.appliedCampaignId,
+                        campaignCode: pricing.appliedCampaignCode,
+                        isCampaign: !!pricing.appliedCampaignId,
+                        value: Number(pricing.discountAmount) || 0,
+                        type: 'fixed'
+                    });
+                    setNotification({ message: `Coupon applied successfully!`, type: 'success' });
+                } else {
+                    setCouponError(data.message || "Invalid coupon code");
+                    setAppliedCoupon(null);
+                }
+            } catch (err) {
+                console.error("Failed to apply coupon:", err);
+                setCouponError("Failed to validate coupon");
+            } finally {
+                setIsValidatingCoupon(false);
+            }
+            return;
+        }
         
+        // 1. Check if there is a matching campaign in the valid campaigns list
+        const campaignCoupon = validCoupons.find(c => c.isCampaign && c.code === codeToUse);
+        if (campaignCoupon) {
+            setAppliedCoupon(campaignCoupon);
+            setNotification({ message: `Campaign "${campaignCoupon.displayName}" applied successfully!`, type: 'success' });
+            setIsValidatingCoupon(false);
+            return;
+        }
+        
+        // 2. Otherwise, validate via API (legacy support)
         try {
             const res = await fetch('/api/coupons/validate', {
                 method: 'POST',
@@ -268,10 +567,29 @@ export default function CheckoutClient({ id }) {
         }
     };
 
-    const removeCoupon = () => {
-        setAppliedCoupon(null);
-        setCouponCode('');
-        setCouponError('');
+    const removeCoupon = async () => {
+        if (sessionToken) {
+            setIsValidatingCoupon(true);
+            try {
+                await fetch('/api/booking-session/apply-coupon', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sessionToken, code: null })
+                });
+                setAppliedCoupon(null);
+                setCouponCode('');
+                setCouponError('');
+                setNotification({ message: `Coupon removed`, type: 'info' });
+            } catch (err) {
+                console.error("Failed to remove coupon:", err);
+            } finally {
+                setIsValidatingCoupon(false);
+            }
+        } else {
+            setAppliedCoupon(null);
+            setCouponCode('');
+            setCouponError('');
+        }
     };
 
     const handleConfirmPay = async () => {
@@ -280,8 +598,64 @@ export default function CheckoutClient({ id }) {
         setIsProcessing(true);
         try {
             const isFree = total === 0;
+
+            if (sessionToken) {
+                // 1. Accept terms on session
+                await fetch('/api/booking-session/accept-terms', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sessionToken, termsAccepted: true })
+                });
+
+                // 2. Create the order / booking row
+                const orderRes = await fetch('/api/booking-session/create-order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sessionToken })
+                });
+                const orderData = await orderRes.json();
+                if (!orderRes.ok || !orderData.success) {
+                    throw new Error(orderData.error || "Order creation failed");
+                }
+                const bookingId = orderData.bookingId;
+
+                // 3. Handle free vs paid
+                if (isFree) {
+                    const verifyRes = await fetch('/api/booking-session/verify-payment', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ sessionToken, gateway: 'Free' })
+                    });
+                    const verifyData = await verifyRes.json();
+                    if (!verifyRes.ok || !verifyData.success) {
+                        throw new Error(verifyData.error || "Payment verification failed");
+                    }
+
+                    setLastBooking({
+                        id: bookingId,
+                        eventId: String(event.id),
+                        eventName: event.title,
+                        amount: 0,
+                        baseAmount: 0,
+                        convenienceFee: 0,
+                        gst: 0,
+                        tickets: qty,
+                        status: 'Confirmed',
+                        date: new Date().toISOString().split('T')[0],
+                        ticketType: selectedPackageName || 'General Admission',
+                        paymentMethod: 'Free',
+                        location: event.location,
+                        meetingUrl: event.meetingUrl,
+                    });
+                    setBookingDone(true);
+                } else {
+                    router.push(`/events/book/payment?bookingId=${bookingId}&id=${id}&sessionToken=${sessionToken}`);
+                }
+                return;
+            }
+
+            // Legacy non-session booking flow
             const breakdown = getFeeBreakdown(baseAmount, resolvedFeeSettings);
-            
             let regData = {};
             if (regDataParam) {
                 try { regData = JSON.parse(regDataParam); } catch { }
@@ -301,7 +675,7 @@ export default function CheckoutClient({ id }) {
                     platform_revenue: breakdown.platformRevenue,
                     partner_total: breakdown.partnerTotal,
                     discount_amount: discountAmount,
-                    coupon_id: appliedCoupon?.id || null,
+                    coupon_id: (!appliedCoupon || appliedCoupon.isCampaign) ? null : appliedCoupon.id,
                     total_price: total,
                     status: isFree ? 'Confirmed' : 'Pending',
                     scanned: false,
@@ -312,6 +686,8 @@ export default function CheckoutClient({ id }) {
                         name: user.name || "Guest User",
                         email: user.identifier || user.email || "",
                         phone: user.phone || "",
+                        applied_campaign_id: appliedCoupon?.isCampaign ? appliedCoupon.id : null,
+                        applied_campaign_code: appliedCoupon?.isCampaign ? appliedCoupon.code : null,
                         ...regData
                     }
                 }])
@@ -423,6 +799,37 @@ export default function CheckoutClient({ id }) {
             setIsProcessing(false);
         }
     };
+
+    if (sessionLoading) {
+        return (
+            <main className="min-h-screen bg-[#FAF9F6] flex items-center justify-center">
+                <div className="flex flex-col items-center gap-4">
+                    <div className="w-12 h-12 border-4 border-pink-500 border-t-transparent rounded-full animate-spin" />
+                    <p className="text-slate-500 font-bold uppercase tracking-widest text-[11px]">Loading Secure Session...</p>
+                </div>
+            </main>
+        );
+    }
+
+    if (sessionErrorMsg) {
+        return (
+            <main className="min-h-screen bg-[#FAF9F6] flex items-center justify-center">
+                <div className="bg-white p-12 rounded-[3rem] shadow-xl text-center space-y-6 max-w-md">
+                    <div className="w-20 h-20 bg-rose-50 rounded-full flex items-center justify-center text-rose-500 mx-auto">
+                        <Info size={40} />
+                    </div>
+                    <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">Session Error</h2>
+                    <p className="text-slate-500 font-medium">{sessionErrorMsg}</p>
+                    <button 
+                        onClick={() => router.push(`/events/book?id=${id || propId}`)}
+                        className="px-8 py-3 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] hover:scale-105 transition-all"
+                    >
+                        Restart Booking
+                    </button>
+                </div>
+            </main>
+        );
+    }
 
     if (eventLoading || !storageLoaded) {
         return (
@@ -553,10 +960,10 @@ export default function CheckoutClient({ id }) {
                 <div className="space-y-4">
                     <div className="flex items-center justify-between">
                         <button 
-                            onClick={() => router.push(`/events/detail?id=${id}`)}
+                            onClick={() => router.back()}
                             className="inline-flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-slate-900 transition-colors"
                         >
-                            <ChevronLeft size={16} /> Back to Event Registration
+                            <ChevronLeft size={16} /> Back
                         </button>
                         <div className="px-4 py-2 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg">
                             Step 1 of 2
@@ -564,13 +971,13 @@ export default function CheckoutClient({ id }) {
                     </div>
 
                     <div className="bg-white rounded-[40px] border border-slate-100 shadow-2xl overflow-hidden">
-                        <div className="flex flex-col gap-0">
-                            <div className="w-full relative shrink-0 overflow-hidden bg-slate-900">
-                                <div className="h-64 lg:h-full lg:min-h-[600px] relative">
-                                    <img src={event.img} alt="" className="w-full h-full object-cover opacity-60" />
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent lg:bg-gradient-to-r" />
-                                    <div className="absolute bottom-12 left-12 right-12">
-                                        <h3 className="text-3xl font-black text-white uppercase tracking-tight leading-tight mb-3 drop-shadow-xl">{event.title}</h3>
+                        <div className="flex flex-col lg:flex-row gap-0">
+                            <div className="w-full lg:w-[35%] relative shrink-0 overflow-hidden bg-slate-900 flex items-center justify-center">
+                                <div className="h-48 md:h-56 lg:h-full w-full relative flex flex-col justify-center">
+                                    <img src={event.img} alt="" className="w-full h-full object-cover lg:object-contain opacity-80 p-0 lg:p-8" />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+                                    <div className="absolute bottom-6 left-6 right-6 lg:bottom-10 lg:left-10 lg:right-10">
+                                        <h3 className="text-2xl lg:text-3xl font-black text-white uppercase tracking-tight leading-tight mb-2 lg:mb-3 drop-shadow-xl">{event.title}</h3>
                                         <div className="flex items-center gap-2 text-[10px] font-black text-white/90 uppercase tracking-[0.2em]">
                                             <div className="w-8 h-8 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20">
                                                 <Calendar size={14} className="text-pink-400" />
@@ -610,9 +1017,9 @@ export default function CheckoutClient({ id }) {
                                                 </div>
                                                 <div className="flex items-center justify-between sm:justify-end gap-4 md:gap-6 w-full sm:w-auto">
                                                     <div className="flex items-center gap-2 md:gap-4 bg-white border border-slate-200 rounded-xl px-2 md:px-4 py-2 shadow-sm shrink-0">
-                                                        <button onClick={() => setQty(Math.max(1, qty - 1))} className="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-pink-500 transition-colors bg-slate-50 rounded-lg"><Minus size={12} /></button>
+                                                        <button onClick={() => handleQtyChange(Math.max(1, qty - 1))} className="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-pink-500 transition-colors bg-slate-50 rounded-lg"><Minus size={12} /></button>
                                                         <span className="text-sm text-slate-900 font-black min-w-[20px] text-center">{qty}</span>
-                                                        <button onClick={() => setQty(qty + 1)} className="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-pink-500 transition-colors bg-slate-50 rounded-lg"><Plus size={12} /></button>
+                                                        <button onClick={() => handleQtyChange(qty + 1)} className="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-pink-500 transition-colors bg-slate-50 rounded-lg"><Plus size={12} /></button>
                                                     </div>
                                                     <div className="text-right shrink-0">
                                                         <span className="text-[16px] md:text-xl font-black text-slate-900 tracking-tighter">₹{baseAmount.toFixed(2)}</span>
@@ -669,18 +1076,27 @@ export default function CheckoutClient({ id }) {
                                                                         }}
                                                                         className="w-full text-left p-3 bg-slate-50 hover:bg-pink-50 rounded-xl border border-slate-100 hover:border-pink-200 transition-all flex items-center justify-between group"
                                                                     >
-                                                                        <div>
-                                                                            <div className="flex items-center gap-2 mb-1">
+                                                                        <div className="flex-1 min-w-0 pr-2">
+                                                                            <div className="flex items-center gap-2 mb-1 flex-wrap">
                                                                                 <span className="text-[11px] font-black text-slate-900 uppercase tracking-widest bg-white px-2 py-0.5 rounded-md border border-slate-200 group-hover:border-pink-200 transition-colors">
-                                                                                    {coupon.code}
+                                                                                    {coupon.code.startsWith('BULK_AUTO_') ? 'Bulk Offer' : coupon.code}
                                                                                 </span>
                                                                                 <span className="text-[9px] font-bold text-emerald-500 uppercase tracking-widest">
-                                                                                    Active
+                                                                                    {coupon.isCampaign ? 'Brand Offer' : coupon.code.startsWith('BULK_AUTO_') ? 'Auto Applied' : 'Active'}
                                                                                 </span>
                                                                             </div>
-                                                                            <p className="text-[11px] font-bold text-slate-500">
-                                                                                Save ₹{coupon.value} on total value
+                                                                            <p className="text-[11px] font-bold text-slate-500 line-clamp-2">
+                                                                                {coupon.offerTitle || (coupon.type === 'percent' ? `Save ${coupon.value}% on tickets` : `Save ₹${coupon.value} on total value`)}
                                                                             </p>
+                                                                            <div className="flex items-center gap-2 mt-1">
+                                                                                {coupon.partnerLogo ? (
+                                                                                    <img src={coupon.partnerLogo} alt={coupon.partnerName} className="h-5 object-contain rounded" />
+                                                                                ) : coupon.partnerName ? (
+                                                                                    <p className="text-[9px] font-bold text-pink-500 uppercase tracking-wider">
+                                                                                        Partner: {coupon.partnerName}
+                                                                                    </p>
+                                                                                ) : null}
+                                                                            </div>
                                                                         </div>
                                                                         <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center shadow-sm text-slate-300 group-hover:text-pink-500 transition-colors shrink-0">
                                                                             <ArrowRight size={14} />
@@ -696,7 +1112,7 @@ export default function CheckoutClient({ id }) {
                                             <div className="flex items-center justify-between p-3 bg-emerald-50 rounded-xl border border-emerald-100 border-dashed">
                                                 <div className="flex items-center gap-2 text-emerald-600">
                                                     <Sparkles size={14} />
-                                                    <span className="text-[10px] font-black uppercase tracking-widest">{appliedCoupon.code} Applied</span>
+                                                    <span className="text-[10px] font-black uppercase tracking-widest">{appliedCoupon.code.startsWith('BULK_AUTO_') ? 'Bulk Discount' : appliedCoupon.code} Applied</span>
                                                 </div>
                                                 <button onClick={removeCoupon} className="text-slate-400 hover:text-rose-500 transition-colors">
                                                     <X size={16} />
@@ -705,39 +1121,57 @@ export default function CheckoutClient({ id }) {
                                         )}
                                     </div>
 
-                                    <div className="space-y-2 pt-3 border-t border-slate-100">
-                                        <div className="flex justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                            <span>Sub Total</span>
-                                            <span className="text-slate-900">₹{baseAmount.toFixed(2)}</span>
+                                    <div className="space-y-0 pt-4 mt-2">
+                                        {/* Ticket Price */}
+                                        <div className="flex justify-between items-center text-[13px] font-medium text-slate-700 py-1.5">
+                                            <span>Ticket(s) price</span>
+                                            <span>₹{baseAmount.toFixed(2)}</span>
                                         </div>
-                                        <div className="flex justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                            <span>Platform Fee</span>
-                                            <span className="text-slate-900">₹{convenienceFee.toFixed(2)}</span>
+
+                                        {/* Convenience Fees */}
+                                        <div className="flex flex-col text-[13px] text-slate-700 py-1.5 w-full">
+                                            <div 
+                                                className="flex justify-between items-start cursor-pointer font-medium text-slate-700 hover:text-slate-900 transition-colors" 
+                                                onClick={() => setShowFeesDropdown(!showFeesDropdown)}
+                                            >
+                                                <div className="flex items-center gap-1">
+                                                    <span>Convenience fees</span>
+                                                    <ChevronDown size={14} className={`transition-transform text-slate-400 ${showFeesDropdown ? 'rotate-180' : ''}`} />
+                                                </div>
+                                                <span className="font-medium shrink-0">₹{(convenienceFee + gst).toFixed(2)}</span>
+                                            </div>
+                                            {showFeesDropdown && (
+                                                <div className="text-[11px] text-slate-500 mt-2 space-y-1.5 font-medium pb-2">
+                                                    <div className="flex justify-between">
+                                                        <span>Base Amount</span>
+                                                        <span>₹{convenienceFee.toFixed(2)}</span>
+                                                    </div>
+                                                    <div className="flex justify-between">
+                                                        <span>Integrated GST (IGST) @ {gstPercent}%</span>
+                                                        <span>₹{gst.toFixed(2)}</span>
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
-                                        <div className="flex justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                            <span>GST ({gstPercent}%)</span>
-                                            <span className="text-slate-900">₹{gst.toFixed(2)}</span>
-                                        </div>
+
+
+                                        {/* Discount */}
                                         {appliedCoupon && (
-                                            <div className="flex justify-between text-[10px] font-black text-emerald-500 uppercase tracking-widest pt-4 border-t border-slate-50">
+                                            <div className="flex justify-between items-center text-[13px] font-medium text-emerald-600 mt-3 pt-3 border-t border-slate-100">
                                                 <span>Discount Applied</span>
                                                 <span>- ₹{discountAmount.toFixed(2)}</span>
                                             </div>
                                         )}
-                                    </div>
 
-                                    <div className="space-y-3 pt-3 border-t-[3px] border-dotted border-slate-100">
-                                        <div className="flex justify-between items-end">
-                                            <div className="space-y-1">
-                                                <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.25em]">Total Amount</p>
-                                                <div className="text-3xl font-black text-slate-900 tracking-tighter flex items-baseline gap-1">
-                                                    <span className="text-2xl font-bold opacity-20 tracking-normal mr-2">₹</span>{total.toFixed(2)}
-                                                </div>
-                                            </div>
-                                            <div className="w-14 h-14 rounded-2xl bg-pink-50 flex items-center justify-center text-pink-500 shadow-inner border border-pink-100/50">
-                                                <CreditCard size={32} />
-                                            </div>
+                                        {/* Separator */}
+                                        <div className="border-t border-dashed border-slate-300 my-4"></div>
+
+                                        <div className="flex justify-between items-center mb-6">
+                                            <span className="text-[15px] font-black text-slate-900">Order total</span>
+                                            <span className="text-lg font-black text-slate-900">₹{total.toFixed(2)}</span>
                                         </div>
+                                        
+
 
                                         <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-100/50">
                                             <label className="flex items-center gap-3 cursor-pointer group">

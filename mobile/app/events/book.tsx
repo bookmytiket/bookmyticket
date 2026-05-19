@@ -79,6 +79,40 @@ export default function BookEventScreen() {
   const [venueLayouts, setVenueLayouts] = useState<any[]>([]);
   const [selectedBlock, setSelectedBlock] = useState<any>(null);
 
+  // Auto-apply best bulk discount
+  useEffect(() => {
+    if (!availableCoupons || availableCoupons.length === 0) return;
+    
+    const applicableBulkCoupons = availableCoupons.filter(c => 
+      c.code?.startsWith('BULK_AUTO_') && quantity >= (c.min_tickets || 1)
+    );
+    
+    if (applicableBulkCoupons.length > 0) {
+      let bestCoupon = null;
+      let maxDiscount = 0;
+      const base = ticketPrice * quantity; // Simplified base for bulk checking
+      
+      applicableBulkCoupons.forEach(coupon => {
+        let currentDiscount = 0;
+        if (coupon.type === 'percent') {
+          currentDiscount = (base * coupon.value) / 100;
+        } else {
+          currentDiscount = coupon.value;
+        }
+        if (currentDiscount > maxDiscount) {
+          maxDiscount = currentDiscount;
+          bestCoupon = coupon;
+        }
+      });
+      
+      if (bestCoupon && (!appliedCoupon || (appliedCoupon.code?.startsWith('BULK_AUTO_') && appliedCoupon.id !== bestCoupon.id))) {
+        setAppliedCoupon({...bestCoupon, offerTitle: bestCoupon.offerTitle || 'Bulk Booking Discount'});
+      }
+    } else if (appliedCoupon?.code?.startsWith('BULK_AUTO_')) {
+      setAppliedCoupon(null);
+    }
+  }, [availableCoupons, quantity, ticketPrice]);
+
   useEffect(() => {
     if (!id) return;
 
@@ -178,13 +212,48 @@ export default function BookEventScreen() {
 
   const fetchCoupons = async () => {
     try {
-      const { data, error } = await supabase
+      // 1. Fetch standard platform coupons
+      const { data: stdCoupons, error } = await supabase
         .from('coupons')
         .select('*')
         .eq('is_active', true)
         .order('created_at', { ascending: false });
+        
       if (error) throw error;
-      setAvailableCoupons(data || []);
+      
+      let allOffers = [...(stdCoupons || [])];
+      
+      // 2. Fetch Partner Campaigns (Brand Offers)
+      const { data: campaigns } = await supabase
+        .from('partner_campaigns')
+        .select('*, partner_campaign_coupons!inner(*)')
+        .eq('partner_campaign_coupons.status', 'Active');
+        
+      if (campaigns && campaigns.length > 0) {
+        const campaignOffers = campaigns.map(camp => {
+           const activeCoupon = Array.isArray(camp.partner_campaign_coupons) 
+              ? camp.partner_campaign_coupons.find((c: any) => c.status === 'Active') 
+              : camp.partner_campaign_coupons;
+              
+           if (!activeCoupon) return null;
+           
+           return {
+             id: activeCoupon.id,
+             code: activeCoupon.coupon_code,
+             type: camp.discount_type === 'Percentage' ? 'percent' : 'fixed',
+             value: camp.discount_value,
+             isCampaign: true,
+             campaignId: camp.id,
+             offerTitle: camp.campaign_name || (camp.discount_type === 'Percentage' ? `Flat ${camp.discount_value}% OFF` : `Flat ₹${camp.discount_value} OFF`),
+             partnerName: 'Brand Offer',
+             min_tickets: 1 // default for campaigns
+           };
+        }).filter(Boolean);
+        
+        allOffers = [...allOffers, ...campaignOffers];
+      }
+      
+      setAvailableCoupons(allOffers);
     } catch (err) {
       console.error('Error fetching coupons:', err);
     }
@@ -349,23 +418,44 @@ export default function BookEventScreen() {
         .eq('is_active', true)
         .maybeSingle();
 
-      if (error) throw error;
-      if (!data) {
+      let appliedData = data;
+
+      if (!appliedData) {
+        // Try partner campaigns
+        const { data: campaign } = await supabase
+          .from('partner_campaigns')
+          .select('*, partner_campaign_coupons!inner(*)')
+          .eq('partner_campaign_coupons.coupon_code', code)
+          .eq('partner_campaign_coupons.status', 'Active')
+          .maybeSingle();
+          
+        if (campaign) {
+          appliedData = {
+            code: code,
+            type: campaign.discount_type === 'Percentage' ? 'percent' : 'fixed',
+            value: campaign.discount_value,
+            isCampaign: true,
+            campaignId: campaign.id
+          };
+        }
+      }
+
+      if (!appliedData) {
         Alert.alert('Invalid Coupon', 'This coupon code does not exist or is expired.');
         return;
       }
 
       // Check constraints
-      if (data.expiry_date && new Date(data.expiry_date) < new Date()) {
+      if (appliedData.expiry_date && new Date(appliedData.expiry_date) < new Date()) {
         Alert.alert('Expired', 'This coupon has expired.');
         return;
       }
-      if (quantity < (data.min_tickets || 1)) {
-        Alert.alert('Limit Not Met', `Minimum ${data.min_tickets || 1} tickets required.`);
+      if (quantity < (appliedData.min_tickets || 1)) {
+        Alert.alert('Limit Not Met', `Minimum ${appliedData.min_tickets || 1} tickets required.`);
         return;
       }
 
-      setAppliedCoupon(data);
+      setAppliedCoupon(appliedData);
       Alert.alert('Success', `Coupon ${code} applied successfully!`);
     } catch (err) {
       Alert.alert('Error', 'Failed to validate coupon.');
@@ -1367,9 +1457,20 @@ export default function BookEventScreen() {
                   >
                     <RNView style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                       <RNView>
-                        <Text style={{ fontSize: 16, fontWeight: '900', color: colors.text }}>{c.code}</Text>
+                        <RNView style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                          <Text style={{ fontSize: 16, fontWeight: '900', color: colors.text }}>
+                            {c.code?.startsWith('BULK_AUTO_') ? 'Bulk Discount' : c.code}
+                          </Text>
+                          {(c.isCampaign || c.code?.startsWith('BULK_AUTO_')) && (
+                            <RNView style={{ backgroundColor: '#10b98120', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                               <Text style={{ color: '#10b981', fontSize: 9, fontWeight: '800' }}>
+                                 {c.code?.startsWith('BULK_AUTO_') ? 'BULK OFFER' : 'BRAND OFFER'}
+                               </Text>
+                            </RNView>
+                          )}
+                        </RNView>
                         <Text style={{ fontSize: 12, color: colors.muted, marginTop: 4 }}>
-                          {c.type === 'percent' ? `${c.value}% Off` : `₹${c.value} Off`}
+                          {c.offerTitle || (c.type === 'percent' ? `${c.value}% Off` : `₹${c.value} Off`)}
                         </Text>
                       </RNView>
                       <ArrowLeft size={20} color={colors.tint} style={{ transform: [{ rotate: '180deg' }] }} />

@@ -310,7 +310,9 @@ export default function EventBookClient({ id }) {
         );
     }
 
-    const handleContinue = () => {
+    const [isCreatingSession, setIsCreatingSession] = useState(false);
+
+    const handleContinue = async () => {
         if (isMarathon) {
             if (bookingStep < 5) {
                 if (bookingStep === 1 && !selectedPackage) return;
@@ -328,17 +330,48 @@ export default function EventBookClient({ id }) {
         }
 
         if (isSeating && selectedSeats.length === 0) return;
-        const seatParam = selectedSeats.length > 0
-            ? `&seats=${encodeURIComponent(JSON.stringify(selectedSeats))}`
-            : '';
-        const qtyParam = !isSeating ? `&qty=${quantity}` : '';
-        const packageParam = selectedPackage ? `&package=${encodeURIComponent(selectedPackage.title || selectedPackage.name)}` : '';
-        const priceParam = !isSeating ? `&price=${bookingType === 'audience_free' ? 0 : currentPrice}` : '';
-        const participantParam = isMarathon ? `&participant=${encodeURIComponent(JSON.stringify(participantData))}` : '';
-        const teamParam = isTournament ? `&team=${encodeURIComponent(JSON.stringify(teamData))}` : '';
-        const typeParam = bookingType === 'audience_free' ? `&type=audience_free` : (isTournament ? `&type=tournament` : '');
-        
-        router.push(`/events/book/checkout?id=${id}${qtyParam}${seatParam}${packageParam}${priceParam}${participantParam}${teamParam}${typeParam}`);
+
+        if (!user) {
+            router.push(`/signin?redirect=${encodeURIComponent('/events/book?id=' + id)}`);
+            return;
+        }
+
+        setIsCreatingSession(true);
+        try {
+            const pkgId = selectedPackage ? (selectedPackage.title || selectedPackage.name) : (isSeating ? 'Seating' : 'Standard');
+            const response = await fetch('/api/booking-session', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    eventId: id,
+                    packageId: pkgId,
+                    quantity: quantity,
+                    userId: user.id,
+                    participantData: {
+                        selectedSeats,
+                        participant: participantData,
+                        team: teamData,
+                        bookingType,
+                        price: currentPrice
+                    },
+                    pricingSnapshot: {
+                        baseAmount: baseAmount,
+                        totalPrice: total
+                    }
+                })
+            });
+
+            const data = await response.json();
+            if (data.success && data.sessionToken) {
+                router.push(`/events/book/checkout?sessionToken=${data.sessionToken}&id=${id}`);
+            } else {
+                throw new Error(data.error || "Failed to create checkout session");
+            }
+        } catch (err) {
+            console.error("Error creating booking session:", err);
+            alert("Booking session initialization failed: " + err.message);
+            setIsCreatingSession(false);
+        }
     };
 
     return (

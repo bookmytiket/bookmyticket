@@ -381,13 +381,7 @@ export default function DynamicEventClient({ event }) {
                 {/* Back Button & Category Badge */}
                 <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
                     <button 
-                        onClick={() => {
-                            if (window.history.length > 1) {
-                                router.back();
-                            } else {
-                                router.push('/');
-                            }
-                        }}
+                        onClick={() => router.push('/events')}
                         className="group flex items-center gap-2 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] hover:text-slate-900 transition-all"
                     >
                         <div className="w-8 h-8 rounded-full border border-slate-100 flex items-center justify-center group-hover:bg-slate-900 group-hover:text-white transition-all">
@@ -563,25 +557,6 @@ export default function DynamicEventClient({ event }) {
                                                     />
                                                 </div>
                                             )}
-                                        </div>
-
-                                        <div className="space-y-2 w-full md:w-32">
-                                            <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Quantity</h4>
-                                            <div className="flex items-center h-10 bg-slate-50 border border-slate-100 rounded-lg px-2">
-                                                <button 
-                                                    onClick={() => setQuantity(prev => Math.max(1, prev - 1))}
-                                                    className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-white hover:shadow-sm transition-all text-slate-400 hover:text-[#ec4899]"
-                                                >
-                                                    <Minus size={12} />
-                                                </button>
-                                                <div className="flex-1 text-center font-black text-slate-900 text-xs">{quantity}</div>
-                                                <button 
-                                                    onClick={() => setQuantity(prev => Math.min(10, prev + 1))}
-                                                    className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-white hover:shadow-sm transition-all text-slate-400 hover:text-[#ec4899]"
-                                                >
-                                                    <Plus size={12} />
-                                                </button>
-                                            </div>
                                         </div>
                                     </div>
 

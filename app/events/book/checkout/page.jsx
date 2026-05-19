@@ -6,11 +6,12 @@ import { useSearchParams } from 'next/navigation';
 export default function EventCheckoutPage() {
     const searchParams = useSearchParams();
     const id = searchParams.get('id');
+    const sessionToken = searchParams.get('sessionToken');
     
-    if (!id) {
+    if (!id && !sessionToken) {
         return (
             <div style={{ paddingTop: '150px', textAlign: 'center' }}>
-                <h2>Event ID is required</h2>
+                <h2>Checkout Session or Event ID is required</h2>
             </div>
         );
     }
@@ -22,7 +23,7 @@ export default function EventCheckoutPage() {
                 <p style={{ marginTop: '20px', color: '#64748b', fontWeight: 'bold' }}>LOADING SECURE CHECKOUT...</p>
             </div>
         }>
-            <CheckoutClient id={id} />
+            <CheckoutClient id={id} sessionToken={sessionToken} />
         </React.Suspense>
     );
 }

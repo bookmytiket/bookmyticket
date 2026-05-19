@@ -269,7 +269,7 @@ export default function EventDetailClient({ id }) {
             {/* --- FLOATING BACK BUTTON --- */}
             <div className="fixed top-6 left-6 z-[100] pointer-events-none">
                 <button 
-                    onClick={() => router.push("/")}
+                    onClick={() => router.push("/events")}
                     className="pointer-events-auto p-3 bg-white/80 backdrop-blur-md rounded-full shadow-lg border border-white/20 text-slate-600 hover:text-pink-500 hover:scale-110 transition-all group"
                 >
                     <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform" />

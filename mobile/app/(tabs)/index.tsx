@@ -167,7 +167,7 @@ export default function HomeScreen() {
   }, [user, role, hasCheckedRedirect]);
 
   const displayPromos = useMemo(() => {
-    const data = couponsRaw || PROMOS;
+    const data = couponsRaw && couponsRaw.length > 0 ? couponsRaw : PROMOS;
     return data.map(c => ({
       code: c.code || 'COUPON',
       text: c.title || c.text,
@@ -717,66 +717,68 @@ export default function HomeScreen() {
     )}
 
         {/* 2. Promo Ticker - Landscape Box Style */}
-        <View style={{ paddingHorizontal: 20, paddingVertical: 10, backgroundColor: colors.background }}>
-          <Pressable 
-            style={{ 
-              height: 70, 
-              backgroundColor: colors.card, 
-              borderRadius: 16, 
-              flexDirection: 'row', 
-              overflow: 'hidden', 
-              borderWidth: 1, 
-              borderColor: colors.border,
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.05,
-              shadowRadius: 8,
-              elevation: 3
-            }}
-            onPress={() => {
-              if (!user) {
-                router.push('/auth/sign-in');
-              } else {
-                router.push('/coupons');
-              }
-            }}
-          >
-            <MotiView
-              key={currentPromoIndex}
-              from={{ rotateX: '-90deg', opacity: 0 }}
-              animate={{ rotateX: '0deg', opacity: 1 }}
-              transition={{ type: 'timing', duration: 600 }}
-              style={{ flex: 1, flexDirection: 'row' }}
+        {displayPromos.length > 0 && (
+          <View style={{ paddingHorizontal: 20, paddingVertical: 10, backgroundColor: colors.background }}>
+            <Pressable 
+              style={{ 
+                height: 70, 
+                backgroundColor: colors.card, 
+                borderRadius: 16, 
+                flexDirection: 'row', 
+                overflow: 'hidden', 
+                borderWidth: 1, 
+                borderColor: colors.border,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.05,
+                shadowRadius: 8,
+                elevation: 3
+              }}
+              onPress={() => {
+                if (!user) {
+                  router.push('/auth/sign-in');
+                } else {
+                  router.push('/coupons');
+                }
+              }}
             >
-              {/* Left Image */}
-              <View style={{ width: 80, height: '100%', backgroundColor: '#f1f5f9' }}>
-                <Image 
-                  source={{ uri: displayPromos[currentPromoIndex].img }} 
-                  style={{ width: '100%', height: '100%' }} 
-                  resizeMode="cover"
-                />
-              </View>
-              
-              {/* Right Content */}
-              <View style={{ flex: 1, paddingHorizontal: 12, justifyContent: 'center' }}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Text style={{ fontSize: 10, fontWeight: '900', color: '#f844a4' }}>{displayPromos[currentPromoIndex].code}</Text>
-                  <View style={{ backgroundColor: '#f0fdf4', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
-                    <Text style={{ fontSize: 8, fontWeight: '900', color: '#16a34a' }}>LIMITED DEAL</Text>
-                  </View>
+              <MotiView
+                key={currentPromoIndex}
+                from={{ rotateX: '-90deg', opacity: 0 }}
+                animate={{ rotateX: '0deg', opacity: 1 }}
+                transition={{ type: 'timing', duration: 600 }}
+                style={{ flex: 1, flexDirection: 'row' }}
+              >
+                {/* Left Image */}
+                <View style={{ width: 80, height: '100%', backgroundColor: '#f1f5f9' }}>
+                  <Image 
+                    source={{ uri: displayPromos[currentPromoIndex]?.img }} 
+                    style={{ width: '100%', height: '100%' }} 
+                    resizeMode="cover"
+                  />
                 </View>
-                <Text style={{ fontSize: 13, fontWeight: '900', color: colors.text, marginTop: 2 }} numberOfLines={1}>
-                  {displayPromos[currentPromoIndex].text}
-                </Text>
-              </View>
+                
+                {/* Right Content */}
+                <View style={{ flex: 1, paddingHorizontal: 12, justifyContent: 'center' }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Text style={{ fontSize: 10, fontWeight: '900', color: '#f844a4' }}>{displayPromos[currentPromoIndex]?.code}</Text>
+                    <View style={{ backgroundColor: '#f0fdf4', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                      <Text style={{ fontSize: 8, fontWeight: '900', color: '#16a34a' }}>LIMITED DEAL</Text>
+                    </View>
+                  </View>
+                  <Text style={{ fontSize: 13, fontWeight: '900', color: colors.text, marginTop: 2 }} numberOfLines={1}>
+                    {displayPromos[currentPromoIndex]?.text}
+                  </Text>
+                </View>
 
-              {/* Action */}
-              <View style={{ width: 30, backgroundColor: '#f844a4', justifyContent: 'center', alignItems: 'center' }}>
-                <ChevronRight size={16} color="#fff" />
-              </View>
-            </MotiView>
-          </Pressable>
-        </View>
+                {/* Action */}
+                <View style={{ width: 30, backgroundColor: '#f844a4', justifyContent: 'center', alignItems: 'center' }}>
+                  <ChevronRight size={16} color="#fff" />
+                </View>
+              </MotiView>
+            </Pressable>
+          </View>
+        )}
 
         {/* 3. Search Bar */}
         <View style={[styles.searchContainer, { backgroundColor: colors.background, paddingTop: 15 }]}>

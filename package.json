@@ -36,6 +36,7 @@
     "next": "^16.2.1",
     "nodemailer": "^8.0.3",
     "ogl": "^1.0.11",
+    "pg": "^8.21.0",
     "postprocessing": "^6.38.3",
     "qrcode.react": "^4.2.0",
     "razorpay": "^2.9.6",

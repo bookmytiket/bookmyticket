@@ -8,7 +8,7 @@ export const DEFAULT_FEE_SETTINGS = {
   convenienceFeeValue: 7, 
   gstPercent: 18,
   partnerSharePercent: 2,
-  gstApplyOn: 'both',
+  gstApplyOn: 'platform_fee',
 };
 
 export function resolveFeeSettings(systemSettings: any = {}, organiserConfig: any = {}, eventConfig: any = {}) {

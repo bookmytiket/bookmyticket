@@ -7,20 +7,17 @@ const supabase = createClient(
 );
 
 async function check() {
-  const { data: event, error: eventError } = await supabase
-    .from('events')
-    .select('*')
-    .eq('id', '4aba9725-9b4b-4df4-85d6-9741d95abea5')
-    .single();
-  console.log("Event:", event, eventError);
+  const { data: users, error: usersError } = await supabase.auth.admin.listUsers();
+  const user = users.users.find(u => u.email === 'rajavasu97@gmail.com');
+  console.log("Auth User:", user);
 
-  if (event) {
+  if (user) {
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('*')
-      .eq('id', event.organiser_id || event.organiserId)
+      .eq('id', user.id)
       .maybeSingle();
-    console.log("Organiser Profile:", profile, profileError);
+    console.log("Profile:", profile, profileError);
   }
 }
 

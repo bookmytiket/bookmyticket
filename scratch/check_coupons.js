@@ -2,21 +2,10 @@ import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 dotenv.config({ path: '.env.local' });
 
-const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-);
+const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
-async function checkCoupons() {
-    const { data, error } = await supabase.from('coupons').select('*');
-    if (error) {
-        console.error("Error fetching coupons:", error);
-        return;
-    }
-    console.log("Coupons in database:");
-    data.forEach(c => {
-        console.log(`- Code: ${c.code}, Active: ${c.is_active}, Min Tickets: ${c.min_tickets}, Events: ${JSON.stringify(c.applicable_events)}`);
-    });
+async function check() {
+  const { data, error } = await supabase.from('coupons').select('*').limit(1);
+  console.log(error ? error : Object.keys(data[0] || {}));
 }
-
-checkCoupons();
+check();
