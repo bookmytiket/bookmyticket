@@ -7,45 +7,79 @@ import { useToast } from '@/context/ToastContext';
 
 export default function FinanceCrossVerificationAdmin({ t, theme }) {
     const [reconciliations, setReconciliations] = useState([]);
+    const [allReconciliations, setAllReconciliations] = useState([]);
+    const [organizers, setOrganizers] = useState([]);
+    const [selectedOrganizer, setSelectedOrganizer] = useState('all');
     const [stats, setStats] = useState({ totalCustomerPaid: 0, totalAdminRev: 0, totalOrganizerRev: 0, mismatchCount: 0 });
     const [loading, setLoading] = useState(true);
     const { showToast } = useToast();
 
     useEffect(() => {
-        fetchReconciliations();
+        fetchData();
     }, []);
 
-    const fetchReconciliations = async () => {
+    const fetchData = async () => {
         setLoading(true);
         try {
-            const { data, error } = await supabase
-                .from('settlement_reconciliation_logs')
-                .select('*, bookings(id, base_amount, total_amount, platform_charge, gst_amount, discount_amount)')
-                .order('created_at', { ascending: false })
-                .limit(100);
+            // Fetch Organizers
+            const { data: orgData } = await supabase
+                .from('organisers')
+                .select('id, brand_name, full_name')
+                .eq('status', 'approved');
+            
+            if (orgData) setOrganizers(orgData);
 
-            if (error) {
-                if (error.message.includes('relation "settlement_reconciliation_logs" does not exist')) {
-                    showToast("Database tables for new accounting system are not yet created. Please run the SQL migration.", "warning");
-                }
-                setReconciliations([]);
-            } else {
-                setReconciliations(data || []);
-                const s = { totalCustomerPaid: 0, totalAdminRev: 0, totalOrganizerRev: 0, mismatchCount: 0 };
-                (data || []).forEach(row => {
-                    s.totalCustomerPaid += Number(row.customer_paid || 0);
-                    s.totalAdminRev += Number(row.admin_actual || 0);
-                    s.totalOrganizerRev += Number(row.organizer_actual || 0);
-                    if (row.verification_status === 'mismatch') s.mismatchCount++;
-                });
-                setStats(s);
-            }
+            await fetchReconciliations();
         } catch (err) {
             console.error(err);
         } finally {
             setLoading(false);
         }
     };
+
+    const fetchReconciliations = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('settlement_reconciliation_logs')
+                .select('*, bookings(id, base_amount, total_amount, platform_charge, gst_amount, discount_amount, events(organiser_id))')
+                .order('created_at', { ascending: false })
+                .limit(500);
+
+            if (error) {
+                if (error.message.includes('relation "settlement_reconciliation_logs" does not exist')) {
+                    showToast("Database tables for new accounting system are not yet created. Please run the SQL migration.", "warning");
+                }
+                setAllReconciliations([]);
+                setReconciliations([]);
+            } else {
+                setAllReconciliations(data || []);
+                applyFilter(data || [], selectedOrganizer);
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    const applyFilter = (data, orgId) => {
+        let filtered = data;
+        if (orgId !== 'all') {
+            filtered = data.filter(row => row.bookings?.events?.organiser_id === orgId);
+        }
+        setReconciliations(filtered);
+        
+        const s = { totalCustomerPaid: 0, totalAdminRev: 0, totalOrganizerRev: 0, mismatchCount: 0 };
+        filtered.forEach(row => {
+            s.totalCustomerPaid += Number(row.customer_paid || 0);
+            s.totalAdminRev += Number(row.admin_actual || 0);
+            s.totalOrganizerRev += Number(row.organizer_actual || 0);
+            if (row.verification_status === 'mismatch') s.mismatchCount++;
+        });
+        setStats(s);
+    };
+
+    useEffect(() => {
+        applyFilter(allReconciliations, selectedOrganizer);
+    }, [selectedOrganizer]);
 
     if (loading) {
         return <div style={{ padding: "40px", textAlign: "center", color: t.textSub }}>Loading financial ledger...</div>;
@@ -57,6 +91,31 @@ export default function FinanceCrossVerificationAdmin({ t, theme }) {
                 <div>
                     <h3 style={{ fontSize: "22px", fontWeight: 900, color: t.textMain, letterSpacing: '-0.02em', margin: 0 }}>Settlement Cross-Verification</h3>
                     <p style={{ fontSize: '12px', color: t.textSub, marginTop: '4px' }}>Automated matching of Customer Paid vs (Admin Revenue + Organizer Net Revenue).</p>
+                </div>
+                <div>
+                    <select 
+                        value={selectedOrganizer}
+                        onChange={(e) => setSelectedOrganizer(e.target.value)}
+                        style={{
+                            padding: "10px 16px",
+                            borderRadius: "12px",
+                            border: `1px solid ${t.border}`,
+                            backgroundColor: t.bg,
+                            color: t.textMain,
+                            fontSize: "13px",
+                            fontWeight: 600,
+                            outline: "none",
+                            cursor: "pointer",
+                            minWidth: "200px"
+                        }}
+                    >
+                        <option value="all">All Organisers</option>
+                        {organizers.map(org => (
+                            <option key={org.id} value={org.id}>
+                                {org.brand_name || org.full_name}
+                            </option>
+                        ))}
+                    </select>
                 </div>
             </div>
 
