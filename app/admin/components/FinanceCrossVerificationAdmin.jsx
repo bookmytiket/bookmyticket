@@ -25,7 +25,7 @@ export default function FinanceCrossVerificationAdmin({ t, theme }) {
             const { data: orgData } = await supabase
                 .from('organisers')
                 .select('id, brand_name, full_name')
-                .eq('status', 'approved');
+                .eq('status', 'active');
             
             if (orgData) setOrganizers(orgData);
 
