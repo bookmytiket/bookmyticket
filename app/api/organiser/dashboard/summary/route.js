@@ -76,31 +76,73 @@ export async function GET(request) {
     const targetId = organiser?.id || user.id;
     const now = new Date().toISOString();
 
-    // 3. Fetch Stats in Parallel
-    const [eventsCount, activeCount, expiredCount, bookingsData] = await Promise.all([
-      // Total Events
-      adminClient.from('events').select('id', { count: 'exact', head: true }).eq('organiser_id', targetId),
-      // Active Events
-      adminClient.from('events').select('id', { count: 'exact', head: true })
-        .eq('organiser_id', targetId)
-        .eq('publish_status', 'published')
-        .gt('event_end_at', now),
-      // Expired Events
-      adminClient.from('events').select('id', { count: 'exact', head: true })
-        .eq('organiser_id', targetId)
-        .lt('event_end_at', now),
+    // 3. Fetch Events and Bookings
+    const [eventsResult, bookingsData] = await Promise.all([
+      // Fetch all events for organiser to classify status
+      adminClient.from('events')
+        .select('id, publish_status, listing_status, event_start_at, event_end_at, date, time, end_date, end_time, dynamic_config')
+        .eq('organiser_id', targetId),
       // Bookings & Revenue (Join through events)
       adminClient.from('bookings').select('total_amount, event_id, events!inner(organiser_id)')
         .eq('events.organiser_id', targetId)
     ]);
 
+    const eventsList = eventsResult.data || [];
+    let totalEvents = eventsList.length;
+    let activeEvents = 0;
+    let expiredEvents = 0;
+    let draftEvents = 0;
+    let archivedEvents = 0;
+
+    const parseDate = (d, t) => {
+      if (!d) return null;
+      let formattedD = d;
+      if (typeof d === "string" && (d.includes("/") || d.includes("-"))) {
+          const separator = d.includes("/") ? "/" : "-";
+          const parts = d.split(separator);
+          if (parts[0].length <= 2) { // DD-MM-YYYY
+              const [day, month, year] = parts;
+              formattedD = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+          }
+      }
+      const dt = new Date(`${formattedD}T${t || "00:00"}`);
+      return isNaN(dt.getTime()) ? null : dt;
+    };
+
+    eventsList.forEach((e) => {
+      const pStatus = e.publish_status || (e.status === 'draft' ? 'draft' : 'published');
+      const lStatus = e.listing_status || (e.status === 'archived' ? 'archived' : 'active');
+      
+      let endAt = e.event_end_at ? new Date(e.event_end_at) : null;
+
+      if (!endAt) {
+        const configBasic = e.dynamic_config?.basicInfo || {};
+        const startDateStr = e.date || e.startDate || configBasic.startDate;
+        const endDateStr = e.end_date || e.endDate || configBasic.endDate || startDateStr;
+        const endTimeStr = e.end_time || e.endTime || configBasic.endTime || "23:59";
+
+        endAt = parseDate(endDateStr, endTimeStr);
+      }
+
+      const evalNow = new Date();
+      if (lStatus === "archived") {
+        archivedEvents++;
+      } else if (pStatus === "draft") {
+        draftEvents++;
+      } else if (endAt && endAt < evalNow) {
+        expiredEvents++;
+      } else {
+        activeEvents++;
+      }
+    });
+
     const totalRevenue = bookingsData.data?.reduce((sum, b) => sum + (Number(b.total_amount) || 0), 0) || 0;
 
     return NextResponse.json({
       stats: {
-        totalEvents: eventsCount.count || 0,
-        activeEvents: activeCount.count || 0,
-        expiredEvents: expiredCount.count || 0,
+        totalEvents: totalEvents,
+        activeEvents: activeEvents,
+        expiredEvents: expiredEvents,
         totalBookings: bookingsData.data?.length || 0,
         revenue: totalRevenue,
         organiserName: organiser?.business_name || 'Organiser'
