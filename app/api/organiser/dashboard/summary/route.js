@@ -83,7 +83,8 @@ export async function GET(request) {
         .select('id, publish_status, listing_status, event_start_at, event_end_at, date, time, end_date, end_time, dynamic_config')
         .eq('organiser_id', targetId),
       // Bookings & Revenue (Join through events)
-      adminClient.from('bookings').select('total_amount, event_id, events!inner(organiser_id)')
+      adminClient.from('bookings')
+        .select('id, total_price, base_amount, partner_total, ticket_count, status, event_id, events!inner(organiser_id)')
         .eq('events.organiser_id', targetId)
     ]);
 
@@ -136,15 +137,29 @@ export async function GET(request) {
       }
     });
 
-    const totalRevenue = bookingsData.data?.reduce((sum, b) => sum + (Number(b.total_amount) || 0), 0) || 0;
+    // Revenue = sum of organizer earnings (partner_total) from confirmed bookings
+    const confirmedBookings = bookingsData.data?.filter(b => b.status === 'Confirmed') || [];
+    const totalRevenue = confirmedBookings.reduce((sum, b) =>
+        sum + (Number(b.partner_total) || Number(b.base_amount) || 0), 0);
+    const totalTicketsSold = confirmedBookings.reduce((sum, b) =>
+        sum + (Number(b.ticket_count) || 1), 0);
+
+    // Fetch organiser wallet balance
+    const { data: walletData } = await adminClient
+        .from('organiser_wallet')
+        .select('balance')
+        .eq('organiser_id', targetId)
+        .maybeSingle();
 
     return NextResponse.json({
       stats: {
         totalEvents: totalEvents,
         activeEvents: activeEvents,
         expiredEvents: expiredEvents,
-        totalBookings: bookingsData.data?.length || 0,
+        totalBookings: confirmedBookings.length,
+        totalTicketsSold: totalTicketsSold,
         revenue: totalRevenue,
+        walletBalance: walletData?.balance || 0,
         organiserName: organiser?.business_name || 'Organiser'
       },
       ownership: {

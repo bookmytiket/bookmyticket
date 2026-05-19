@@ -176,7 +176,7 @@ import {
   LifeBuoy,
   Briefcase,
   Package,
-  DollarSign,
+  IndianRupee,
   Activity,
   TrendingUp,
   PieChart,
@@ -5777,7 +5777,7 @@ function OrganiserPanel() {
                       height: "56px",
                     }}
                   >
-                    <DollarSign size={28} />
+                    <IndianRupee size={28} />
                   </div>
                   <p
                     style={{
@@ -8311,7 +8311,7 @@ function OrganiserPanel() {
 
           const myEventIds = new Set(events.map((e) => String(e.id)));
           const myBookings = convexBookings.filter((b) =>
-            myEventIds.has(String(b.event_id)),
+            myEventIds.has(String(b.event_id)) && b.status !== "Pending"
           );
           const filtered =
             statusFilter === "all" ||

@@ -6,190 +6,257 @@ const supabaseAdmin = createClient(
 );
 
 /**
- * Unified function to handle payment success:
- * 1. Credits only base amount to provider's wallet (organiser or service provider)
- * 2. Records platform fee and GST separately in platform_revenue
- * 3. Supports real-time updates via Supabase
+ * Unified payment success handler.
+ * Runs all financial settlement steps after a confirmed payment.
+ *
+ * Steps:
+ *  1. Update payment record to success
+ *  2. Insert booking_financials
+ *  3. Credit organiser wallet (organiser_wallet table)
+ *  4. Insert wallet_transaction record
+ *  5. Insert organizer_revenue_ledger
+ *  6. Insert admin_revenue_ledger
+ *  7. Insert tax_ledger (GST)
+ *  8. Insert settlement_reconciliation_log
+ *  9. Insert organiser_transactions (earnings dashboard)
+ * 10. Insert revenue_ledger (admin revenue dashboard)
+ * 11. Insert platform_revenue
  */
 export async function handlePaymentSuccess({
     paymentId,
-    type, // 'event' or 'service'
-    referenceId, // bookingId or serviceOrderId
+    type,          // 'event' | 'service'
+    referenceId,   // bookingId
     totalAmount,
-    baseAmount,
+    baseAmount,    // organiser payout amount
     platformFee,
     gstAmount,
-    providerId,
+    providerId,    // organiser_id
+    eventId,       // optional - for linking to event
     description
 }) {
+    const errors = [];
     try {
-        console.log(`[Payment] Processing success for ${type} ${referenceId}. Base: ${baseAmount}, Fees: ${platformFee + gstAmount}`);
+        console.log(`[Payment] Processing success for ${type} ${referenceId}. Base: ${baseAmount}, Fee: ${platformFee}, GST: ${gstAmount}, Total: ${totalAmount}`);
 
-        // 1. Update Payment Record
-        const { error: payUpdateErr } = await supabaseAdmin
-            .from('payments')
-            .update({
-                status: 'success',
-                total_amount: totalAmount,
-                base_amount: baseAmount,
-                platform_fee: platformFee,
-                gst_amount_col: gstAmount,
-                updated_at: new Date().toISOString()
-            })
-            .eq('id', paymentId);
-        
-        if (payUpdateErr) console.warn("Payment update error:", payUpdateErr.message);
+        const adminTotal = Number(platformFee || 0) + Number(gstAmount || 0);
 
-        // 2. Record Platform Revenue
-        const { error: revErr } = await supabaseAdmin
-            .from('platform_revenue')
-            .insert({
-                payment_id: paymentId,
-                platform_fee: platformFee,
-                gst_amount: gstAmount,
-                total_revenue: platformFee + gstAmount
-            });
-        
-        if (revErr) console.warn("Revenue record error:", revErr.message);
-
-        // 3. Credit Provider Wallet
-        const walletTable = type === 'event' ? 'organiser_wallet' : 'provider_wallet';
-        const idColumn = type === 'event' ? 'organiser_id' : 'service_provider_id';
-
-            // --- NEW ACCOUNTING MODULE START ---
-            let newAccountingSuccess = false;
-            try {
-                // 3a. Record Booking Financials
-                const { error: bfErr } = await supabaseAdmin.from('booking_financials').insert({
-                    booking_id: referenceId,
-                    ticket_amount: totalAmount - platformFee - gstAmount + (baseAmount < totalAmount ? totalAmount - platformFee - gstAmount - baseAmount : 0),
-                    discount_amount: (baseAmount < totalAmount ? totalAmount - platformFee - gstAmount - baseAmount : 0),
-                    discounted_ticket_amount: baseAmount,
+        // ── STEP 1: Update Payment Record to Success ──────────────────────────
+        if (paymentId) {
+            const { error: payUpdateErr } = await supabaseAdmin
+                .from('payments')
+                .update({
+                    status: 'success',
+                    total_amount: totalAmount,
+                    base_amount: baseAmount,
                     platform_fee: platformFee,
-                    gst_amount: gstAmount,
-                    gateway_fee: 0,
-                    final_paid: totalAmount,
-                    organizer_credit: baseAmount,
-                    admin_credit: platformFee + gstAmount
-                });
-                if (bfErr) console.warn("Booking financials insert error (table may not exist yet):", bfErr.message);
-
-                // 3b. Record Organizer Revenue Ledger
-                const { error: orlErr } = await supabaseAdmin.from('organizer_revenue_ledger').insert({
-                    organizer_id: providerId,
-                    booking_id: referenceId,
-                    gross_ticket_revenue: baseAmount + (totalAmount > baseAmount + platformFee + gstAmount ? totalAmount - baseAmount - platformFee - gstAmount : 0),
-                    discount_amount: (totalAmount > baseAmount + platformFee + gstAmount ? totalAmount - baseAmount - platformFee - gstAmount : 0),
-                    net_organizer_revenue: baseAmount,
-                    settlement_credit_amount: baseAmount,
-                    settlement_status: 'credited'
-                });
-                if (orlErr) console.warn("Organizer revenue ledger error:", orlErr.message);
-
-                // 3c. Record Settlement Reconciliation Log
-                await supabaseAdmin.from('settlement_reconciliation_logs').insert({
-                    booking_id: referenceId,
-                    customer_paid: totalAmount,
-                    organizer_expected: baseAmount,
-                    organizer_actual: baseAmount,
-                    admin_expected: platformFee + gstAmount,
-                    admin_actual: platformFee + gstAmount,
-                    variance_amount: 0,
-                    verification_status: 'matched'
-                });
-
-                // 3d. Update Unified Wallets Table
-                const { data: adminWallet } = await supabaseAdmin.from('wallets').select('id, balance').eq('user_id', providerId).eq('wallet_type', 'organizer').maybeSingle();
-                if (adminWallet) {
-                    await supabaseAdmin.from('wallets').update({ balance: adminWallet.balance + baseAmount }).eq('id', adminWallet.id);
-                    await supabaseAdmin.from('wallet_transactions').insert({
-                        wallet_id: adminWallet.id,
-                        booking_id: referenceId,
-                        transaction_type: 'credit',
-                        amount: baseAmount,
-                        description: `Earnings from booking ${referenceId}`
-                    });
-                    newAccountingSuccess = true;
-                } else {
-                    // Try inserting wallet if missing
-                    const { data: newWallet, error: nwErr } = await supabaseAdmin.from('wallets').insert({
-                        user_id: providerId,
-                        wallet_type: 'organizer',
-                        balance: baseAmount
-                    }).select('id').maybeSingle();
-                    if (newWallet) {
-                        await supabaseAdmin.from('wallet_transactions').insert({
-                            wallet_id: newWallet.id,
-                            booking_id: referenceId,
-                            transaction_type: 'credit',
-                            amount: baseAmount,
-                            description: `Earnings from booking ${referenceId}`
-                        });
-                        newAccountingSuccess = true;
-                    }
-                }
-            } catch (err) {
-                console.warn("New accounting module execution skipped, proceeding with legacy:", err.message);
+                    gst_amount_col: gstAmount,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', paymentId);
+            if (payUpdateErr) {
+                errors.push(`payments update: ${payUpdateErr.message}`);
+                console.warn('[Payment] payments update error:', payUpdateErr.message);
             }
-            // --- NEW ACCOUNTING MODULE END ---
+        }
 
-            // LEGACY WALLET SYNC (Fallback/Parallel until full UI migration)
-            if (providerId && baseAmount > 0) {
-                // Fetch current balance
-                const { data: walletData, error: walletFetchErr } = await supabaseAdmin
-                    .from(walletTable)
-                    .select('balance')
-                    .eq(idColumn, providerId)
-                    .maybeSingle();
+        // ── STEP 2: Booking Financials ─────────────────────────────────────────
+        const { error: bfErr } = await supabaseAdmin.from('booking_financials').insert({
+            booking_id: referenceId,
+            ticket_amount: Number(baseAmount) || 0,
+            discount_amount: 0,
+            discounted_ticket_amount: Number(baseAmount) || 0,
+            platform_fee: Number(platformFee) || 0,
+            gst_amount: Number(gstAmount) || 0,
+            gateway_fee: 0,
+            final_paid: Number(totalAmount) || 0,
+            organizer_credit: Number(baseAmount) || 0,
+            admin_credit: adminTotal
+        });
+        if (bfErr) {
+            errors.push(`booking_financials: ${bfErr.message}`);
+            console.warn('[Payment] booking_financials insert error:', bfErr.message);
+        }
 
-                const newBalance = (walletData?.balance || 0) + Number(baseAmount);
+        // ── STEP 3: Credit Organiser Wallet ────────────────────────────────────
+        if (providerId && baseAmount > 0) {
+            const walletTable = type === 'event' ? 'organiser_wallet' : 'provider_wallet';
+            const idColumn = type === 'event' ? 'organiser_id' : 'service_provider_id';
 
-                // Update balance
-                await supabaseAdmin
-                    .from(walletTable)
-                    .upsert({
-                        [idColumn]: providerId,
-                        balance: newBalance,
-                        updated_at: new Date().toISOString()
-                    }, { onConflict: idColumn });
+            const { data: walletData } = await supabaseAdmin
+                .from(walletTable)
+                .select('balance')
+                .eq(idColumn, providerId)
+                .maybeSingle();
 
-                // Record Transaction
-                await supabaseAdmin
-                    .from('wallet_transactions')
-                    .insert({
-                        provider_type: type === 'event' ? 'organiser' : 'service',
-                        provider_id: providerId,
-                        amount: baseAmount,
-                        type: 'credit',
-                        reference_id: referenceId,
-                        description: description || `Earnings from ${type} ${referenceId}`
-                    });
+            const newBalance = (walletData?.balance || 0) + Number(baseAmount);
 
-                // Legacy Sync (Optional - if Organisers table still used for balance)
-                if (type === 'event') {
-                    try {
-                        const { data: orgData } = await supabaseAdmin
+            await supabaseAdmin
+                .from(walletTable)
+                .upsert({
+                    [idColumn]: providerId,
+                    balance: newBalance,
+                    updated_at: new Date().toISOString()
+                }, { onConflict: idColumn });
+
+            // Legacy organisers table wallet_balance sync
+            if (type === 'event') {
+                try {
+                    const { data: orgData } = await supabaseAdmin
+                        .from('organisers')
+                        .select('wallet_balance')
+                        .eq('id', providerId)
+                        .maybeSingle();
+                    if (orgData) {
+                        await supabaseAdmin
                             .from('organisers')
-                            .select('wallet_balance')
-                            .eq('id', providerId)
-                            .single();
-                        
-                        if (orgData) {
-                            await supabaseAdmin
-                                .from('organisers')
-                                .update({ wallet_balance: (orgData.wallet_balance || 0) + Number(baseAmount) })
-                                .eq('id', providerId);
-                        }
-                    } catch (e) {}
-                }
-
-                console.log(`[Payment] Successfully credited ${baseAmount} to ${providerId} (${type})`);
-                return { success: true, newBalance, newAccountingSuccess };
+                            .update({ wallet_balance: (orgData.wallet_balance || 0) + Number(baseAmount) })
+                            .eq('id', providerId);
+                    }
+                } catch (e) { /* non-critical */ }
             }
+        }
 
-        return { success: true };
+        // ── STEP 4: Wallet Transaction Record ──────────────────────────────────
+        if (providerId && baseAmount > 0) {
+            const { error: wtErr } = await supabaseAdmin.from('wallet_transactions').insert({
+                organiser_id: type === 'event' ? providerId : null,
+                provider_id: providerId,
+                provider_type: type === 'event' ? 'organiser' : 'service',
+                booking_id: referenceId,
+                amount: Number(baseAmount),
+                type: 'credit',
+                description: description || `Earnings from ${type} booking #${referenceId?.slice(-8)?.toUpperCase()}`
+            });
+            if (wtErr) {
+                errors.push(`wallet_transactions: ${wtErr.message}`);
+                console.warn('[Payment] wallet_transactions insert error:', wtErr.message);
+            }
+        }
+
+        // ── STEP 5: Organizer Revenue Ledger ──────────────────────────────────
+        const { error: orlErr } = await supabaseAdmin.from('organizer_revenue_ledger').insert({
+            organizer_id: providerId,
+            booking_id: referenceId,
+            gross_ticket_revenue: Number(totalAmount) || 0,
+            discount_amount: 0,
+            net_organizer_revenue: Number(baseAmount) || 0,
+            settlement_credit_amount: Number(baseAmount) || 0,
+            settlement_status: 'credited'
+        });
+        if (orlErr) {
+            errors.push(`organizer_revenue_ledger: ${orlErr.message}`);
+            console.warn('[Payment] organizer_revenue_ledger error:', orlErr.message);
+        }
+
+        // ── STEP 6: Admin Revenue Ledger ──────────────────────────────────────
+        const { error: arlErr } = await supabaseAdmin.from('admin_revenue_ledger').insert({
+            booking_id: referenceId,
+            payment_id: paymentId || null,
+            organizer_id: providerId,
+            platform_fee: Number(platformFee) || 0,
+            gst_amount: Number(gstAmount) || 0,
+            gateway_charges: 0,
+            admin_total: adminTotal
+        });
+        if (arlErr) {
+            errors.push(`admin_revenue_ledger: ${arlErr.message}`);
+            console.warn('[Payment] admin_revenue_ledger error:', arlErr.message);
+        }
+
+        // ── STEP 7: Tax Ledger (GST) ──────────────────────────────────────────
+        if (gstAmount > 0) {
+            const { error: tlErr } = await supabaseAdmin.from('tax_ledger').insert({
+                booking_id: referenceId,
+                organizer_id: providerId,
+                tax_type: 'GST',
+                tax_amount: Number(gstAmount) || 0,
+                tax_rate: 18,
+                taxable_amount: Number(platformFee) || 0,
+                invoice_reference: referenceId ? `INV-${referenceId.slice(-8).toUpperCase()}` : null
+            });
+            if (tlErr) {
+                errors.push(`tax_ledger: ${tlErr.message}`);
+                console.warn('[Payment] tax_ledger error:', tlErr.message);
+            }
+        }
+
+        // ── STEP 8: Settlement Reconciliation Log ─────────────────────────────
+        const { error: srlErr } = await supabaseAdmin.from('settlement_reconciliation_logs').insert({
+            booking_id: referenceId,
+            organizer_id: providerId,
+            customer_paid: Number(totalAmount) || 0,
+            organizer_expected: Number(baseAmount) || 0,
+            organizer_actual: Number(baseAmount) || 0,
+            admin_expected: adminTotal,
+            admin_actual: adminTotal,
+            variance_amount: 0,
+            verification_status: 'matched'
+        });
+        if (srlErr) {
+            errors.push(`settlement_reconciliation_logs: ${srlErr.message}`);
+            console.warn('[Payment] settlement_reconciliation_logs error:', srlErr.message);
+        }
+
+        // ── STEP 9: Organiser Transactions (earnings dashboard) ───────────────
+        const { error: otErr } = await supabaseAdmin.from('organiser_transactions').insert({
+            organiser_id: providerId,
+            booking_id: referenceId,
+            event_id: eventId || null,
+            amount: Number(baseAmount) || 0,
+            type: 'credit',
+            description: description || `Booking earnings #${referenceId?.slice(-8)?.toUpperCase()}`,
+            status: 'completed'
+        });
+        if (otErr) {
+            errors.push(`organiser_transactions: ${otErr.message}`);
+            console.warn('[Payment] organiser_transactions error:', otErr.message);
+        }
+
+        // ── STEP 10: Revenue Ledger (admin dashboard) ─────────────────────────
+        const { error: rlErr } = await supabaseAdmin.from('revenue_ledger').insert({
+            booking_id: referenceId,
+            payment_id: paymentId || null,
+            organizer_id: providerId,
+            event_id: eventId || null,
+            type: type || 'event',
+            total_collected: Number(totalAmount) || 0,
+            organizer_payout: Number(baseAmount) || 0,
+            platform_fee: Number(platformFee) || 0,
+            gst_amount: Number(gstAmount) || 0,
+            net_platform_revenue: adminTotal,
+            status: 'settled'
+        });
+        if (rlErr) {
+            errors.push(`revenue_ledger: ${rlErr.message}`);
+            console.warn('[Payment] revenue_ledger error:', rlErr.message);
+        }
+
+        // ── STEP 11: Platform Revenue ─────────────────────────────────────────
+        if (paymentId) {
+            const { error: prErr } = await supabaseAdmin.from('platform_revenue').insert({
+                payment_id: paymentId,
+                platform_fee: Number(platformFee) || 0,
+                gst_amount: Number(gstAmount) || 0,
+                total_revenue: adminTotal,
+                partner_share: 0,
+                net_platform_revenue: adminTotal
+            });
+            if (prErr) {
+                errors.push(`platform_revenue: ${prErr.message}`);
+                console.warn('[Payment] platform_revenue error:', prErr.message);
+            }
+        }
+
+        if (errors.length > 0) {
+            console.warn(`[Payment] Completed with ${errors.length} non-critical errors:`, errors);
+        } else {
+            console.log(`[Payment] ✅ All settlement steps completed successfully for booking ${referenceId}`);
+        }
+
+        return { success: true, errors };
+
     } catch (err) {
-        console.error("[Payment] Critical Failure:", err.message);
-        return { success: false, error: err.message };
+        console.error('[Payment] Critical Failure:', err.message);
+        return { success: false, error: err.message, errors };
     }
 }

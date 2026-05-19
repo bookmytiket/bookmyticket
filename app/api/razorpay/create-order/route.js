@@ -17,7 +17,7 @@ export async function POST(request) {
             .from('payment_gateways')
             .select('config')
             .eq('name', 'Razorpay')
-            .single();
+            .maybeSingle();
 
         if (gateway?.config) {
             key_id = gateway.config.keyId || gateway.config.apiKey || key_id;

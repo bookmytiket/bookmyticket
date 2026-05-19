@@ -246,7 +246,8 @@ export default function EventBookClient({ id }) {
         : (event?.dynamic_config?.price || event?.price || 499);
     const currentPrice = selectedPackage ? selectedPackage.price : ticketPrice;
     const baseAmount = isSeating ? totalSeatPrice : currentPrice * quantity;
-    const { convenienceFee, gst, total } = getFeeBreakdown(bookingType === 'audience_free' ? 0 : baseAmount, feeSettings);
+    const breakdown = getFeeBreakdown(bookingType === 'audience_free' ? 0 : baseAmount, feeSettings);
+    const { convenienceFee, gst, total } = breakdown;
 
     const [bookingStep, setBookingStep] = useState(1);
     const [participantData, setParticipantData] = useState({});
@@ -361,7 +362,13 @@ export default function EventBookClient({ id }) {
                     },
                     pricingSnapshot: {
                         baseAmount: baseAmount,
-                        totalPrice: total
+                        convenienceFee: breakdown.convenienceFee,
+                        gst: breakdown.gst,
+                        gstPercent: breakdown.gstPercent,
+                        totalPrice: breakdown.total,
+                        partnerBonus: breakdown.partnerBonus,
+                        platformRevenue: breakdown.platformRevenue,
+                        partnerTotal: breakdown.partnerTotal
                     }
                 })
             });

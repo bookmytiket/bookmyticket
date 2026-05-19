@@ -409,7 +409,7 @@ export default function BookingAnalytics({ events = [], bookings = [], theme = '
                                     </div>
                                     <Activity size={24} style={{ color: '#3b82f6' }} />
                                 </div>
-                                <ResponsiveContainer width="100%" height="80%">
+                                <ResponsiveContainer width="100%" height="80%" minWidth={1} minHeight={1}>
                                     <AreaChart data={stats.salesTrendData}>
                                         <defs>
                                             <linearGradient id="revenueFill" x1="0" y1="0" x2="0" y2="1">
@@ -434,7 +434,7 @@ export default function BookingAnalytics({ events = [], bookings = [], theme = '
                                     </div>
                                     <BarChart3 size={24} style={{ color: '#8b5cf6' }} />
                                 </div>
-                                <ResponsiveContainer width="100%" height="80%">
+                                <ResponsiveContainer width="100%" height="80%" minWidth={1} minHeight={1}>
                                     <BarChart data={stats.eventData} layout="vertical" margin={{ left: 20 }}>
                                         <XAxis type="number" hide />
                                         <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} width={120} tick={{ fill: t.textMain, fontSize: 12, fontWeight: 800 }} />
@@ -457,7 +457,7 @@ export default function BookingAnalytics({ events = [], bookings = [], theme = '
                                         <div key={idx} style={{ background: t.cardBg, padding: '28px', borderRadius: '28px', border: `1px solid ${t.border}` }}>
                                             <h4 style={{ fontSize: '12px', fontWeight: 800, color: t.textSub, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '20px' }}>{insight.field}</h4>
                                             <div style={{ height: '200px' }}>
-                                                <ResponsiveContainer width="100%" height="100%">
+                                                <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
                                                     <BarChart data={insight.data}>
                                                         <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 700 }} />
                                                         <YAxis hide />

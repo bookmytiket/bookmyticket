@@ -29,7 +29,7 @@ export default function RevenueDashboard({ t, theme }) {
         // Realtime sync for revenue audit
         const channel = supabase
             .channel('admin-revenue-stream')
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'platform_revenue' }, () => {
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'booking_financials' }, () => {
                 fetchRevenueStats();
             })
             .subscribe();
@@ -42,29 +42,12 @@ export default function RevenueDashboard({ t, theme }) {
     const fetchRevenueStats = async () => {
         setLoading(true);
         try {
-            // Fetch platform revenue stats
-            const { data: revData, error } = await supabase
-                .from('platform_revenue')
-                .select('*')
-                .order('created_at', { ascending: false });
+            const res = await fetch('/api/admin/revenue-stats');
+            const data = await res.json();
+            if (data.error) throw new Error(data.error);
 
-            if (error) throw error;
-
-            if (revData) {
-                const totalRev = revData.reduce((acc, curr) => acc + (Number(curr.total_revenue) || 0), 0);
-                const totalFee = revData.reduce((acc, curr) => acc + (Number(curr.platform_fee) || 0), 0);
-                const totalGst = revData.reduce((acc, curr) => acc + (Number(curr.gst_amount) || 0), 0);
-                const totalPartner = revData.reduce((acc, curr) => acc + (Number(curr.partner_share) || 0), 0);
-                const totalNet = revData.reduce((acc, curr) => acc + (Number(curr.net_platform_revenue) || 0), 0);
-
-                setStats({
-                    totalRevenue: totalRev,
-                    totalPlatformFee: totalFee,
-                    totalGst: totalGst,
-                    totalPartner: totalPartner,
-                    totalNet: totalNet,
-                    recentTransactions: revData.slice(0, 20) // Show more for admin visibility
-                });
+            if (data.stats) {
+                setStats(data.stats);
             }
         } catch (err) {
             console.error("Revenue Fetch Error:", err);

@@ -23,6 +23,16 @@ import TermsModal from "@/components/TermsModal";
 
 const DEFAULT_IMG = 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200&h=600&fit=crop';
 
+const loadScript = (src) => {
+    return new Promise((resolve) => {
+        const script = document.createElement("script");
+        script.src = src;
+        script.onload = () => resolve(true);
+        script.onerror = () => resolve(false);
+        document.body.appendChild(script);
+    });
+};
+
 function getEventById(id, convexEvents) {
     const sid = String(id);
     const fromHome = (Array.isArray(HOME_EVENTS) ? HOME_EVENTS : []).find(e => String(e.id) === sid);
@@ -98,6 +108,7 @@ export default function CheckoutClient({ id: propId, sessionToken }) {
     const [teamParam, setTeamParam] = useState('');
     const [bookingType, setBookingType] = useState('standard');
     const [ticketPrice, setTicketPrice] = useState(499);
+    const [session, setSession] = useState(null);
 
     useEffect(() => {
         if (!sessionToken) return;
@@ -110,7 +121,9 @@ export default function CheckoutClient({ id: propId, sessionToken }) {
                 if (!res.ok || !data.valid) {
                     throw new Error(data.error || "Invalid booking session");
                 }
-                const session = data.session;
+                const sessionData = data.session;
+                setSession(sessionData);
+                const session = sessionData;
                 const participantData = session.participant_data || {};
 
                 setQty(participantData.quantity || 1);
@@ -144,6 +157,13 @@ export default function CheckoutClient({ id: propId, sessionToken }) {
                 if (session.events) {
                     setRawEvent(session.events);
                     setEventLoading(false);
+                }
+                
+                // Force sync/recalculate pricing snapshot in database
+                const pricingRes = await fetch(`/api/booking-session/pricing?sessionToken=${sessionToken}`);
+                const pricingData = await pricingRes.json();
+                if (pricingData.success && pricingData.pricing) {
+                    setSession(prev => prev ? { ...prev, pricing_snapshot: pricingData.pricing } : { pricing_snapshot: pricingData.pricing });
                 }
             } catch (err) {
                 console.error("Failed to load booking session:", err);
@@ -271,11 +291,17 @@ export default function CheckoutClient({ id: propId, sessionToken }) {
     
 
     const baseAmount = useMemo(() => {
+        if (sessionToken && session?.pricing_snapshot) {
+            const snap = session.pricing_snapshot;
+            if (snap.baseAmount !== undefined && snap.baseAmount !== null) {
+                return Number(snap.baseAmount) || 0;
+            }
+        }
         if (selectedSeats.length > 0) {
             return selectedSeats.reduce((s, seat) => s + (seat.isFree ? 0 : Number(seat.price) || 0), 0);
         }
         return ticketPrice * qty;
-    }, [selectedSeats, ticketPrice, qty]);
+    }, [selectedSeats, ticketPrice, qty, session, sessionToken]);
 
     const validCoupons = useMemo(() => {
         const list = [];
@@ -461,18 +487,35 @@ export default function CheckoutClient({ id: propId, sessionToken }) {
     }, [feeSettings, organiserData?.fee_config, event?.fee_config]);
 
     const discountAmount = useMemo(() => {
+        if (sessionToken && session?.pricing_snapshot) {
+            const snap = session.pricing_snapshot;
+            if (snap.discountAmount !== undefined && snap.discountAmount !== null) {
+                return Number(snap.discountAmount) || 0;
+            }
+        }
         if (!appliedCoupon) return 0;
         if (appliedCoupon.type === 'percent') {
             return (baseAmount * appliedCoupon.value) / 100;
         } else {
             return Math.min(baseAmount, appliedCoupon.value);
         }
-    }, [baseAmount, appliedCoupon]);
+    }, [baseAmount, appliedCoupon, session, sessionToken]);
 
     const { convenienceFee, gst, total, gstPercent } = useMemo(() => {
+        if (sessionToken && session?.pricing_snapshot) {
+            const snap = session.pricing_snapshot;
+            if (snap.totalPrice !== undefined && snap.totalPrice !== null) {
+                return {
+                    convenienceFee: Number(snap.convenienceFee) || 0,
+                    gst: Number(snap.gst) || 0,
+                    total: Number(snap.totalPrice) || 0,
+                    gstPercent: Number(snap.gstPercent) || 0
+                };
+            }
+        }
         const discountedBase = Math.max(0, baseAmount - discountAmount);
         return getFeeBreakdown(discountedBase, resolvedFeeSettings);
-    }, [baseAmount, discountAmount, resolvedFeeSettings]);
+    }, [baseAmount, discountAmount, resolvedFeeSettings, session, sessionToken]);
 
     const handleQtyChange = async (newQty) => {
         if (newQty < 1) return;
@@ -484,7 +527,11 @@ export default function CheckoutClient({ id: propId, sessionToken }) {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ sessionToken, quantity: newQty })
                 });
-                await fetch(`/api/booking-session/pricing?sessionToken=${sessionToken}`);
+                const pricingRes = await fetch(`/api/booking-session/pricing?sessionToken=${sessionToken}`);
+                const pricingData = await pricingRes.json();
+                if (pricingData.success && pricingData.pricing) {
+                    setSession(prev => prev ? { ...prev, pricing_snapshot: pricingData.pricing } : null);
+                }
             } catch (err) {
                 console.error("Failed to update quantity in session:", err);
             }
@@ -508,6 +555,7 @@ export default function CheckoutClient({ id: propId, sessionToken }) {
                 const data = await res.json();
                 if (data.success && data.pricing) {
                     const pricing = data.pricing;
+                    setSession(prev => prev ? { ...prev, pricing_snapshot: pricing } : null);
                     setAppliedCoupon({
                         code: pricing.appliedCouponCode,
                         id: pricing.appliedCouponId,
@@ -649,7 +697,71 @@ export default function CheckoutClient({ id: propId, sessionToken }) {
                     });
                     setBookingDone(true);
                 } else {
-                    router.push(`/events/book/payment?bookingId=${bookingId}&id=${id}&sessionToken=${sessionToken}`);
+                    const resScript = await loadScript("https://checkout.razorpay.com/v1/checkout.js");
+                    if (!resScript) throw new Error("Razorpay SDK failed to load.");
+
+                    const paymentRes = await fetch('/api/booking-session/create-order', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ sessionToken, gateway: 'Razorpay' })
+                    });
+                    const paymentData = await paymentRes.json();
+                    if (!paymentRes.ok || !paymentData.success) {
+                        throw new Error(paymentData.error || "Razorpay order creation failed");
+                    }
+
+                    const { order, keyId } = paymentData;
+
+                    const options = {
+                        key: keyId,
+                        amount: order.amount,
+                        currency: order.currency,
+                        name: "BookMyTicket",
+                        description: `Payment for ${event.title}`,
+                        image: "/logo.png",
+                        order_id: order.id,
+                        handler: async function (response) {
+                            try {
+                                const verifyRes = await fetch('/api/booking-session/verify-payment', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        sessionToken,
+                                        gateway: "Razorpay",
+                                        razorpay_order_id: response.razorpay_order_id,
+                                        razorpay_payment_id: response.razorpay_payment_id,
+                                        razorpay_signature: response.razorpay_signature
+                                    })
+                                });
+                                const verifyData = await verifyRes.json();
+                                if (verifyData.success) {
+                                    router.push(`/events/book/success?bookingId=${bookingId}&id=${id}&sessionToken=${sessionToken}`);
+                                } else {
+                                    throw new Error(verifyData.error || "Verification failed");
+                                }
+                            } catch (err) {
+                                console.error("Razorpay verification failed:", err);
+                                alert("Payment verification failed: " + err.message);
+                                setIsProcessing(false);
+                            }
+                        },
+                        modal: {
+                            ondismiss: function () {
+                                setIsProcessing(false);
+                            }
+                        },
+                        prefill: {
+                            name: user.name || "Guest User",
+                            email: user.identifier || user.email || "",
+                            contact: user.phone || ""
+                        },
+                        theme: {
+                            color: "#FF1CF7"
+                        }
+                    };
+
+                    const rzp = new window.Razorpay(options);
+                    rzp.open();
                 }
                 return;
             }
@@ -789,7 +901,78 @@ export default function CheckoutClient({ id: propId, sessionToken }) {
 
                 setBookingDone(true);
             } else {
-                router.push(`/events/book/payment?bookingId=${booking.id}&id=${id}`);
+                const resScript = await loadScript("https://checkout.razorpay.com/v1/checkout.js");
+                if (!resScript) throw new Error("Razorpay SDK failed to load.");
+
+                const rzpOrderRes = await fetch('/api/razorpay/create-order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        id: booking.id,
+                        amount: booking.total_price,
+                        type: "booking"
+                    })
+                });
+
+                const order = await rzpOrderRes.json();
+                if (order.error) throw new Error(order.error);
+
+                // Fetch gateways configs to get Key ID
+                const gRes = await fetch('/api/payment/gateways');
+                const gateways = await gRes.json();
+                const rzpConfig = gateways?.find(g => g.name === "Razorpay")?.config;
+                const key_id = rzpConfig?.keyId || rzpConfig?.apiKey || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
+
+                if (!key_id) throw new Error("Razorpay Key ID is not configured.");
+
+                const options = {
+                    key: key_id,
+                    amount: order.amount,
+                    currency: order.currency,
+                    name: "BookMyTicket",
+                    description: `Payment for ${booking.event_name || event?.title}`,
+                    image: "/logo.png",
+                    order_id: order.id,
+                    handler: async function (response) {
+                        try {
+                            const verifyRes = await fetch('/api/razorpay/verify', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    razorpay_order_id: response.razorpay_order_id,
+                                    razorpay_payment_id: response.razorpay_payment_id,
+                                    razorpay_signature: response.razorpay_signature
+                                })
+                            });
+                            const verifyData = await verifyRes.json();
+                            if (verifyData.success) {
+                                router.push(`/events/book/success?bookingId=${booking.id}&id=${id}`);
+                            } else {
+                                throw new Error(verifyData.error || "Verification failed");
+                            }
+                        } catch (err) {
+                            console.error("Razorpay verification failed:", err);
+                            alert("Payment verification failed: " + err.message);
+                            setIsProcessing(false);
+                        }
+                    },
+                    modal: {
+                        ondismiss: function () {
+                            setIsProcessing(false);
+                        }
+                    },
+                    prefill: {
+                        name: user.name || "Guest User",
+                        email: user.identifier || user.email || "",
+                        contact: user.phone || ""
+                    },
+                    theme: {
+                        color: "#FF1CF7"
+                    }
+                };
+
+                const rzp = new window.Razorpay(options);
+                rzp.open();
             }
         } catch (error) {
             console.error("Booking failed:", error);

@@ -70,7 +70,7 @@ export async function POST(request) {
                 .from('payment_gateways')
                 .select('config')
                 .eq('name', 'Razorpay')
-                .single();
+                .maybeSingle();
 
             if (gatewayConfig?.config) {
                 key_secret = gatewayConfig.config.keySecret || gatewayConfig.config.apiSecret || key_secret;
@@ -151,15 +151,44 @@ export async function POST(request) {
                 type: 'event',
                 referenceId: bookingId,
                 totalAmount: booking.total_price,
-                baseAmount: booking.partner_total || (booking.base_amount - (booking.discount_amount || 0)),
+                baseAmount: booking.partner_total || booking.base_amount || 0,
                 platformFee: booking.platform_charge || 0,
                 gstAmount: booking.gst_amount || 0,
                 providerId: organiserId,
-                description: `Earnings from event booking ${bookingId}`
+                eventId: session.event_id,
+                description: `Earnings from event booking #${bookingId.slice(-8).toUpperCase()}`
             });
         }
 
-        // 8. Generate Ticket Record
+        // 8. Decrement event ticket inventory
+        try {
+            const ticketsBought = booking.ticket_count || 1;
+            const { data: ev } = await supabaseAdmin
+                .from('events')
+                .select('total_seats')
+                .eq('id', session.event_id)
+                .maybeSingle();
+            if (ev) {
+                // Count all confirmed bookings for this event to get accurate sold count
+                const { count: soldCount } = await supabaseAdmin
+                    .from('bookings')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('event_id', session.event_id)
+                    .eq('status', 'Confirmed');
+                
+                const bookedSeats = soldCount || 0;
+                await supabaseAdmin
+                    .from('events')
+                    .update({ 
+                        normal_ticket_capacity: Math.max(0, (ev.total_seats || 0) - bookedSeats)
+                    })
+                    .eq('id', session.event_id);
+            }
+        } catch (invErr) {
+            console.warn('[verify-payment] Inventory update error:', invErr.message);
+        }
+
+        // 9. Generate Ticket Record
         const ticketNumber = Math.random().toString(36).substring(2, 10).toUpperCase();
         await supabaseAdmin.from('tickets').insert({
             booking_id: bookingId,

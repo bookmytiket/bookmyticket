@@ -7,4 +7,5 @@ out/
 dist/
 build/
 *.log
-.vercel
+
+scratch/

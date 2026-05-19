@@ -47,6 +47,41 @@ export async function POST(request) {
                 .maybeSingle();
             if (!bErr && b) {
                 booking = b;
+                
+                // Update booking details with current session and pricing snapshot
+                const customerDetails = {
+                    name: booking.customer_details?.name || "Guest User",
+                    email: booking.customer_details?.email || "",
+                    phone: booking.customer_details?.phone || "",
+                    applied_campaign_id: pricingSnapshot.appliedCampaignId || null,
+                    applied_campaign_code: pricingSnapshot.appliedCampaignCode || null,
+                    ...participantData
+                };
+
+                const { data: updatedBooking, error: updateErr } = await supabaseAdmin
+                    .from("bookings")
+                    .update({
+                        ticket_count: participantData.quantity || 1,
+                        base_amount: Number(pricingSnapshot.baseAmount) || Number(event.price) || 0,
+                        platform_charge: Number(pricingSnapshot.convenienceFee) || 0,
+                        gst_amount: Number(pricingSnapshot.gst) || 0,
+                        gst_percent: Number(pricingSnapshot.gstPercent) || 0,
+                        partner_bonus: Number(pricingSnapshot.partnerBonus) || 0,
+                        platform_revenue: Number(pricingSnapshot.platformRevenue) || 0,
+                        partner_total: Number(pricingSnapshot.partnerTotal) || 0,
+                        discount_amount: Number(pricingSnapshot.discountAmount) || 0,
+                        coupon_id: pricingSnapshot.appliedCouponId || null,
+                        total_price: Number(pricingSnapshot.totalPrice) || 0,
+                        selected_seats: participantData.selectedSeats || [],
+                        customer_details: customerDetails
+                    })
+                    .eq("id", bookingId)
+                    .select()
+                    .single();
+
+                if (!updateErr && updatedBooking) {
+                    booking = updatedBooking;
+                }
             }
         }
 
@@ -59,7 +94,7 @@ export async function POST(request) {
                 .maybeSingle();
 
             const customerDetails = {
-                name: profile?.name || "Guest User",
+                name: profile?.full_name || "Guest User",
                 email: profile?.email || "",
                 phone: profile?.phone || "",
                 applied_campaign_id: pricingSnapshot.appliedCampaignId || null,
@@ -132,7 +167,7 @@ export async function POST(request) {
                 .from('payment_gateways')
                 .select('config')
                 .eq('name', 'Razorpay')
-                .single();
+                .maybeSingle();
 
             if (gatewayConfig?.config) {
                 key_id = gatewayConfig.config.keyId || gatewayConfig.config.apiKey || key_id;

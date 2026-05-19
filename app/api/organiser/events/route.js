@@ -5,8 +5,7 @@ import { createClient } from '@supabase/supabase-js';
  * GET /api/organiser/events
  * 
  * Server-side enforced organiser isolation.
- * Uses the service role key (bypasses DB RLS) but ALWAYS filters by
- * the authenticated user's ID — so cross-organiser data leakage is impossible.
+ * Returns events with live booked_seats count from bookings table.
  */
 export async function GET(request) {
   try {
@@ -21,7 +20,7 @@ export async function GET(request) {
     }
     const userJwt = authHeader.replace('Bearer ', '');
 
-    // 2. Get the user from their JWT using a user-scoped client
+    // 2. Get the user from their JWT
     const userClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: `Bearer ${userJwt}` } },
     });
@@ -30,10 +29,10 @@ export async function GET(request) {
       return NextResponse.json({ error: 'Invalid auth token' }, { status: 401 });
     }
 
-    // 3. Use service role client (bypasses RLS) but FORCE filter by organiser_id
+    // 3. Use service role client
     const adminClient = createClient(supabaseUrl, serviceKey);
 
-    // Resolve Organiser ID (checks: Own ID -> Auth ID Mapping -> Staff Assignment)
+    // Resolve Organiser ID
     let { data: organiser } = await adminClient
       .from('organisers')
       .select('id')
@@ -41,7 +40,6 @@ export async function GET(request) {
       .maybeSingle();
 
     if (!organiser) {
-      // Check for legacy Auth UID mapping
       const { data: altOrg } = await adminClient
         .from('organisers')
         .select('id')
@@ -51,7 +49,6 @@ export async function GET(request) {
       if (altOrg) {
         organiser = altOrg;
       } else {
-        // Check if user is STAFF assigned to an organiser
         const { data: staffMember } = await adminClient
           .from('staff')
           .select('organiser_id')
@@ -66,25 +63,54 @@ export async function GET(request) {
 
     const targetId = organiser?.id || user.id;
 
-    // 4. Build the events query — ALWAYS scoped to the resolved organiser
-    let query = adminClient
+    // 4. Fetch events scoped to this organiser
+    const { data: events, error: evErr } = await adminClient
       .from('events')
       .select('*, tournament_events!event_id(*), tournament_categories!event_id(*), marathon_config!event_id(*)')
+      .eq('organiser_id', targetId)
       .order('created_at', { ascending: false });
 
-    // Hard-enforce: only own events
-    query = query.eq('organiser_id', targetId);
-
-    const { data: events, error: evErr } = await query;
     if (evErr) {
       console.error('[/api/organiser/events] Query error:', evErr);
       return NextResponse.json({ error: evErr.message }, { status: 500 });
     }
 
+    // 5. Fetch confirmed booking counts per event in one query
+    let eventsWithBookings = events || [];
+    if (eventsWithBookings.length > 0) {
+      const eventIds = eventsWithBookings.map(e => e.id);
+
+      // Get count of confirmed bookings and total ticket_count per event
+      const { data: bookingSummary } = await adminClient
+        .from('bookings')
+        .select('event_id, ticket_count, total_price')
+        .in('event_id', eventIds)
+        .eq('status', 'Confirmed');
+
+      // Aggregate per event
+      const bookingMap = {};
+      for (const b of (bookingSummary || [])) {
+        if (!bookingMap[b.event_id]) {
+          bookingMap[b.event_id] = { booked_seats: 0, booking_count: 0, total_revenue: 0 };
+        }
+        bookingMap[b.event_id].booked_seats += (b.ticket_count || 1);
+        bookingMap[b.event_id].booking_count += 1;
+        bookingMap[b.event_id].total_revenue += (Number(b.total_price) || 0);
+      }
+
+      // Merge into events
+      eventsWithBookings = eventsWithBookings.map(ev => ({
+        ...ev,
+        booked_seats: bookingMap[ev.id]?.booked_seats || 0,
+        booking_count: bookingMap[ev.id]?.booking_count || 0,
+        event_revenue: bookingMap[ev.id]?.total_revenue || 0,
+      }));
+    }
+
     return NextResponse.json({
-      events: events || [],
+      events: eventsWithBookings,
       organiser_id: user.id,
-      count: events?.length || 0,
+      count: eventsWithBookings.length,
     });
 
   } catch (err) {

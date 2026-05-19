@@ -16,11 +16,16 @@ export const DEFAULT_FEE_SETTINGS = {
  * 3. System Default
  */
 export function resolveFeeSettings(systemSettings = {}, organiserConfig = {}, eventConfig = {}) {
+  const sysCFType = systemSettings.convenienceFeeType || systemSettings.convenience_fee_type || systemSettings.fee_type;
+  const sysCFValue = systemSettings.convenienceFeeValue ?? systemSettings.convenience_fee_value ?? systemSettings.fee_value;
+  const sysGSTPercent = systemSettings.gstPercent ?? systemSettings.gst_percent;
+  const sysGSTApplyOn = systemSettings.gstApplyOn ?? systemSettings.gst_apply_on;
+
   let finalConfig = {
-    convenienceFeeType: systemSettings.convenienceFeeType || DEFAULT_FEE_SETTINGS.convenienceFeeType,
-    convenienceFeeValue: Number(systemSettings.convenienceFeeValue) ?? DEFAULT_FEE_SETTINGS.convenienceFeeValue,
-    gstPercent: Number(systemSettings.gstPercent) ?? DEFAULT_FEE_SETTINGS.gstPercent,
-    gstApplyOn: systemSettings.gstApplyOn || systemSettings.gst_apply_on || DEFAULT_FEE_SETTINGS.gstApplyOn,
+    convenienceFeeType: sysCFType || DEFAULT_FEE_SETTINGS.convenienceFeeType,
+    convenienceFeeValue: sysCFValue !== undefined && sysCFValue !== null ? Number(sysCFValue) : DEFAULT_FEE_SETTINGS.convenienceFeeValue,
+    gstPercent: sysGSTPercent !== undefined && sysGSTPercent !== null ? Number(sysGSTPercent) : DEFAULT_FEE_SETTINGS.gstPercent,
+    gstApplyOn: sysGSTApplyOn || DEFAULT_FEE_SETTINGS.gstApplyOn,
     applyGst: true
   };
 

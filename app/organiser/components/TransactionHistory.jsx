@@ -13,7 +13,9 @@ export default function TransactionHistory({ user, theme: t }) {
 
     const { data: transactions = [], loading } = useSupabaseQuery(
         'wallet_transactions', 
-        q => q.eq('provider_id', user?.id).order('created_at', { ascending: false }),
+        q => q
+            .or(`organiser_id.eq.${user?.id},provider_id.eq.${user?.id}`)
+            .order('created_at', { ascending: false }),
         [user?.id]
     );
 
