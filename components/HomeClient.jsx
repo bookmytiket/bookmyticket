@@ -45,7 +45,7 @@ function TicketCard({ event, router }) {
       }}
       style={{ 
         backgroundColor: "#fff", 
-        borderRadius: "20px", 
+        borderRadius: "16px", 
         overflow: "hidden", 
         border: "1px solid #f1f5f9", 
         boxShadow: "0 4px 20px rgba(0,0,0,0.04)",
@@ -55,16 +55,16 @@ function TicketCard({ event, router }) {
         transition: 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
         cursor: 'pointer'
       }}
-      onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-8px)'}
+      onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-6px)'}
       onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
     >
-      {/* Image Area - Increased size to match Exclusive Events style */}
-      <div style={{ width: '100%', aspectRatio: '2.3/3', position: 'relative', overflow: 'hidden', background: '#f1f5f9' }}>
+      {/* Image Area - Aspect ratio changed to 4/3 to reduce card size */}
+      <div style={{ width: '100%', aspectRatio: '4/3', position: 'relative', overflow: 'hidden', background: '#f1f5f9' }}>
         <img 
           src={event.img} 
           alt={event.title} 
           style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s ease' }}
-          onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
+          onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.08)'}
           onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
         />
         <div style={{ 
@@ -78,10 +78,10 @@ function TicketCard({ event, router }) {
         </div>
       </div>
 
-      <div style={{ padding: "16px", flex: 1, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      <div style={{ padding: "12px", flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <h3 style={{ 
-            fontSize: "16px", 
+            fontSize: "14px", 
             fontWeight: 800, 
             margin: 0, 
             lineHeight: '1.2',
@@ -91,27 +91,27 @@ function TicketCard({ event, router }) {
             overflow: 'hidden',
             textOverflow: 'ellipsis'
           }}>{event.title}</h3>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="#1d9bf0" style={{ flexShrink: 0 }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#1d9bf0" style={{ flexShrink: 0 }}>
             <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm-1.1 14.5l-4.2-4.2 1.4-1.4 2.8 2.8 6.1-6.1 1.4 1.4-7.5 7.5z" />
           </svg>
         </div>
         
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>
-          <span style={{ fontSize: '13px', color: '#64748b', fontWeight: 600 }}>{event.location || event.city || "TBA"}</span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>
+          <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{event.location || event.city || "TBA"}</span>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '8px', borderTop: '1px solid #f8fafc' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
-            <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 700 }}>{event.date?.split(' ')[0]}</span>
+            <span style={{ fontSize: '10px', color: '#64748b', fontWeight: 700 }}>{event.date?.split(' ')[0]}</span>
           </div>
           <div style={{ 
-            fontSize: '11px', 
+            fontSize: '10px', 
             fontWeight: 900, 
             color: isFreeEvent(event) ? '#22c55e' : '#0f172a',
             backgroundColor: isFreeEvent(event) ? '#22c55e10' : '#f1f5f9',
-            padding: '4px 10px',
+            padding: '3px 8px',
             borderRadius: '100px',
             letterSpacing: '0.02em',
             textTransform: 'uppercase'

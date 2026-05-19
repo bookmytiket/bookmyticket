@@ -115,7 +115,7 @@ export default function FeaturedEvents({ events }) {
                                     boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
                                     height: '100%'
                                 }}
-                            >                                <div style={{ position: "relative", width: "100%", aspectRatio: "2.3/3", overflow: "hidden" }}>
+                            >                                <div style={{ position: "relative", width: "100%", aspectRatio: "4/3", overflow: "hidden" }}>
                                     <img
                                         src={event.img}
                                         alt={event.title}

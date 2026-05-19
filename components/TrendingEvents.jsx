@@ -23,7 +23,7 @@ function EventCard({ event }) {
                     transition: "box-shadow 0.2s ease",
                 }}
             >
-                <div style={{ position: "relative", width: "100%", aspectRatio: "2.3/3", overflow: "hidden" }}>
+                <div style={{ position: "relative", width: "100%", aspectRatio: "4/3", overflow: "hidden" }}>
                     <img
                         src={event.img}
                         alt={event.title}

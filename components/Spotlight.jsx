@@ -92,7 +92,7 @@ export default function Spotlight({ events = [] }) {
               >
                 <div style={{
                   width: "100%",
-                  aspectRatio: "2.3/3",
+                  aspectRatio: "4/3",
                   overflow: "hidden",
                   position: "relative"
                 }}>
