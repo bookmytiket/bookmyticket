@@ -10,6 +10,7 @@ export default function FinanceCrossVerificationAdmin({ t, theme }) {
     const [allReconciliations, setAllReconciliations] = useState([]);
     const [organizers, setOrganizers] = useState([]);
     const [selectedOrganizer, setSelectedOrganizer] = useState('all');
+    const [isOpen, setIsOpen] = useState(false);
     const [stats, setStats] = useState({ totalCustomerPaid: 0, totalAdminRev: 0, totalOrganizerRev: 0, mismatchCount: 0 });
     const [loading, setLoading] = useState(true);
     const { showToast } = useToast();
@@ -92,10 +93,9 @@ export default function FinanceCrossVerificationAdmin({ t, theme }) {
                     <h3 style={{ fontSize: "22px", fontWeight: 900, color: t.textMain, letterSpacing: '-0.02em', margin: 0 }}>Settlement Cross-Verification</h3>
                     <p style={{ fontSize: '12px', color: t.textSub, marginTop: '4px' }}>Automated matching of Customer Paid vs (Admin Revenue + Organizer Net Revenue).</p>
                 </div>
-                <div>
-                    <select 
-                        value={selectedOrganizer}
-                        onChange={(e) => setSelectedOrganizer(e.target.value)}
+                <div style={{ position: 'relative' }}>
+                    <div 
+                        onClick={() => setIsOpen(!isOpen)}
                         style={{
                             padding: "10px 16px",
                             borderRadius: "12px",
@@ -104,18 +104,95 @@ export default function FinanceCrossVerificationAdmin({ t, theme }) {
                             color: t.textMain,
                             fontSize: "13px",
                             fontWeight: 600,
-                            outline: "none",
                             cursor: "pointer",
-                            minWidth: "200px"
+                            minWidth: "220px",
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            userSelect: 'none'
                         }}
                     >
-                        <option value="all">All Organisers</option>
-                        {organizers.map(org => (
-                            <option key={org.id} value={org.id}>
-                                {org.business_name}
-                            </option>
-                        ))}
-                    </select>
+                        <span>
+                            {selectedOrganizer === 'all' 
+                                ? 'All Organisers' 
+                                : organizers.find(o => o.id === selectedOrganizer)?.business_name || 'Select Organiser'}
+                        </span>
+                        <span style={{ fontSize: '10px', marginLeft: '8px', opacity: 0.7 }}>▼</span>
+                    </div>
+
+                    {isOpen && (
+                        <>
+                            <div 
+                                onClick={() => setIsOpen(false)} 
+                                style={{ position: 'fixed', inset: 0, zIndex: 99 }}
+                            />
+                            <div 
+                                style={{
+                                    position: 'absolute',
+                                    top: 'calc(100% + 6px)',
+                                    right: 0,
+                                    backgroundColor: t.cardBg,
+                                    border: `1px solid ${t.border}`,
+                                    borderRadius: '12px',
+                                    boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1)',
+                                    zIndex: 100,
+                                    minWidth: '220px',
+                                    overflow: 'hidden',
+                                    padding: '4px'
+                                }}
+                            >
+                                <div 
+                                    onClick={() => { setSelectedOrganizer('all'); setIsOpen(false); }}
+                                    style={{
+                                        padding: '10px 14px',
+                                        fontSize: '13px',
+                                        fontWeight: selectedOrganizer === 'all' ? 800 : 600,
+                                        color: selectedOrganizer === 'all' ? '#fff' : t.textMain,
+                                        backgroundColor: selectedOrganizer === 'all' ? '#3b82f6' : 'transparent',
+                                        borderRadius: '8px',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.15s ease'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        if (selectedOrganizer !== 'all') e.currentTarget.style.backgroundColor = theme === 'light' ? '#f1f5f9' : '#1e293b';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        if (selectedOrganizer !== 'all') e.currentTarget.style.backgroundColor = 'transparent';
+                                    }}
+                                >
+                                    All Organisers
+                                </div>
+                                {organizers.map(org => {
+                                    const isSelected = selectedOrganizer === org.id;
+                                    return (
+                                        <div 
+                                            key={org.id}
+                                            onClick={() => { setSelectedOrganizer(org.id); setIsOpen(false); }}
+                                            style={{
+                                                padding: '10px 14px',
+                                                fontSize: '13px',
+                                                fontWeight: isSelected ? 800 : 600,
+                                                color: isSelected ? '#fff' : t.textMain,
+                                                backgroundColor: isSelected ? '#3b82f6' : 'transparent',
+                                                borderRadius: '8px',
+                                                cursor: 'pointer',
+                                                marginTop: '2px',
+                                                transition: 'all 0.15s ease'
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                if (!isSelected) e.currentTarget.style.backgroundColor = theme === 'light' ? '#f1f5f9' : '#1e293b';
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                if (!isSelected) e.currentTarget.style.backgroundColor = 'transparent';
+                                            }}
+                                        >
+                                            {org.business_name}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </>
+                    )}
                 </div>
             </div>
 
