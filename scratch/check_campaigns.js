@@ -10,12 +10,12 @@ const supabase = createClient(
 );
 
 async function check() {
-  console.log("Checking events...");
-  const { data, error } = await supabase.from('events').select('id, title').eq('publish_status', 'published').limit(5);
+  console.log("Checking campaigns...");
+  const { data, error } = await supabase.from('partner_campaigns').select('*');
   if (error) {
     console.error("Error:", error.message);
   } else {
-    console.log("Events:", data);
+    console.log("Campaigns:", data);
   }
 }
 check();

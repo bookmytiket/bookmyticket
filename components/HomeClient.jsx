@@ -289,19 +289,22 @@ function HomeClient() {
 
   // Keep other queries for branding, etc.
   const { data: brandingRaw } = useSupabaseQuery('site_branding', (q) => q, [], { realtime: false });
-  const { data: serviceProvidersRaw } = useSupabaseQuery('professional_service_profiles', (q) => q.eq('active_status', true), []);
+  const { data: serviceProvidersRaw } = useSupabaseQuery('service_providers', (q) => q.select('*, profiles:service_providers_id_fkey(selected_city, full_name, email, phone)').ilike('status', 'active'), []);
 
   const serviceProviders = useMemo(() => {
     if (!serviceProvidersRaw) return [];
     let list = serviceProvidersRaw;
     if (selectedCity && selectedCity !== "All Cities" && selectedCity !== "India") {
-      list = list.filter(p => p.city && p.city.toLowerCase() === selectedCity.toLowerCase());
+      list = list.filter(p => {
+        const city = p.profiles?.selected_city || p.advanced_settings?.city || p.city;
+        return city && city.toLowerCase() === selectedCity.toLowerCase();
+      });
     }
     return list.map(pro => ({
       ...pro,
-      business_name: pro.business_name || pro.full_name,
-      image_url: pro.profile_image,
-      advanced_settings: JSON.stringify({ rating: pro.rating || "5.0" }),
+      business_name: pro.business_name || pro.profiles?.full_name,
+      image_url: pro.image_url,
+      advanced_settings: JSON.stringify({ rating: pro.advanced_settings?.rating || "5.0" }),
     }));
   }, [serviceProvidersRaw, selectedCity]);
 

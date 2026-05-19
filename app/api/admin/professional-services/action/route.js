@@ -110,20 +110,25 @@ export async function POST(request) {
                         status: 'active'
                     });
 
-                // 3. Create professional_service_profiles
+                // 3. Create service_providers profile
+                const kyc = requestData.kyc_details || {};
                 await supabaseAdmin
-                    .from('professional_service_profiles')
+                    .from('service_providers')
                     .upsert({
-                        auth_user_id: userId,
-                        request_id: requestId,
-                        full_name: requestData.full_name,
-                        email: requestData.email,
-                        business_name: requestData.business_name,
-                        category: requestData.service_category,
-                        service_type: requestData.service_type,
-                        city: requestData.city,
-                        description: requestData.description,
-                        active_status: true
+                        id: userId,
+                        organiser_id: userId,
+                        business_name: kyc.businessName || requestData.business_name || requestData.full_name,
+                        category: requestData.service_category || kyc.category || "Professional Service",
+                        status: 'active',
+                        bio: kyc.remarks || requestData.description || "",
+                        starting_price: 1999,
+                        advanced_settings: {
+                            service_type: kyc.serviceType || "",
+                            city: kyc.city || "",
+                            experience: kyc.experience || "",
+                            portfolio_link: kyc.portfolioLink || "",
+                            coverage_area: kyc.coverageArea || ""
+                        }
                     });
 
                 // 4. Send Approval Email with credentials

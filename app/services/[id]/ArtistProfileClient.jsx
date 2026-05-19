@@ -38,25 +38,57 @@ export default function ArtistProfileClient({ id: vendorId }) {
     const [agreedToTerms, setAgreedToTerms] = useState(false);
 
     // Fetch profile and vendor
-    const { data: profileResult, loading: profileLoading } = useSupabaseQuery('service_providers', (q) => 
-        q.select('*').eq('id', vendorId).maybeSingle()
+    const { data: profileRaw, loading: profileLoading } = useSupabaseQuery('service_providers', (q) => 
+        q.select('*, profiles:service_providers_id_fkey(selected_city, full_name, email, phone)').eq('id', vendorId).maybeSingle()
     , [vendorId]);
 
     const { data: vendorResult } = useSupabaseQuery('vendors', (q) => 
         q.select('*').eq('id', vendorId).maybeSingle()
     , [vendorId]);
     
-    const fullProfile = profileResult ? { organiser: vendorResult, vendorProfile: profileResult } : null;
+    const profileResult = useMemo(() => {
+        if (!profileRaw) return null;
+        return {
+            ...profileRaw,
+            business_name: profileRaw.business_name || profileRaw.profiles?.full_name,
+            name: profileRaw.profiles?.full_name || profileRaw.business_name,
+            bio: profileRaw.bio || profileRaw.description || "Premium professional services.",
+            city: profileRaw.profiles?.selected_city || profileRaw.advanced_settings?.city || profileRaw.city || "",
+            portfolio: profileRaw.image_url ? [{ url: profileRaw.image_url, type: "image" }] : []
+        };
+    }, [profileRaw]);
+
+    const fullProfile = useMemo(() => {
+        if (!profileResult) return null;
+        return { organiser: profileResult, vendorProfile: profileResult };
+    }, [profileResult]);
 
     // Fetch packages
-    const { data: packages = [] } = useSupabaseQuery('artistPackages', (q) => 
-        q.select('*').eq('vendor_id', vendorId)
+    const { data: packagesRaw = [] } = useSupabaseQuery('provider_services', (q) => 
+        q.select('*').eq('provider_id', vendorId)
     , [vendorId]);
 
+    const packages = useMemo(() => {
+        return (packagesRaw || []).map(p => ({
+            id: p.id,
+            title: p.service_name,
+            description: p.description,
+            price: Number(p.pricing || 0),
+            status: p.status
+        }));
+    }, [packagesRaw]);
+
     // Fetch reviews
-    const { data: reviews = [] } = useSupabaseQuery('vendor_reviews', (q) => 
-        q.select('*').eq('vendor_id', vendorId).order('created_at', { ascending: false })
+    const { data: reviewsRaw = [] } = useSupabaseQuery('provider_reviews', (q) => 
+        q.select('*, profiles!customer_id(full_name)').eq('provider_id', vendorId).order('created_at', { ascending: false })
     , [vendorId]);
+
+    const reviews = useMemo(() => {
+        return (reviewsRaw || []).map(r => ({
+            ...r,
+            reviewer_name: r.profiles?.full_name || "Verified Customer"
+        }));
+    }, [reviewsRaw]);
 
     useEffect(() => {
         if (user) {
@@ -79,20 +111,15 @@ export default function ArtistProfileClient({ id: vendorId }) {
 
         setIsBooking(true);
         try {
-            const { error } = await supabase.from('vendor_bookings').insert([{
-                vendor_id: vendorId,
-                user_id: user.id,
-                service_type: fullProfile.vendorProfile.category || "Professional Service",
+            const { error } = await supabase.from('provider_bookings').insert([{
+                provider_id: vendorId,
+                customer_id: user.id,
+                service_id: selectedPackage.id,
                 booking_date: formData.date,
-                total_amount: selectedPackage.price,
-                customer_details: {
-                    name: formData.name,
-                    phone: formData.phone,
-                    email: formData.email,
-                    address: formData.address,
-                    remarks: formData.remarks
-                },
-                status: 'Pending'
+                booking_time: '10:00:00',
+                amount: selectedPackage.price,
+                notes: formData.remarks || "",
+                booking_status: 'New Request'
             }]);
 
             if (error) throw error;

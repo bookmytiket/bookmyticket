@@ -2,6 +2,7 @@ import { Cashfree, CFEnvironment } from "cashfree-pg";
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import { handlePaymentSuccess } from "@/app/utils/paymentUtils";
+import { unlockPartnerReward } from "@/lib/partnerRewards";
 
 const supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -93,6 +94,13 @@ export async function POST(request) {
                 ticket_number: ticketNumber,
                 status: 'active'
             });
+
+            // 5.1 Unlock Partner Rewards post-booking
+            try {
+                await unlockPartnerReward(bookingId, booking.user_id, booking.event_id);
+            } catch (rewardErr) {
+                console.error("[REWARDS] Error in cashfree unlockPartnerReward:", rewardErr.message);
+            }
 
             // 6. Record Coupon Usage
             if (booking.coupon_id) {

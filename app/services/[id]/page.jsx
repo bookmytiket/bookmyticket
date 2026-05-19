@@ -8,11 +8,22 @@ export async function generateMetadata({ params }) {
     if (!id) return {};
 
     try {
-        const { data: service } = await supabase
+        const { data: rawService } = await supabase
             .from('service_providers')
-            .select('*')
+            .select('*, profiles:service_providers_id_fkey(selected_city, full_name, email, phone)')
             .eq('id', id)
             .maybeSingle();
+
+        if (!rawService) return { title: 'Artist Profile | BookMyTicket' };
+
+        const service = {
+            ...rawService,
+            business_name: rawService.business_name || rawService.profiles?.full_name,
+            name: rawService.profiles?.full_name || rawService.business_name,
+            bio: rawService.bio || rawService.description || "Premium professional services.",
+            city: rawService.profiles?.selected_city || rawService.advanced_settings?.city || rawService.city || "",
+            portfolio: rawService.image_url ? [{ url: rawService.image_url }] : []
+        };
 
         if (!service) return { title: 'Artist Profile | BookMyTicket' };
 
@@ -44,15 +55,24 @@ export default async function ArtistProfilePage({ params }) {
          return <div>Debug: Missing Vendor ID in Page</div>;
     }
     
-    const { data: service, error } = await supabase
+    const { data: rawService, error } = await supabase
         .from('service_providers')
-        .select('*')
+        .select('*, profiles:service_providers_id_fkey(selected_city, full_name, email, phone)')
         .eq('id', vendorId)
         .maybeSingle();
 
     if (error) {
         return <div>Debug Query Error: {error.message}</div>;
     }
+
+    const service = rawService ? {
+        ...rawService,
+        business_name: rawService.business_name || rawService.profiles?.full_name,
+        name: rawService.profiles?.full_name || rawService.business_name,
+        bio: rawService.bio || rawService.description || "Premium professional services.",
+        city: rawService.profiles?.selected_city || rawService.advanced_settings?.city || rawService.city || "",
+        portfolio: rawService.image_url ? [{ url: rawService.image_url }] : []
+    } : null;
 
     return (
         <>

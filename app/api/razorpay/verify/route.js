@@ -2,6 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import crypto from "crypto";
 import { handlePaymentSuccess } from "@/app/utils/paymentUtils";
+import { unlockPartnerReward } from "@/lib/partnerRewards";
 
 const supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -106,6 +107,13 @@ export async function POST(request) {
                 ticket_number: ticketNumber,
                 status: 'active'
             });
+
+            // 6.1 Unlock Partner Rewards post-booking
+            try {
+                await unlockPartnerReward(id, booking.user_id, booking.event_id);
+            } catch (rewardErr) {
+                console.error("[REWARDS] Error in verify unlockPartnerReward:", rewardErr.message);
+            }
 
             // 7. Record Coupon Usage
             if (booking.coupon_id) {

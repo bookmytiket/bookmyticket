@@ -16,14 +16,37 @@ export default function ServicesPage() {
   const [page, setPage] = useState(1);
   const [isPartnerModalOpen, setIsPartnerModalOpen] = useState(false);
 
-  // Fetch all vendors for the category
-  const { data: vendors = [], loading: vendorsLoading } = useSupabaseQuery('service_providers', (q) => {
+  // Fetch all active professional service profiles
+  const { data: vendorsRaw = [], loading: vendorsLoading } = useSupabaseQuery('service_providers', (q) => {
+    let query = q.select('*, provider_services(*), profiles:service_providers_id_fkey(selected_city, full_name, email, phone)').ilike('status', 'active');
     if (category && category !== "All Services") {
       const search = category.endsWith('s') ? category.slice(0, -1) : category;
-      return q.or(`category.ilike.%${category}%,category.ilike.%${search}%`);
+      query = query.or(`category.ilike.%${category}%,category.ilike.%${search}%`);
     }
-    return q;
-  }, [category], { refreshOn: ['service_like_counts'] });
+    return query;
+  }, [category]);
+
+  const vendors = useMemo(() => {
+    return (vendorsRaw || []).map(pro => {
+      const publishedServices = (pro.provider_services || []).filter(s => s.status === 'Published' || s.status === 'active');
+      const prices = publishedServices.map(s => Number(s.pricing || 0));
+      const minPrice = prices.length > 0 ? Math.min(...prices) : (pro.starting_price || 1999);
+      
+      return {
+        id: pro.id,
+        business_name: pro.business_name || pro.profiles?.full_name,
+        name: pro.profiles?.full_name || pro.business_name,
+        category: pro.category || "Professional Service",
+        city: pro.profiles?.selected_city || pro.advanced_settings?.city || pro.city || "",
+        bio: pro.bio || pro.description || "Premium professional services.",
+        portfolio: pro.image_url ? [{ url: pro.image_url, type: "image" }] : [],
+        pricing: [{ name: "Standard", price: minPrice }],
+        rating: pro.rating || 5.0,
+        reviewsCount: 0,
+        isTurf: false
+      };
+    });
+  }, [vendorsRaw]);
 
   // Fetch all active turfs
   const { data: turfsRaw = [], loading: turfsLoading } = useSupabaseQuery('turfs', (q) => q.eq('status', 'active'), []);

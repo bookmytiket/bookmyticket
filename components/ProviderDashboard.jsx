@@ -41,16 +41,24 @@ export default function ProviderDashboard() {
         setLoading(true);
         try {
             const { data: prov } = await supabase
-                .from("professional_service_profiles")
-                .select("*")
-                .eq("auth_user_id", user.id)
+                .from("service_providers")
+                .select("*, profiles:service_providers_id_fkey(selected_city, full_name, email, phone)")
+                .or(`id.eq.${user.id},organiser_id.eq.${user.id}`)
                 .maybeSingle();
 
             if (!prov) {
                 router.push("/partner");
                 return;
             }
-            setProvider(prov);
+            const mappedProv = {
+                ...prov,
+                full_name: prov.profiles?.full_name || prov.business_name,
+                city: prov.profiles?.selected_city || prov.advanced_settings?.city || prov.city || "",
+                email: prov.profiles?.email,
+                phone: prov.profiles?.phone,
+                description: prov.bio || prov.description
+            };
+            setProvider(mappedProv);
 
             const { data: bks } = await supabase
                 .from("provider_bookings")

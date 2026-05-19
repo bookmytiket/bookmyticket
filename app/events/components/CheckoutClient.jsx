@@ -148,6 +148,8 @@ export default function CheckoutClient({ id }) {
         }
     }, [notification]);
 
+
+
     const bookingIdFromUrl = searchParams.get('bookingId');
     const isSuccess = searchParams.get('success') === 'true';
 
@@ -562,8 +564,8 @@ export default function CheckoutClient({ id }) {
                     </div>
 
                     <div className="bg-white rounded-[40px] border border-slate-100 shadow-2xl overflow-hidden">
-                        <div className="flex flex-col lg:flex-row gap-0">
-                            <div className="lg:w-[600px] relative shrink-0 border-r border-slate-50 overflow-hidden bg-slate-900">
+                        <div className="flex flex-col gap-0">
+                            <div className="w-full relative shrink-0 overflow-hidden bg-slate-900">
                                 <div className="h-64 lg:h-full lg:min-h-[600px] relative">
                                     <img src={event.img} alt="" className="w-full h-full object-cover opacity-60" />
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent lg:bg-gradient-to-r" />

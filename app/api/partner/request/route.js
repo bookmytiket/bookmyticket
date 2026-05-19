@@ -62,21 +62,27 @@ export async function POST(request) {
     let insertError;
 
     if (type === 'professional_service') {
+      const psRemarks = `Business Name: ${businessName || 'N/A'}\nService Type: ${serviceType || 'N/A'}\nCity: ${city || 'N/A'}\nExperience: ${experience || 'N/A'}\nPortfolio: ${portfolioLink || 'N/A'}\nCoverage Area: ${coverageArea || 'N/A'}\nRemarks: ${remarks || ''}`;
       const res = await supabaseAdmin
-        .from('professional_service_requests')
+        .from('partner_requests')
         .insert({
-          full_name: `${firstName} ${lastName}`.trim(),
+          first_name: firstName,
+          last_name: lastName,
           email: email,
-          mobile: phone,
-          business_name: businessName,
-          service_category: category,
-          service_type: serviceType,
-          city: city,
-          experience: experience,
-          description: remarks,
-          portfolio_link: portfolioLink,
-          coverage_area: coverageArea,
-          status: 'Pending Review'
+          phone: phone,
+          category: category,
+          type: type,
+          role: role || 'Individual',
+          remarks: psRemarks,
+          kyc_details: {
+            businessName,
+            serviceType,
+            city,
+            experience,
+            portfolioLink,
+            coverageArea
+          },
+          status: 'Pending'
         })
         .select()
         .single();

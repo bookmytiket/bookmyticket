@@ -33,7 +33,7 @@ import {
     Edit, Search, AlertCircle, ChevronDown, ChevronRight, LogOut, Activity, RefreshCw, 
     AlertTriangle, Info, Smartphone, MessageSquare, Landmark, Ban, Sun, Moon, Filter, 
     Building2, Cpu, ExternalLink, Eye, Layout, Settings2, ShieldCheck, Slash, ArrowRight, 
-    User, Phone, Star, Trophy, Timer, Key
+    User, Phone, Star, Trophy, Timer, Key, Layers, ShoppingBag, Utensils, Car
 } from "lucide-react";
 import { HOME_EVENTS, HERO_BANNER_SLIDES } from "@/app/data/homeEvents";
 import { eventMatchesCategory } from "@/app/utils/categoryMatch";
@@ -690,15 +690,250 @@ const MapPin = ({ size, style }) => (
     </svg>
 );
 
+const CustomSelect = ({ value, onChange, options = [], placeholder = 'Select option...', theme, t }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
+    const selectedOption = options.find(opt => opt.value === value);
+
+    const filteredOptions = options.filter(opt => 
+        opt.label.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    useEffect(() => {
+        if (!isOpen) setSearchTerm('');
+    }, [isOpen]);
+
+    return (
+        <div style={{ position: 'relative', width: '100%' }}>
+            <div 
+                onClick={() => setIsOpen(!isOpen)}
+                style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    width: '100%',
+                    padding: '12px 16px',
+                    borderRadius: '10px',
+                    border: `1.5px solid ${t.border}`,
+                    backgroundColor: theme === 'light' ? '#fff' : '#1e293b',
+                    color: selectedOption ? t.textMain : t.textSub,
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                    transition: 'border-color 0.2s, box-shadow 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = '#8b5cf6';
+                }}
+                onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = t.border;
+                }}
+            >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    {selectedOption?.icon && <selectedOption.icon size={16} style={{ color: '#8b5cf6' }} />}
+                    <span>{selectedOption ? selectedOption.label : placeholder}</span>
+                </div>
+                <ChevronDown size={16} style={{ transition: 'transform 0.2s', transform: isOpen ? 'rotate(180deg)' : 'none', color: t.textSub }} />
+            </div>
+
+            {isOpen && (
+                <>
+                    <div onClick={() => setIsOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 999 }} />
+                    <div style={{
+                        position: 'absolute',
+                        top: 'calc(100% + 6px)',
+                        left: 0,
+                        right: 0,
+                        zIndex: 1000,
+                        borderRadius: '12px',
+                        border: `1.5px solid ${t.border}`,
+                        backgroundColor: theme === 'light' ? '#fff' : '#0f172a',
+                        boxShadow: '0 10px 25px -5px rgba(0,0,0,0.15), 0 8px 10px -6px rgba(0,0,0,0.15)',
+                        padding: '6px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '6px'
+                    }}>
+                        <div style={{ padding: '2px' }} onClick={e => e.stopPropagation()}>
+                            <input 
+                                type="text"
+                                value={searchTerm}
+                                onChange={e => setSearchTerm(e.target.value)}
+                                placeholder="Type to search..."
+                                autoFocus
+                                style={{
+                                    width: '100%',
+                                    padding: '8px 12px',
+                                    borderRadius: '8px',
+                                    border: `1px solid ${t.border}`,
+                                    backgroundColor: theme === 'light' ? '#f8fafc' : '#1e293b',
+                                    color: t.textMain,
+                                    fontSize: '12px',
+                                    fontWeight: 600,
+                                    outline: 'none',
+                                }}
+                            />
+                        </div>
+
+                        <div style={{ maxHeight: '180px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                            {filteredOptions.length === 0 ? (
+                                <div style={{ padding: '10px 14px', fontSize: '12px', color: t.textSub, textAlign: 'center' }}>
+                                    No matches found
+                                </div>
+                            ) : (
+                                filteredOptions.map((opt) => {
+                                    const isSelected = opt.value === value;
+                                    return (
+                                        <div
+                                            key={opt.value}
+                                            onClick={() => {
+                                                onChange(opt.value);
+                                                setIsOpen(false);
+                                            }}
+                                            style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '10px',
+                                                padding: '10px 14px',
+                                                borderRadius: '8px',
+                                                fontSize: '13px',
+                                                fontWeight: isSelected ? 800 : 600,
+                                                color: isSelected ? '#fff' : t.textMain,
+                                                backgroundColor: isSelected ? '#8b5cf6' : 'transparent',
+                                                cursor: 'pointer',
+                                                transition: 'all 0.15s'
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                if (!isSelected) e.currentTarget.style.backgroundColor = theme === 'light' ? '#f1f5f9' : '#1e293b';
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                if (!isSelected) e.currentTarget.style.backgroundColor = 'transparent';
+                                            }}
+                                        >
+                                            {opt.icon && <opt.icon size={15} style={{ color: isSelected ? '#fff' : '#8b5cf6' }} />}
+                                            <span>{opt.label}</span>
+                                        </div>
+                                    );
+                                })
+                            )}
+                        </div>
+                    </div>
+                </>
+            )}
+        </div>
+    );
+};
 
 const CouponManager = ({ t, theme }) => {
-    const { data: coupons = [], loading, refresh } = useSupabaseQuery('coupons', q => q.order('created_at', { ascending: false }));
+    const [subTab, setSubTab] = useState('legacy'); // 'legacy', 'partners', 'campaigns', 'mappings', 'inventory', 'ledger'
+    const { data: coupons = [], loading: legacyLoading, refresh: refreshLegacy } = useSupabaseQuery('coupons', q => q.order('created_at', { ascending: false }));
     const [upsertCoupon] = useSupabaseMutation('coupons', 'upsert');
     const [deleteCoupon] = useSupabaseMutation('coupons', 'delete', (q, p) => q.eq('id', p.id));
     const { showToast } = useToast();
+    
+    // Legacy Coupons State
     const [showModal, setShowModal] = useState(false);
     const [formData, setFormData] = useState({ code: '', type: 'percent', value: '', min_tickets: 1, usage_limit_per_user: 1, expiry_date: '', is_active: true });
     const [editingId, setEditingId] = useState(null);
+
+    // Partner Rewards State
+    const [partners, setPartners] = useState([]);
+    const [campaigns, setCampaigns] = useState([]);
+    const [events, setEvents] = useState([]);
+    const [mappings, setMappings] = useState([]);
+    const [redemptionLogs, setRedemptionLogs] = useState([]);
+    const [loadingRewards, setLoadingRewards] = useState(false);
+
+    // Forms State
+    const [partnerForm, setPartnerForm] = useState({ name: '', logo_url: '', category: 'Shopping', description: '', contact_name: '', contact_email: '' });
+    const [campaignForm, setCampaignForm] = useState({ partner_id: '', campaign_name: '', offer_title: '', offer_description: '', terms: '', redeem_url: '', start_date: '', end_date: '' });
+    const [mappingForm, setMappingForm] = useState({ event_id: '', campaign_id: '', allocation_limit: 100, is_enabled: true });
+    const [inventoryForm, setInventoryForm] = useState({ campaign_id: '', codesText: '' });
+    const categoryOptions = useMemo(() => [
+        { value: 'Shopping', label: 'Shopping / retail', icon: ShoppingBag },
+        { value: 'Food & Dining', label: 'Food & Dining', icon: Utensils },
+        { value: 'Travel', label: 'Travel & Cabs', icon: Car },
+        { value: 'Entertainment', label: 'Entertainment', icon: Sparkles },
+        { value: 'Health', label: 'Health & Wellness', icon: Activity }
+    ], []);
+
+    const partnerOptions = useMemo(() => partners.map(p => ({
+        value: p.id,
+        label: p.name,
+        icon: Gift
+    })), [partners]);
+
+    const campaignOptions = useMemo(() => campaigns.map(c => ({
+        value: c.id,
+        label: `${c.partnerName} - ${c.campaign_name}`,
+        icon: Gift
+    })), [campaigns]);
+
+    const eventOptions = useMemo(() => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return events
+            .filter(ev => {
+                if (ev.status === 'expired') return false;
+                if (ev.date) {
+                    const evDate = new Date(ev.date);
+                    if (evDate < today) return false;
+                }
+                return true;
+            })
+            .map(ev => ({
+                value: ev.id,
+                label: ev.title,
+                icon: Ticket
+            }));
+    }, [events]);
+
+    useEffect(() => {
+        if (subTab !== 'legacy') {
+            loadRewardsData();
+        }
+    }, [subTab]);
+
+    const loadRewardsData = async () => {
+        setLoadingRewards(true);
+        try {
+            // Load Partners
+            const pRes = await fetch('/api/admin/partners');
+            const pData = await pRes.json();
+            if (pData.success) {
+                setPartners(pData.partners || []);
+                // Flat map campaigns
+                const allCamps = (pData.partners || []).reduce((acc, curr) => {
+                    return [...acc, ...(curr.partner_campaigns || []).map(c => ({ ...c, partnerName: curr.name }))];
+                }, []);
+                setCampaigns(allCamps);
+            }
+
+            // Load Events
+            const { data: evs } = await supabase.from('events').select('id, title, status, date').eq('publish_status', 'published');
+            setEvents(evs || []);
+
+            // Load Mappings
+            const { data: maps } = await supabase
+                .from('event_coupon_mapping')
+                .select('*, partner_campaigns(*), events(title)');
+            setMappings(maps || []);
+
+            // Load Rewards Ledger
+            const { data: logs } = await supabase
+                .from('user_coupon_rewards')
+                .select('*, profiles(full_name, email), coupon_inventory(coupon_code, partner_campaigns(campaign_name, offer_title, partners(name)))')
+                .order('unlocked_at', { ascending: false });
+            setRedemptionLogs(logs || []);
+
+        } catch (err) {
+            console.error("Error loading rewards admin data:", err);
+            showToast("Failed to load rewards data", "error");
+        } finally {
+            setLoadingRewards(false);
+        }
+    };
 
     const handleSave = async (e) => {
         e.preventDefault();
@@ -718,71 +953,549 @@ const CouponManager = ({ t, theme }) => {
             setShowModal(false);
             setEditingId(null);
             setFormData({ code: '', type: 'percent', value: '', min_tickets: 1, usage_limit_per_user: 1, expiry_date: '', is_active: true });
-            refresh();
+            refreshLegacy();
         } catch (err) {
             showToast("Error saving coupon: " + err.message, "error");
         }
     };
 
-    if (loading) return <div style={{ padding: "40px", textAlign: "center", color: t.textSub }}>Loading coupons...</div>;
+    const handleCreatePartner = async (e) => {
+        e.preventDefault();
+        try {
+            const res = await fetch('/api/admin/partners', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(partnerForm)
+            });
+            const data = await res.json();
+            if (data.success) {
+                showToast("Partner onboarded successfully!", "success");
+                setPartnerForm({ name: '', logo_url: '', category: 'Shopping', description: '', contact_name: '', contact_email: '' });
+                loadRewardsData();
+            } else {
+                throw new Error(data.error);
+            }
+        } catch (err) {
+            showToast(err.message, "error");
+        }
+    };
+
+    const handleCreateCampaign = async (e) => {
+        e.preventDefault();
+        try {
+            const res = await fetch('/api/admin/partner-campaigns', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(campaignForm)
+            });
+            const data = await res.json();
+            if (data.success) {
+                showToast("Campaign created successfully!", "success");
+                setCampaignForm({ partner_id: '', campaign_name: '', offer_title: '', offer_description: '', terms: '', redeem_url: '', start_date: '', end_date: '' });
+                loadRewardsData();
+            } else {
+                throw new Error(data.error);
+            }
+        } catch (err) {
+            showToast(err.message, "error");
+        }
+    };
+
+    const handleCreateMapping = async (e) => {
+        e.preventDefault();
+        try {
+            const res = await fetch('/api/admin/event-mappings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(mappingForm)
+            });
+            const data = await res.json();
+            if (data.success) {
+                showToast("Event rewards campaign mapping saved!", "success");
+                setMappingForm({ event_id: '', campaign_id: '', allocation_limit: 100, is_enabled: true });
+                loadRewardsData();
+            } else {
+                throw new Error(data.error);
+            }
+        } catch (err) {
+            showToast(err.message, "error");
+        }
+    };
+
+    const handleImportInventory = async (e) => {
+        e.preventDefault();
+        try {
+            const codes = inventoryForm.codesText
+                .split(/[\n,]+/)
+                .map(c => c.trim())
+                .filter(c => c.length > 0);
+
+            if (codes.length === 0) {
+                showToast("Please enter at least one coupon code", "warning");
+                return;
+            }
+
+            const res = await fetch('/api/admin/coupon-inventory', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    campaign_id: inventoryForm.campaign_id,
+                    coupons: codes
+                })
+            });
+            const data = await res.json();
+            if (data.success) {
+                showToast(`Successfully imported ${data.count} coupon codes!`, "success");
+                setInventoryForm({ campaign_id: '', codesText: '' });
+                loadRewardsData();
+            } else {
+                throw new Error(data.error);
+            }
+        } catch (err) {
+            showToast(err.message, "error");
+        }
+    };
 
     return (
-        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
-                <h3 style={{ fontSize: "18px", fontWeight: 700 }}>Advanced Coupon Management</h3>
-                <button 
-                    onClick={() => { setEditingId(null); setFormData({ code: '', type: 'percent', value: '', min_tickets: 1, usage_limit_per_user: 1, expiry_date: '', is_active: true }); setShowModal(true); }}
-                    style={{ padding: "8px 16px", background: "linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)", color: "#fff", border: "none", borderRadius: "10px", fontSize: "13px", fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}
-                >
-                    <Plus size={18} /> Create Coupon
-                </button>
+        <div style={{ backgroundColor: t.cardBg, padding: "32px", borderRadius: "24px", border: `1px solid ${t.border}`, boxShadow: "0 10px 30px rgba(0,0,0,0.02)" }}>
+            
+            {/* Header Block */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '28px', borderBottom: `1px solid ${t.border}`, paddingBottom: '20px' }}>
+                <div>
+                    <h3 style={{ fontSize: "22px", fontWeight: 900, color: t.textMain, letterSpacing: '-0.02em', margin: 0 }}>Advanced Promotional Ledger</h3>
+                    <p style={{ fontSize: '12px', color: t.textSub, marginTop: '4px' }}>Control direct checkout discounts and post-booking partner rewards.</p>
+                </div>
             </div>
 
-            <div className="table-container">
-                <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                    <thead>
-                        <tr style={{ borderBottom: `1px solid ${t.border}`, textAlign: "left" }}>
-                            <th style={{ padding: "12px", color: t.textSub, fontSize: "12px", fontWeight: 700, textTransform: "uppercase" }}>Code</th>
-                            <th style={{ padding: "12px", color: t.textSub, fontSize: "12px", fontWeight: 700, textTransform: "uppercase" }}>Discount</th>
-                            <th style={{ padding: "12px", color: t.textSub, fontSize: "12px", fontWeight: 700, textTransform: "uppercase" }}>Conditions</th>
-                            <th style={{ padding: "12px", color: t.textSub, fontSize: "12px", fontWeight: 700, textTransform: "uppercase" }}>Status</th>
-                            <th style={{ padding: "12px", color: t.textSub, fontSize: "12px", fontWeight: 700, textTransform: "uppercase" }}>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {coupons.length === 0 ? (
-                            <tr><td colSpan="5" style={{ padding: "40px", textAlign: "center", color: t.textSub }}>No coupons found.</td></tr>
-                        ) : coupons.map((c) => (
-                            <tr key={c.id} style={{ borderBottom: `1px solid ${t.border}` }}>
-                                <td style={{ padding: "12px", fontWeight: 700, color: t.textMain }}>{c.code}</td>
-                                <td style={{ padding: "12px" }}>
-                                    <span style={{ padding: "4px 8px", backgroundColor: "#ec489915", color: "#ec4899", borderRadius: "6px", fontSize: "11px", fontWeight: 800 }}>
-                                        {c.type === 'percent' ? `${c.value}% OFF` : `₹${c.value} OFF`}
-                                    </span>
-                                </td>
-                                <td style={{ padding: "12px", fontSize: "12px", color: t.textSub }}>
-                                    <div>Min Tickets: {c.min_tickets}</div>
-                                    <div>Limit/User: {c.usage_limit_per_user}</div>
-                                    {c.expiry_date && <div>Expires: {new Date(c.expiry_date).toLocaleDateString()}</div>}
-                                </td>
-                                <td style={{ padding: "12px" }}>
-                                    <span className={`badge ${c.is_active ? 'badge-green' : 'badge-red'}`}>
-                                        {c.is_active ? 'ACTIVE' : 'INACTIVE'}
-                                    </span>
-                                </td>
-                                <td style={{ padding: "12px" }}>
-                                    <div style={{ display: "flex", gap: "8px" }}>
-                                        <button onClick={() => { setEditingId(c.id); setFormData({ ...c, expiry_date: c.expiry_date ? new Date(c.expiry_date).toISOString().split('T')[0] : '' }); setShowModal(true); }} style={{ color: t.textSub, background: "none", border: "none", cursor: "pointer" }}><Edit size={16} /></button>
-                                        <button onClick={() => deleteCoupon({ id: c.id }).then(() => refresh())} style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer" }}><Trash2 size={16} /></button>
-                                    </div>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
+            {/* Inner Tabs Row */}
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '28px', flexWrap: 'wrap' }}>
+                {[
+                    { id: 'legacy', label: 'Legacy Cart Coupons', icon: Tag },
+                    { id: 'partners', label: 'Onboard Brands', icon: Briefcase },
+                    { id: 'campaigns', label: 'Reward Campaigns', icon: Gift },
+                    { id: 'mappings', label: 'Event Mappings', icon: Layers },
+                    { id: 'inventory', label: 'Inventory Import', icon: Upload },
+                    { id: 'ledger', label: 'Redemption Ledger', icon: BarChart3 }
+                ].map(tab => {
+                    const Icon = tab.icon;
+                    const isActive = subTab === tab.id;
+                    return (
+                        <button
+                            key={tab.id}
+                            onClick={() => setSubTab(tab.id)}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                padding: '10px 18px',
+                                borderRadius: '12px',
+                                border: 'none',
+                                fontWeight: 800,
+                                fontSize: '13px',
+                                cursor: 'pointer',
+                                background: isActive ? 'linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)' : (theme === 'light' ? '#f1f5f9' : '#1e293b'),
+                                color: isActive ? '#fff' : t.textSub,
+                                transition: 'all 0.2s',
+                                boxShadow: isActive ? '0 4px 15px rgba(236,72,153,0.2)' : 'none'
+                            }}
+                        >
+                            <Icon size={16} />
+                            {tab.label}
+                        </button>
+                    );
+                })}
             </div>
 
-            {showModal && (
+            {/* Legacy Tab View */}
+            {subTab === 'legacy' && (
+                <div>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
+                        <button 
+                            onClick={() => { setEditingId(null); setFormData({ code: '', type: 'percent', value: '', min_tickets: 1, usage_limit_per_user: 1, expiry_date: '', is_active: true }); setShowModal(true); }}
+                            style={{ padding: "10px 20px", background: "linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)", color: "#fff", border: "none", borderRadius: "12px", fontSize: "13px", fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", boxShadow: '0 4px 12px rgba(236,72,153,0.2)' }}
+                        >
+                            <Plus size={18} /> Create Cart Coupon
+                        </button>
+                    </div>
+
+                    <div className="table-container">
+                        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                            <thead>
+                                <tr style={{ borderBottom: `1px solid ${t.border}`, textAlign: "left" }}>
+                                    <th style={{ padding: "14px", color: t.textSub, fontSize: "12px", fontWeight: 800, textTransform: "uppercase" }}>Code</th>
+                                    <th style={{ padding: "14px", color: t.textSub, fontSize: "12px", fontWeight: 800, textTransform: "uppercase" }}>Discount</th>
+                                    <th style={{ padding: "14px", color: t.textSub, fontSize: "12px", fontWeight: 800, textTransform: "uppercase" }}>Conditions</th>
+                                    <th style={{ padding: "14px", color: t.textSub, fontSize: "12px", fontWeight: 800, textTransform: "uppercase" }}>Status</th>
+                                    <th style={{ padding: "14px", color: t.textSub, fontSize: "12px", fontWeight: 800, textTransform: "uppercase" }}>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {coupons.length === 0 ? (
+                                    <tr><td colSpan="5" style={{ padding: "40px", textAlign: "center", color: t.textSub }}>No coupons found.</td></tr>
+                                ) : coupons.map((c) => (
+                                    <tr key={c.id} style={{ borderBottom: `1px solid ${t.border}` }}>
+                                        <td style={{ padding: "14px", fontWeight: 800, color: t.textMain }}>{c.code}</td>
+                                        <td style={{ padding: "14px" }}>
+                                            <span style={{ padding: "4px 8px", backgroundColor: "#ec489915", color: "#ec4899", borderRadius: "6px", fontSize: "11px", fontWeight: 800 }}>
+                                                {c.type === 'percent' ? `${c.value}% OFF` : `₹${c.value} OFF`}
+                                            </span>
+                                        </td>
+                                        <td style={{ padding: "14px", fontSize: "12px", color: t.textSub }}>
+                                            <div>Min Tickets: {c.min_tickets}</div>
+                                            <div>Limit/User: {c.usage_limit_per_user}</div>
+                                            {c.expiry_date && <div>Expires: {new Date(c.expiry_date).toLocaleDateString()}</div>}
+                                        </td>
+                                        <td style={{ padding: "14px" }}>
+                                            <span className={`badge ${c.is_active ? 'badge-green' : 'badge-red'}`}>
+                                                {c.is_active ? 'ACTIVE' : 'INACTIVE'}
+                                            </span>
+                                        </td>
+                                        <td style={{ padding: "14px" }}>
+                                            <div style={{ display: "flex", gap: "10px" }}>
+                                                <button onClick={() => { setEditingId(c.id); setFormData({ ...c, expiry_date: c.expiry_date ? new Date(c.expiry_date).toISOString().split('T')[0] : '' }); setShowModal(true); }} style={{ color: t.textSub, background: "none", border: "none", cursor: "pointer" }}><Edit size={16} /></button>
+                                                <button onClick={() => deleteCoupon({ id: c.id }).then(() => refreshLegacy())} style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer" }}><Trash2 size={16} /></button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+
+            {/* Partners Onboarding View */}
+            {subTab === 'partners' && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '32px' }}>
+                    <form onSubmit={handleCreatePartner} style={{ display: 'flex', flexDirection: 'column', gap: '16px', background: theme === 'light' ? '#f8fafc' : '#111827', padding: '24px', borderRadius: '20px', border: `1px solid ${t.border}` }}>
+                        <h4 style={{ fontSize: '16px', fontWeight: 800, color: t.textMain, margin: '0 0 8px' }}>Onboard Brand Partner</h4>
+                        <div>
+                            <label style={{ display: "block", fontSize: "11px", fontWeight: 800, color: t.textSub, marginBottom: "6px", textTransform: "uppercase" }}>Brand Name</label>
+                            <input required value={partnerForm.name} onChange={e => setPartnerForm({...partnerForm, name: e.target.value})} placeholder="e.g. Swiggy" style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1px solid ${t.border}`, backgroundColor: t.cardBg, color: t.textMain }} />
+                        </div>
+                        <div>
+                            <label style={{ display: "block", fontSize: "11px", fontWeight: 800, color: t.textSub, marginBottom: "6px", textTransform: "uppercase" }}>Logo URL</label>
+                            <input value={partnerForm.logo_url} onChange={e => setPartnerForm({...partnerForm, logo_url: e.target.value})} placeholder="https://..." style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1px solid ${t.border}`, backgroundColor: t.cardBg, color: t.textMain }} />
+                        </div>
+                        <div>
+                            <label style={{ display: "block", fontSize: "11px", fontWeight: 800, color: t.textSub, marginBottom: "6px", textTransform: "uppercase" }}>Category</label>
+                            <CustomSelect 
+                                value={partnerForm.category} 
+                                onChange={val => setPartnerForm({...partnerForm, category: val})} 
+                                options={categoryOptions}
+                                placeholder="Select Category"
+                                theme={theme}
+                                t={t}
+                            />
+                        </div>
+                        <div>
+                            <label style={{ display: "block", fontSize: "11px", fontWeight: 800, color: t.textSub, marginBottom: "6px", textTransform: "uppercase" }}>Description</label>
+                            <textarea value={partnerForm.description} onChange={e => setPartnerForm({...partnerForm, description: e.target.value})} placeholder="Brief brand overview" style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1px solid ${t.border}`, backgroundColor: t.cardBg, color: t.textMain, height: '70px', resize: 'none' }} />
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                            <div>
+                                <label style={{ display: "block", fontSize: "11px", fontWeight: 800, color: t.textSub, marginBottom: "6px", textTransform: "uppercase" }}>Contact Name</label>
+                                <input value={partnerForm.contact_name} onChange={e => setPartnerForm({...partnerForm, contact_name: e.target.value})} placeholder="POC Name" style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1px solid ${t.border}`, backgroundColor: t.cardBg, color: t.textMain }} />
+                            </div>
+                            <div>
+                                <label style={{ display: "block", fontSize: "11px", fontWeight: 800, color: t.textSub, marginBottom: "6px", textTransform: "uppercase" }}>Contact Email</label>
+                                <input value={partnerForm.contact_email} onChange={e => setPartnerForm({...partnerForm, contact_email: e.target.value})} placeholder="poc@brand.com" style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1px solid ${t.border}`, backgroundColor: t.cardBg, color: t.textMain }} />
+                            </div>
+                        </div>
+                        <button type="submit" style={{ padding: "14px", borderRadius: "12px", background: "linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)", color: "#fff", border: "none", fontWeight: 800, textTransform: "uppercase", cursor: "pointer", marginTop: '8px' }}>
+                            Onboard Brand
+                        </button>
+                    </form>
+
+                    <div className="table-container">
+                        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                            <thead>
+                                <tr style={{ borderBottom: `1px solid ${t.border}`, textAlign: "left" }}>
+                                    <th style={{ padding: "14px", color: t.textSub, fontSize: "12px", fontWeight: 800 }}>Partner</th>
+                                    <th style={{ padding: "14px", color: t.textSub, fontSize: "12px", fontWeight: 800 }}>Category</th>
+                                    <th style={{ padding: "14px", color: t.textSub, fontSize: "12px", fontWeight: 800 }}>Contact info</th>
+                                    <th style={{ padding: "14px", color: t.textSub, fontSize: "12px", fontWeight: 800 }}>Campaigns</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {partners.length === 0 ? (
+                                    <tr><td colSpan="4" style={{ padding: "40px", textAlign: "center", color: t.textSub }}>No partners onboarded yet.</td></tr>
+                                ) : partners.map((p) => (
+                                    <tr key={p.id} style={{ borderBottom: `1px solid ${t.border}` }}>
+                                        <td style={{ padding: "14px", fontWeight: 800, color: t.textMain }}>{p.name}</td>
+                                        <td style={{ padding: "14px" }}>
+                                            <span style={{ padding: '3px 8px', borderRadius: '4px', background: '#3b82f615', color: '#3b82f6', fontSize: '11px', fontWeight: 800 }}>{p.category}</span>
+                                        </td>
+                                        <td style={{ padding: "14px", fontSize: "12px", color: t.textSub }}>
+                                            <div>{p.contact_name || 'No POC'}</div>
+                                            <div>{p.contact_email || 'No Email'}</div>
+                                        </td>
+                                        <td style={{ padding: "14px", fontSize: "13px", fontWeight: 700, color: t.textMain }}>
+                                            {p.partner_campaigns?.length || 0} active
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+
+            {/* Campaign Creator View */}
+            {subTab === 'campaigns' && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '32px' }}>
+                    <form onSubmit={handleCreateCampaign} style={{ display: 'flex', flexDirection: 'column', gap: '16px', background: theme === 'light' ? '#f8fafc' : '#111827', padding: '24px', borderRadius: '20px', border: `1px solid ${t.border}` }}>
+                        <h4 style={{ fontSize: '16px', fontWeight: 800, color: t.textMain, margin: '0 0 8px' }}>Launch Reward Campaign</h4>
+                        
+                        <div>
+                            <label style={{ display: "block", fontSize: "11px", fontWeight: 800, color: t.textSub, marginBottom: "6px", textTransform: "uppercase" }}>Select Partner</label>
+                            <CustomSelect 
+                                value={campaignForm.partner_id} 
+                                onChange={val => setCampaignForm({...campaignForm, partner_id: val})} 
+                                options={partnerOptions}
+                                placeholder="Choose partner..."
+                                theme={theme}
+                                t={t}
+                            />
+                        </div>
+                        <div>
+                            <label style={{ display: "block", fontSize: "11px", fontWeight: 800, color: t.textSub, marginBottom: "6px", textTransform: "uppercase" }}>Campaign Name</label>
+                            <input required value={campaignForm.campaign_name} onChange={e => setCampaignForm({...campaignForm, campaign_name: e.target.value})} placeholder="e.g. Swiggy Super Food Fest 2026" style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1px solid ${t.border}`, backgroundColor: t.cardBg, color: t.textMain }} />
+                        </div>
+                        <div>
+                            <label style={{ display: "block", fontSize: "11px", fontWeight: 800, color: t.textSub, marginBottom: "6px", textTransform: "uppercase" }}>Offer Headline / Title</label>
+                            <input required value={campaignForm.offer_title} onChange={e => setCampaignForm({...campaignForm, offer_title: e.target.value})} placeholder="e.g. Flat Rs.150 OFF on orders above Rs.399" style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1px solid ${t.border}`, backgroundColor: t.cardBg, color: t.textMain }} />
+                        </div>
+                        <div>
+                            <label style={{ display: "block", fontSize: "11px", fontWeight: 800, color: t.textSub, marginBottom: "6px", textTransform: "uppercase" }}>Offer Description</label>
+                            <textarea value={campaignForm.offer_description} onChange={e => setCampaignForm({...campaignForm, offer_description: e.target.value})} placeholder="Enter description details..." style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1px solid ${t.border}`, backgroundColor: t.cardBg, color: t.textMain, height: '60px', resize: 'none' }} />
+                        </div>
+                        <div>
+                            <label style={{ display: "block", fontSize: "11px", fontWeight: 800, color: t.textSub, marginBottom: "6px", textTransform: "uppercase" }}>Redeem Redirect URL</label>
+                            <input required value={campaignForm.redeem_url} onChange={e => setCampaignForm({...campaignForm, redeem_url: e.target.value})} placeholder="https://..." style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1px solid ${t.border}`, backgroundColor: t.cardBg, color: t.textMain }} />
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                            <div>
+                                <label style={{ display: "block", fontSize: "11px", fontWeight: 800, color: t.textSub, marginBottom: "6px", textTransform: "uppercase" }}>Start Date</label>
+                                <input type="date" value={campaignForm.start_date} onChange={e => setCampaignForm({...campaignForm, start_date: e.target.value})} style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1px solid ${t.border}`, backgroundColor: t.cardBg, color: t.textMain }} />
+                            </div>
+                            <div>
+                                <label style={{ display: "block", fontSize: "11px", fontWeight: 800, color: t.textSub, marginBottom: "6px", textTransform: "uppercase" }}>End Date</label>
+                                <input type="date" value={campaignForm.end_date} onChange={e => setCampaignForm({...campaignForm, end_date: e.target.value})} style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1px solid ${t.border}`, backgroundColor: t.cardBg, color: t.textMain }} />
+                            </div>
+                        </div>
+                        <button type="submit" style={{ padding: "14px", borderRadius: "12px", background: "linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)", color: "#fff", border: "none", fontWeight: 800, textTransform: "uppercase", cursor: "pointer" }}>
+                            Launch Campaign
+                        </button>
+                    </form>
+
+                    <div className="table-container">
+                        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                            <thead>
+                                <tr style={{ borderBottom: `1px solid ${t.border}`, textAlign: "left" }}>
+                                    <th style={{ padding: "14px", color: t.textSub, fontSize: "12px", fontWeight: 800 }}>Campaign Name</th>
+                                    <th style={{ padding: "14px", color: t.textSub, fontSize: "12px", fontWeight: 800 }}>Brand</th>
+                                    <th style={{ padding: "14px", color: t.textSub, fontSize: "12px", fontWeight: 800 }}>Offer Details</th>
+                                    <th style={{ padding: "14px", color: t.textSub, fontSize: "12px", fontWeight: 800 }}>Validity</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {campaigns.length === 0 ? (
+                                    <tr><td colSpan="4" style={{ padding: "40px", textAlign: "center", color: t.textSub }}>No reward campaigns defined yet.</td></tr>
+                                ) : campaigns.map((c) => (
+                                    <tr key={c.id} style={{ borderBottom: `1px solid ${t.border}` }}>
+                                        <td style={{ padding: "14px", fontWeight: 800, color: t.textMain }}>{c.campaign_name}</td>
+                                        <td style={{ padding: "14px", fontSize: "13px", fontWeight: 700, color: t.textMain }}>{c.partnerName}</td>
+                                        <td style={{ padding: "14px", fontSize: "12px", color: t.textSub }}>
+                                            <div style={{ fontWeight: 800, color: t.textMain }}>{c.offer_title}</div>
+                                            <div style={{ fontSize: '11px', marginTop: '2px' }}>{c.redeem_url}</div>
+                                        </td>
+                                        <td style={{ padding: "14px", fontSize: "12px", color: t.textSub }}>
+                                            <div>Start: {c.start_date ? new Date(c.start_date).toLocaleDateString() : 'N/A'}</div>
+                                            <div>End: {c.end_date ? new Date(c.end_date).toLocaleDateString() : 'N/A'}</div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+
+            {/* Event mappings view */}
+            {subTab === 'mappings' && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '32px' }}>
+                    <form onSubmit={handleCreateMapping} style={{ display: 'flex', flexDirection: 'column', gap: '16px', background: theme === 'light' ? '#f8fafc' : '#111827', padding: '24px', borderRadius: '20px', border: `1px solid ${t.border}` }}>
+                        <h4 style={{ fontSize: '16px', fontWeight: 800, color: t.textMain, margin: '0 0 8px' }}>Map Rewards to Event Tickets</h4>
+                        
+                        <div>
+                            <label style={{ display: "block", fontSize: "11px", fontWeight: 800, color: t.textSub, marginBottom: "6px", textTransform: "uppercase" }}>Select Premium Event</label>
+                            <CustomSelect 
+                                value={mappingForm.event_id} 
+                                onChange={val => setMappingForm({...mappingForm, event_id: val})} 
+                                options={eventOptions}
+                                placeholder="Choose event..."
+                                theme={theme}
+                                t={t}
+                            />
+                        </div>
+                        <div>
+                            <label style={{ display: "block", fontSize: "11px", fontWeight: 800, color: t.textSub, marginBottom: "6px", textTransform: "uppercase" }}>Select Reward Campaign</label>
+                            <CustomSelect 
+                                value={mappingForm.campaign_id} 
+                                onChange={val => setMappingForm({...mappingForm, campaign_id: val})} 
+                                options={campaignOptions}
+                                placeholder="Choose campaign..."
+                                theme={theme}
+                                t={t}
+                            />
+                        </div>
+                        <div>
+                            <label style={{ display: "block", fontSize: "11px", fontWeight: 800, color: t.textSub, marginBottom: "6px", textTransform: "uppercase" }}>Allocation Count Limit</label>
+                            <input type="number" required value={mappingForm.allocation_limit} onChange={e => setMappingForm({...mappingForm, allocation_limit: parseInt(e.target.value)})} style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1px solid ${t.border}`, backgroundColor: t.cardBg, color: t.textMain }} />
+                        </div>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', marginTop: '4px' }}>
+                            <input type="checkbox" checked={mappingForm.is_enabled} onChange={e => setMappingForm({...mappingForm, is_enabled: e.target.checked})} />
+                            <span style={{ fontSize: '13px', fontWeight: 700, color: t.textMain }}>Enable Allocations</span>
+                        </label>
+                        <button type="submit" style={{ padding: "14px", borderRadius: "12px", background: "linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)", color: "#fff", border: "none", fontWeight: 800, textTransform: "uppercase", cursor: "pointer" }}>
+                            Save Event Reward Mapping
+                        </button>
+                    </form>
+
+                    <div className="table-container">
+                        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                            <thead>
+                                <tr style={{ borderBottom: `1px solid ${t.border}`, textAlign: "left" }}>
+                                    <th style={{ padding: "14px", color: t.textSub, fontSize: "12px", fontWeight: 800 }}>Event</th>
+                                    <th style={{ padding: "14px", color: t.textSub, fontSize: "12px", fontWeight: 800 }}>Mapped Campaign</th>
+                                    <th style={{ padding: "14px", color: t.textSub, fontSize: "12px", fontWeight: 800 }}>Allocation Limit</th>
+                                    <th style={{ padding: "14px", color: t.textSub, fontSize: "12px", fontWeight: 800 }}>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {mappings.length === 0 ? (
+                                    <tr><td colSpan="4" style={{ padding: "40px", textAlign: "center", color: t.textSub }}>No event-campaign mappings saved yet.</td></tr>
+                                ) : mappings.map((m) => (
+                                    <tr key={m.id} style={{ borderBottom: `1px solid ${t.border}` }}>
+                                        <td style={{ padding: "14px", fontWeight: 800, color: t.textMain }}>{m.events?.title || 'Unknown Event'}</td>
+                                        <td style={{ padding: "14px", fontSize: "13px", fontWeight: 700, color: t.textMain }}>{m.partner_campaigns?.campaign_name || 'Unknown Campaign'}</td>
+                                        <td style={{ padding: "14px", fontSize: "13px", color: t.textMain }}>{m.allocation_limit} max</td>
+                                        <td style={{ padding: "14px" }}>
+                                            <span className={`badge ${m.is_enabled ? 'badge-green' : 'badge-red'}`}>
+                                                {m.is_enabled ? 'ACTIVE' : 'MUTED'}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+
+            {/* Inventory Import View */}
+            {subTab === 'inventory' && (
+                <div style={{ maxWidth: '650px', margin: '0 auto' }}>
+                    <form onSubmit={handleImportInventory} style={{ display: 'flex', flexDirection: 'column', gap: '20px', background: theme === 'light' ? '#f8fafc' : '#111827', padding: '32px', borderRadius: '24px', border: `1px solid ${t.border}` }}>
+                        <h4 style={{ fontSize: '18px', fontWeight: 900, color: t.textMain, margin: 0 }}>Bulk Partner Coupon Code Loader</h4>
+                        <p style={{ fontSize: '12px', color: t.textSub, margin: 0 }}>Select a campaign and paste unique vendor coupon codes to hydrate the reward bank inventory pool.</p>
+                        
+                        <div>
+                            <label style={{ display: "block", fontSize: "11px", fontWeight: 800, color: t.textSub, marginBottom: "6px", textTransform: "uppercase" }}>Select Reward Campaign</label>
+                            <CustomSelect 
+                                value={inventoryForm.campaign_id} 
+                                onChange={val => setInventoryForm({...inventoryForm, campaign_id: val})} 
+                                options={campaignOptions}
+                                placeholder="Choose campaign..."
+                                theme={theme}
+                                t={t}
+                            />
+                        </div>
+                        <div>
+                            <label style={{ display: "block", fontSize: "11px", fontWeight: 800, color: t.textSub, marginBottom: "6px", textTransform: "uppercase" }}>Enter Coupon Codes (One per line or comma-separated)</label>
+                            <textarea required value={inventoryForm.codesText} onChange={e => setInventoryForm({...inventoryForm, codesText: e.target.value})} placeholder="FLIPKART500&#10;FLIPKART1000&#10;FLIPKART2000..." style={{ width: "100%", padding: "16px", borderRadius: "12px", border: `1px solid ${t.border}`, backgroundColor: t.cardBg, color: t.textMain, height: '180px', fontFamily: 'monospace', fontSize: '13px', lineHeight: 1.5 }} />
+                        </div>
+                        <button type="submit" style={{ padding: "16px", borderRadius: "12px", background: "linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)", color: "#fff", border: "none", fontWeight: 800, textTransform: "uppercase", cursor: "pointer", letterSpacing: '0.5px' }}>
+                            Bulk Hydrate Reward Inventory
+                        </button>
+                    </form>
+                </div>
+            )}
+
+            {/* Ledger View */}
+            {subTab === 'ledger' && (
+                <div>
+                    <div style={{ display: 'flex', gap: '20px', marginBottom: '24px' }}>
+                        <div style={{ flex: 1, padding: '20px', background: theme === 'light' ? '#f8fafc' : '#111827', borderRadius: '16px', border: `1px solid ${t.border}` }}>
+                            <div style={{ fontSize: '11px', fontWeight: 800, color: t.textSub, textTransform: 'uppercase', marginBottom: '4px' }}>Total Unlocked Coupons</div>
+                            <div style={{ fontSize: '26px', fontWeight: 900, color: t.textMain }}>{redemptionLogs.length}</div>
+                        </div>
+                        <div style={{ flex: 1, padding: '20px', background: theme === 'light' ? '#f8fafc' : '#111827', borderRadius: '16px', border: `1px solid ${t.border}` }}>
+                            <div style={{ fontSize: '11px', fontWeight: 800, color: t.textSub, textTransform: 'uppercase', marginBottom: '4px' }}>Redeemed / Used Coupons</div>
+                            <div style={{ fontSize: '26px', fontWeight: 900, color: '#10b981' }}>{redemptionLogs.filter(l => l.reward_status === 'redeemed').length}</div>
+                        </div>
+                        <div style={{ flex: 1, padding: '20px', background: theme === 'light' ? '#f8fafc' : '#111827', borderRadius: '16px', border: `1px solid ${t.border}` }}>
+                            <div style={{ fontSize: '11px', fontWeight: 800, color: t.textSub, textTransform: 'uppercase', marginBottom: '4px' }}>Active Conversion Rate</div>
+                            <div style={{ fontSize: '26px', fontWeight: 900, color: '#8b5cf6' }}>
+                                {redemptionLogs.length > 0 
+                                    ? ((redemptionLogs.filter(l => l.reward_status === 'redeemed').length / redemptionLogs.length) * 100).toFixed(1) + '%' 
+                                    : '0%'}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="table-container">
+                        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                            <thead>
+                                <tr style={{ borderBottom: `1px solid ${t.border}`, textAlign: "left" }}>
+                                    <th style={{ padding: "14px", color: t.textSub, fontSize: "12px", fontWeight: 800 }}>Customer</th>
+                                    <th style={{ padding: "14px", color: t.textSub, fontSize: "12px", fontWeight: 800 }}>Brand & Campaign</th>
+                                    <th style={{ padding: "14px", color: t.textSub, fontSize: "12px", fontWeight: 800 }}>Coupon Code</th>
+                                    <th style={{ padding: "14px", color: t.textSub, fontSize: "12px", fontWeight: 800 }}>Unlocked Date</th>
+                                    <th style={{ padding: "14px", color: t.textSub, fontSize: "12px", fontWeight: 800 }}>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {redemptionLogs.length === 0 ? (
+                                    <tr><td colSpan="5" style={{ padding: "40px", textAlign: "center", color: t.textSub }}>No coupon rewards unlocked or logged yet.</td></tr>
+                                ) : redemptionLogs.map((l) => {
+                                    const inv = l.coupon_inventory || {};
+                                    const camp = inv.partner_campaigns || {};
+                                    const part = camp.partners || {};
+                                    
+                                    return (
+                                        <tr key={l.id} style={{ borderBottom: `1px solid ${t.border}` }}>
+                                            <td style={{ padding: "14px", fontSize: "13px" }}>
+                                                <div style={{ fontWeight: 800, color: t.textMain }}>{l.profiles?.full_name || 'Guest User'}</div>
+                                                <div style={{ fontSize: '11px', color: t.textSub }}>{l.profiles?.email}</div>
+                                            </td>
+                                            <td style={{ padding: "14px", fontSize: "13px" }}>
+                                                <div style={{ fontWeight: 800, color: t.textMain }}>{part.name}</div>
+                                                <div style={{ fontSize: '11px', color: t.textSub }}>{camp.campaign_name}</div>
+                                            </td>
+                                            <td style={{ padding: "14px", fontWeight: 800, fontFamily: 'monospace', color: t.textMain }}>
+                                                {inv.coupon_code || 'N/A'}
+                                            </td>
+                                            <td style={{ padding: "14px", fontSize: "12px", color: t.textSub }}>
+                                                {new Date(l.unlocked_at).toLocaleString()}
+                                            </td>
+                                            <td style={{ padding: "14px" }}>
+                                                <span className={`badge ${l.reward_status === 'redeemed' ? 'badge-green' : 'badge-blue'}`}>
+                                                    {l.reward_status?.toUpperCase()}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+
+            {/* Cart Coupon Creator modal (Legacy view modal) */}
+            {showModal && subTab === 'legacy' && (
                 <div style={{ position: "fixed", inset: 0, zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}>
                     <div style={{ backgroundColor: t.cardBg, width: "100%", maxWidth: "500px", borderRadius: "24px", padding: "32px", boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)" }}>
                         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "24px" }}>
@@ -834,7 +1547,7 @@ const CouponManager = ({ t, theme }) => {
             )}
         </div>
     );
-};
+};;
 
 
 const PayoutRequestsTable = ({ t, theme }) => {
