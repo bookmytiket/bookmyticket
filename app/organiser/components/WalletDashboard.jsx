@@ -21,6 +21,7 @@ import { useToast } from '@/context/ToastContext';
 export default function WalletDashboard({ user, providerType = 'organiser' }) {
     const [wallet, setWallet] = useState(null);
     const [transactions, setTransactions] = useState([]);
+    const [revenueLedger, setRevenueLedger] = useState([]);
     const [withdrawRequests, setWithdrawRequests] = useState([]);
     const [bankDetails, setBankDetails] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -68,30 +69,54 @@ export default function WalletDashboard({ user, providerType = 'organiser' }) {
             const walletTable = providerType === 'organiser' ? 'organiser_wallet' : 'provider_wallet';
             const idColumn = providerType === 'organiser' ? 'organiser_id' : 'service_provider_id';
 
-            // Fetch Wallet
-            const { data: walletData } = await supabase
-                .from(walletTable)
+            // Fetch Unified Wallet (fallback to legacy)
+            const { data: unifiedWallet, error: uwErr } = await supabase
+                .from('wallets')
                 .select('*')
-                .eq(idColumn, user.id)
+                .eq('user_id', user.id)
+                .eq('wallet_type', providerType === 'organiser' ? 'organizer' : 'provider')
                 .maybeSingle();
-            
-            if (walletData) setWallet(walletData);
+
+            if (!uwErr && unifiedWallet) {
+                setWallet(unifiedWallet);
+            } else {
+                const { data: walletData } = await supabase
+                    .from(walletTable)
+                    .select('*')
+                    .eq(idColumn, user.id)
+                    .maybeSingle();
+                if (walletData) setWallet(walletData);
+            }
 
             // Fetch Transactions
             const { data: txData } = await supabase
                 .from('wallet_transactions')
                 .select('*')
-                .eq('provider_id', user.id)
+                .eq(unifiedWallet ? 'wallet_id' : 'provider_id', unifiedWallet ? unifiedWallet.id : user.id)
                 .order('created_at', { ascending: false });
             
             setTransactions(txData || []);
 
+            // Fetch Organizer Revenue Ledger (NEW)
+            if (providerType === 'organiser') {
+                const { data: ledgerData, error: ledgErr } = await supabase
+                    .from('organizer_revenue_ledger')
+                    .select('*, bookings(id, ticket_number)')
+                    .eq('organizer_id', user.id)
+                    .order('created_at', { ascending: false })
+                    .limit(50);
+                
+                if (!ledgErr && ledgerData) {
+                    setRevenueLedger(ledgerData);
+                }
+            }
+
             // Fetch Withdraw Requests
             const { data: wrData } = await supabase
-                .from('withdraw_requests')
+                .from(unifiedWallet ? 'payout_requests' : 'withdraw_requests')
                 .select('*')
-                .eq(idColumn, user.id)
-                .order('created_at', { ascending: false });
+                .eq(unifiedWallet ? 'organizer_id' : idColumn, user.id)
+                .order(unifiedWallet ? 'requested_at' : 'created_at', { ascending: false });
             
             setWithdrawRequests(wrData || []);
 
@@ -310,6 +335,50 @@ export default function WalletDashboard({ user, providerType = 'organiser' }) {
                     </div>
                 </div>
             </div>
+
+            {/* Revenue Ledger Cross-Verification (NEW MODULE) */}
+            {providerType === 'organiser' && revenueLedger.length > 0 && (
+                <div className="bg-white rounded-[40px] border border-slate-100 shadow-sm overflow-hidden">
+                    <div className="p-8 border-b border-slate-50 flex items-center justify-between bg-slate-900 text-white">
+                        <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center text-white">
+                                <History size={20} />
+                            </div>
+                            <h3 className="text-lg font-black tracking-tight uppercase">Revenue Ledger (Audit)</h3>
+                        </div>
+                    </div>
+                    <div className="p-0 overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="border-b border-slate-100 bg-slate-50 text-[10px] uppercase tracking-widest font-black text-slate-500">
+                                    <th className="p-4">Booking Ref</th>
+                                    <th className="p-4">Gross Revenue</th>
+                                    <th className="p-4">Discount</th>
+                                    <th className="p-4">Net Revenue</th>
+                                    <th className="p-4">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {revenueLedger.map((row, idx) => (
+                                    <tr key={idx} className="border-b border-slate-50 hover:bg-slate-50/50">
+                                        <td className="p-4 font-black text-slate-900 text-sm">{row.booking_id?.substring(0,8)}...</td>
+                                        <td className="p-4 font-bold text-slate-500 text-sm">₹{row.gross_ticket_revenue}</td>
+                                        <td className="p-4 font-bold text-rose-500 text-sm">
+                                            {row.discount_amount > 0 ? `-₹${row.discount_amount}` : '-'}
+                                        </td>
+                                        <td className="p-4 font-black text-emerald-600 text-sm">₹{row.net_organizer_revenue}</td>
+                                        <td className="p-4">
+                                            <span className="inline-flex items-center px-2 py-1 bg-emerald-50 text-emerald-600 text-[10px] uppercase font-black rounded-full tracking-widest">
+                                                {row.settlement_status}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
 
             {/* Withdraw Modal */}
             {showWithdrawModal && (

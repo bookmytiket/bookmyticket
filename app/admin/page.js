@@ -23,6 +23,7 @@ import ScannerMonitor from "@/app/admin/components/ScannerMonitor";
 import FraudDashboard from "@/app/admin/components/FraudDashboard";
 import FlashAdmin from "@/app/admin/components/FlashAdmin";
 import PushCenter from "@/app/admin/components/PushCenter";
+import FinanceCrossVerificationAdmin from "@/app/admin/components/FinanceCrossVerificationAdmin";
 
 
 import { 
@@ -3278,6 +3279,7 @@ function AdminHomePage() {
 
                                 <GroupTitle title="Finance" t={t} />
                                 <NavLink id="payments" label="Revenue Ledger" icon={BarChart3} active={activeTab === "payments" || activeTab === "revenue"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
+                                <NavLink id="settlement_verification" label="Settlement Audit" icon={FileText} active={activeTab === "settlement_verification"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
                                 <NavLink id="payout_requests" label="Payouts" icon={CreditCard} active={activeTab === "payout_requests"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
                                 <NavLink id="gst" label="Tax Audits" icon={FileText} active={activeTab === "gst"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
                                 <NavLink id="subscriptions" label="Staff Subscriptions" icon={Zap} active={activeTab === "subscriptions"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
@@ -4088,6 +4090,10 @@ function AdminHomePage() {
 
                     {activeTab === "coupons" && (
                         <CouponManager t={t} theme={theme} />
+                    )}
+
+                    {activeTab === "settlement_verification" && (
+                        <FinanceCrossVerificationAdmin t={t} theme={theme} />
                     )}
 
                     {activeTab === "exclusive_settings" && (
