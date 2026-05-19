@@ -24,8 +24,8 @@ export default function FinanceCrossVerificationAdmin({ t, theme }) {
             // Fetch Organizers
             const { data: orgData } = await supabase
                 .from('organisers')
-                .select('id, brand_name, full_name')
-                .eq('status', 'active');
+                .select('id, business_name')
+                .eq('is_approved', true);
             
             if (orgData) setOrganizers(orgData);
 
@@ -112,7 +112,7 @@ export default function FinanceCrossVerificationAdmin({ t, theme }) {
                         <option value="all">All Organisers</option>
                         {organizers.map(org => (
                             <option key={org.id} value={org.id}>
-                                {org.brand_name || org.full_name}
+                                {org.business_name}
                             </option>
                         ))}
                     </select>
