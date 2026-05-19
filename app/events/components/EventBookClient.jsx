@@ -24,6 +24,12 @@ import { useSeatLocking } from '@/hooks/useSeatLocking';
 const DEFAULT_IMG = 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200&h=600&fit=crop';
 const ROW_LABELS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 
+const isValidUUID = (uuid) => {
+    if (!uuid || typeof uuid !== 'string') return false;
+    const regex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    return regex.test(uuid);
+};
+
 function getCategoryForRow(categories, rIdx) {
     let sum = 0;
     for (const cat of categories) {
@@ -128,7 +134,7 @@ export default function EventBookClient({ id }) {
     const feeSettingsSystem = feeSettingsRaw || DEFAULT_FEE_SETTINGS;
     
     const organiserId = event?.organiser_id || event?.organiserId;
-    const { data: organiserData } = useSupabaseQuery('profiles', (q) => q.eq('id', organiserId).single(), [organiserId], { enabled: !!organiserId });
+    const { data: organiserData } = useSupabaseQuery('profiles', (q) => q.eq('id', organiserId).single(), [organiserId], { enabled: !!organiserId && isValidUUID(organiserId) });
     
     const feeSettings = useMemo(() => {
         return resolveFeeSettings(
@@ -244,6 +250,7 @@ export default function EventBookClient({ id }) {
 
     const [bookingStep, setBookingStep] = useState(1);
     const [participantData, setParticipantData] = useState({});
+    const [isCreatingSession, setIsCreatingSession] = useState(false);
     const [teamData, setTeamData] = useState({
         teamName: "",
         captainName: "",
@@ -309,8 +316,6 @@ export default function EventBookClient({ id }) {
             </main>
         );
     }
-
-    const [isCreatingSession, setIsCreatingSession] = useState(false);
 
     const handleContinue = async () => {
         if (isMarathon) {
