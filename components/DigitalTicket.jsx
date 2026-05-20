@@ -59,67 +59,54 @@ export default function DigitalTicket({ booking, event, ticket: initialTicket, s
     const ticketNumber = ticket?.ticket_number || (booking.id || "").slice(-8).toUpperCase();
     
     // Dynamic Content Mapping based on Category
+    // Dynamic Content Mapping based on Category
     const getCategoryDetails = (category) => {
         const c = String(category || 'Event').toLowerCase();
         
+        let theme = {
+            icon: <Zap className="text-pink-400" size={20} />,
+            accent: "text-pink-400",
+            titleStyle: { fontWeight: "900", letterSpacing: "-0.03em", textShadow: "0 2px 15px rgba(236,72,153,0.5)" },
+            overlay: "from-fuchsia-900/90 via-purple-900/80 to-slate-900/90",
+            glow1: "bg-pink-600",
+            glow2: "bg-purple-600",
+            border: "border-pink-500/30",
+            fallbackBg: "#4a044e"
+        };
+
         if (c.includes('marathon') || c.includes('sport')) {
-            return {
-                label: "Marathon",
+            theme = {
                 icon: <Trophy className="text-emerald-400" size={20} />,
-                neonColor: "shadow-emerald-500/50",
                 accent: "text-emerald-400",
-                fields: [
-                    { label: "BIB NUMBER", value: booking.metadata?.bib_number || `BIB-${ticketNumber.slice(-3)}` },
-                    { label: "DISTANCE", value: booking.metadata?.distance || event.distance || "21K" },
-                    { label: "TEAM", value: booking.metadata?.team_name || "PRO" }
-                ],
-                gradient: "from-[#064e3b] via-[#020617] to-[#020617]",
-                titleStyle: { fontFamily: "'Impact', 'Arial Black', sans-serif", letterSpacing: "-0.05em", transform: "skewX(-10deg)" }
+                titleStyle: { fontFamily: "'Impact', 'Arial Black', sans-serif", letterSpacing: "-0.05em", transform: "skewX(-10deg)", textShadow: "0 2px 15px rgba(16,185,129,0.5)" },
+                overlay: "from-emerald-900/90 via-teal-900/80 to-slate-900/90",
+                glow1: "bg-emerald-600",
+                glow2: "bg-teal-600",
+                border: "border-emerald-500/30",
+                fallbackBg: "#064e3b"
+            };
+        } else if (c.includes('corporate') || c.includes('business')) {
+            theme = {
+                icon: <Briefcase className="text-blue-400" size={20} />,
+                accent: "text-blue-400",
+                titleStyle: { fontWeight: "300", letterSpacing: "0.05em", textShadow: "0 2px 15px rgba(59,130,246,0.5)" },
+                overlay: "from-blue-900/90 via-indigo-900/80 to-slate-900/90",
+                glow1: "bg-blue-600",
+                glow2: "bg-indigo-600",
+                border: "border-blue-500/30",
+                fallbackBg: "#1e1b4b"
             };
         }
-        if (c.includes('concert') || c.includes('music')) {
-            return {
-                label: "Concert",
-                icon: <Music className="text-yellow-400" size={20} />,
-                neonColor: "shadow-yellow-500/50",
-                accent: "text-yellow-400",
-                fields: [
-                    { label: "ARTIST", value: event.artist_name || "Headliner" },
-                    { label: "ZONE", value: booking.metadata?.zone || "Platinum" },
-                    { label: "ENTRY", value: "Gate 4" }
-                ],
-                gradient: "from-[#2e1065] via-[#4c1d95] to-[#020617]",
-                titleStyle: { textShadow: "0 0 20px rgba(234, 179, 8, 0.5)", letterSpacing: "-0.02em" }
-            };
-        }
-        if (c.includes('corporate') || c.includes('business')) {
-            return {
-                label: "Corporate",
-                icon: <Briefcase className="text-purple-400" size={20} />,
-                neonColor: "shadow-purple-500/50",
-                accent: "text-purple-400",
-                fields: [
-                    { label: "COMPANY", value: booking.customer_details?.company || "Organization" },
-                    { label: "ROLE", value: booking.customer_details?.designation || "Delegate" },
-                    { label: "HALL", value: "A-12" }
-                ],
-                gradient: "from-[#1e1b4b] via-[#4c1d95] to-[#020617]",
-                titleStyle: { fontWeight: "300", letterSpacing: "0.05em" }
-            };
-        }
-        // Default Sports/Event - Using Yellow and Purple
+
         return {
-            label: "Event",
-            icon: <Zap className="text-yellow-400" size={20} />,
-            neonColor: "shadow-yellow-500/50",
-            accent: "text-yellow-400",
+            label: category || "Event",
             fields: [
-                { label: "STADIUM", value: event.location?.split(',')[0] || "Venue" },
-                { label: "STAND", value: "North Wing" },
-                { label: "GATE", value: "01" }
+                { label: "ATTENDEE", value: booking.customer_name || booking.customer_details?.name || booking.customer_email || "Guest" },
+                { label: "EVENT TYPE", value: event.category || "General" },
+                { label: "SEAT CATEGORY", value: booking.metadata?.zone || "General Admission" },
+                { label: "SEAT NO", value: booking.metadata?.seat_no || "Open Seating" }
             ],
-            gradient: "from-[#4c1d95] via-[#1e1b4b] to-[#020617]",
-            titleStyle: { fontWeight: "900", letterSpacing: "-0.03em" }
+            ...theme
         };
     };
 
@@ -154,115 +141,103 @@ export default function DigitalTicket({ booking, event, ticket: initialTicket, s
 
     return (
         <div className="flex flex-col items-center w-full mx-auto p-4 max-w-5xl">
+            {/* Dynamic CSS for shimmer */}
+            <style dangerouslySetInnerHTML={{__html: `
+                @keyframes ticket-shimmer {
+                    0% { transform: translateX(-150%) skewX(-15deg); }
+                    50% { transform: translateX(200%) skewX(-15deg); }
+                    100% { transform: translateX(200%) skewX(-15deg); }
+                }
+                .animate-ticket-shimmer {
+                    animation: ticket-shimmer 4s infinite cubic-bezier(0.4, 0, 0.2, 1);
+                }
+            `}} />
+            
             {/* Standard Size Container (800x400) */}
             <div 
                 ref={ticketRef}
-                className={`relative w-full flex flex-row transition-all duration-500 overflow-hidden shadow-2xl ${isCapturing ? 'rounded-none' : 'rounded-3xl'} ${!isTabActive && !isCapturing ? 'blur-2xl' : ''} ${details.neonColor} border border-white/10 bg-gradient-to-br ${details.gradient}`}
+                className={`group relative w-full flex flex-row transition-all duration-500 overflow-hidden shadow-2xl ${isCapturing ? 'rounded-none' : 'rounded-3xl hover:shadow-[0_20px_50px_rgba(0,0,0,0.5)] hover:-translate-y-1'} ${!isTabActive && !isCapturing ? 'blur-2xl' : ''} ${details.border}`}
                 style={{ 
                     aspectRatio: "2/1",
                     minHeight: "350px",
-                    maxWidth: "800px"
+                    maxWidth: "800px",
+                    backgroundImage: 'url("/bookmyticket/eventticket.jpg")',
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    backgroundColor: details.fallbackBg
                 }}
             >
-                {/* Texture Overlay */}
-                <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]" />
-
+                {/* Dynamic Category Overlay */}
+                <div className={`absolute inset-0 bg-gradient-to-br ${details.overlay} pointer-events-none transition-colors duration-1000`} />
+                
+                {/* Animated Shimmer Effect (disabled during capture) */}
+                {!isCapturing && (
+                    <div className="absolute inset-0 pointer-events-none overflow-hidden z-20">
+                        <div className="absolute inset-y-0 w-1/3 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-ticket-shimmer opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    </div>
+                )}
+                
                 {/* Neon Glow Effects */}
-                <div className={`absolute -top-24 -left-24 w-64 h-64 rounded-full blur-[100px] opacity-20 ${details.accent.replace('text-', 'bg-')}`} />
-                <div className={`absolute -bottom-24 -right-24 w-64 h-64 rounded-full blur-[100px] opacity-20 ${details.accent.replace('text-', 'bg-')}`} />
+                <div className={`absolute -top-24 -left-24 w-64 h-64 rounded-full blur-[100px] opacity-40 transition-colors duration-1000 ${details.glow1}`} />
+                <div className={`absolute -bottom-24 -right-24 w-64 h-64 rounded-full blur-[100px] opacity-40 transition-colors duration-1000 ${details.glow2}`} />
 
                 {/* Left Section: Main Body */}
-                <div className="flex-[2] p-10 flex flex-col justify-between relative z-10">
+                <div className="flex-[2] p-6 md:p-10 flex flex-col justify-between relative z-10 w-full">
                     <div className="space-y-6">
                         {/* Header */}
                         <div className="flex justify-between items-start gap-4">
                             <div className="flex-1 space-y-1 max-w-[75%]">
                                 <div className="flex items-center gap-2">
                                     {details.icon}
-                                    <p className={`text-[10px] font-black uppercase tracking-[0.4em] ${details.accent}`}>{details.label}</p>
+                                    <p className={`text-[10px] md:text-xs font-black uppercase tracking-[0.4em] ${details.accent}`}>{details.label}</p>
                                 </div>
                                 <h2 
-                                    className="text-3xl md:text-4xl lg:text-5xl font-black uppercase tracking-tighter text-white italic leading-[0.9] break-words"
+                                    className="text-2xl md:text-4xl lg:text-5xl font-black uppercase tracking-tighter text-white italic leading-[1] break-words"
                                     style={details.titleStyle}
                                 >
                                     {event.title}
                                 </h2>
                             </div>
                             <div className="flex-shrink-0">
-                                <img src="/logo.png" className="h-12 w-auto brightness-0 invert object-contain opacity-80" alt="Logo" />
+                                <img src="/logo.png" className="h-10 md:h-12 w-auto brightness-0 invert object-contain opacity-90 drop-shadow-lg" alt="Logo" />
                             </div>
                         </div>
 
                         {/* Dynamic Metadata Fields */}
-                        <div className="grid grid-cols-3 gap-8 pt-2">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 pt-2">
                             {details.fields.map((f, i) => (
                                 <div key={i} className="space-y-0.5">
-                                    <p className="text-[9px] font-black text-white/30 uppercase tracking-widest">{f.label}</p>
-                                    <p className="text-base md:text-lg font-black text-white uppercase tracking-tight leading-tight">{f.value}</p>
+                                    <p className="text-[8px] md:text-[9px] font-black text-white/50 uppercase tracking-widest">{f.label}</p>
+                                    <p className="text-sm md:text-base font-black text-white uppercase tracking-tight leading-tight truncate">{f.value}</p>
                                 </div>
                             ))}
                         </div>
                     </div>
 
                     {/* Footer Details */}
-                    <div className="flex items-end justify-between border-t border-white/10 pt-6 mt-auto">
+                    <div className="flex flex-col md:flex-row md:items-end justify-between border-t border-white/20 pt-4 md:pt-6 mt-6 md:mt-auto gap-4 md:gap-0">
                         <div className="flex flex-col gap-4">
-                            {/* Sponsors Section */}
-                            <div className="space-y-1.5">
-                                <p className="text-[8px] font-black text-white/30 uppercase tracking-[0.3em]">Official Sponsors</p>
-                                <div className="flex items-center gap-4">
-                                    {(branding?.sponsor_logo_1 || branding?.sponsor_logo_2 || branding?.partner_logo_1 || branding?.partner_logo_2) ? (
-                                        <>
-                                            {[
-                                                branding?.sponsor_logo_1,
-                                                branding?.sponsor_logo_2,
-                                                branding?.partner_logo_1,
-                                                branding?.partner_logo_2
-                                            ].filter(Boolean).map((logo, idx) => (
-                                                <div key={idx} className="h-7 hover:scale-110 transition-all duration-300">
-                                                    <img src={logo} className="h-full w-auto object-contain" alt="Sponsor" />
-                                                </div>
-                                            ))}
-                                        </>
-                                    ) : (
-                                        <>
-                                            <div className="flex items-center gap-2 opacity-30 grayscale transition-all">
-                                                <div className="w-6 h-6 rounded bg-white/10 flex items-center justify-center border border-white/10">
-                                                    <ShieldCheck size={12} className="text-white/40" />
-                                                </div>
-                                                <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">Sponsor</span>
-                                            </div>
-                                            <div className="flex items-center gap-2 opacity-30 grayscale transition-all">
-                                                <div className="w-6 h-6 rounded bg-white/10 flex items-center justify-center border border-white/10">
-                                                    <Zap size={12} className="text-white/40" />
-                                                </div>
-                                                <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">Partner</span>
-                                            </div>
-                                        </>
-                                    )}
-                                </div>
-                            </div>
                             
-                            <div className="flex gap-8 pt-2">
+                            <div className="flex gap-6 md:gap-8">
                                 <div className="space-y-1">
-                                    <div className="flex items-center gap-1.5 text-white/40">
+                                    <div className="flex items-center gap-1.5 text-white/60">
                                         <Calendar size={10} />
                                         <p className="text-[8px] font-black uppercase tracking-widest">Date</p>
                                     </div>
                                     <p className="text-xs font-black text-white">{event.date || "TBA"}</p>
                                 </div>
                                 <div className="space-y-1">
-                                    <div className="flex items-center gap-1.5 text-white/40">
+                                    <div className="flex items-center gap-1.5 text-white/60">
                                         <MapPin size={10} />
                                         <p className="text-[8px] font-black uppercase tracking-widest">Venue</p>
                                     </div>
-                                    <p className="text-xs font-black text-white truncate max-w-[120px]">{event.location?.split(',')[0]}</p>
+                                    <p className="text-xs font-black text-white truncate max-w-[150px]">{event.location?.split(',')[0]}</p>
                                 </div>
                             </div>
                         </div>
-                        <div className="text-right">
-                            <p className="text-[9px] font-black text-white/40 uppercase tracking-widest mb-1">Pass Price</p>
-                            <p className={`text-2xl font-black ${details.accent}`}>₹{booking.total_price}</p>
+                        <div className="text-left md:text-right">
+                            <p className="text-[9px] font-black text-white/60 uppercase tracking-widest mb-1">Pass Price</p>
+                            <p className={`text-xl md:text-2xl font-black ${details.accent}`}>₹{booking.total_price}</p>
                         </div>
                     </div>
                 </div>
