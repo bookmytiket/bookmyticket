@@ -175,13 +175,20 @@ export default function ProfilePage() {
                     padding-top: 120px;
                     padding-bottom: 80px;
                 }
-                .profile-content-wrap {
-                    display: flex;
-                    max-width: 1200px;
-                    margin: 0 auto;
-                    padding: 0 24px;
-                    gap: 32px;
-                    align-items: flex-start;
+                @media (min-width: 769px) {
+                    .profile-content-wrap {
+                        display: flex;
+                        max-width: 1200px;
+                        margin: 0 auto;
+                        padding: 0 24px;
+                        gap: 32px;
+                        align-items: flex-start;
+                    }
+                }
+                @media (max-width: 768px) {
+                    .profile-content-wrap {
+                        display: none !important;
+                    }
                 }
                 .profile-sidebar {
                     width: 260px;
