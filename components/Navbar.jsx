@@ -684,7 +684,53 @@ export default function Navbar({ compact = false }) {
 
           {/* Desktop Actions Area */}
           <div className="nav-desktop-actions hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-            <ComingSoonCountdown />
+            <motion.button
+              whileHover={{ scale: 1.05, boxShadow: '0 4px 15px rgba(248, 68, 164, 0.15)' }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setOrgOpen(true)}
+              style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '8px', 
+                fontSize: '13px', 
+                fontWeight: 800, 
+                color: scrolled ? '#fff' : '#1e293b', 
+                background: scrolled ? 'rgba(255,255,255,0.1)' : 'rgba(255, 255, 255, 0.8)', 
+                border: scrolled ? '1px solid rgba(255,255,255,0.2)' : '1px solid rgba(248, 68, 164, 0.3)', 
+                backdropFilter: 'blur(8px)',
+                padding: '0 16px',
+                height: '44px',
+                borderRadius: '12px',
+                cursor: 'pointer',
+                position: 'relative',
+                overflow: 'hidden',
+                transition: 'all 0.3s ease'
+              }}
+            >
+              <motion.div
+                animate={{ rotate: [0, -15, 15, -15, 15, 0] }}
+                transition={{ duration: 1.5, repeat: Infinity, repeatDelay: 2 }}
+              >
+                <Handshake size={18} style={{ color: '#f84464' }} />
+              </motion.div>
+              <span style={{ position: 'relative', zIndex: 1 }}>Become a Partner</span>
+              
+              {/* Dynamic Highlight Shimmer */}
+              <motion.div
+                animate={{ x: ['-100%', '200%'] }}
+                transition={{ duration: 2.5, repeat: Infinity, ease: "linear", repeatDelay: 1 }}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '50%',
+                  height: '100%',
+                  background: 'linear-gradient(90deg, transparent, rgba(248, 68, 164, 0.2), transparent)',
+                  transform: 'skewX(-20deg)',
+                  zIndex: 0
+                }}
+              />
+            </motion.button>
             {!mounted ? (
               /* Render a neutral placeholder during SSR / before hydration */
               <Link
@@ -1046,25 +1092,6 @@ export default function Navbar({ compact = false }) {
             </div>
 
             <div className="subnav-actions hide-mobile" style={{ gap: '30px' }}>
-              <motion.button
-                whileHover={{ scale: 1.05, color: '#f84464' }}
-                onClick={() => setOrgOpen(true)}
-                className={`subnav-action${orgOpen ? " active" : ""}`}
-                style={{ fontSize: '14px', fontWeight: 700, color: scrolled ? '#fff' : '#475569' }}
-              >
-                <Handshake size={18} className="subnav-action-icon" style={{ color: '#f84464' }} />
-                Become a Partner
-              </motion.button>
-              <motion.div whileHover={{ scale: 1.05, color: '#c026d3' }}>
-                <Link
-                  href="/branding"
-                  className={`subnav-action${pathname?.startsWith("/branding") ? " active" : ""}`}
-                  style={{ fontSize: '14px', fontWeight: 700, color: scrolled ? '#fff' : '#475569' }}
-                >
-                  <Globe size={18} className="subnav-action-icon" style={{ color: '#c026d3' }} />
-                  Branding
-                </Link>
-              </motion.div>
             </div>
           </div>
         </nav>

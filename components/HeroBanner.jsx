@@ -4,6 +4,7 @@ import { useSupabaseQuery } from "@/hooks/useSupabase";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { resolveBannerRedirect } from "@/lib/bannerHelper";
+import { motion, AnimatePresence } from 'framer-motion';
 
 const FEATURES = [
     { num: "01", title: "Create Event Page", sub: "Do-it-yourself approach" },
@@ -112,10 +113,8 @@ export default function HeroBanner({ slides: propSlides, showDetails = true, sho
             if (sliding) return;
             setDir(direction);
             setSliding(true);
-            setTimeout(() => {
-                setCurrent((idx + total) % total);
-                setTimeout(() => setSliding(false), 50);
-            }, 400);
+            setCurrent((idx + total) % total);
+            setTimeout(() => setSliding(false), 500);
         },
         [sliding, total]
     );
@@ -134,14 +133,51 @@ export default function HeroBanner({ slides: propSlides, showDetails = true, sho
     const slide = slides[current];
 
     return (
-        <div className="bms-banner-wrap">
+        <div className="bms-banner-wrap" style={{ perspective: '1500px' }}>
             <div
                 className="bms-banner-stage"
                 onMouseEnter={() => setIsHovered(true)}
                 onMouseLeave={() => setIsHovered(false)}
+                style={{ position: 'relative', overflow: 'hidden' }}
             >
-                {/* Main full-width active slide */}
-                <div className={`bms-slide-main-full ${sliding ? (dir === 1 ? "slide-exit-left" : "slide-exit-right") : "slide-enter"}`}>
+                <AnimatePresence initial={false} custom={dir}>
+                    <motion.div
+                        key={current}
+                        custom={dir}
+                        variants={{
+                            enter: (direction) => ({
+                                x: direction > 0 ? '100%' : '-100%',
+                                opacity: 0,
+                                rotateY: direction > 0 ? 45 : -45,
+                                scale: 0.8,
+                                zIndex: 0
+                            }),
+                            center: {
+                                x: 0,
+                                opacity: 1,
+                                rotateY: 0,
+                                scale: 1,
+                                zIndex: 1
+                            },
+                            exit: (direction) => ({
+                                x: direction < 0 ? '100%' : '-100%',
+                                opacity: 0,
+                                rotateY: direction < 0 ? 45 : -45,
+                                scale: 0.8,
+                                zIndex: 0
+                            })
+                        }}
+                        initial="enter"
+                        animate="center"
+                        exit="exit"
+                        transition={{
+                            x: { type: "spring", stiffness: 300, damping: 30 },
+                            opacity: { duration: 0.4 },
+                            rotateY: { type: "spring", stiffness: 200, damping: 20 },
+                            scale: { duration: 0.4 }
+                        }}
+                        style={{ position: 'absolute', width: '100%', height: '100%', top: 0, left: 0, transformStyle: 'preserve-3d' }}
+                    >
                     {slide.custom ? (
                         <PromoSlide isMobile={isMobile} />
                     ) : (
@@ -200,7 +236,8 @@ export default function HeroBanner({ slides: propSlides, showDetails = true, sho
                             )}
                         </div>
                     )}
-                </div>
+                    </motion.div>
+                </AnimatePresence>
             </div>
         </div>
     );

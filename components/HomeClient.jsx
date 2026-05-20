@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import VideoHeroBanner from '@/components/VideoHeroBanner';
+import HeroBanner from '@/components/HeroBanner';
 import FeaturedEvents from '@/components/FeaturedEvents';
 import RecentlyViewedEvents from '@/components/RecentlyViewedEvents';
 import ComingSoonEvents from '@/components/ComingSoonEvents';
@@ -688,6 +689,12 @@ function HomeClient() {
           </section>
         ) : (
           <div style={{ width: '100%' }}>
+            <div style={{ width: '100%', maxWidth: '1240px', margin: '0 auto', padding: '20px 20px 40px 20px' }}>
+              <div style={{ borderRadius: '16px', overflow: 'hidden', boxShadow: '0 10px 30px rgba(0,0,0,0.08)' }}>
+                <HeroBanner slides={heroSlides} />
+              </div>
+            </div>
+            
             <VideoHeroBanner />
 
             {/* 0) Tournament Spotlight Banner - Premium Highlight */}

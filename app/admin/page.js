@@ -10,7 +10,6 @@ import AdminCheckoutFooter from "@/app/admin/components/AdminCheckoutFooter";
 import MobileBannersAdmin from "@/app/admin/components/MobileBannersAdmin";
 import AdminPartnerRequestsTable from "@/app/admin/components/AdminPartnerRequestsTable";
 import AdminServiceRequestsTable from "@/app/admin/components/AdminServiceRequestsTable";
-import BrandingHeader from "@/components/BrandingHeader";
 import EmailCommSystem from "@/app/admin/components/EmailCommSystem";
 import SeoAnalyticsAdmin from "@/app/admin/components/SeoAnalyticsAdmin";
 import CareersAdmin from "@/app/admin/components/CareersAdmin";

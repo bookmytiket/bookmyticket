@@ -13,7 +13,6 @@ export async function GET() {
     { loc: `${BASE_URL}`, changefreq: "always", priority: "1.0" },
     { loc: `${BASE_URL}/events`, changefreq: "daily", priority: "0.8" },
     { loc: `${BASE_URL}/services`, changefreq: "daily", priority: "0.8" },
-    { loc: `${BASE_URL}/branding`, changefreq: "monthly", priority: "0.6" },
   ];
 
   try {
