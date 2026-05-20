@@ -9,9 +9,12 @@ CREATE TABLE IF NOT EXISTS public.wallets (
     pending_balance NUMERIC(10, 2) DEFAULT 0.00,
     currency TEXT DEFAULT 'INR',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    UNIQUE(user_id, wallet_type)
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- Ensure columns exist in existing wallets table
+ALTER TABLE public.wallets ADD COLUMN IF NOT EXISTS pending_balance NUMERIC(10, 2) DEFAULT 0.00;
+ALTER TABLE public.wallets ADD COLUMN IF NOT EXISTS wallet_type TEXT DEFAULT 'organizer';
 
 -- 2. Wallet Transactions Table
 CREATE TABLE IF NOT EXISTS public.wallet_transactions (
@@ -24,6 +27,10 @@ CREATE TABLE IF NOT EXISTS public.wallet_transactions (
     status TEXT DEFAULT 'completed' CHECK (status IN ('pending', 'completed', 'failed')),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- Ensure columns exist in existing wallet_transactions table
+ALTER TABLE public.wallet_transactions ADD COLUMN IF NOT EXISTS wallet_id UUID REFERENCES public.wallets(id) ON DELETE CASCADE;
+ALTER TABLE public.wallet_transactions ADD COLUMN IF NOT EXISTS transaction_type TEXT DEFAULT 'credit';
 
 -- 3. Booking Financials Table
 CREATE TABLE IF NOT EXISTS public.booking_financials (
@@ -111,13 +118,13 @@ ALTER TABLE public.organizer_revenue_ledger ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.settlement_reconciliation_logs ENABLE ROW LEVEL SECURITY;
 
 -- Allow reading own wallet
-CREATE POLICY "Users can view own wallet" ON public.wallets FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can view own wallet" ON public.wallets FOR SELECT USING (auth.uid() = organiser_id);
 -- Allow reading own wallet transactions
-CREATE POLICY "Users can view own transactions" ON public.wallet_transactions FOR SELECT USING (wallet_id IN (SELECT id FROM public.wallets WHERE user_id = auth.uid()));
+CREATE POLICY "Users can view own transactions" ON public.wallet_transactions FOR SELECT USING (auth.uid() = organiser_id);
 -- Allow reading own payout requests
-CREATE POLICY "Users can view own payouts" ON public.payout_requests FOR SELECT USING (auth.uid() = organizer_id);
+CREATE POLICY "Users can view own payouts" ON public.payout_requests FOR SELECT USING (auth.uid() = requester_id);
 -- Allow creating own payout requests
-CREATE POLICY "Users can request payouts" ON public.payout_requests FOR INSERT WITH CHECK (auth.uid() = organizer_id);
+CREATE POLICY "Users can request payouts" ON public.payout_requests FOR INSERT WITH CHECK (auth.uid() = requester_id);
 -- Allow reading own organizer revenue ledger
 CREATE POLICY "Users can view own revenue ledger" ON public.organizer_revenue_ledger FOR SELECT USING (auth.uid() = organizer_id);
 

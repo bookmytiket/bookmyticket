@@ -15,13 +15,38 @@ import {
     Zap
 } from "lucide-react"; 
 import * as htmlToImage from 'html-to-image';
+import { supabase } from "@/lib/supabase";
 
-export default function DigitalTicket({ booking, event, ticket, showDownload = true, branding = {} }) {
+export default function DigitalTicket({ booking, event, ticket: initialTicket, showDownload = true, branding = {} }) {
+    const [ticket, setTicket] = useState(initialTicket);
     const [isRevealed, setIsRevealed] = useState(false);
     const [downloading, setDownloading] = useState(false);
     const [isCapturing, setIsCapturing] = useState(false);
     const [isTabActive, setIsTabActive] = useState(true);
     const ticketRef = useRef(null);
+
+    useEffect(() => {
+        if (initialTicket) {
+            setTicket(initialTicket);
+        }
+    }, [initialTicket]);
+
+    useEffect(() => {
+        if (!ticket && booking?.id) {
+            supabase
+                .from('tickets')
+                .select('*')
+                .eq('booking_id', booking.id)
+                .limit(1)
+                .maybeSingle()
+                .then(({ data }) => {
+                    if (data) {
+                        setTicket(data);
+                    }
+                })
+                .catch(err => console.error("[DigitalTicket] Error fetching ticket:", err));
+        }
+    }, [booking?.id, ticket]);
 
     useEffect(() => {
         const handleVisibility = () => setIsTabActive(!document.hidden);
@@ -255,7 +280,7 @@ export default function DigitalTicket({ booking, event, ticket, showDownload = t
                         onClick={() => setIsRevealed(!isRevealed)}
                     >
                         <div className="bg-white p-1 rounded-xl">
-                            <QRCodeSVG value={ticketNumber} size={110} level="H" fgColor="#2e1065" />
+                            <QRCodeSVG value={ticket?.qr_code || ticketNumber} size={110} level="H" fgColor="#2e1065" />
                         </div>
                     </div>
 

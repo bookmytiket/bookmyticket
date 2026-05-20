@@ -3,6 +3,8 @@ import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import { handlePaymentSuccess } from "@/app/utils/paymentUtils";
 import { unlockPartnerReward } from "@/lib/partnerRewards";
+import crypto from "crypto";
+import { generateSecureQRToken } from "@/lib/security";
 
 const supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -88,11 +90,20 @@ export async function POST(request) {
             }
 
             // 5. Generate Ticket Record
+            const ticketId = crypto.randomUUID();
             const ticketNumber = Math.random().toString(36).substring(2, 10).toUpperCase();
+            const qrCodeToken = generateSecureQRToken({
+                ticketId,
+                bookingId,
+                eventId: booking.event_id,
+                ticketCode: ticketNumber
+            });
             await supabaseAdmin.from('tickets').insert({
+                id: ticketId,
                 booking_id: bookingId,
                 ticket_number: ticketNumber,
-                status: 'active'
+                status: 'active',
+                qr_code: qrCodeToken
             });
 
             // 5.1 Unlock Partner Rewards post-booking

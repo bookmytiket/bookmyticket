@@ -46,10 +46,10 @@ export default function RequireAuth({ children, allowedRoles }) {
       return;
     }
 
-    // SPECIAL CASE: Staff users are ONLY allowed on /pwa-scan
-    if (user.role === "staff" && pathname !== "/pwa-scan") {
-      console.log(`[RequireAuth] Staff user on ${pathname}. Redirecting to /pwa-scan`);
-      router.replace("/pwa-scan");
+    // SPECIAL CASE: Staff users are ONLY allowed on /scanner
+    if (user.role === "staff" && pathname !== "/scanner") {
+      console.log(`[RequireAuth] Staff user on ${pathname}. Redirecting to /scanner`);
+      router.replace("/scanner");
       return;
     }
 

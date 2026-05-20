@@ -9,7 +9,9 @@ export default function ConditionalLayoutWrapper({ children }) {
                         pathname?.startsWith("/organiser") || 
                         pathname?.startsWith("/vendor") ||
                         pathname?.startsWith("/signin") ||
-                        pathname?.startsWith("/login");
+                        pathname?.startsWith("/login") ||
+                        pathname?.startsWith("/scanner") ||
+                        pathname?.startsWith("/pwa-scan");
 
     if (isAdminRoute) {
         return (
@@ -46,7 +48,7 @@ export default function ConditionalLayoutWrapper({ children }) {
                 }
                 @media (max-width: 768px) {
                     .page-main-content {
-                        padding-bottom: 140px;
+                        padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
                     }
                 }
             `}</style>

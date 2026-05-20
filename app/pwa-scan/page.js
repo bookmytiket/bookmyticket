@@ -125,52 +125,57 @@ function PWAScanContent() {
         setScanResult(null);
 
         try {
-            // Log the validation attempt
-            await logValidation({
-                ticket_id: id,
-                validation_status: "Attempted",
-                scanner_device: navigator.userAgent
+            const res = await fetch("/api/scanner/validate", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    qrPayload: id,
+                    deviceUuid: navigator.userAgent,
+                    deviceName: "Staff Scanner Portal",
+                    gateName: gateName,
+                    scannerUserId: user?.id
+                })
             });
 
-            const booking = bookings.find(b => b.id === id || b.ticket_id === id);
-            
-            if (!booking) {
-                setScanResult({ status: "invalid" });
-                await logScan({ ticket_id: null, scanned_by: user.id, gate_name: gateName, scan_status: "Invalid QR" });
-            } else if (assignedEventId && booking.event_id !== assignedEventId) {
-                setScanResult({ status: "wrong_event", booking });
-                await logScan({ ticket_id: booking.id, scanned_by: user.id, gate_name: gateName, scan_status: "Wrong Event" });
-            } else if (booking.checked_in) {
-                setScanResult({ status: "already_used", booking });
-                await logDuplicate({
-                    ticket_id: booking.id,
-                    first_scan_time: booking.scanned_at,
-                    device_id: navigator.userAgent,
-                    scanned_by: user.id
-                });
-                await logScan({ ticket_id: booking.id, scanned_by: user.id, gate_name: gateName, scan_status: "Duplicate" });
-            } else if (booking.payment_status !== 'paid' && booking.payment_status !== 'confirmed') {
-                setScanResult({ status: "unpaid", booking });
-                await logScan({ ticket_id: booking.id, scanned_by: user.id, gate_name: gateName, scan_status: "Unpaid" });
-            } else {
-                // Success - Mark as checked in
-                await updateBooking({ 
-                    id: booking.id, 
-                    checked_in: true, 
-                    scanned_at: new Date().toISOString(),
-                    scanned_by: user?.id
-                });
-                
-                await logScan({ 
-                    ticket_id: booking.id, 
-                    scanned_by: user.id, 
-                    gate_name: gateName, 
-                    scan_status: "Valid" 
-                });
+            const data = await res.json();
 
-                setScanResult({ status: "valid", booking });
-                showToast("Entry Approved", "success");
-                refetchBookings();
+            if (res.ok) {
+                if (data.status === "valid") {
+                    setScanResult({
+                        status: "valid",
+                        booking: {
+                            id: data.ticket_code || id.slice(-8),
+                            full_name: data.attendee,
+                            event_name: data.event,
+                            ticket_category: data.category
+                        }
+                    });
+                    showToast("Entry Approved", "success");
+                    refetchBookings();
+                } else if (data.status === "already_used") {
+                    setScanResult({
+                        status: "already_used",
+                        booking: {
+                            id: data.ticket_code || id.slice(-8),
+                            full_name: data.attendee,
+                            event_name: data.event,
+                            scanned_at: data.scanned_at || new Date().toISOString()
+                        }
+                    });
+                    showToast("Already Checked-In", "warning");
+                } else {
+                    setScanResult({
+                        status: data.status,
+                        message: data.message || "Invalid Ticket"
+                    });
+                }
+            } else {
+                setScanResult({
+                    status: data.status || "invalid",
+                    message: data.message || "Invalid QR Code"
+                });
             }
         } catch (err) {
             setScanResult({ status: "error", message: err.message });

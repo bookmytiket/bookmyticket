@@ -108,11 +108,11 @@ export default function MobileBottomNav() {
           background: rgba(255, 255, 255, 0.98);
           backdrop-filter: blur(25px);
           -webkit-backdrop-filter: blur(25px);
-          border-top: 1px solid rgba(0, 0, 0, 0.1);
-          z-index: 900;
-          padding-bottom: env(safe-area-inset-bottom, 20px);
+          border-top: 1px solid rgba(0, 0, 0, 0.05);
+          z-index: 10000;
+          padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
           display: none;
-          box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.08);
+          box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.06);
         }
 
         @media (max-width: 768px) {

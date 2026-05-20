@@ -25,7 +25,7 @@ export default function SuccessClient({ eventId, bookingId }) {
     const event = booking?.events;
 
     const { data: ticket, loading: ticketLoading } = useSupabaseQuery('tickets', (q) => 
-        q.eq('booking_id', bookingId).maybeSingle(),
+        q.eq('booking_id', bookingId).limit(1).maybeSingle(),
         [bookingId]
     );
 
