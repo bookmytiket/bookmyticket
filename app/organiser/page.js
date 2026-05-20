@@ -2625,7 +2625,7 @@ function OrganiserPanel() {
         ? postEvent.bannerPreview
         : postEvent.img ||
           postEvent.image_url ||
-          "https://images.unsplash.com/photo-1540575861501-7ad058c647a0?w=500&h=650&fit=crop";
+          "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&q=80";
 
     // Build payload with ONLY fields accepted by Convex
     if (
@@ -12592,7 +12592,7 @@ function OrganiserPanel() {
                           venue: newEvent.venue,
                           date: firstSlot?.date || "TBA",
                           time: firstSlot?.time || "TBA",
-                          img: "https://images.unsplash.com/photo-1540575861501-7ad058c647a0?w=500&h=650&fit=crop",
+                          img: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&q=80",
                           city:
                             selectedCity && selectedCity !== "All Cities"
                               ? selectedCity

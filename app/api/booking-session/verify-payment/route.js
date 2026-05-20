@@ -1,9 +1,9 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
+import { after } from "next/server";
 import crypto from "crypto";
-import { handlePaymentSuccess } from "@/app/utils/paymentUtils";
-import { unlockPartnerReward } from "@/lib/partnerRewards";
 import { generateSecureQRToken } from "@/lib/security";
+import { queueJob, executeJob } from "@/app/utils/backgroundJobs";
 
 const supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -111,10 +111,20 @@ export async function POST(request) {
             return NextResponse.json({ error: "Payment verification failed" }, { status: 400 });
         }
 
-        // 4. Update Booking Status to Confirmed
+        // ── SYNCHRONOUS CRITICAL PATH ──────────────────────────────────────────
+        // Executed instantly to confirm booking, issue e-ticket and secure QR
+
+        const nowIso = new Date().toISOString();
+
+        // 4. Update Booking Status to Confirmed immediately
         await supabaseAdmin
             .from("bookings")
-            .update({ status: "Confirmed" })
+            .update({ 
+                status: "Confirmed",
+                payment_status: "paid",
+                confirmed_at: nowIso,
+                booking_ref: bookingId.slice(-8).toUpperCase()
+            })
             .eq("id", bookingId);
 
         // 5. Update payment_transactions status
@@ -122,6 +132,10 @@ export async function POST(request) {
             .from("payment_transactions")
             .update({
                 payment_status: "success",
+                booking_session_id: sessionToken,
+                gateway_payment_id: finalPaymentId,
+                gateway_order_id: finalOrderId,
+                verified_at: nowIso,
                 response_payload: body
             })
             .eq("booking_id", bookingId)
@@ -137,40 +151,21 @@ export async function POST(request) {
             payment_id: finalPaymentId,
             order_id: finalOrderId,
             signature: razorpay_signature || "",
-            status: 'pending',
+            status: 'success', // confirmed instantly
             total_amount: booking.total_price,
             base_amount: booking.base_amount,
             platform_fee: booking.platform_charge,
             gst_amount_col: booking.gst_amount
         }).select().single();
 
-        // 7. Unified Payment Logic (Wallet Credit & Revenue split)
-        const organiserId = session.events?.organiser_id;
-        if (paymentRecord?.id) {
-            await handlePaymentSuccess({
-                paymentId: paymentRecord.id,
-                type: 'event',
-                referenceId: bookingId,
-                totalAmount: booking.total_price,
-                baseAmount: booking.partner_total || booking.base_amount || 0,
-                platformFee: booking.platform_charge || 0,
-                gstAmount: booking.gst_amount || 0,
-                providerId: organiserId,
-                eventId: session.event_id,
-                description: `Earnings from event booking #${bookingId.slice(-8).toUpperCase()}`
-            });
-        }
-
-        // 8. Decrement event ticket inventory
+        // 7. Decrement event ticket inventory
         try {
-            const ticketsBought = booking.ticket_count || 1;
             const { data: ev } = await supabaseAdmin
                 .from('events')
                 .select('total_seats')
                 .eq('id', session.event_id)
                 .maybeSingle();
             if (ev) {
-                // Count all confirmed bookings for this event to get accurate sold count
                 const { count: soldCount } = await supabaseAdmin
                     .from('bookings')
                     .select('*', { count: 'exact', head: true })
@@ -189,7 +184,7 @@ export async function POST(request) {
             console.warn('[verify-payment] Inventory update error:', invErr.message);
         }
 
-        // 9. Generate Ticket Record
+        // 8. Generate Ticket Record with Secure QR Token
         const ticketId = crypto.randomUUID();
         const ticketNumber = Math.random().toString(36).substring(2, 10).toUpperCase();
         const qrCodeToken = generateSecureQRToken({
@@ -202,15 +197,16 @@ export async function POST(request) {
             id: ticketId,
             booking_id: bookingId,
             ticket_number: ticketNumber,
+            ticket_code: ticketNumber,
+            qr_token: qrCodeToken,
+            issued_at: nowIso,
             status: 'active',
             qr_code: qrCodeToken
         });
 
         // 9. Record Coupon / Partner Campaign Voucher Usage
         const pricingSnapshot = session.pricing_snapshot || {};
-        
         if (pricingSnapshot.appliedCampaignId) {
-            // Partner Voucher Redemption
             const { data: coupon } = await supabaseAdmin
                 .from("coupon_inventory")
                 .select("id")
@@ -218,16 +214,14 @@ export async function POST(request) {
                 .maybeSingle();
 
             if (coupon) {
-                // Mark coupon as redeemed
                 await supabaseAdmin
                     .from("coupon_inventory")
                     .update({
                         status: "redeemed",
-                        redeemed_at: new Date().toISOString()
+                        redeemed_at: nowIso
                     })
                     .eq("id", coupon.id);
 
-                // Add log to coupon_usage_logs
                 await supabaseAdmin
                     .from("coupon_usage_logs")
                     .insert({
@@ -238,7 +232,6 @@ export async function POST(request) {
                     });
             }
         } else if (pricingSnapshot.appliedCouponId) {
-            // Regular Coupon Redemption
             await supabaseAdmin.from('coupon_usage').insert({
                 user_id: session.user_id,
                 coupon_id: pricingSnapshot.appliedCouponId,
@@ -252,52 +245,115 @@ export async function POST(request) {
             .update({ status: "completed" })
             .eq("id", sessionToken);
 
-        // 11. Post-Payment Reward Coupon Distribution
-        let rewardInfo = null;
-        try {
-            const rewardResult = await unlockPartnerReward(bookingId, session.user_id, session.event_id);
-            if (rewardResult.success && rewardResult.rewards && rewardResult.rewards.length > 0) {
-                rewardInfo = rewardResult.rewards[0];
-            }
-        } catch (rewardErr) {
-            console.error("[REWARDS] Error in verify-payment unlockPartnerReward:", rewardErr.message);
-        }
+        // ── ASYNCHRONOUS DEFERRED PATH (USING NEXT.JS AFTER) ──────────────────
+        // Heavy settlements, rewards and slow external notifications are run async
+        // keeping checkout confirmation times under 2 seconds!
 
-        // 12. Trigger Email/SMS Notifications
-        try {
+        const protocol = request.headers.get('x-forwarded-proto') || 'https';
+        const host = request.headers.get('host');
+        const origin = `${protocol}://${host}`;
+
+        after(async () => {
+            console.log(`[After-Response] Triggering background jobs for booking: ${bookingId}`);
+
+            // 1. Financial Settlement Job
+            const organiserId = session.events?.organiser_id;
+            if (paymentRecord?.id) {
+                const { jobId } = await queueJob({
+                    jobType: "settlement",
+                    bookingId,
+                    payload: {
+                        paymentId: paymentRecord.id,
+                        totalAmount: booking.total_price,
+                        baseAmount: booking.partner_total || booking.base_amount || 0,
+                        platformFee: booking.platform_charge || 0,
+                        gstAmount: booking.gst_amount || 0,
+                        providerId: organiserId,
+                        eventId: session.event_id,
+                        description: `Earnings from event booking #${bookingId.slice(-8).toUpperCase()}`
+                    }
+                });
+
+                // Instantly execute the job
+                await executeJob({
+                    jobId,
+                    jobType: "settlement",
+                    bookingId,
+                    payload: {
+                        paymentId: paymentRecord.id,
+                        totalAmount: booking.total_price,
+                        baseAmount: booking.partner_total || booking.base_amount || 0,
+                        platformFee: booking.platform_charge || 0,
+                        gstAmount: booking.gst_amount || 0,
+                        providerId: organiserId,
+                        eventId: session.event_id,
+                        description: `Earnings from event booking #${bookingId.slice(-8).toUpperCase()}`
+                    }
+                });
+            }
+
+            // 2. Rewards Job
+            const { jobId: rewardsJobId } = await queueJob({
+                jobType: "rewards",
+                bookingId,
+                payload: {
+                    userId: session.user_id,
+                    eventId: session.event_id
+                }
+            });
+
+            await executeJob({
+                jobId: rewardsJobId,
+                jobType: "rewards",
+                bookingId,
+                payload: {
+                    userId: session.user_id,
+                    eventId: session.event_id
+                }
+            });
+
+            // 3. Notifications Job
             const customerDetails = booking.customer_details || {};
             const phoneNumber = customerDetails.phone || customerDetails.mobile;
             const email = customerDetails.email;
 
             if (phoneNumber || email) {
-                const protocol = request.headers.get('x-forwarded-proto') || 'https';
-                const host = request.headers.get('host');
-                const origin = `${protocol}://${host}`;
-
-                await fetch(`${origin}/api/comm/trigger`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
+                const { jobId: notifyJobId } = await queueJob({
+                    jobType: "notifications",
+                    bookingId,
+                    payload: {
                         phoneNumber,
                         email,
-                        type: "BOOKING",
-                        data: {
-                            name: customerDetails.name || "Customer",
-                            eventName: session.events?.title || "Event",
-                            date: session.events?.date || "TBA",
-                            bookingId: bookingId,
-                            ticketNumber: ticketNumber
-                        }
-                    })
+                        name: customerDetails.name || "Customer",
+                        eventName: session.events?.title || "Event",
+                        date: session.events?.date || "TBA",
+                        ticketNumber
+                    }
+                });
+
+                await executeJob({
+                    jobId: notifyJobId,
+                    jobType: "notifications",
+                    bookingId,
+                    payload: {
+                        phoneNumber,
+                        email,
+                        name: customerDetails.name || "Customer",
+                        eventName: session.events?.title || "Event",
+                        date: session.events?.date || "TBA",
+                        ticketNumber
+                    },
+                    origin
                 });
             }
-        } catch (notifyErr) {}
+        });
 
+        // Instant redirect response
         return NextResponse.json({ 
             success: true, 
-            bookingId,
-            rewardInfo
+            bookingId
         });
+
     } catch (err) {
         console.error("Verify Payment Error:", err);
         return NextResponse.json({ error: err.message || "Failed to verify payment" }, { status: 500 });

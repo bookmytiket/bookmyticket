@@ -1,10 +1,10 @@
 import { Cashfree, CFEnvironment } from "cashfree-pg";
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
-import { handlePaymentSuccess } from "@/app/utils/paymentUtils";
-import { unlockPartnerReward } from "@/lib/partnerRewards";
+import { after } from "next/server";
 import crypto from "crypto";
 import { generateSecureQRToken } from "@/lib/security";
+import { queueJob, executeJob } from "@/app/utils/backgroundJobs";
 
 const supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -42,6 +42,8 @@ export async function POST(request) {
 
         console.log(`Cashfree Webhook received for Booking ${bookingId}: ${paymentStatus}`);
 
+        const nowIso = new Date().toISOString();
+
         if (paymentStatus === "SUCCESS") {
             // 1. Fetch Booking and Event details
             const { data: booking, error: fetchErr } = await supabaseAdmin
@@ -52,10 +54,15 @@ export async function POST(request) {
 
             if (fetchErr) throw fetchErr;
 
-            // 2. Update Booking Status
+            // 2. Update Booking Status immediately
             await supabaseAdmin
                 .from('bookings')
-                .update({ status: 'Confirmed' })
+                .update({ 
+                    status: 'Confirmed',
+                    payment_status: 'paid',
+                    confirmed_at: nowIso,
+                    booking_ref: bookingId.slice(-8).toUpperCase()
+                })
                 .eq('id', bookingId);
 
             // 3. Record Payment
@@ -66,30 +73,14 @@ export async function POST(request) {
                 reference_id: bookingId,
                 payment_gateway: 'Cashfree',
                 payment_id: payment.cf_payment_id,
-                status: 'pending',
+                status: 'success',
                 total_amount: payment.payment_amount,
                 base_amount: booking.base_amount,
                 platform_fee: booking.platform_charge,
                 gst_amount_col: booking.gst_amount
             }).select().single();
 
-            // 4. Unified Payment Logic
-            const organiserId = booking.events?.organiser_id;
-            if (paymentRecord) {
-                await handlePaymentSuccess({
-                    paymentId: paymentRecord.id,
-                    type: 'event',
-                    referenceId: bookingId,
-                    totalAmount: payment.payment_amount,
-                    baseAmount: booking.partner_total || (booking.base_amount - (booking.discount_amount || 0)),
-                    platformFee: booking.platform_charge || 0,
-                    gstAmount: booking.gst_amount || 0,
-                    providerId: organiserId,
-                    description: `Earnings from booking ${bookingId} (via Cashfree)`
-                });
-            }
-
-            // 5. Generate Ticket Record
+            // 4. Generate Ticket Record with Secure QR Token
             const ticketId = crypto.randomUUID();
             const ticketNumber = Math.random().toString(36).substring(2, 10).toUpperCase();
             const qrCodeToken = generateSecureQRToken({
@@ -102,18 +93,14 @@ export async function POST(request) {
                 id: ticketId,
                 booking_id: bookingId,
                 ticket_number: ticketNumber,
+                ticket_code: ticketNumber,
+                qr_token: qrCodeToken,
+                issued_at: nowIso,
                 status: 'active',
                 qr_code: qrCodeToken
             });
 
-            // 5.1 Unlock Partner Rewards post-booking
-            try {
-                await unlockPartnerReward(bookingId, booking.user_id, booking.event_id);
-            } catch (rewardErr) {
-                console.error("[REWARDS] Error in cashfree unlockPartnerReward:", rewardErr.message);
-            }
-
-            // 6. Record Coupon Usage
+            // 5. Record Coupon Usage (Synchronous and fast)
             if (booking.coupon_id) {
                 await supabaseAdmin.from('coupon_usage').insert({
                     user_id: booking.user_id,
@@ -122,39 +109,112 @@ export async function POST(request) {
                 });
             }
 
-            // 7. Trigger Notifications
-            try {
+            // ── DEFERRED BACKGROUND PROCESSING ─────────────────────────────────────
+            const protocol = headers['x-forwarded-proto'] || 'https';
+            const host = headers['host'];
+            const origin = `${protocol}://${host}`;
+
+            after(async () => {
+                console.log(`[After-Response Cashfree Webhook] Triggering background jobs for booking: ${bookingId}`);
+
+                // 1. Settlement Job
+                const organiserId = booking.events?.organiser_id;
+                if (paymentRecord?.id) {
+                    const { jobId } = await queueJob({
+                        jobType: "settlement",
+                        bookingId,
+                        payload: {
+                            paymentId: paymentRecord.id,
+                            totalAmount: payment.payment_amount,
+                            baseAmount: booking.partner_total || (booking.base_amount - (booking.discount_amount || 0)),
+                            platformFee: booking.platform_charge || 0,
+                            gstAmount: booking.gst_amount || 0,
+                            providerId: organiserId,
+                            eventId: booking.event_id,
+                            description: `Earnings from booking ${bookingId} (via Cashfree)`
+                        }
+                    });
+
+                    await executeJob({
+                        jobId,
+                        jobType: "settlement",
+                        bookingId,
+                        payload: {
+                            paymentId: paymentRecord.id,
+                            totalAmount: payment.payment_amount,
+                            baseAmount: booking.partner_total || (booking.base_amount - (booking.discount_amount || 0)),
+                            platformFee: booking.platform_charge || 0,
+                            gstAmount: booking.gst_amount || 0,
+                            providerId: organiserId,
+                            eventId: booking.event_id,
+                            description: `Earnings from booking ${bookingId} (via Cashfree)`
+                        }
+                    });
+                }
+
+                // 2. Rewards Job
+                const { jobId: rewardsJobId } = await queueJob({
+                    jobType: "rewards",
+                    bookingId,
+                    payload: {
+                        userId: booking.user_id,
+                        eventId: booking.event_id
+                    }
+                });
+
+                await executeJob({
+                    jobId: rewardsJobId,
+                    jobType: "rewards",
+                    bookingId,
+                    payload: {
+                        userId: booking.user_id,
+                        eventId: booking.event_id
+                    }
+                });
+
+                // 3. Notifications Job
                 const customerDetails = booking.customer_details || {};
                 const phoneNumber = customerDetails.phone || customerDetails.mobile;
                 const email = customerDetails.email;
 
                 if (phoneNumber || email) {
-                    const protocol = headers['x-forwarded-proto'] || 'https';
-                    const host = headers['host'];
-                    const origin = `${protocol}://${host}`;
-
-                    await fetch(`${origin}/api/comm/trigger`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
+                    const { jobId: notifyJobId } = await queueJob({
+                        jobType: "notifications",
+                        bookingId,
+                        payload: {
                             phoneNumber,
                             email,
-                            type: "BOOKING",
-                            data: {
-                                name: customerDetails.name || "Customer",
-                                eventName: booking.events?.title || "Event",
-                                date: booking.events?.date || "TBA",
-                                bookingId: bookingId,
-                                ticketNumber: ticketNumber
-                            }
-                        })
+                            name: customerDetails.name || "Customer",
+                            eventName: booking.events?.title || "Event",
+                            date: booking.events?.date || "TBA",
+                            ticketNumber
+                        }
+                    });
+
+                    await executeJob({
+                        jobId: notifyJobId,
+                        jobType: "notifications",
+                        bookingId,
+                        payload: {
+                            phoneNumber,
+                            email,
+                            name: customerDetails.name || "Customer",
+                            eventName: booking.events?.title || "Event",
+                            date: booking.events?.date || "TBA",
+                            ticketNumber
+                        },
+                        origin
                     });
                 }
-            } catch (notifyErr) {}
+            });
+
         } else if (paymentStatus === "FAILED") {
             await supabaseAdmin
                 .from('bookings')
-                .update({ status: 'Failed' })
+                .update({ 
+                    status: 'Failed',
+                    payment_status: 'failed'
+                })
                 .eq('id', bookingId);
         }
 

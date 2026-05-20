@@ -336,7 +336,7 @@ function HomeClient() {
           ...ev,
           id: ev.id,
           title: ev.title || "Event",
-          img: ev.img || "https://images.unsplash.com/photo-1540575861501-7ad058c647a0?w=500&h=280&fit=crop",
+          img: ev.img || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&q=80",
           rawDate: ev.date,
           rawTime: ev.time,
           date: [ev.date, ev.time].filter(Boolean).join(" ") || "TBA",

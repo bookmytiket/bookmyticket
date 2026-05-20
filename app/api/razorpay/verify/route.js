@@ -1,9 +1,9 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
+import { after } from "next/server";
 import crypto from "crypto";
-import { handlePaymentSuccess } from "@/app/utils/paymentUtils";
-import { unlockPartnerReward } from "@/lib/partnerRewards";
 import { generateSecureQRToken } from "@/lib/security";
+import { queueJob, executeJob } from "@/app/utils/backgroundJobs";
 
 const supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -48,6 +48,8 @@ export async function POST(request) {
             return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
         }
 
+        const nowIso = new Date().toISOString();
+
         if (type === "booking" || type === "event") {
             // 2. Fetch Booking and Event details
             const { data: booking, error: fetchErr } = await supabaseAdmin
@@ -58,15 +60,18 @@ export async function POST(request) {
 
             if (fetchErr) throw fetchErr;
 
-            // 3. Update Booking Status
-            const { error: bookingErr } = await supabaseAdmin
+            // 3. Update Booking Status immediately
+            await supabaseAdmin
                 .from('bookings')
-                .update({ status: 'Confirmed' })
+                .update({ 
+                    status: 'Confirmed',
+                    payment_status: 'paid',
+                    confirmed_at: nowIso,
+                    booking_ref: id.slice(-8).toUpperCase()
+                })
                 .eq('id', id);
 
-            if (bookingErr) throw bookingErr;
-
-            // 4. Record Payment
+            // 4. Record Payment (Legacy payments table)
             const { data: paymentRecord } = await supabaseAdmin.from('payments').insert({
                 booking_id: id,
                 user_id: booking.user_id,
@@ -76,34 +81,16 @@ export async function POST(request) {
                 payment_id: razorpay_payment_id,
                 order_id: razorpay_order_id,
                 signature: razorpay_signature,
-                status: 'pending', // Will be updated by handlePaymentSuccess
+                status: 'success',
                 total_amount: booking.total_price,
                 base_amount: booking.base_amount,
                 platform_fee: booking.platform_charge,
                 gst_amount_col: booking.gst_amount
             }).select().single();
 
-            const paymentId = paymentRecord?.id;
-
-            // 5. Unified Payment Logic (Wallet Credit & Revenue split)
-            const organiserId = booking.events?.organiser_id;
-            if (paymentId) {
-                await handlePaymentSuccess({
-                    paymentId,
-                    type: 'event',
-                    referenceId: id,
-                    totalAmount: booking.total_price,
-                    baseAmount: booking.partner_total || (booking.base_amount - (booking.discount_amount || 0)),
-                    platformFee: booking.platform_charge || 0,
-                    gstAmount: booking.gst_amount || 0,
-                    providerId: organiserId,
-                    description: `Earnings from event booking ${id}`
-                });
-            }
-
-            // 6. Generate Ticket Record
+            // 5. Generate Ticket Record with Secure QR Token
             const ticketId = crypto.randomUUID();
-            let ticketNumber = Math.random().toString(36).substring(2, 10).toUpperCase();
+            const ticketNumber = Math.random().toString(36).substring(2, 10).toUpperCase();
             const qrCodeToken = generateSecureQRToken({
                 ticketId,
                 bookingId: id,
@@ -114,18 +101,14 @@ export async function POST(request) {
                 id: ticketId,
                 booking_id: id,
                 ticket_number: ticketNumber,
+                ticket_code: ticketNumber,
+                qr_token: qrCodeToken,
+                issued_at: nowIso,
                 status: 'active',
                 qr_code: qrCodeToken
             });
 
-            // 6.1 Unlock Partner Rewards post-booking
-            try {
-                await unlockPartnerReward(id, booking.user_id, booking.event_id);
-            } catch (rewardErr) {
-                console.error("[REWARDS] Error in verify unlockPartnerReward:", rewardErr.message);
-            }
-
-            // 7. Record Coupon Usage
+            // 6. Record Coupon Usage (Synchronous and fast)
             if (booking.coupon_id) {
                 await supabaseAdmin.from('coupon_usage').insert({
                     user_id: booking.user_id,
@@ -134,38 +117,107 @@ export async function POST(request) {
                 });
             }
 
-            // 8. Trigger Notifications
-            try {
+            // ── DEFERRED BACKGROUND PROCESSING ─────────────────────────────────────
+            const protocol = request.headers.get('x-forwarded-proto') || 'https';
+            const host = request.headers.get('host');
+            const origin = `${protocol}://${host}`;
+
+            after(async () => {
+                console.log(`[After-Response Legacy] Triggering background jobs for booking: ${id}`);
+
+                // 1. Settlement Job
+                const organiserId = booking.events?.organiser_id;
+                if (paymentRecord?.id) {
+                    const { jobId } = await queueJob({
+                        jobType: "settlement",
+                        bookingId: id,
+                        payload: {
+                            paymentId: paymentRecord.id,
+                            totalAmount: booking.total_price,
+                            baseAmount: booking.partner_total || (booking.base_amount - (booking.discount_amount || 0)),
+                            platformFee: booking.platform_charge || 0,
+                            gstAmount: booking.gst_amount || 0,
+                            providerId: organiserId,
+                            eventId: booking.event_id,
+                            description: `Earnings from event booking ${id}`
+                        }
+                    });
+
+                    await executeJob({
+                        jobId,
+                        jobType: "settlement",
+                        bookingId: id,
+                        payload: {
+                            paymentId: paymentRecord.id,
+                            totalAmount: booking.total_price,
+                            baseAmount: booking.partner_total || (booking.base_amount - (booking.discount_amount || 0)),
+                            platformFee: booking.platform_charge || 0,
+                            gstAmount: booking.gst_amount || 0,
+                            providerId: organiserId,
+                            eventId: booking.event_id,
+                            description: `Earnings from event booking ${id}`
+                        }
+                    });
+                }
+
+                // 2. Rewards Job
+                const { jobId: rewardsJobId } = await queueJob({
+                    jobType: "rewards",
+                    bookingId: id,
+                    payload: {
+                        userId: booking.user_id,
+                        eventId: booking.event_id
+                    }
+                });
+
+                await executeJob({
+                    jobId: rewardsJobId,
+                    jobType: "rewards",
+                    bookingId: id,
+                    payload: {
+                        userId: booking.user_id,
+                        eventId: booking.event_id
+                    }
+                });
+
+                // 3. Notifications Job
                 const customerDetails = booking.customer_details || {};
                 const phoneNumber = customerDetails.phone || customerDetails.mobile;
                 const email = customerDetails.email;
 
                 if (phoneNumber || email) {
-                    const protocol = request.headers.get('x-forwarded-proto') || 'https';
-                    const host = request.headers.get('host');
-                    const origin = `${protocol}://${host}`;
-
-                    await fetch(`${origin}/api/comm/trigger`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
+                    const { jobId: notifyJobId } = await queueJob({
+                        jobType: "notifications",
+                        bookingId: id,
+                        payload: {
                             phoneNumber,
                             email,
-                            type: "BOOKING",
-                            data: {
-                                name: customerDetails.name || "Customer",
-                                eventName: booking.events?.title || "Event",
-                                date: booking.events?.date || "TBA",
-                                bookingId: id,
-                                ticketNumber: ticketNumber
-                            }
-                        })
+                            name: customerDetails.name || "Customer",
+                            eventName: booking.events?.title || "Event",
+                            date: booking.events?.date || "TBA",
+                            ticketNumber
+                        }
+                    });
+
+                    await executeJob({
+                        jobId: notifyJobId,
+                        jobType: "notifications",
+                        bookingId: id,
+                        payload: {
+                            phoneNumber,
+                            email,
+                            name: customerDetails.name || "Customer",
+                            eventName: booking.events?.title || "Event",
+                            date: booking.events?.date || "TBA",
+                            ticketNumber
+                        },
+                        origin
                     });
                 }
-            } catch (notifyErr) {}
+            });
 
         } else if (type === "service") {
-            // 1. Fetch Service Booking details
+            // Service Booking flow (Synchronous)
             const { data: sBooking, error: sErr } = await supabaseAdmin
                 .from('vendor_bookings')
                 .select('*')
@@ -174,10 +226,8 @@ export async function POST(request) {
             
             if (sErr) throw sErr;
 
-            // 2. Update Status
             await supabaseAdmin.from('vendor_bookings').update({ status: 'Paid' }).eq('id', id);
 
-            // 3. Record Payment
             const { data: paymentRecord } = await supabaseAdmin.from('payments').insert({
                 user_id: sBooking.user_id,
                 type: 'service',
@@ -185,29 +235,49 @@ export async function POST(request) {
                 payment_gateway: 'Razorpay',
                 payment_id: razorpay_payment_id,
                 order_id: razorpay_order_id,
-                status: 'pending',
+                status: 'success',
                 total_amount: sBooking.total_amount,
-                base_amount: sBooking.total_amount, // For now, services take full base
+                base_amount: sBooking.total_amount,
                 platform_fee: 0,
                 gst_amount_col: 0
             }).select().single();
 
-            // 4. Unified Wallet logic
-            if (paymentRecord) {
-                await handlePaymentSuccess({
-                    paymentId: paymentRecord.id,
-                    type: 'service',
-                    referenceId: id,
-                    totalAmount: sBooking.total_amount,
-                    baseAmount: sBooking.total_amount,
-                    platformFee: 0,
-                    gstAmount: 0,
-                    providerId: sBooking.vendor_id,
-                    description: `Earnings from service session ${id}`
-                });
-            }
+            // Run wallet settlement for service bookings async via after
+            after(async () => {
+                if (paymentRecord) {
+                    const { jobId } = await queueJob({
+                        jobType: "settlement",
+                        bookingId: id,
+                        payload: {
+                            paymentId: paymentRecord.id,
+                            totalAmount: sBooking.total_amount,
+                            baseAmount: sBooking.total_amount,
+                            platformFee: 0,
+                            gstAmount: 0,
+                            providerId: sBooking.vendor_id,
+                            description: `Earnings from service session ${id}`
+                        }
+                    });
+
+                    await executeJob({
+                        jobId,
+                        jobType: "settlement",
+                        bookingId: id,
+                        payload: {
+                            paymentId: paymentRecord.id,
+                            totalAmount: sBooking.total_amount,
+                            baseAmount: sBooking.total_amount,
+                            platformFee: 0,
+                            gstAmount: 0,
+                            providerId: sBooking.vendor_id,
+                            description: `Earnings from service session ${id}`
+                        }
+                    });
+                }
+            });
+
         } else if (type === "subscription" || type === "staff_subscription") {
-            // 1. Fetch Package details
+            // Subscription payments (Synchronous)
             const { data: pkg, error: pkgErr } = await supabaseAdmin
                 .from('staff_packages')
                 .select('*')
@@ -216,12 +286,9 @@ export async function POST(request) {
             
             if (pkgErr) throw pkgErr;
 
-            // 2. Fetch Organiser ID from request body
             const organiserId = body.organiserId;
-
-            // 3. Update/Insert Organiser Subscription
             const expiryDate = new Date();
-            expiryDate.setMonth(expiryDate.getMonth() + 1); // 1 month plan
+            expiryDate.setMonth(expiryDate.getMonth() + 1);
 
             const { error: subErr } = await supabaseAdmin
                 .from('organiser_subscriptions')
@@ -235,13 +302,11 @@ export async function POST(request) {
 
             if (subErr) throw subErr;
 
-            // 4. Calculate GST for logging
             const basePrice = pkg.monthly_price || pkg.package_price || 0;
             const discount = basePrice * ((pkg.discount_percentage || 0) / 100);
             const priceAfterDiscount = basePrice - discount;
             const gstAmount = priceAfterDiscount * ((pkg.gst_percentage || 18) / 100);
 
-            // 5. Record Subscription Payment log
             await supabaseAdmin.from('subscription_payments').insert({
                 organiser_id: organiserId,
                 package_id: id,

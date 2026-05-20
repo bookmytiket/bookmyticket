@@ -879,7 +879,7 @@ export default function HomeScreen() {
                   style={{ width: 180, backgroundColor: colors.card, borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: colors.border, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 2 }}
                   onPress={() => router.push({ pathname: "/events/[id]", params: { id: item.id } })}
                 >
-                  <Image source={{ uri: item.image_url || 'https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=800' }} style={{ width: '100%', height: 120 }} />
+                  <Image source={{ uri: item.img || item.image_url || 'https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=800' }} style={{ width: '100%', height: 120 }} />
                   
                   <View style={{ padding: 12 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
@@ -929,7 +929,7 @@ export default function HomeScreen() {
                   onPress={() => router.push({ pathname: "/events/[id]", params: { id: item.id } })}
                   style={{ width: 280, height: 160, borderRadius: 20, overflow: 'hidden', backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border }}
                 >
-                  <Image source={{ uri: item.image_url || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800' }} style={[StyleSheet.absoluteFill, { width: '100%', height: '100%' }]} />
+                  <Image source={{ uri: item.img || item.image_url || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800' }} style={[StyleSheet.absoluteFill, { width: '100%', height: '100%' }]} />
                   <LinearGradient colors={['transparent', 'rgba(0,0,0,0.8)']} style={StyleSheet.absoluteFill} />
                   <View style={{ position: 'absolute', bottom: 16, left: 16, right: 16 }}>
                     <Text style={{ color: '#fff', fontSize: 16, fontWeight: '900' }} numberOfLines={1}>{item.title}</Text>
@@ -1036,7 +1036,7 @@ export default function HomeScreen() {
                   >
                     {/* Top Image */}
                     <View style={{ height: 180, position: 'relative' }}>
-                      <Image source={{ uri: item.image_url || 'https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=800' }} style={{ width: '100%', height: '100%' }} />
+                      <Image source={{ uri: item.img || item.image_url || 'https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=800' }} style={{ width: '100%', height: '100%' }} />
                       <View style={{ position: 'absolute', top: 16, right: 16, backgroundColor: '#22c55e', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 }}>
                         <Text style={{ fontSize: 10, fontWeight: '900', color: '#fff', textTransform: 'uppercase' }}>Trending</Text>
                       </View>
