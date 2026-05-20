@@ -1,16 +1,8 @@
 "use client";
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { Home, Calendar, Ticket, User, LayoutGrid } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Home, Calendar, Ticket, User } from 'lucide-react';
 import { useAuth } from './AuthContext';
-
-const NAV_ITEMS = [
-  { href: '/', icon: Home, label: 'Home' },
-  { href: '/#explore-popular-events', label: 'Events', icon: Calendar },
-  { href: '/profile?tab=my_booking', label: 'Tickets', icon: Ticket, isAction: true }, // Special handling for Tickets
-  { href: '/profile', icon: User, label: 'Profile' },
-];
 
 export default function MobileBottomNav() {
   const pathname = usePathname();
@@ -50,55 +42,56 @@ export default function MobileBottomNav() {
     }
   };
 
+  const isBookHidden = pathname.includes('/events/book') || pathname.includes('/checkout');
+
   return (
     <nav className="mobile-bottom-nav">
       <div className="bottom-nav-container">
-        {/* Home */}
+        {/* Column 1: Home */}
         <Link href="/" className={`nav-item ${pathname === '/' ? 'active' : ''}`}>
-          <Home size={22} className="nav-icon" />
+          <Home size={20} strokeWidth={2.5} className="nav-icon" />
           <span className="nav-label">Home</span>
         </Link>
 
-        {/* Events */}
-        <Link href="/#explore-popular-events" className={`nav-item ${pathname.includes('#explore') ? 'active' : ''}`}>
-          <Calendar size={22} className="nav-icon" />
+        {/* Column 2: Events */}
+        <Link href="/#explore-popular-events" className={`nav-item ${pathname.includes('#explore') || pathname.includes('/events') && !pathname.includes('/events/book') ? 'active' : ''}`}>
+          <Calendar size={20} strokeWidth={2.5} className="nav-icon" />
           <span className="nav-label">Events</span>
         </Link>
 
-        {/* Floating Book Now Action - Hidden on booking/checkout pages */}
+        {/* Column 3: Floating Action Button */}
         <div className="nav-item-action">
-          {!pathname.includes('/events/book') && !pathname.includes('/checkout') && (
+          {!isBookHidden && (
             <button 
               onClick={handleBookNow}
               className="book-now-floating"
+              aria-label="Book Now"
             >
-              <div className="book-now-inner">
-                <span className="book-now-text">Book</span>
-                <span className="book-now-subtext">Now</span>
-              </div>
+              <span className="book-now-text">Book</span>
+              <span className="book-now-subtext">Now</span>
             </button>
           )}
         </div>
 
-        {/* Tickets */}
+        {/* Column 4: Tickets */}
         <Link 
           href={user ? "/profile?tab=my_booking" : `/signin?redirect=${encodeURIComponent('/profile?tab=my_booking')}`} 
-          className={`nav-item ${pathname.includes('my_booking') ? 'active' : ''}`}
+          className={`nav-item ${pathname.includes('my_booking') || (pathname.includes('/profile') && searchParams.get('tab') === 'my_booking') ? 'active' : ''}`}
         >
-          <Ticket size={22} className="nav-icon" />
+          <Ticket size={20} strokeWidth={2.5} className="nav-icon" />
           <span className="nav-label">Tickets</span>
         </Link>
 
-        {/* Profile */}
+        {/* Column 5: Profile */}
         <Link 
           href={user ? "/profile" : "/signin?redirect=/profile"} 
-          className={`nav-item ${pathname === '/profile' ? 'active' : ''}`}
+          className={`nav-item ${pathname === '/profile' && !searchParams.get('tab') ? 'active' : ''}`}
         >
-          <User size={22} className="nav-icon" />
+          <User size={20} strokeWidth={2.5} className="nav-icon" />
           <span className="nav-label">Profile</span>
         </Link>
       </div>
-      
+
       <style jsx>{`
         .mobile-bottom-nav {
           position: fixed;
@@ -106,13 +99,13 @@ export default function MobileBottomNav() {
           left: 0;
           right: 0;
           background: rgba(255, 255, 255, 0.98);
-          backdrop-filter: blur(25px);
-          -webkit-backdrop-filter: blur(25px);
-          border-top: 1px solid rgba(0, 0, 0, 0.05);
+          backdrop-filter: blur(20px);
+          -webkit-backdrop-filter: blur(20px);
+          border-top: 1px solid rgba(226, 232, 240, 0.8);
           z-index: 10000;
-          padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+          padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
           display: none;
-          box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.06);
+          box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.05);
         }
 
         @media (max-width: 768px) {
@@ -122,14 +115,15 @@ export default function MobileBottomNav() {
         }
 
         .bottom-nav-container {
-          display: flex;
-          justify-content: space-between;
+          display: grid;
+          grid-template-columns: repeat(5, minmax(0, 1fr));
           align-items: center;
-          height: 70px;
-          max-width: 100%;
+          height: 60px;
+          width: 100%;
+          max-width: 480px;
           margin: 0 auto;
-          padding: 0 10px;
-          gap: 5px;
+          padding: 0 8px;
+          box-sizing: border-box;
         }
 
         .nav-item {
@@ -138,79 +132,87 @@ export default function MobileBottomNav() {
           align-items: center;
           justify-content: center;
           text-decoration: none;
-          color: #64748b;
+          color: #94a3b8;
           height: 100%;
-          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-          padding-top: 5px;
-          flex: 1;
+          width: 100%;
+          transition: color 0.2s ease, transform 0.1s ease;
+          cursor: pointer;
+        }
+
+        .nav-item:active {
+          transform: scale(0.95);
         }
 
         .nav-item.active {
           color: #f84464;
-          transform: translateY(-2px);
         }
 
         .nav-icon {
-          margin-bottom: 6px; /* More space */
-          stroke-width: 2.5px;
+          margin-bottom: 4px;
+          transition: transform 0.2s ease;
+        }
+
+        .nav-item.active .nav-icon {
+          transform: scale(1.05);
         }
 
         .nav-label {
-          font-size: 11px; /* Larger font */
+          font-size: 10px;
           font-weight: 800;
           text-transform: uppercase;
           letter-spacing: 0.8px;
           white-space: nowrap;
-          opacity: 0.9;
         }
 
         .nav-item-action {
-          flex: 1.2;
-          display: flex;
-          justify-content: center;
           position: relative;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 100%;
+          height: 100%;
         }
 
         .book-now-floating {
-          width: 56px;
-          height: 56px;
+          position: absolute;
+          top: -24px;
+          width: 58px;
+          height: 58px;
           border-radius: 50%;
           background: linear-gradient(135deg, #f844a4 0%, #a855f7 100%);
           border: 4px solid #fff;
-          box-shadow: 0 8px 20px rgba(248, 68, 164, 0.4);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          transform: translateY(-20px);
-          cursor: pointer;
-          transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-
-        .book-now-floating:active {
-          transform: translateY(-22px) scale(0.9);
-        }
-
-        .book-now-inner {
+          box-shadow: 0 8px 24px rgba(248, 68, 164, 0.45);
           display: flex;
           flex-direction: column;
           align-items: center;
-          line-height: 1.1;
+          justify-content: center;
+          cursor: pointer;
+          transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+          outline: none;
+          z-index: 10001;
+        }
+
+        .book-now-floating:active {
+          transform: scale(0.9) translateY(2px);
+          box-shadow: 0 4px 12px rgba(248, 68, 164, 0.3);
         }
 
         .book-now-text {
           color: #fff;
-          font-size: 10px;
+          font-size: 11px;
           font-weight: 900;
           text-transform: uppercase;
           letter-spacing: 0.5px;
+          line-height: 1;
         }
 
         .book-now-subtext {
-          color: rgba(255, 255, 255, 0.95);
+          color: rgba(255, 255, 255, 0.9);
           font-size: 8px;
           font-weight: 800;
           text-transform: uppercase;
           margin-top: 1px;
+          line-height: 1;
         }
       `}</style>
     </nav>
