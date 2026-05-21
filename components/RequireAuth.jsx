@@ -46,12 +46,7 @@ export default function RequireAuth({ children, allowedRoles }) {
       return;
     }
 
-    // SPECIAL CASE: Staff users are ONLY allowed on /scanner or /pwa-scan
-    if (user.role === "staff" && pathname !== "/scanner" && pathname !== "/pwa-scan") {
-      console.log(`[RequireAuth] Staff user on ${pathname}. Redirecting to /pwa-scan`);
-      router.replace("/pwa-scan");
-      return;
-    }
+
 
     // KYC CHECK FOR ORGANISERS: If not approved, must complete onboarding (Admins/Super Admins bypass this)
     const isAdmin = user.role === "admin" || user.role === "super_admin" || user.role === "system_admin";
