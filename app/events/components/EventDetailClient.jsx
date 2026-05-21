@@ -71,6 +71,7 @@ export default function EventDetailClient({ id }) {
     const { user } = useAuth();
     const [storageLoaded, setStorageLoaded] = useState(false);
     const [showTournamentReg, setShowTournamentReg] = useState(false);
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     useEffect(() => { setStorageLoaded(true); }, []);
 
     const [rawEvent, setRawEvent] = useState(null);
@@ -188,6 +189,16 @@ export default function EventDetailClient({ id }) {
         }
     }, [event?.dynamic_config]);
 
+    const { data: seatingSectionsData } = useSupabaseQuery('seating_sections', (q) => 
+        q.select(`
+            id, 
+            name, 
+            capacity,
+            seat_ticket_mapping ( price ),
+            seating_layouts!inner ( event_id )
+        `).eq('seating_layouts.event_id', id)
+    , [id]);
+
     const categories = useMemo(() => {
         if (isMarathon && marathonCategories?.length > 0) {
             return marathonCategories.map(c => ({
@@ -208,9 +219,6 @@ export default function EventDetailClient({ id }) {
                 }));
             }
             
-            // Priority 1: event.price (computed min category fee or registration fee)
-            // Priority 2: tournamentDetails.registration_fee
-            // Priority 3: dynamic_config
             const fee = Number(event?.price || tournamentDetails?.registration_fee || event?.dynamic_config?.sports_details?.registration_fee || 0);
             return [{
                 id: tournamentDetails?.id || event?.id,
@@ -218,8 +226,30 @@ export default function EventDetailClient({ id }) {
                 price: fee
             }];
         }
+        
+        // Phase 4 Ticket Sync: Pull Price Tiers from the Arena Architect Engine
+        if (seatingSectionsData && seatingSectionsData.length > 0) {
+            return seatingSectionsData.map(section => ({
+                id: section.id,
+                name: section.name,
+                price: section.seat_ticket_mapping?.[0]?.price || 0,
+                capacity: section.capacity
+            })).sort((a, b) => b.price - a.price); // Sort highest to lowest price
+        }
+
+        if (rawEvent?.seat_categories && rawEvent.seat_categories.length > 0) {
+            const parsedCategories = typeof rawEvent.seat_categories === 'string' ? JSON.parse(rawEvent.seat_categories) : rawEvent.seat_categories;
+            return parsedCategories.map((c, i) => ({
+                id: c.id || `seat_cat_${i}`,
+                name: c.name || "General",
+                price: Number(c.price) || 0,
+                capacity: Number(c.rows) || 0
+            }));
+        }
+
         return parsedConfig?.categories || [];
-    }, [isMarathon, marathonCategories, isTournament, tournamentDetails, event, parsedConfig?.categories]);
+    }, [isMarathon, marathonCategories, isTournament, tournamentDetails, event, parsedConfig?.categories, seatingSectionsData, rawEvent]);
+
     const selectedCat = useMemo(() => {
         if (categories.length === 0) return null;
         return categories.find(c => c.id === selectedCatId) || categories[0];
@@ -537,30 +567,52 @@ export default function EventDetailClient({ id }) {
                                     {categories.length > 1 && (
                                         <div className="space-y-3 py-4 border-t border-slate-50">
                                             <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Select Category</p>
-                                            <div className="space-y-2">
-                                                {categories.map((cat) => (
-                                                    <button
-                                                        key={cat.id}
-                                                        onClick={() => setSelectedCatId(cat.id)}
-                                                        className={`w-full p-4 rounded-2xl border text-left transition-all flex items-center justify-between group ${
-                                                            (selectedCatId === cat.id || (!selectedCatId && cat === categories[0]))
-                                                                ? 'border-pink-500 bg-pink-50/50'
-                                                                : 'border-slate-100 bg-slate-50 hover:border-pink-200'
-                                                        }`}
-                                                    >
-                                                        <div>
-                                                            <p className="text-[11px] font-black text-slate-900 uppercase tracking-tight">{cat.name}</p>
-                                                            <p className="text-[10px] font-bold text-pink-500 mt-0.5">₹{cat.price}</p>
+                                            <div className="relative">
+                                                <button
+                                                    onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                                                    className="w-full p-4 rounded-2xl border border-slate-100 bg-slate-50 hover:border-pink-200 transition-all flex items-center justify-between"
+                                                >
+                                                    <div className="text-left">
+                                                        <p className="text-[11px] font-black text-slate-900 uppercase tracking-tight">{selectedCat?.name || categories[0]?.name}</p>
+                                                        <p className="text-[10px] font-bold text-pink-500 mt-0.5">₹{selectedCat?.price || categories[0]?.price}</p>
+                                                    </div>
+                                                    <div className={`transition-transform duration-300 ${isDropdownOpen ? 'rotate-180' : ''}`}>
+                                                        <ChevronDown size={18} className="text-slate-400" />
+                                                    </div>
+                                                </button>
+                                                
+                                                {isDropdownOpen && (
+                                                    <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl border border-slate-100 shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                                                        <div className="max-h-[240px] overflow-y-auto">
+                                                            {categories.map((cat, idx) => (
+                                                                <button
+                                                                    key={cat.id}
+                                                                    onClick={() => {
+                                                                        setSelectedCatId(cat.id);
+                                                                        setIsDropdownOpen(false);
+                                                                    }}
+                                                                    className={`w-full p-4 text-left transition-all flex items-center justify-between group ${idx !== categories.length - 1 ? 'border-b border-slate-50' : ''} ${
+                                                                        (selectedCatId === cat.id || (!selectedCatId && cat === categories[0]))
+                                                                            ? 'bg-pink-50/50'
+                                                                            : 'hover:bg-slate-50'
+                                                                    }`}
+                                                                >
+                                                                    <div>
+                                                                        <p className="text-[11px] font-black text-slate-900 uppercase tracking-tight group-hover:text-pink-600 transition-colors">{cat.name}</p>
+                                                                        <p className="text-[10px] font-bold text-pink-500 mt-0.5">₹{cat.price}</p>
+                                                                    </div>
+                                                                    <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all ${
+                                                                        (selectedCatId === cat.id || (!selectedCatId && cat === categories[0]))
+                                                                            ? 'bg-pink-500 border-pink-500 text-white'
+                                                                            : 'bg-white border-slate-200 group-hover:border-pink-300'
+                                                                    }`}>
+                                                                        {(selectedCatId === cat.id || (!selectedCatId && cat === categories[0])) && <CheckCircle size={12} />}
+                                                                    </div>
+                                                                </button>
+                                                            ))}
                                                         </div>
-                                                        <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all ${
-                                                            (selectedCatId === cat.id || (!selectedCatId && cat === categories[0]))
-                                                                ? 'bg-pink-500 border-pink-500 text-white'
-                                                                : 'bg-white border-slate-200 group-hover:border-pink-300'
-                                                        }`}>
-                                                            {(selectedCatId === cat.id || (!selectedCatId && cat === categories[0])) && <CheckCircle size={12} />}
-                                                        </div>
-                                                    </button>
-                                                ))}
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     )}

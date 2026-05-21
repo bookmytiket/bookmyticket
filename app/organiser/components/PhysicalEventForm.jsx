@@ -77,7 +77,8 @@ const PhysicalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEdi
                 type: "Physical Event",
                 country: prev.country || "India",
                 countryCode: prev.countryCode || "IN",
-                seating_type: prev.seating_type || "FCFS"
+                seating_type: prev.seating_type || "FCFS",
+                ticketType: prev.ticketType || "paid"
             }));
         }
     }, []);
@@ -499,37 +500,65 @@ const PhysicalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEdi
 
             {/* Step 4: Seating Blueprint & Mapping */}
             {currentStep === 4 && (
-                <div className="bg-white rounded-[3rem] border border-slate-100 shadow-[0_50px_100px_-20px_rgba(0,0,0,0.05)] p-12 space-y-12 animate-in fade-in slide-in-from-right-8 duration-700">
-                    <div className="flex items-center gap-6">
-                        <div className="w-16 h-16 rounded-3xl bg-pink-50 flex items-center justify-center text-pink-600 shadow-inner">
-                            <Layout size={32} strokeWidth={1.5} />
+                <div className="animate-in fade-in slide-in-from-right-8 duration-700 space-y-6">
+                    {/* Ticketing Format Toggle */}
+                    <div className="bg-white rounded-[3rem] p-12 border border-slate-100 shadow-[0_50px_100px_-20px_rgba(0,0,0,0.05)] mb-6">
+                        <div className="flex flex-col md:flex-row items-center gap-6 justify-between">
+                            <div className="flex items-center gap-5">
+                                <div className="w-14 h-14 rounded-2xl bg-orange-50 flex items-center justify-center text-orange-600 shadow-inner">
+                                    <Layout size={28} />
+                                </div>
+                                <div>
+                                    <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Ticketing Format</h3>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Select General Admission vs Reserved Seating</p>
+                                </div>
+                            </div>
+                            <div className="flex bg-slate-100 p-1.5 rounded-full shadow-inner">
+                                <button 
+                                    onClick={() => setPostEvent(p => ({ ...p, ticketType: 'free' }))}
+                                    className={`px-8 py-3 rounded-full text-[11px] font-black uppercase tracking-widest transition-all ${postEvent.ticketType === 'free' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30' : 'text-slate-500 hover:text-slate-900'}`}
+                                >
+                                    Free / General
+                                </button>
+                                <button 
+                                    onClick={() => setPostEvent(p => ({ ...p, ticketType: 'paid' }))}
+                                    className={`px-8 py-3 rounded-full text-[11px] font-black uppercase tracking-widest transition-all ${postEvent.ticketType === 'paid' ? 'bg-pink-500 text-white shadow-lg shadow-pink-500/30' : 'text-slate-500 hover:text-slate-900'}`}
+                                >
+                                    Paid / Reserved
+                                </button>
+                            </div>
                         </div>
-                        <div>
-                            <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter italic leading-none">Architectural Mapping</h2>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2 italic">Block Mapping & Inventory Control Module</p>
-                        </div>
+
+                        {postEvent.ticketType === 'free' && (
+                            <div className="mt-10 pt-10 border-t border-slate-100 animate-in fade-in slide-in-from-top-4">
+                                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] pl-1 mb-4">Total Ticket Available Slots</label>
+                                <div className="relative max-w-md">
+                                    <input 
+                                        type="number"
+                                        value={postEvent.totalCapacity || ''}
+                                        onChange={(e) => setPostEvent(p => ({ ...p, totalCapacity: Number(e.target.value) }))}
+                                        className="w-full bg-slate-50 border border-slate-200 text-slate-900 text-2xl font-black px-6 py-5 rounded-[2rem] focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-300 transition-all placeholder:text-slate-300"
+                                        placeholder="e.g. 500"
+                                    />
+                                    <div className="absolute right-6 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                        Slots
+                                    </div>
+                                </div>
+                                <p className="text-[11px] font-medium text-slate-500 mt-4 max-w-md leading-relaxed">
+                                    Since this is a free or general admission event, no physical seating map is required. Simply enter the maximum number of people allowed.
+                                </p>
+                            </div>
+                        )}
                     </div>
 
-                    <div className="space-y-10">
-                        <div className="flex items-center gap-5 bg-purple-50/40 p-8 rounded-[3rem] border border-purple-100 shadow-sm relative overflow-hidden group">
-                            <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
-                                <Info size={100} />
-                            </div>
-                            <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center text-purple-600 shadow-sm shrink-0">
-                                <Info size={24} />
-                            </div>
-                            <p className="text-[11px] font-bold text-purple-900/60 uppercase leading-relaxed tracking-widest max-w-2xl">
-                                UPLOAD YOUR VENUE BLUEPRINT AND DRAG-TO-DEFINE SEATING BLOCKS. EACH BLOCK CAN BE LINKED TO A SPECIFIC TICKET CATEGORY IN THE NEXT STEP FOR INVENTORY SYNC.
-                            </p>
-                        </div>
-
+                    {postEvent.ticketType === 'paid' && (
                         <BlockMapDesigner 
                             postEvent={postEvent}
                             setPostEvent={setPostEvent}
                         />
-                    </div>
+                    )}
 
-                    <div className="pt-10 flex justify-between">
+                    <div className="pt-10 flex justify-between bg-white rounded-[3rem] p-12 border border-slate-100 shadow-[0_50px_100px_-20px_rgba(0,0,0,0.05)]">
                         <button onClick={prevStep} className="px-10 py-5 text-slate-400 font-black uppercase tracking-widest text-[10px] flex items-center gap-3 hover:text-slate-900 transition-colors"><ArrowLeft size={18} /> Logistics Return</button>
                         <button onClick={nextStep} className="px-12 py-5 bg-slate-900 text-white rounded-[2.5rem] text-[11px] font-black uppercase tracking-widest flex items-center gap-4 hover:bg-pink-600 transition-all shadow-2xl">Next: Ticket Inventory <ArrowRight size={18} /></button>
                     </div>

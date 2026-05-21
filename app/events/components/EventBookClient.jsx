@@ -87,14 +87,41 @@ export default function EventBookClient({ id }) {
     const searchParams = useSearchParams();
 
     useEffect(() => {
-        const catId = searchParams.get('catId');
         const type = searchParams.get('type');
-        if (catId) setSelectedCatId(catId);
         if (type === 'audience_free') setBookingType('audience_free');
     }, [searchParams]);
 
     const event = useMemo(() => {
         if (!rawEvent) return null;
+        
+        const seatCategories = typeof rawEvent.seat_categories === 'string' ? JSON.parse(rawEvent.seat_categories) : (rawEvent.seat_categories || []);
+        
+        // Ensure blocks exist with rows and cols so VisualSeatPicker always renders a grid
+        let validBlocks = rawEvent.blocks || [];
+        if (validBlocks.length === 0 && seatCategories.length > 0 && Number(rawEvent.cols) > 0) {
+            validBlocks = seatCategories.map((cat, i) => ({
+                id: cat.id || `block_${i}`,
+                name: cat.name,
+                category: cat.name,
+                price: cat.price,
+                rows: Math.max(1, Math.floor(Number(rawEvent.cols) || 10)),
+                cols: Math.max(1, Number(rawEvent.cols) || 10),
+                rowNaming: 'alphabetic',
+                numberingDirection: 'ltr',
+                startNumber: 1
+            }));
+        } else {
+            // Fix legacy blocks that don't have rows/cols
+            validBlocks = validBlocks.map(b => ({
+                ...b,
+                rows: b.rows || Math.max(1, Math.floor(Number(rawEvent.cols) || 10)),
+                cols: b.cols || Math.max(1, Number(rawEvent.cols) || 10),
+                rowNaming: b.rowNaming || 'alphabetic',
+                numberingDirection: b.numberingDirection || 'ltr',
+                startNumber: b.startNumber || 1
+            }));
+        }
+
         return {
             ...rawEvent,
             id: rawEvent.id,
@@ -104,7 +131,9 @@ export default function EventBookClient({ id }) {
             time: rawEvent.time || '',
             location: rawEvent.location || rawEvent.venue || rawEvent.address || 'Venue',
             dateSlots: rawEvent.dateSlots || [],
-            dynamic_config: typeof rawEvent.dynamic_config === 'string' ? JSON.parse(rawEvent.dynamic_config) : (rawEvent.dynamic_config || {})
+            dynamic_config: typeof rawEvent.dynamic_config === 'string' ? JSON.parse(rawEvent.dynamic_config) : (rawEvent.dynamic_config || {}),
+            seatCategories: seatCategories,
+            blocks: validBlocks
         };
     }, [rawEvent]);
 
@@ -157,8 +186,66 @@ export default function EventBookClient({ id }) {
     // Real-time Seat Locking
     const { lockedSeats, myLocks, lockSeat, releaseSeat } = useSeatLocking(id, user?.id);
 
+    const { data: seatingSectionsData } = useSupabaseQuery('seating_sections', (q) => 
+        q.select(`
+            id, 
+            name, 
+            capacity,
+            seat_ticket_mapping ( price ),
+            seating_layouts!inner ( event_id )
+        `).eq('seating_layouts.event_id', id)
+    , [id]);
+
     const isMarathon = event?.type === 'Marathon';
     const isTournament = event?.type === 'Tournament' || event?.type === 'Tournament Event';
+
+    const computedPackages = useMemo(() => {
+        if (!event) return [];
+        if (seatingSectionsData && seatingSectionsData.length > 0) {
+            return seatingSectionsData.map(section => ({
+                id: section.id,
+                title: section.name,
+                price: section.seat_ticket_mapping?.[0]?.price || 0,
+                description: `Standard admission for the ${section.name} tier.`,
+                features: ['Access to main area', `${section.name} Seating`]
+            })).sort((a, b) => b.price - a.price);
+        }
+        if (relationalSeats && relationalSeats.length > 0 && event.blocks && event.blocks.length > 0) {
+            return event.blocks.map(b => ({
+                id: b.id,
+                title: b.name,
+                price: b.price || b.ticket_price || event?.dynamic_config?.price || event?.price || 499,
+                description: `Access to ${b.name} zone.`,
+                features: ['Assigned Seating']
+            }));
+        }
+        if (event.seatCategories?.length > 0 || event.dynamic_config?.categories?.length > 0 || event.ticketTypes?.length > 0) {
+            return (event.seatCategories || event.dynamic_config?.categories || event.ticketTypes).map((cat, i) => ({
+                id: cat.id || `seat_cat_${i}`, // Note: Changed to match EventDetailClient
+                title: cat.name || cat.title || 'Category',
+                price: cat.price || 0,
+                description: cat.description || `Standard admission for ${cat.name || 'this category'}.`,
+                features: cat.features || ['Access to main area']
+            }));
+        }
+        return [
+            { id: 'gen', title: 'Ticket', price: event?.dynamic_config?.price || event?.price || 499, description: 'Standard admission for the event.', features: ['Access to main area', 'General Seating'] }
+        ];
+    }, [event, seatingSectionsData, relationalSeats]);
+
+    useEffect(() => {
+        if (computedPackages.length > 0 && !selectedPackage) {
+            const catId = searchParams.get('catId');
+            if (catId) {
+                const matched = computedPackages.find(p => p.id === catId || p.id === Number(catId));
+                if (matched) {
+                    setSelectedPackage(matched);
+                } else {
+                    setSelectedPackage(computedPackages[0]);
+                }
+            }
+        }
+    }, [computedPackages, searchParams, selectedPackage]);
 
     useEffect(() => {
         const fetchRelationalData = async () => {
@@ -500,9 +587,7 @@ export default function EventBookClient({ id }) {
                                         </div>
                                     ) : (
                                         <PackageSelector 
-                                            packages={event.ticketTypes || event.dynamic_config?.categories || [
-                                                { id: 'gen', title: 'Ticket', price: ticketPrice, description: 'Standard admission for the event.', features: ['Access to main area', 'General Seating'] }
-                                            ]}
+                                            packages={computedPackages}
                                             selectedPackage={selectedPackage}
                                             onSelect={(p) => {
                                                 setSelectedPackage(p);
