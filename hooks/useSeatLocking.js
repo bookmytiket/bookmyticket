@@ -17,15 +17,15 @@ export function useSeatLocking(eventId, userId) {
         
         const { data, error } = await supabase
             .from('seat_inventory')
-            .select('id, status, locked_by, lock_expires_at')
+            .select('id, seat_number, status, locked_by, lock_expires_at')
             .eq('event_id', eventId)
             .or(`status.eq.locked,status.eq.temp_locked`);
 
         if (!error && data) {
             const others = data.filter(s => s.locked_by !== userId && new Date(s.lock_expires_at) > new Date());
             const mine = data.filter(s => s.locked_by === userId && new Date(s.lock_expires_at) > new Date());
-            setLockedSeats(others.map(s => s.id));
-            setMyLocks(mine.map(s => s.id));
+            setLockedSeats(others.map(s => s.seat_number));
+            setMyLocks(mine.map(s => s.seat_number));
         }
         setLoading(false);
     }, [eventId, userId]);
@@ -46,15 +46,15 @@ export function useSeatLocking(eventId, userId) {
                 
                 // If seat was released or sold
                 if (newSeat.status === 'available' || newSeat.status === 'sold') {
-                    setLockedSeats(prev => prev.filter(id => id !== newSeat.id));
-                    setMyLocks(prev => prev.filter(id => id !== newSeat.id));
+                    setLockedSeats(prev => prev.filter(id => id !== newSeat.seat_number));
+                    setMyLocks(prev => prev.filter(id => id !== newSeat.seat_number));
                 } 
                 // If seat was locked
                 else if (newSeat.status === 'locked' || newSeat.status === 'temp_locked') {
                     if (newSeat.locked_by === userId) {
-                        setMyLocks(prev => Array.from(new Set([...prev, newSeat.id])));
+                        setMyLocks(prev => Array.from(new Set([...prev, newSeat.seat_number])));
                     } else {
-                        setLockedSeats(prev => Array.from(new Set([...prev, newSeat.id])));
+                        setLockedSeats(prev => Array.from(new Set([...prev, newSeat.seat_number])));
                     }
                 }
             })
