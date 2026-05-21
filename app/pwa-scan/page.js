@@ -81,14 +81,14 @@ function PWAScanContent() {
         [user, staffRecord, assignedEventId]
     );
 
-    // Fetch recent bookings/scans
-    const { data: bookings = [], refetch: refetchBookings } = useSupabaseQuery(
-        "bookings",
+    // Fetch recent scan logs for this scanner
+    const { data: scanLogs = [], refetch: refetchScanLogs } = useSupabaseQuery(
+        "ticket_scan_logs",
         (q) => {
-            if (events.length === 0) return q.eq("id", "00000000-0000-0000-0000-000000000000");
-            return q.in("event_id", events.map(e => e.id));
+            if (!user?.id) return q.eq("id", "00000000-0000-0000-0000-000000000000");
+            return q.eq("scanned_by", user.id).order('created_at', { ascending: false }).limit(20);
         },
-        [events]
+        [user?.id]
     );
 
     const [updateBooking] = useSupabaseMutation("bookings", "update", (q, p) => q.eq("id", p.id));
@@ -153,7 +153,7 @@ function PWAScanContent() {
                         }
                     });
                     showToast("Entry Approved", "success");
-                    refetchBookings();
+                    refetchScanLogs();
                 } else if (data.status === "already_used") {
                     setScanResult({
                         status: "already_used",
@@ -185,11 +185,10 @@ function PWAScanContent() {
     };
 
     const recentScans = useMemo(() => {
-        return bookings
-            .filter(b => b.checked_in)
-            .sort((a, b) => new Date(b.scanned_at || b.created_at) - new Date(a.scanned_at || a.created_at))
+        return scanLogs
+            .filter(log => log.scan_status?.toLowerCase() === 'success' || log.scan_status?.toLowerCase() === 'scanned')
             .slice(0, 15);
-    }, [bookings]);
+    }, [scanLogs]);
 
     if (isExpired) {
         return (
@@ -462,15 +461,15 @@ function PWAScanContent() {
                                         <UserCheck size={18} />
                                     </div>
                                     <div>
-                                        <p className="text-xs font-black italic uppercase text-[#2C2520] leading-none mb-1">{scan.event_name || "Event"}</p>
+                                        <p className="text-xs font-black italic uppercase text-[#2C2520] leading-none mb-1">Ticket Validated</p>
                                         <p className="text-[9px] text-[#7A7067] font-bold uppercase tracking-widest">
-                                            {scan.full_name || "Guest"} • {new Date(scan.scanned_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            Gate: {scan.gate_name || gateName} • {new Date(scan.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                         </p>
                                     </div>
                                 </div>
                                 <div className="text-right">
                                     <p className="text-[8px] font-black text-[#7A7067] uppercase tracking-widest mb-0.5">Ticket ID</p>
-                                    <p className="text-[10px] font-mono text-[#7A7067]">#{scan.id.slice(-6).toUpperCase()}</p>
+                                    <p className="text-[10px] font-mono text-[#7A7067]">#{scan.ticket_code?.slice(-6).toUpperCase() || scan.ticket_id?.slice(-6).toUpperCase()}</p>
                                 </div>
                             </div>
                         ))}
