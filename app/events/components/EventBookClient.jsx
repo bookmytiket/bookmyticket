@@ -620,29 +620,20 @@ export default function EventBookClient({ id }) {
                                         />
                                     )}
                                     
-                                    {!isMarathon && !isTournament && (selectedPackage || (isSeating && selectedSeats.length > 0)) && (
+                                    {!isMarathon && !isTournament && !isSeating && selectedPackage && (
                                         <motion.div 
                                             initial={{ opacity: 0, height: 0 }}
                                             animate={{ opacity: 1, height: 'auto' }}
                                             className="mt-12 pt-8 border-t border-slate-100 flex flex-col md:flex-row items-center justify-between gap-8"
                                         >
-                                            <div className="flex items-center gap-8">
-                                                {!isSeating && (
-                                                    <div>
-                                                        <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-3">Tickets</p>
-                                                        <div className="flex items-center gap-3 bg-white p-2 rounded-2xl border-2 border-slate-100 shadow-sm">
-                                                            <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="w-10 h-10 rounded-xl bg-slate-50 text-slate-600 flex items-center justify-center font-black hover:bg-pink-50 hover:text-pink-600 transition-colors active:scale-95">−</button>
-                                                            <span className="text-xl font-black w-12 text-center text-slate-900">{quantity}</span>
-                                                            <button onClick={() => setQuantity(q => q + 1)} className="w-10 h-10 rounded-xl bg-slate-50 text-slate-600 flex items-center justify-center font-black hover:bg-pink-50 hover:text-pink-600 transition-colors active:scale-95">+</button>
-                                                        </div>
+                                                <div>
+                                                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-3">Tickets</p>
+                                                    <div className="flex items-center gap-3 bg-white p-2 rounded-2xl border-2 border-slate-100 shadow-sm">
+                                                        <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="w-10 h-10 rounded-xl bg-slate-50 text-slate-600 flex items-center justify-center font-black hover:bg-pink-50 hover:text-pink-600 transition-colors active:scale-95">−</button>
+                                                        <span className="text-xl font-black w-12 text-center text-slate-900">{quantity}</span>
+                                                        <button onClick={() => setQuantity(q => q + 1)} className="w-10 h-10 rounded-xl bg-slate-50 text-slate-600 flex items-center justify-center font-black hover:bg-pink-50 hover:text-pink-600 transition-colors active:scale-95">+</button>
                                                     </div>
-                                                )}
-                                                {isSeating && (
-                                                    <div>
-                                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Selected</p>
-                                                        <p className="text-xl font-black text-slate-900">{selectedSeats.length} Seat{selectedSeats.length !== 1 ? 's' : ''}</p>
-                                                    </div>
-                                                )}
+                                                </div>
                                             </div>
                                             <button 
                                                 onClick={handleContinue} 
