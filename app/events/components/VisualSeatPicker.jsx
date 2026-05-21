@@ -85,7 +85,7 @@ export default function VisualSeatPicker({
             </div>
 
             {/* MAIN CANVAS CONTAINER */}
-            <div className="h-[600px] md:h-[750px] w-full relative bg-[#f8f9fa] overflow-hidden flex" ref={containerRef}>
+            <div className="h-[600px] md:h-[750px] w-full relative bg-[#f8f9fa] overflow-hidden flex items-center justify-center" ref={containerRef}>
                 {backgroundUrl && (
                     <img src={backgroundUrl} className="absolute inset-0 w-full h-full object-cover opacity-20 pointer-events-none" alt="Background Map" />
                 )}
@@ -97,7 +97,7 @@ export default function VisualSeatPicker({
                     dragConstraints={containerRef}
                     className="w-max h-max min-w-full min-h-full cursor-grab active:cursor-grabbing flex shrink-0"
                 >
-                    <div className={`m-auto p-12 md:p-24 transition-all duration-300 relative w-max ${isSpatial ? 'w-[2000px] h-[2000px]' : 'flex flex-col items-center gap-16'}`}>
+                    <div className={`m-auto p-4 md:p-8 transition-all duration-300 relative w-max ${isSpatial ? 'w-[2000px] h-[2000px]' : 'flex flex-col items-center gap-8'}`}>
                         {blocks.map((block, bIdx) => {
                             const blockPrice = categories.find(c => c.name === block.category)?.price || block.price || block.ticket_price || 0;
                             
@@ -114,7 +114,7 @@ export default function VisualSeatPicker({
                                         </h4>
                                     </div>
 
-                                    <div className="w-max flex gap-6 items-start bg-white/40 p-6 rounded-3xl border border-white/50 backdrop-blur-sm shadow-xl">
+                                    <div className="w-max flex gap-3 md:gap-4 items-start bg-white/40 p-4 md:p-6 rounded-3xl border border-white/50 backdrop-blur-sm shadow-xl">
                                         {/* ROW LABELS */}
                                         <div className="flex flex-col gap-2 pt-1 pointer-events-none">
                                             {Array.from({ length: block.rows || 0 }).map((_, rIdx) => (
