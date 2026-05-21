@@ -174,7 +174,7 @@ function PWAScanContent() {
         }
     };
 
-    const handleValidate = async (id) => {
+    const handleValidate = async (id, isHistoryClick = false) => {
         if (!id || isExpired) return;
         setIsValidating(true);
         setScanResult(null);
@@ -200,7 +200,7 @@ function PWAScanContent() {
                 if (data.status === "requires_action") {
                     setScanResult(data);
                 } else if (data.status === "already_used") {
-                    setScanResult(data);
+                    setScanResult({ ...data, isHistoryClick });
                     showToast("Already Checked-In", "warning");
                 } else {
                     setScanResult({
@@ -210,14 +210,18 @@ function PWAScanContent() {
                 }
             } else {
                 setScanResult({
-                    status: data.status || "invalid",
-                    message: data.message || "Invalid QR Code"
+                    status: "error",
+                    title: "NETWORK ERROR",
+                    message: "Could not connect to validation server.",
+                    color: "red",
+                    isHistoryClick
                 });
             }
         } catch (err) {
             setScanResult({ status: "error", message: err.message });
         } finally {
             setIsValidating(false);
+            setScanInput("");
         }
     };
 
@@ -227,67 +231,64 @@ function PWAScanContent() {
 
     if (isExpired) {
         return (
-            <div className="min-h-screen bg-[#FAF8F5] flex flex-col items-center justify-center p-8 text-center">
+            <div className="min-h-screen bg-[#0A0A0E] flex flex-col items-center justify-center p-8 text-center">
                 <div className="w-24 h-24 rounded-full bg-red-500/10 flex items-center justify-center text-red-500 mb-6">
                     <ShieldAlert size={48} />
                 </div>
-                <h2 className="text-2xl font-black italic uppercase tracking-tight text-[#2C2520] mb-2">Access Expired</h2>
-                <p className="text-[#7A7067] text-sm mb-8">Your scan access period has ended. Please contact your organiser for renewal.</p>
-                <button onClick={() => logout()} className="px-8 py-4 bg-[#2C2520] text-[#FFFFFF] rounded-2xl font-black uppercase tracking-widest text-[11px]">Log Out</button>
+                <h2 className="text-2xl font-black italic uppercase tracking-tight text-white mb-2">Access Expired</h2>
+                <p className="text-zinc-400 text-sm mb-8">Your scan access period has ended. Please contact your organiser for renewal.</p>
+                <button onClick={() => logout()} className="px-8 py-4 bg-gradient-to-r from-pink-600 to-purple-600 text-white rounded-2xl font-black uppercase tracking-widest text-[11px]">Log Out</button>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-[#FAF8F5] text-[#2C2520] font-sans selection:bg-pink-500/30">
-            {/* Header */}
-            <header className="sticky top-0 z-50 bg-[#FAF8F5]/80 backdrop-blur-xl border-b border-[#EFECE6] px-6 py-4 flex items-center justify-between">
+        <div className="h-[100dvh] bg-[#0A0A0E] text-white font-sans selection:bg-pink-500/50 flex flex-col overflow-hidden">
+            <header className="flex-none bg-[#0A0A0E]/80 backdrop-blur-xl border-b border-[#1F1F2E] px-6 py-4 flex items-center justify-between z-50">
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-[#8C7B6B] flex items-center justify-center shadow-lg shadow-[#8C7B6B]/20">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 flex items-center justify-center shadow-lg shadow-purple-500/20">
                         <Zap size={20} className="text-white fill-white" />
                     </div>
                     <div>
                         <h1 className="text-sm font-black italic uppercase tracking-tighter leading-none">Scanner</h1>
-                        <p className="text-[10px] font-bold text-[#7A7067] uppercase tracking-widest">Portal v2.0</p>
+                        <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Portal v2.0</p>
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
-                    <button onClick={() => window.location.reload()} className="p-2.5 rounded-xl bg-[#F2EDE4] border border-[#EFECE6] text-[#7A7067] hover:text-[#2C2520] transition-all">
+                    <button onClick={() => window.location.reload()} className="p-2.5 rounded-xl bg-white/5 border border-[#1F1F2E] text-zinc-400 hover:text-white transition-all">
                         <RefreshCw size={18} />
                     </button>
-                    <button onClick={() => logout()} className="p-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 hover:bg-red-500 hover:text-[#2C2520] transition-all">
+                    <button onClick={() => logout()} className="p-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white transition-all">
                         <LogOut size={18} />
                     </button>
                 </div>
             </header>
 
-            <main className="p-6 max-w-lg mx-auto space-y-8 pb-32">
-                {/* Staff Info Card */}
+            <main className="flex-1 overflow-y-auto no-scrollbar p-4 space-y-4 w-full max-w-lg mx-auto pb-8">
                 <div className="relative group">
-                    <div className="absolute -inset-1 bg-[#8C7B6B] rounded-[2rem] opacity-20 blur group-hover:opacity-30 transition-all"></div>
-                    <div className="relative p-5 rounded-[2rem] bg-[#FFFFFF] border border-[#EFECE6] flex items-center justify-between">
+                    <div className="absolute -inset-1 bg-gradient-to-r from-pink-500 to-purple-600 rounded-[2rem] opacity-20 blur group-hover:opacity-30 transition-all"></div>
+                    <div className="relative p-5 rounded-[2rem] bg-[#13131A] border border-[#1F1F2E] flex items-center justify-between">
                         <div className="flex items-center gap-4">
-                            <div className="w-14 h-14 rounded-2xl bg-[#F2EDE4] border border-[#EFECE6] flex items-center justify-center text-2xl font-black italic text-transparent bg-clip-text bg-[#8C7B6B]">
+                            <div className="w-14 h-14 rounded-2xl bg-white/5 border border-[#1F1F2E] flex items-center justify-center text-2xl font-black italic text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-600">
                                 {user?.full_name?.charAt(0) || user?.email?.charAt(0).toUpperCase()}
                             </div>
                             <div>
                                 <p className="text-sm font-black italic uppercase tracking-tight">{user?.full_name || "Staff Member"}</p>
                                 <div className="flex items-center gap-2 mt-0.5">
                                     <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                                    <p className="text-[10px] font-bold text-[#7A7067] uppercase tracking-widest">Live • {gateName}</p>
+                                    <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Live • {gateName}</p>
                                 </div>
                             </div>
                         </div>
                         <div className="text-right">
-                            <p className="text-[9px] font-black text-[#7A7067] uppercase tracking-widest mb-1">Restricted</p>
-                            <div className="px-2 py-1 rounded-lg bg-[#8C7B6B]/10 border border-[#8C7B6B]/20 text-[9px] font-bold text-[#8C7B6B] uppercase">
+                            <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">Restricted</p>
+                            <div className="px-2 py-1 rounded-lg bg-gradient-to-r from-pink-500 to-purple-600/10 border border-[#1F1F2E] text-[9px] font-bold text-pink-400 uppercase">
                                 {assignedEventId ? "One Event" : "Global"}
                             </div>
                         </div>
                     </div>
                 </div>
 
-                {/* Gate Selector Simulation */}
                 <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
                     {["Main Entrance", "VIP Gate", "Marathon Start", "Gate B"].map(g => (
                         <button 
@@ -300,7 +301,7 @@ function PWAScanContent() {
                                 setGateName(g);
                             }}
                             className={`whitespace-nowrap px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                                gateName === g ? "bg-[#2C2520] text-[#FFFFFF]" : (features.multi_gate || g === "Main Entrance" ? "bg-[#F2EDE4] text-[#7A7067] border border-[#EFECE6]" : "bg-[#F2EDE4] text-[#7A7067] border border-[#EFECE6] cursor-not-allowed opacity-50")
+                                gateName === g ? "bg-gradient-to-r from-pink-600 to-purple-600 text-white" : (features.multi_gate || g === "Main Entrance" ? "bg-white/5 text-zinc-400 border border-[#1F1F2E]" : "bg-white/5 text-zinc-400 border border-[#1F1F2E] cursor-not-allowed opacity-50")
                             }`}
                         >
                             {g} {!features.multi_gate && g !== "Main Entrance" && "🔒"}
@@ -313,37 +314,35 @@ function PWAScanContent() {
                     )}
                 </div>
 
-                {/* Scanner Interface */}
                 <div className="space-y-4">
                     {!isScannerOpen ? (
                         <button 
                             onClick={() => setIsScannerOpen(true)}
-                            className="w-full aspect-square rounded-[3.5rem] bg-[#FFFFFF] border-2 border-dashed border-[#EFECE6] flex flex-col items-center justify-center gap-6 group hover:border-[#8C7B6B]/50 transition-all shadow-2xl"
+                            className="w-full h-48 sm:h-64 rounded-[2rem] bg-[#13131A] border-2 border-dashed border-[#1F1F2E] flex flex-col items-center justify-center gap-3 group hover:border-pink-500/50 transition-all shadow-xl"
                         >
-                            <div className="w-24 h-24 rounded-full bg-[#F2EDE4] flex items-center justify-center text-[#8C7B6B] group-hover:scale-110 transition-all border border-[#8C7B6B]/30 shadow-2xl shadow-[#8C7B6B]/10">
-                                <Camera size={40} />
+                            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white/5 flex items-center justify-center text-pink-400 group-hover:scale-110 transition-all border border-pink-500/30 shadow-xl shadow-pink-500/10">
+                                <Camera size={32} />
                             </div>
                             <div className="text-center">
-                                <span className="block text-xl font-black italic uppercase tracking-tight text-[#2C2520] mb-1">Start Scanning</span>
-                                <span className="block text-[10px] font-bold text-[#7A7067] uppercase tracking-widest px-8">Point camera at the attendee's QR ticket for instant validation</span>
+                                <span className="block text-xl font-black italic uppercase tracking-tight text-white mb-1">Start Scanning</span>
+                                <span className="block text-[10px] font-bold text-zinc-400 uppercase tracking-widest px-8">Point camera at the attendee's QR ticket for instant validation</span>
                             </div>
                         </button>
                     ) : (
-                        <div className="relative aspect-square rounded-[3.5rem] overflow-hidden border-2 border-[#8C7B6B] shadow-2xl shadow-[#8C7B6B]/20">
+                        <div className="relative w-full h-64 sm:h-72 rounded-[2rem] overflow-hidden border-2 border-pink-500/50 shadow-2xl shadow-purple-500/20">
                             <div id="pwa-qr-reader" className="w-full h-full bg-black"></div>
                             <button 
                                 onClick={() => setIsScannerOpen(false)}
-                                className="absolute top-6 right-6 p-4 bg-red-500 rounded-2xl text-[#2C2520] shadow-2xl active:scale-95 transition-all"
+                                className="absolute top-6 right-6 p-4 bg-red-500 rounded-2xl text-white shadow-2xl active:scale-95 transition-all"
                             >
                                 <X size={24} />
                             </button>
-                            {/* Scanning Overlay */}
                             <div className="absolute inset-0 pointer-events-none">
-                                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 border-2 border-[#D2C5B4] rounded-3xl"></div>
-                                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-1 bg-[#8C7B6B]/50 shadow-[0_0_15px_rgba(236,72,153,0.5)] animate-scan"></div>
+                                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 sm:w-56 sm:h-56 border-2 border-pink-500/50 rounded-3xl"></div>
+                                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 sm:w-56 h-1 bg-gradient-to-r from-pink-500 to-purple-600/50 shadow-[0_0_15px_rgba(236,72,153,0.5)] animate-scan"></div>
                             </div>
                             <div className="absolute inset-x-0 bottom-10 flex justify-center">
-                                <div className="px-6 py-3 bg-black/60 backdrop-blur-md rounded-full border border-[#EFECE6] text-[10px] font-black uppercase tracking-widest text-[#2C2520] shadow-2xl">
+                                <div className="px-6 py-3 bg-black/60 backdrop-blur-md rounded-full border border-[#1F1F2E] text-[10px] font-black uppercase tracking-widest text-white shadow-2xl">
                                     Align QR in Frame
                                 </div>
                             </div>
@@ -351,20 +350,19 @@ function PWAScanContent() {
                     )}
 
                     <div className="grid grid-cols-2 gap-4">
-                        <div className="p-5 rounded-3xl bg-[#FFFFFF] border border-[#EFECE6] text-center relative overflow-hidden">
-                            <div className="absolute top-0 right-0 w-12 h-12 bg-[#8C7B6B]/5 rounded-bl-[2rem]"></div>
-                            <p className="text-[9px] font-black text-[#7A7067] uppercase tracking-widest mb-1">Session Scans</p>
-                            <p className="text-3xl font-black italic text-[#2C2520]">{recentScans.length}</p>
+                        <div className="p-5 rounded-3xl bg-[#13131A] border border-[#1F1F2E] text-center relative overflow-hidden">
+                            <div className="absolute top-0 right-0 w-12 h-12 bg-gradient-to-r from-pink-500 to-purple-600/5 rounded-bl-[2rem]"></div>
+                            <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">Session Scans</p>
+                            <p className="text-3xl font-black italic text-white">{recentScans.length}</p>
                         </div>
-                        <div className="p-5 rounded-3xl bg-[#FFFFFF] border border-[#EFECE6] text-center relative overflow-hidden">
+                        <div className="p-5 rounded-3xl bg-[#13131A] border border-[#1F1F2E] text-center relative overflow-hidden">
                             <div className="absolute top-0 right-0 w-12 h-12 bg-purple-500/5 rounded-bl-[2rem]"></div>
-                            <p className="text-[9px] font-black text-[#7A7067] uppercase tracking-widest mb-1">Total Events</p>
-                            <p className="text-3xl font-black italic text-[#2C2520]">{events.length}</p>
+                            <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">Total Events</p>
+                            <p className="text-3xl font-black italic text-white">{events.length}</p>
                         </div>
                     </div>
                 </div>
 
-                {/* Result Area */}
                 {scanResult && (
                     <div className={`p-8 rounded-[3rem] border shadow-2xl animate-in fade-in zoom-in duration-300 ${
                         scanResult.status === "valid" ? "bg-green-500/10 border-green-500/20" : 
@@ -373,9 +371,9 @@ function PWAScanContent() {
                     }`}>
                         <div className="flex items-center gap-5 mb-8">
                             <div className={`w-16 h-16 rounded-[1.5rem] flex items-center justify-center shadow-xl ${
-                                scanResult.status === "valid" ? "bg-green-500 text-[#2C2520] shadow-green-500/20" : 
-                                scanResult.status === "already_used" ? "bg-amber-500 text-[#2C2520] shadow-amber-500/20" : 
-                                "bg-red-500 text-[#2C2520] shadow-red-500/20"
+                                scanResult.status === "valid" ? "bg-green-500 text-white shadow-green-500/20" : 
+                                scanResult.status === "already_used" ? "bg-amber-500 text-white shadow-amber-500/20" : 
+                                "bg-red-500 text-white shadow-red-500/20"
                             }`}>
                                 {scanResult.status === "valid" ? <CheckCircle size={36} /> : 
                                  scanResult.status === "requires_action" ? <AlertCircle size={36} /> :  
@@ -384,23 +382,23 @@ function PWAScanContent() {
                             </div>
                             <div>
                                 <h3 className="text-2xl font-black italic uppercase leading-tight tracking-tight">
-                                    {scanResult.status === "valid" ? "Access Granted" : 
+                                    {scanResult.isHistoryClick && scanResult.status === "already_used" ? "TICKET DETAILS" : (scanResult.status === "valid" ? "Access Granted" : 
                                      scanResult.status === "requires_action" ? "Verify ID" : 
                                      scanResult.status === "rejected" ? "Entry Rejected" :  
                                      scanResult.status === "already_used" ? "Ticket Scanned" : 
                                      scanResult.status === "wrong_event" ? "Wrong Event" :
                                      scanResult.status === "unpaid" ? "Payment Pending" :
-                                     "Invalid QR"}
+                                     "Invalid QR")}
                                 </h3>
                                 <p className={`text-[10px] font-black uppercase tracking-widest mt-1 ${
                                     scanResult.status === "valid" ? "text-green-500" : 
                                     scanResult.status === "requires_action" ? "text-blue-500" : 
-                                    scanResult.status === "already_used" ? "text-amber-500" : 
+                                    scanResult.status === "already_used" ? (scanResult.isHistoryClick ? "text-white/60" : "text-amber-500") : 
                                     "text-red-400"
                                 }`}>
                                     {scanResult.status === "valid" ? "Verified & Checked-In" : 
                                      scanResult.status === "requires_action" ? "Action Required • Awaiting Approval" :  
-                                     scanResult.status === "already_used" ? "Duplicate Scan Blocked" : 
+                                     scanResult.status === "already_used" ? (scanResult.isHistoryClick ? "Previously Scanned" : "Duplicate Scan Blocked") : 
                                      "Security Alert • Blocked"}
                                 </p>
                             </div>
@@ -408,53 +406,51 @@ function PWAScanContent() {
 
                         {scanResult.attendee && (
                             <div className="space-y-4">
-                                <div className="p-5 rounded-3xl bg-[#F2EDE4] border border-[#EFECE6] space-y-4">
+                                <div className="p-5 rounded-3xl bg-white/5 border border-[#1F1F2E] space-y-4">
                                     <div>
-                                        <p className="text-[9px] font-black text-[#7A7067] uppercase tracking-widest mb-1">Attendee</p>
-                                        <p className="text-lg font-black italic uppercase text-[#2C2520]">{scanResult.attendee || "Guest Attendee"}</p>
+                                        <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">Attendee</p>
+                                        <p className="text-lg font-black italic uppercase text-white">{scanResult.attendee || "Guest Attendee"}</p>
                                     </div>
                                     
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
-                                            <p className="text-[9px] font-black text-[#7A7067] uppercase tracking-widest mb-1">Ticket ID</p>
-                                            <p className="text-xs font-bold text-[#7A7067]">#{(scanResult.booking_id || "00000000").slice(-8).toUpperCase()}</p>
+                                            <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">Ticket ID</p>
+                                            <p className="text-xs font-bold text-zinc-400">#{(scanResult.ticket_code || scanResult.booking_id || "00000000").slice(-8).toUpperCase()}</p>
                                         </div>
                                         <div>
-                                            <p className="text-[9px] font-black text-[#7A7067] uppercase tracking-widest mb-1">Quantity</p>
-                                            <p className="text-xs font-bold text-[#7A7067]">{1} Person(s)</p>
+                                            <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">Quantity</p>
+                                            <p className="text-xs font-bold text-zinc-400">{1} Person(s)</p>
                                         </div>
                                     </div>
 
-                                    {/* Marathon Specifics */}
                                     {scanResult.marathon_details && (
-                                        <div className="pt-4 border-t border-[#EFECE6] grid grid-cols-2 gap-4">
+                                        <div className="pt-4 border-t border-[#1F1F2E] grid grid-cols-2 gap-4">
                                             <div>
-                                                <p className="text-[9px] font-black text-[#8C7B6B] uppercase tracking-widest mb-1">Bib Number</p>
-                                                <p className="text-sm font-black italic text-[#2C2520]">{scanResult.marathon_details.bib_number || "TBD"}</p>
+                                                <p className="text-[9px] font-black text-pink-400 uppercase tracking-widest mb-1">Bib Number</p>
+                                                <p className="text-sm font-black italic text-white">{scanResult.marathon_details.bib_number || "TBD"}</p>
                                             </div>
                                             <div>
-                                                <p className="text-[9px] font-black text-[#8C7B6B] uppercase tracking-widest mb-1">T-Shirt Size</p>
-                                                <p className="text-sm font-black italic text-[#2C2520]">{scanResult.marathon_details.tshirt_size || "N/A"}</p>
+                                                <p className="text-[9px] font-black text-pink-400 uppercase tracking-widest mb-1">T-Shirt Size</p>
+                                                <p className="text-sm font-black italic text-white">{scanResult.marathon_details.tshirt_size || "N/A"}</p>
                                             </div>
                                         </div>
                                     )}
                                 </div>
                                 
-                                
                                 {scanResult.status === "requires_action" && (
-                                    <div className="pt-4 border-t border-[#EFECE6] space-y-4">
-                                        <div className="p-4 rounded-2xl bg-white border border-[#EFECE6] space-y-2">
-                                            <p className="text-[10px] font-black text-[#8C7B6B] uppercase tracking-widest flex items-center gap-2">
+                                    <div className="pt-4 border-t border-[#1F1F2E] space-y-4">
+                                        <div className="p-4 rounded-2xl bg-[#13131A] border border-[#1F1F2E] space-y-2">
+                                            <p className="text-[10px] font-black text-pink-400 uppercase tracking-widest flex items-center gap-2">
                                                 <ShieldAlert size={14} /> ID Verification Required
                                             </p>
                                             <div className="space-y-1">
                                                 {(scanResult.verificationSettings?.accepted_id_types || []).map((idType, idx) => (
-                                                    <label key={idx} className="flex items-center gap-2 text-xs font-bold text-[#2C2520]">
+                                                    <label key={idx} className="flex items-center gap-2 text-xs font-bold text-white">
                                                         <input type="checkbox" className="w-3 h-3 accent-[#8C7B6B]" /> 
                                                         Check {idType}
                                                     </label>
                                                 ))}
-                                                <label className="flex items-center gap-2 text-xs font-bold text-[#2C2520]">
+                                                <label className="flex items-center gap-2 text-xs font-bold text-white">
                                                     <input type="checkbox" className="w-3 h-3 accent-[#8C7B6B]" /> 
                                                     Match Photo & Name
                                                 </label>
@@ -484,7 +480,7 @@ function PWAScanContent() {
                                                 <select 
                                                     value={rejectionReason}
                                                     onChange={e => setRejectionReason(e.target.value)}
-                                                    className="w-full bg-white border border-red-500/20 rounded-xl px-4 py-3 text-[#2C2520] text-sm font-bold outline-none"
+                                                    className="w-full bg-white border border-red-500/20 rounded-xl px-4 py-3 text-white text-sm font-bold outline-none"
                                                 >
                                                     <option value="">Select a reason...</option>
                                                     <option value="Invalid ID Proof">Invalid ID Proof</option>
@@ -496,7 +492,7 @@ function PWAScanContent() {
                                                 <div className="flex gap-2">
                                                     <button 
                                                         onClick={() => setShowRejectModal(false)}
-                                                        className="flex-1 py-3 rounded-xl bg-white border border-[#EFECE6] text-[#7A7067] font-black uppercase tracking-widest text-[10px]"
+                                                        className="flex-1 py-3 rounded-xl bg-white border border-[#1F1F2E] text-zinc-400 font-black uppercase tracking-widest text-[10px]"
                                                     >
                                                         Cancel
                                                     </button>
@@ -529,18 +525,17 @@ function PWAScanContent() {
                         
                         <button 
                             onClick={() => setScanResult(null)}
-                            className="w-full mt-6 py-4 rounded-2xl bg-[#F2EDE4] border border-[#EFECE6] text-[10px] font-black uppercase tracking-widest text-[#7A7067] hover:text-[#2C2520] transition-all"
+                            className="w-full mt-6 py-4 rounded-2xl bg-white/5 border border-[#1F1F2E] text-[10px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-all"
                         >
                             Dismiss & Clear
                         </button>
                     </div>
                 )}
 
-                {/* Manual Audit */}
                 <div className="space-y-4">
                     <div className="flex items-center justify-between px-2">
-                        <label className="text-[10px] font-black text-[#7A7067] uppercase tracking-widest">Manual Audit</label>
-                        <Search size={14} className="text-[#7A7067]" />
+                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Manual Audit</label>
+                        <Search size={14} className="text-zinc-400" />
                     </div>
                     <div className="relative group">
                         <input 
@@ -548,27 +543,30 @@ function PWAScanContent() {
                             placeholder="Enter Booking ID or Ticket Code..." 
                             value={scanInput}
                             onChange={(e) => setScanInput(e.target.value)}
-                            className="w-full bg-[#FFFFFF] border border-[#EFECE6] rounded-2xl px-6 py-5 text-[#2C2520] font-bold outline-none focus:border-[#8C7B6B]/50 transition-all placeholder:text-[#7A7067]"
+                            className="w-full bg-[#13131A] border border-[#1F1F2E] rounded-2xl px-6 py-5 text-white font-bold outline-none focus:border-pink-500/50 transition-all placeholder:text-zinc-400"
                         />
                         <button 
                             onClick={() => handleValidate(scanInput)}
                             disabled={isValidating || !scanInput}
-                            className="absolute right-2 top-2 bottom-2 px-6 bg-[#8C7B6B] text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-95 disabled:opacity-30 transition-all shadow-lg shadow-[#8C7B6B]/20"
+                            className="absolute right-2 top-2 bottom-2 px-6 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-95 disabled:opacity-30 transition-all shadow-lg shadow-purple-500/20"
                         >
                             {isValidating ? "..." : "Verify"}
                         </button>
                     </div>
                 </div>
 
-                {/* Session History */}
                 <div className="space-y-4">
                     <div className="flex items-center justify-between px-2">
-                        <h3 className="text-[10px] font-black text-[#7A7067] uppercase tracking-widest">Live Activity</h3>
+                        <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Live Activity</h3>
                         <div className="px-2 py-0.5 rounded bg-green-500/10 text-[8px] font-bold text-green-500 uppercase tracking-widest">Syncing</div>
                     </div>
                     <div className="space-y-3">
                         {recentScans.map((scan) => (
-                            <div key={scan.id} className="group p-4 rounded-3xl bg-[#FFFFFF] border border-[#EFECE6] flex items-center justify-between hover:border-[#8C7B6B]/30 transition-all">
+                            <button 
+                                key={scan.id} 
+                                onClick={() => handleValidate(scan.ticket_code || scan.ticket_id, true)}
+                                className="w-full text-left group p-4 rounded-3xl bg-[#13131A] border border-[#1F1F2E] flex items-center justify-between hover:border-pink-500/50 hover:bg-pink-500/5 transition-all cursor-pointer"
+                            >
                                 <div className="flex items-center gap-4">
                                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
                                         scan.scan_status?.toLowerCase() === 'success' ? 'bg-green-500/10 text-green-500' :
@@ -580,24 +578,24 @@ function PWAScanContent() {
                                          <AlertCircle size={18} />}
                                     </div>
                                     <div>
-                                        <p className="text-xs font-black italic uppercase text-[#2C2520] leading-none mb-1">
+                                        <p className="text-xs font-black italic uppercase text-white leading-none mb-1">
                                             {scan.scan_status?.toLowerCase() === 'success' ? 'Entry Approved' :
                                              scan.scan_status?.toLowerCase() === 'rejected' ? 'Entry Rejected' :
                                              scan.scan_status}
                                         </p>
-                                        <p className="text-[9px] text-[#7A7067] font-bold uppercase tracking-widest">
+                                        <p className="text-[9px] text-zinc-400 font-bold uppercase tracking-widest">
                                             Gate: {scan.gate_name || gateName} • {new Date(scan.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                         </p>
                                     </div>
                                 </div>
                                 <div className="text-right">
-                                    <p className="text-[8px] font-black text-[#7A7067] uppercase tracking-widest mb-0.5">Ticket ID</p>
-                                    <p className="text-[10px] font-mono text-[#7A7067]">#{scan.ticket_code?.slice(-6).toUpperCase() || scan.ticket_id?.slice(-6).toUpperCase()}</p>
+                                    <p className="text-[8px] font-black text-zinc-400 uppercase tracking-widest mb-0.5">Ticket ID</p>
+                                    <p className="text-[10px] font-mono text-zinc-400">#{scan.ticket_code?.slice(-6).toUpperCase() || scan.ticket_id?.slice(-6).toUpperCase()}</p>
                                 </div>
-                            </div>
+                            </button>
                         ))}
                         {recentScans.length === 0 && (
-                            <div className="text-center py-16 bg-[#F2EDE4] rounded-[3rem] border border-dashed border-[#D2C5B4] text-[#7A7067]">
+                            <div className="text-center py-16 bg-white/5 rounded-[3rem] border border-dashed border-pink-500/50 text-zinc-400">
                                 <QrCode size={64} className="mx-auto mb-4 opacity-30" />
                                 <p className="text-[10px] font-black uppercase tracking-widest opacity-50">Awaiting First Scan</p>
                             </div>
@@ -607,13 +605,15 @@ function PWAScanContent() {
             </main>
 
             {/* Bottom Nav Simulation */}
-            <div className="fixed bottom-0 inset-x-0 p-6 bg-gradient-to-t from-[#FAF8F5] via-[#FAF8F5] to-transparent">
-                <button 
-                    onClick={() => router.push('/')}
-                    className="w-full py-5 rounded-[2rem] bg-[#2C2520] text-[#FFFFFF] text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-3 shadow-2xl shadow-[#2C2520]/10 active:scale-95 transition-all"
-                >
-                    <Home size={18} /> Exit to Portal Home
-                </button>
+            <div className="flex-none w-full border-t border-[#1F1F2E] bg-[#0A0A0E]">
+                <div className="max-w-lg mx-auto p-4">
+                    <button 
+                        onClick={() => router.push('/')}
+                        className="w-full py-4 rounded-[1.5rem] bg-gradient-to-r from-pink-600 to-purple-600 text-white text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-3 shadow-2xl shadow-purple-500/20 active:scale-95 transition-all"
+                    >
+                        <Home size={18} /> Exit to Portal Home
+                    </button>
+                </div>
             </div>
 
             {/* Custom Scan Animation Keyframes */}

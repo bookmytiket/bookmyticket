@@ -248,7 +248,9 @@ export async function POST(request) {
                 color: "yellow",
                 attendee: customerName,
                 event: eventTitle,
-                scanned_at: ticket.scanned_at
+                scanned_at: ticket.scanned_at,
+                ticket_id: ticket.id,
+                ticket_code: ticket.ticket_number || ticketNumber
             });
         }
 
