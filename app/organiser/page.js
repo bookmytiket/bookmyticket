@@ -2804,6 +2804,10 @@ function OrganiserPanel() {
               rowNaming: b.rowNaming || "alphabetic",
               startNumber: Number(b.startNumber) || 1,
               numberingDirection: b.numberingDirection || "ltr",
+              price: Number(b.basePrice || b.price) || 0,
+              basePrice: Number(b.basePrice || b.price) || 0,
+              isGeneral: !!b.isGeneral,
+              capacity: Number(b.capacity) || 0,
             }))
           : undefined,
       // Advanced Details
