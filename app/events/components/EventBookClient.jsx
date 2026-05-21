@@ -594,8 +594,8 @@ export default function EventBookClient({ id }) {
                                     ) : isSeating && event.blocks?.length > 0 ? (
                                         <div className="space-y-8">
                                             <div className="flex flex-col items-center text-center space-y-4 mb-8">
-                                                <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter italic leading-none">Architectural Selection</h2>
-                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.3em]">Interactive Venue Interface</p>
+                                                <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter italic leading-none">Select Your Seats</h2>
+                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.3em]">Interactive Venue Map</p>
                                             </div>
                                             <VisualSeatPicker 
                                                 blocks={event.blocks}
