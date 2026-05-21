@@ -166,11 +166,21 @@ export default function BookEventScreen() {
 
   const processEventData = (data: any) => {
     const parsedConfig = safeParse(data.dynamic_config) || {};
-    const ticketsData = safeParse(data.tickets);
-    const parsedTickets = (Array.isArray(ticketsData) && ticketsData.length > 0) 
-      ? ticketsData 
-      : (parsedConfig.marathonCategories || parsedConfig.marathon_categories || parsedConfig.tickets || parsedConfig.categories || []);
-    const tiers = Array.isArray(parsedTickets) ? parsedTickets : [];
+    let tiers = [];
+    if (parsedConfig.categories?.length > 0) tiers = parsedConfig.categories;
+    else if (data.event_ticket_categories?.length > 0) {
+      tiers = data.event_ticket_categories.map((c: any) => ({
+        id: c.id, title: c.category_name, price: c.price, description: c.description || 'General Admission Ticket'
+      }));
+    } else if (data.seat_categories?.length > 0) tiers = data.seat_categories;
+    else {
+      const ticketsData = safeParse(data.tickets);
+      if (Array.isArray(ticketsData) && ticketsData.length > 0) tiers = ticketsData;
+      else if (parsedConfig.marathonCategories || parsedConfig.marathon_categories || parsedConfig.tickets || parsedConfig.categories) {
+        tiers = parsedConfig.marathonCategories || parsedConfig.marathon_categories || parsedConfig.tickets || parsedConfig.categories;
+      }
+      else tiers = [{ id: 'gen', title: 'Ticket', price: parsedConfig.price || data.price || 499, description: 'Standard admission for the event.' }];
+    }
     if (tiers.length > 0) {
       setSelectedTier(tiers[0]);
       const rawRates = tiers[0].ageRates || tiers[0].agePricing || tiers[0].age_rates || tiers[0].age_pricing || [];
@@ -266,7 +276,9 @@ export default function BookEventScreen() {
         .from('events')
         .select(`
           *,
-          organiser:profiles!events_organiser_id_fkey (*)
+          organiser:profiles!events_organiser_id_fkey (*),
+          event_ticket_categories (*),
+          seat_categories (*)
         `)
         .eq('id', id)
         .single();
@@ -331,13 +343,24 @@ export default function BookEventScreen() {
     fetchLayouts();
   }, [id]);
   const dynamicConfig = safeParse(event?.dynamic_config) || {};
-  const ticketsData = safeParse(event?.tickets);
-  const parsedTickets = (Array.isArray(ticketsData) && ticketsData.length > 0) 
-    ? ticketsData 
-    : (dynamicConfig.tickets || dynamicConfig.categories || []);
-  const ticketTiers = Array.isArray(parsedTickets) ? parsedTickets : [];
+  
+  const ticketTiers = (() => {
+    if (event?.dynamic_config?.categories?.length > 0) return event.dynamic_config.categories;
+    if (event?.event_ticket_categories?.length > 0) {
+      return event.event_ticket_categories.map((c: any) => ({
+        id: c.id, title: c.category_name, price: c.price, description: c.description || 'General Admission Ticket'
+      }));
+    }
+    if (event?.seat_categories?.length > 0) return event.seat_categories;
+    const ticketsData = safeParse(event?.tickets);
+    if (Array.isArray(ticketsData) && ticketsData.length > 0) return ticketsData;
+    if (dynamicConfig.tickets || dynamicConfig.categories) return dynamicConfig.tickets || dynamicConfig.categories;
+    return [
+      { id: 'gen', title: 'Ticket', price: event?.dynamic_config?.price || event?.price || 499, description: 'Standard admission for the event.' }
+    ];
+  })();
   const isMarathon = event?.type === 'Marathon' || marathonCategories.length > 0;
-  const hasSeatingMap = venueLayouts.length > 0;
+  const hasSeatingMap = event?.event_type !== 'general' && venueLayouts.length > 0;
   const marathonSteps = [
     { id: 1, title: 'Category', icon: Ticket },
     { id: 2, title: 'Identity', icon: Users },

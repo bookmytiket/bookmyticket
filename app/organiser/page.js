@@ -1763,6 +1763,10 @@ function OrganiserPanel() {
         let uiStatus = "active";
         if (lStatus === "archived") {
           uiStatus = "archived";
+        } else if (lStatus === "cancelled") {
+          uiStatus = "cancelled";
+        } else if (lStatus === "completed") {
+          uiStatus = "completed";
         } else if (pStatus === "draft") {
           uiStatus = "draft";
         } else if (endAt && endAt < now) {
@@ -3571,12 +3575,12 @@ function OrganiserPanel() {
             }
             .dashboard-overview-grid {
                 display: grid;
-                grid-template-columns: repeat(6, 1fr);
+                grid-template-columns: repeat(5, 1fr);
                 gap: 20px;
                 margin-bottom: 32px;
             }
             @media (max-width: 1400px) {
-                .dashboard-overview-grid { grid-template-columns: repeat(3, 1fr); }
+                .dashboard-overview-grid { grid-template-columns: repeat(5, 1fr); }
             }
             @media (max-width: 768px) {
                 .dashboard-overview-grid { grid-template-columns: repeat(2, 1fr); }
@@ -3633,8 +3637,8 @@ function OrganiserPanel() {
             .overview-card {
                 background-color: rgba(255, 255, 255, 0.05);
                 backdrop-filter: blur(10px);
-                padding: 28px 20px;
-                border-radius: 24px;
+                padding: 16px 20px;
+                border-radius: 20px;
                 border: 1px solid rgba(255, 255, 255, 0.1);
                 display: flex;
                 flex-direction: column;
@@ -3650,13 +3654,13 @@ function OrganiserPanel() {
                 border-color: rgba(250, 204, 21, 0.4);
             }
             .overview-card-icon {
-                width: 54px;
-                height: 54px;
-                border-radius: 18px;
+                width: 44px;
+                height: 44px;
+                border-radius: 14px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                margin-bottom: 20px;
+                margin-bottom: 12px;
                 box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
             }
             .welcome-banner {
@@ -5735,7 +5739,46 @@ function OrganiserPanel() {
               <div className="dashboard-overview-grid">
                 <div
                   className="overview-card"
-                  style={{ borderTop: "4px solid #3b82f6" }}
+                  style={{ borderTop: "4px solid #f59e0b", cursor: "pointer" }}
+                  onClick={() => setActiveTab("manage_events")}
+                >
+                  <div
+                    className="overview-card-icon"
+                    style={{
+                      backgroundColor: "rgba(245, 158, 11, 0.1)",
+                      color: "#f59e0b",
+                      width: "56px",
+                      height: "56px",
+                    }}
+                  >
+                    <IndianRupee size={28} />
+                  </div>
+                  <p
+                    style={{
+                      fontSize: "28px",
+                      fontWeight: 800,
+                      margin: "0 0 4px",
+                      color: t.textMain,
+                    }}
+                  >
+                    ₹{Number(dashboardStats.revenue).toLocaleString()}
+                  </p>
+                  <p
+                    style={{
+                      fontSize: "13px",
+                      fontWeight: 600,
+                      color: "#f59e0b",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.5px",
+                    }}
+                  >
+                    Total Revenue
+                  </p>
+                </div>
+                <div
+                  className="overview-card"
+                  style={{ borderTop: "4px solid #3b82f6", cursor: "pointer" }}
+                  onClick={() => { setEventSubTab("all"); setActiveTab("manage_events"); }}
                 >
                   <div
                     className="overview-card-icon"
@@ -5772,44 +5815,8 @@ function OrganiserPanel() {
                 </div>
                 <div
                   className="overview-card"
-                  style={{ borderTop: "4px solid #10b981" }}
-                >
-                  <div
-                    className="overview-card-icon"
-                    style={{
-                      backgroundColor: "rgba(16, 185, 129, 0.1)",
-                      color: "#10b981",
-                      width: "56px",
-                      height: "56px",
-                    }}
-                  >
-                    <Activity size={28} />
-                  </div>
-                  <p
-                    style={{
-                      fontSize: "28px",
-                      fontWeight: 800,
-                      margin: "0 0 4px",
-                      color: t.textMain,
-                    }}
-                  >
-                    {Number(dashboardStats.activeEvents).toLocaleString()}
-                  </p>
-                  <p
-                    style={{
-                      fontSize: "13px",
-                      fontWeight: 600,
-                      color: "#10b981",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.5px",
-                    }}
-                  >
-                    Active Events
-                  </p>
-                </div>
-                <div
-                  className="overview-card"
-                  style={{ borderTop: "4px solid #8b5cf6" }}
+                  style={{ borderTop: "4px solid #8b5cf6", cursor: "pointer" }}
+                  onClick={() => setActiveTab("manage_events")}
                 >
                   <div
                     className="overview-card-icon"
@@ -5846,18 +5853,19 @@ function OrganiserPanel() {
                 </div>
                 <div
                   className="overview-card"
-                  style={{ borderTop: "4px solid #f59e0b" }}
+                  style={{ borderTop: "4px solid #10b981", cursor: "pointer" }}
+                  onClick={() => { setEventSubTab("active"); setActiveTab("manage_events"); }}
                 >
                   <div
                     className="overview-card-icon"
                     style={{
-                      backgroundColor: "rgba(245, 158, 11, 0.1)",
-                      color: "#f59e0b",
+                      backgroundColor: "rgba(16, 185, 129, 0.1)",
+                      color: "#10b981",
                       width: "56px",
                       height: "56px",
                     }}
                   >
-                    <IndianRupee size={28} />
+                    <Activity size={28} />
                   </div>
                   <p
                     style={{
@@ -5867,20 +5875,59 @@ function OrganiserPanel() {
                       color: t.textMain,
                     }}
                   >
-                    ₹{Number(dashboardStats.revenue).toLocaleString()}
+                    {Number(dashboardStats.activeEvents).toLocaleString()}
                   </p>
                   <p
                     style={{
                       fontSize: "13px",
                       fontWeight: 600,
-                      color: "#f59e0b",
+                      color: "#10b981",
                       textTransform: "uppercase",
                       letterSpacing: "0.5px",
                     }}
                   >
-                    Total Revenue
+                    Active Events
                   </p>
                 </div>
+                <div
+                  className="overview-card"
+                  style={{ borderTop: "4px solid #64748b", cursor: "pointer" }}
+                  onClick={() => { setEventSubTab("expired"); setActiveTab("manage_events"); }}
+                >
+                  <div
+                    className="overview-card-icon"
+                    style={{
+                      backgroundColor: "rgba(100, 116, 139, 0.1)",
+                      color: "#64748b",
+                      width: "56px",
+                      height: "56px",
+                    }}
+                  >
+                    <Clock size={28} />
+                  </div>
+                  <p
+                    style={{
+                      fontSize: "28px",
+                      fontWeight: 800,
+                      margin: "0 0 4px",
+                      color: t.textMain,
+                    }}
+                  >
+                    {Number(dashboardStats.expiredEvents || 0).toLocaleString()}
+                  </p>
+                  <p
+                    style={{
+                      fontSize: "13px",
+                      fontWeight: 600,
+                      color: "#64748b",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.5px",
+                    }}
+                  >
+                    Expired Events
+                  </p>
+                </div>
+
               </div>
 
               {/* V2 Specialized Publishing Cards */}
@@ -6317,13 +6364,16 @@ function OrganiserPanel() {
                   }}
                 >
                   {[
+                    { id: "all", label: "All", color: "#3b82f6" },
                     { id: "active", label: "Active", color: "#10b981" },
+                    { id: "completed", label: "Completed", color: "#14b8a6" },
                     { id: "draft", label: "Drafts", color: "#f59e0b" },
-                    { id: "expired", label: "Expired", color: "#ef4444" },
-                    { id: "archived", label: "Archived", color: "#64748b" }
+                    { id: "expired", label: "Expired", color: "#64748b" },
+                    { id: "cancelled", label: "Cancelled", color: "#ef4444" },
+                    { id: "archived", label: "Archived", color: "#475569" }
                   ].map((tab) => {
                     const isActive = eventSubTab === tab.id;
-                    const count = events.filter(e => e.uiStatus === tab.id).length;
+                    const count = tab.id === "all" ? events.length : events.filter(e => e.uiStatus === tab.id).length;
                     
                     return (
                       <button
@@ -6366,7 +6416,7 @@ function OrganiserPanel() {
 
                 <div>
                   {(() => {
-                    const filteredMappableEvents = events.filter((ev) => ev.uiStatus === eventSubTab);
+                    const filteredMappableEvents = eventSubTab === "all" ? events : events.filter((ev) => ev.uiStatus === eventSubTab);
                     const isExpiredSection = eventSubTab === "expired";
 
                     return (
@@ -13820,22 +13870,7 @@ function OrganiserPanel() {
                     <span>Dashboard</span>
                   </div>
                 </button>
-                <button
-                  onClick={() => router.push("/branding/dashboard")}
-                  className="sidebar-item"
-                  style={{ width: "calc(100% - 30px)" }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "12px",
-                    }}
-                  >
-                    <Sparkles size={18} />
-                    <span>Branding Panel</span>
-                  </div>
-                </button>
+
 
                 <div className="sidebar-category">Management</div>
                 <button
@@ -14438,16 +14473,7 @@ function OrganiserPanel() {
               <LayoutDashboard size={18} /> Dashboard (Locked)
             </div>
           </div>
-          <button
-            onClick={() => router.push("/branding/dashboard")}
-            className="sidebar-item"
-            style={{ width: "calc(100% - 30px)", opacity: 1, color: "#ffffff" }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-              <Sparkles size={18} />
-              <span>Branding Panel</span>
-            </div>
-          </button>
+
 
           <div className="sidebar-category">
             {isProfessionalService ? "Portfolio" : "Events"}

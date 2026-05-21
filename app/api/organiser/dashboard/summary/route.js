@@ -92,6 +92,8 @@ export async function GET(request) {
     let totalEvents = eventsList.length;
     let activeEvents = 0;
     let expiredEvents = 0;
+    let completedEvents = 0;
+    let cancelledEvents = 0;
     let draftEvents = 0;
     let archivedEvents = 0;
 
@@ -112,7 +114,7 @@ export async function GET(request) {
 
     eventsList.forEach((e) => {
       const pStatus = e.publish_status || (e.status === 'draft' ? 'draft' : 'published');
-      const lStatus = e.listing_status || (e.status === 'archived' ? 'archived' : 'active');
+      const lStatus = e.listing_status || e.status || 'active';
       
       let endAt = e.event_end_at ? new Date(e.event_end_at) : null;
 
@@ -128,6 +130,10 @@ export async function GET(request) {
       const evalNow = new Date();
       if (lStatus === "archived") {
         archivedEvents++;
+      } else if (lStatus === "cancelled") {
+        cancelledEvents++;
+      } else if (lStatus === "completed") {
+        completedEvents++;
       } else if (pStatus === "draft") {
         draftEvents++;
       } else if (endAt && endAt < evalNow) {
@@ -156,6 +162,10 @@ export async function GET(request) {
         totalEvents: totalEvents,
         activeEvents: activeEvents,
         expiredEvents: expiredEvents,
+        completedEvents: completedEvents,
+        cancelledEvents: cancelledEvents,
+        draftEvents: draftEvents,
+        archivedEvents: archivedEvents,
         totalBookings: confirmedBookings.length,
         totalTicketsSold: totalTicketsSold,
         revenue: totalRevenue,
