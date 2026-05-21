@@ -71,6 +71,29 @@ export async function POST(request) {
                 })
                 .eq('id', id);
 
+            // 3.5 Mark individual seats as sold in seat_inventory
+            if (booking.selected_seats && booking.selected_seats.length > 0) {
+                try {
+                    for (const seat of booking.selected_seats) {
+                        const seatId = seat.id;
+                        const { data: existingSeat } = await supabaseAdmin
+                            .from('seat_inventory')
+                            .select('id')
+                            .eq('event_id', booking.event_id)
+                            .eq('seat_number', seatId)
+                            .maybeSingle();
+
+                        if (existingSeat) {
+                            await supabaseAdmin.from('seat_inventory').update({ status: 'sold' }).eq('id', existingSeat.id);
+                        } else {
+                            await supabaseAdmin.from('seat_inventory').insert({ event_id: booking.event_id, seat_number: seatId, status: 'sold' });
+                        }
+                    }
+                } catch (seatErr) {
+                    console.error("Seat update error in razorpay/verify:", seatErr.message);
+                }
+            }
+
             // 4. Record Payment (Legacy payments table)
             const { data: paymentRecord } = await supabaseAdmin.from('payments').insert({
                 booking_id: id,

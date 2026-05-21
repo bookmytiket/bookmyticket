@@ -557,14 +557,47 @@ export default function PaymentClient({ id: eventId, bookingId: propBookingId })
                                                         try {
                                                             const details = await actions.order.capture();
                                                             if (details.status === "COMPLETED") {
-                                                                const { error } = await supabase
-                                                                    .from('bookings')
-                                                                    .update({ status: 'Confirmed' })
-                                                                    .eq('id', bookingId);
-                                                                if (error) throw error;
+                                                                if (sessionToken) {
+                                                                    const verifyRes = await fetch('/api/booking-session/verify-payment', {
+                                                                        method: 'POST',
+                                                                        headers: { 'Content-Type': 'application/json' },
+                                                                        body: JSON.stringify({
+                                                                            sessionToken,
+                                                                            gateway: "PayPal",
+                                                                            paypal_order_id: details.id,
+                                                                            paypal_status: details.status
+                                                                        })
+                                                                    });
+                                                                    const verifyData = await verifyRes.json();
+                                                                    if (verifyRes.ok && verifyData.success) {
+                                                                        setPaymentStatus('success');
+                                                                        setTimeout(() => router.push(`/events/book/success?bookingId=${bookingId}&id=${eventId}&sessionToken=${sessionToken}`), 1500);
+                                                                    } else {
+                                                                        throw new Error(verifyData.error || "Verification failed");
+                                                                    }
+                                                                } else {
+                                                                    const { error } = await supabase
+                                                                        .from('bookings')
+                                                                        .update({ status: 'Confirmed' })
+                                                                        .eq('id', bookingId);
+                                                                    if (error) throw error;
+                                                                    
+                                                                    // Update seat_inventory for legacy paypal
+                                                                    if (booking.selected_seats && booking.selected_seats.length > 0) {
+                                                                        for (const seat of booking.selected_seats) {
+                                                                            const seatId = seat.id;
+                                                                            const { data: existingSeat } = await supabase.from('seat_inventory').select('id').eq('event_id', eventId).eq('seat_number', seatId).maybeSingle();
+                                                                            if (existingSeat) {
+                                                                                await supabase.from('seat_inventory').update({ status: 'sold' }).eq('id', existingSeat.id);
+                                                                            } else {
+                                                                                await supabase.from('seat_inventory').insert({ event_id: eventId, seat_number: seatId, status: 'sold' });
+                                                                            }
+                                                                        }
+                                                                    }
 
-                                                                setPaymentStatus('success');
-                                                                setTimeout(() => router.push(`/events/book/success?bookingId=${bookingId}&id=${eventId}`), 1500);
+                                                                    setPaymentStatus('success');
+                                                                    setTimeout(() => router.push(`/events/book/success?bookingId=${bookingId}&id=${eventId}`), 1500);
+                                                                }
                                                             } else {
                                                                 setPaymentStatus('fail');
                                                             }
