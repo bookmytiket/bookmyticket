@@ -189,12 +189,6 @@ export default function EventBookClient({ id }) {
     // Real-time Seat Locking
     const { lockedSeats, myLocks, lockSeat, releaseSeat } = useSeatLocking(id, user?.id);
 
-    // Auto-release abandoned locks when returning to this page
-    useEffect(() => {
-        if (myLocks && myLocks.length > 0 && selectedSeats.length === 0 && !isCreatingSession) {
-            myLocks.forEach(seatId => releaseSeat(seatId));
-        }
-    }, [myLocks, selectedSeats.length, isCreatingSession, releaseSeat]);
 
     const { data: seatingSectionsData } = useSupabaseQuery('seating_sections', (q) => 
         q.select(`
@@ -378,6 +372,13 @@ export default function EventBookClient({ id }) {
         city: "",
         members: []
     });
+
+    // Auto-release abandoned locks when returning to this page
+    useEffect(() => {
+        if (myLocks && myLocks.length > 0 && selectedSeats.length === 0 && !isCreatingSession) {
+            myLocks.forEach(seatId => releaseSeat(seatId));
+        }
+    }, [myLocks, selectedSeats.length, isCreatingSession, releaseSeat]);
 
     const marathonSteps = [
         { id: 1, title: "Category", icon: Ticket },
