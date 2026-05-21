@@ -85,7 +85,7 @@ export default function VisualSeatPicker({
             </div>
 
             {/* MAIN CANVAS CONTAINER */}
-            <div className="h-[600px] relative bg-[#f8f9fa] overflow-hidden" ref={containerRef}>
+            <div className="h-[600px] md:h-[750px] w-full relative bg-[#f8f9fa] overflow-hidden flex" ref={containerRef}>
                 {backgroundUrl && (
                     <img src={backgroundUrl} className="absolute inset-0 w-full h-full object-cover opacity-20 pointer-events-none" alt="Background Map" />
                 )}
@@ -95,9 +95,9 @@ export default function VisualSeatPicker({
                     style={{ x: springX, y: springY, scale }}
                     drag
                     dragConstraints={containerRef}
-                    className="absolute inset-0 flex items-center justify-center cursor-grab active:cursor-grabbing"
+                    className="w-max h-max min-w-full min-h-full cursor-grab active:cursor-grabbing flex"
                 >
-                    <div className={`relative transition-all duration-300 ${isSpatial ? 'w-[2000px] h-[2000px]' : 'flex flex-col items-center gap-24 py-32 min-w-full'}`}>
+                    <div className={`m-auto p-12 md:p-24 transition-all duration-300 relative ${isSpatial ? 'w-[2000px] h-[2000px]' : 'flex flex-col items-center gap-16'}`}>
                         {blocks.map((block, bIdx) => {
                             const blockPrice = categories.find(c => c.name === block.category)?.price || block.price || block.ticket_price || 0;
                             
