@@ -97,14 +97,14 @@ export default function VisualSeatPicker({
                     dragConstraints={containerRef}
                     className="w-max h-max min-w-full min-h-full cursor-grab active:cursor-grabbing flex"
                 >
-                    <div className={`m-auto p-12 md:p-24 transition-all duration-300 relative ${isSpatial ? 'w-[2000px] h-[2000px]' : 'flex flex-col items-center gap-16'}`}>
+                    <div className={`m-auto p-12 md:p-24 transition-all duration-300 relative w-max ${isSpatial ? 'w-[2000px] h-[2000px]' : 'flex flex-col items-center gap-16'}`}>
                         {blocks.map((block, bIdx) => {
                             const blockPrice = categories.find(c => c.name === block.category)?.price || block.price || block.ticket_price || 0;
                             
                             return (
                                 <div 
                                     key={block.id}
-                                    className={`${isSpatial ? 'absolute' : 'relative flex flex-col items-center'}`}
+                                    className={`w-max ${isSpatial ? 'absolute' : 'relative flex flex-col items-center'}`}
                                     style={isSpatial ? { left: block.x, top: block.y } : {}}
                                 >
                                     {/* SECTION PRICING LABEL */}
@@ -114,7 +114,7 @@ export default function VisualSeatPicker({
                                         </h4>
                                     </div>
 
-                                    <div className="flex gap-6 items-start bg-white/40 p-6 rounded-3xl border border-white/50 backdrop-blur-sm shadow-xl">
+                                    <div className="w-max flex gap-6 items-start bg-white/40 p-6 rounded-3xl border border-white/50 backdrop-blur-sm shadow-xl">
                                         {/* ROW LABELS */}
                                         <div className="flex flex-col gap-2 pt-1 pointer-events-none">
                                             {Array.from({ length: block.rows || 0 }).map((_, rIdx) => (
