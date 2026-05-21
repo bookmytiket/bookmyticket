@@ -95,7 +95,7 @@ export default function VisualSeatPicker({
                     style={{ x: springX, y: springY, scale }}
                     drag
                     dragConstraints={containerRef}
-                    className="w-max h-max min-w-full min-h-full cursor-grab active:cursor-grabbing flex"
+                    className="w-max h-max min-w-full min-h-full cursor-grab active:cursor-grabbing flex shrink-0"
                 >
                     <div className={`m-auto p-12 md:p-24 transition-all duration-300 relative w-max ${isSpatial ? 'w-[2000px] h-[2000px]' : 'flex flex-col items-center gap-16'}`}>
                         {blocks.map((block, bIdx) => {
@@ -135,7 +135,7 @@ export default function VisualSeatPicker({
                                                             const seatId = `${block.name}-${rowLabel}-${seatNum}`;
                                                             const status = getSeatStatus(seatId);
                                                             
-                                                            let seatStyles = "w-10 h-10 rounded-xl flex items-center justify-center text-[11px] font-bold transition-all border cursor-pointer hover:scale-110 hover:shadow-md active:scale-95 ";
+                                                            let seatStyles = "w-10 h-10 rounded-xl flex shrink-0 items-center justify-center text-[11px] font-bold transition-all border cursor-pointer hover:scale-110 hover:shadow-md active:scale-95 ";
                                                             
                                                             if (status === 'sold') {
                                                                 seatStyles += "bg-slate-200 border-slate-200 text-transparent cursor-not-allowed";
