@@ -626,6 +626,7 @@ export default function EventBookClient({ id }) {
                                             animate={{ opacity: 1, height: 'auto' }}
                                             className="mt-12 pt-8 border-t border-slate-100 flex flex-col md:flex-row items-center justify-between gap-8"
                                         >
+                                            <div className="flex items-center gap-8">
                                                 <div>
                                                     <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-3">Tickets</p>
                                                     <div className="flex items-center gap-3 bg-white p-2 rounded-2xl border-2 border-slate-100 shadow-sm">
