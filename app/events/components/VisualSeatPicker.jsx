@@ -56,12 +56,6 @@ export default function VisualSeatPicker({
         y.set(0);
     };
 
-    // PRICE CALCULATION
-    const subtotal = selectedSeats.reduce((sum, s) => sum + (Number(s.price) || 0), 0);
-    const platformFee = selectedSeats.length > 0 ? (selectedSeats.length * 20) : 0;
-    const gst = Math.round(subtotal * 0.18);
-    const totalAmount = subtotal + platformFee + gst;
-
     // Check if blocks have coordinates
     const isSpatial = blocks.some(b => b.x !== undefined && b.x !== null && b.y !== undefined && b.y !== null);
 
@@ -200,50 +194,6 @@ export default function VisualSeatPicker({
                 ))}
             </div>
             
-            {/* CHECKOUT STRIP */}
-            <div className="p-6 bg-white border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-6 z-[90]">
-                <div className="flex items-center gap-6">
-                    {selectedSeats.length > 0 ? (
-                        <div className="flex flex-col">
-                            <span className="text-[12px] font-bold text-slate-500 uppercase tracking-widest mb-1">{selectedSeats.length} Seats Selected</span>
-                            <div className="flex items-center gap-2 flex-wrap max-w-xs">
-                                {selectedSeats.slice(0, 4).map(s => (
-                                    <span key={s.id} className="text-sm font-black text-slate-800 bg-slate-100 px-3 py-1 rounded-lg border border-slate-200">
-                                        {s.id.split('-').slice(1).join('')}
-                                    </span>
-                                ))}
-                                {selectedSeats.length > 4 && (
-                                    <span className="text-sm font-bold text-slate-400">+{selectedSeats.length - 4} more</span>
-                                )}
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="flex flex-col">
-                            <span className="text-[12px] font-bold text-slate-500 uppercase tracking-widest mb-1">No Seats Selected</span>
-                            <span className="text-sm font-medium text-slate-400">Please select seats from the map</span>
-                        </div>
-                    )}
-                </div>
-
-                <div className="flex items-center gap-8">
-                    <div className="flex flex-col text-right">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Amount</span>
-                        <span className="text-3xl font-black text-slate-900 leading-none">₹{totalAmount}</span>
-                        {platformFee > 0 && <span className="text-[9px] text-slate-400 mt-1">Includes ₹{platformFee + gst} fees & tax</span>}
-                    </div>
-                    
-                    <button 
-                        disabled={selectedSeats.length === 0}
-                        className={`px-10 py-5 rounded-2xl font-black uppercase tracking-widest text-[12px] transition-all flex items-center gap-3 ${
-                            selectedSeats.length > 0 
-                            ? 'bg-pink-600 text-white hover:bg-pink-700 shadow-xl shadow-pink-600/20' 
-                            : 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                        }`}
-                    >
-                        Proceed <ChevronRight size={16} />
-                    </button>
-                </div>
-            </div>
         </div>
     );
 }
