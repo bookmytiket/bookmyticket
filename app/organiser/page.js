@@ -2828,6 +2828,8 @@ function OrganiserPanel() {
         ...(postEvent.dynamic_config || {}),
         organiser_name: postEvent.organiser_name || (postEvent.dynamic_config && postEvent.dynamic_config.organiser_name) || undefined,
         marathonCategories: postEvent.marathonCategories || [],
+        seatingSections: postEvent.seatingSections || [],
+        seatingBoxes: postEvent.seatingBoxes || [],
         form_fields:
           postEvent.dynamic_config?.form_fields ||
           (postEvent.dynamic_config || {}).form_fields ||
@@ -6823,6 +6825,47 @@ function OrganiserPanel() {
                                                   ?.sports_details
                                                   ?.sport_type ||
                                                 ev.sportType,
+                                              seatingSections:
+                                                ev.dynamic_config?.seatingSections ||
+                                                (ev.blocks?.length > 0 ? (ev.blocks || []).filter(b => b.category !== 'Box' && b.category !== 'box').map(b => {
+                                                    const isGen = !!b.isGeneral;
+                                                    let newSeats = [];
+                                                    if (!isGen && b.rows > 0 && b.cols > 0) {
+                                                        for (let r = 0; r < b.rows; r++) {
+                                                            const rowLabel = String.fromCharCode(65 + r);
+                                                            for (let s = 1; s <= b.cols; s++) {
+                                                                newSeats.push({
+                                                                    id: `seat-${Date.now()}-${b.id}-${rowLabel}${s}`,
+                                                                    rowLabel: rowLabel,
+                                                                    seatNumber: s,
+                                                                    seatLabel: `${rowLabel}${s}`,
+                                                                    seatType: (b.category || 'general').toLowerCase(),
+                                                                    status: 'available',
+                                                                    isAisle: false
+                                                                });
+                                                            }
+                                                        }
+                                                    }
+                                                    return {
+                                                        id: b.id || `sec-${Date.now()}-${Math.random()}`,
+                                                        name: b.name,
+                                                        basePrice: b.basePrice || b.price || 0,
+                                                        seats: newSeats,
+                                                        rows: b.rows || 0,
+                                                        cols: b.cols || 0,
+                                                        isGeneral: isGen,
+                                                        capacity: b.capacity || 0
+                                                    };
+                                                }) : []),
+                                              seatingBoxes:
+                                                ev.dynamic_config?.seatingBoxes ||
+                                                (ev.blocks?.length > 0 ? (ev.blocks || []).filter(b => b.category === 'Box' || b.category === 'box').map(b => ({
+                                                    id: b.id || `box-${Date.now()}-${Math.random()}`,
+                                                    name: b.name,
+                                                    seatCount: b.cols || 6,
+                                                    price: b.basePrice || b.price || 0,
+                                                    type: 'VIP'
+                                                })) : []),
                                               ageCategory:
                                                 ev.sports_details
                                                   ?.age_category ||
