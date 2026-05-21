@@ -147,6 +147,13 @@ function PWAScanContent() {
             });
 
             const data = await res.json();
+            
+            if (res.status === 401) {
+                showToast(data.message || "Session expired", "error");
+                logout();
+                return;
+            }
+            
             if (res.ok && data.status === "valid") {
                 showToast("Entry Approved", "success");
                 setScanResult({
@@ -210,6 +217,10 @@ function PWAScanContent() {
                         message: data.message || "Invalid Ticket"
                     });
                 }
+            } else if (res.status === 401) {
+                showToast(data.message || "Session expired", "error");
+                logout();
+                return;
             } else {
                 setScanResult({
                     status: "error",

@@ -392,16 +392,16 @@ export function AuthProvider({ children }) {
                     const isEnabled = settings?.single_device_login_enabled !== false;
 
                     if (isEnabled) {
-                        const { data: existingSession } = await supabase
-                            .from('staff_active_sessions')
-                            .select('*')
-                            .eq('staff_user_id', userData.id)
-                            .eq('session_status', 'active')
-                            .maybeSingle();
+                        if (policy === 'strict_block') {
+                            const { data: existingSession } = await supabase
+                                .from('staff_active_sessions')
+                                .select('*')
+                                .eq('staff_user_id', userData.id)
+                                .eq('session_status', 'active')
+                                .neq('device_id', deviceId)
+                                .limit(1);
 
-                        if (existingSession && existingSession.device_id !== deviceId) {
-                            if (policy === 'strict_block') {
-                                // Block new login
+                            if (existingSession && existingSession.length > 0) {
                                 await supabase.auth.signOut();
                                 await supabase.from('staff_login_history').insert({
                                     staff_user_id: userData.id,
@@ -410,18 +410,23 @@ export function AuthProvider({ children }) {
                                     reason: 'Strict Block: Active session on another device.'
                                 });
                                 return { success: false, error: "This staff account is already active on another device. Please logout from the current device first." };
-                            } else {
-                                // Replace existing
-                                await supabase
-                                    .from('staff_active_sessions')
-                                    .update({ session_status: 'terminated' })
-                                    .eq('id', existingSession.id);
-                                    
+                            }
+                        } else {
+                            // Replace existing: terminate all other active sessions for this user
+                            const { data: terminatedSessions } = await supabase
+                                .from('staff_active_sessions')
+                                .update({ session_status: 'terminated' })
+                                .eq('staff_user_id', userData.id)
+                                .eq('session_status', 'active')
+                                .neq('device_id', deviceId)
+                                .select();
+                                
+                            if (terminatedSessions && terminatedSessions.length > 0) {
                                 await supabase.from('staff_login_history').insert({
                                     staff_user_id: userData.id,
                                     device_id: deviceId,
                                     login_status: 'terminated_old_session',
-                                    reason: 'New login replaced old session.'
+                                    reason: `New login replaced ${terminatedSessions.length} old session(s).`
                                 });
                             }
                         }
