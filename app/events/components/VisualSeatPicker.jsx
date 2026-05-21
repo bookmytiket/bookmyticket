@@ -63,7 +63,7 @@ export default function VisualSeatPicker({
     const totalAmount = subtotal + platformFee + gst;
 
     // Check if blocks have coordinates
-    const isSpatial = blocks.some(b => b.x !== undefined && b.y !== undefined);
+    const isSpatial = blocks.some(b => b.x !== undefined && b.x !== null && b.y !== undefined && b.y !== null);
 
     return (
         <div className="w-full bg-white rounded-3xl overflow-hidden border border-slate-200 shadow-sm flex flex-col relative font-sans">
