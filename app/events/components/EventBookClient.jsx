@@ -255,29 +255,37 @@ export default function EventBookClient({ id }) {
             if (!id || !isSeating) return;
             
             try {
-                // 1. Get Venue Layout
-                const { data: layout } = await supabase.from('venue_layouts').select('id').eq('event_id', id).maybeSingle();
-                if (!layout) return;
-
-                // 2. Get Blocks & Seats
-                const { data: blocksData } = await supabase.from('seat_blocks').select('id, block_name').eq('venue_layout_id', layout.id);
-                if (blocksData?.length > 0) {
-                    const blockIds = blocksData.map(b => b.id);
-                    const { data: seatsData } = await supabase.from('seats').select('*').in('block_id', blockIds);
-                    if (seatsData) setRelationalSeats(seatsData);
-
-                    // 3. Subscribe to Realtime Updates
-                    const subscription = supabase
-                        .channel(`seats_${id}`)
-                        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'seats' }, (payload) => {
-                            setRelationalSeats(current => 
-                                current.map(s => s.id === payload.new.id ? payload.new : s)
-                            );
-                        })
-                        .subscribe();
-
-                    return () => supabase.removeChannel(subscription);
+                // Fetch permanent seat states from seat_inventory
+                const { data: invSeats } = await supabase
+                    .from('seat_inventory')
+                    .select('seat_number, status')
+                    .eq('event_id', id)
+                    .in('status', ['sold', 'booked', 'blocked', 'maintenance']);
+                
+                if (invSeats) {
+                    setRelationalSeats(invSeats);
                 }
+
+                // Subscribe to Realtime Updates on seat_inventory
+                const subscription = supabase
+                    .channel(`inventory_${id}`)
+                    .on('postgres_changes', { event: '*', schema: 'public', table: 'seat_inventory', filter: `event_id=eq.${id}` }, (payload) => {
+                        setRelationalSeats(current => {
+                            if (payload.eventType === 'INSERT') {
+                                return [...current, payload.new];
+                            }
+                            const existingIdx = current.findIndex(s => s.seat_number === payload.new.seat_number);
+                            if (existingIdx >= 0) {
+                                const newArr = [...current];
+                                newArr[existingIdx] = payload.new;
+                                return newArr;
+                            }
+                            return [...current, payload.new];
+                        });
+                    })
+                    .subscribe();
+
+                return () => supabase.removeChannel(subscription);
             } catch (err) {
                 console.error("Failed to fetch seat data:", err);
             }
@@ -287,25 +295,16 @@ export default function EventBookClient({ id }) {
     }, [id, isSeating]);
 
     const bookedSeats = useMemo(() => {
-        return relationalSeats.filter(s => s.status === 'booked' || s.status === 'sold').map(s => {
-            const block = event?.blocks?.find(b => b.id === s.block_id) || { name: 'Unknown' };
-            return `${block.name}-${s.row_name}-${s.seat_number}`;
-        });
-    }, [relationalSeats, event?.blocks]);
+        return relationalSeats.filter(s => s.status === 'booked' || s.status === 'sold').map(s => s.seat_number);
+    }, [relationalSeats]);
 
     const blockedSeats = useMemo(() => {
-        return relationalSeats.filter(s => s.status === 'blocked' || s.status === 'maintenance').map(s => {
-            const block = event?.blocks?.find(b => b.id === s.block_id) || { name: 'Unknown' };
-            return `${block.name}-${s.row_name}-${s.seat_number}`;
-        });
-    }, [relationalSeats, event?.blocks]);
+        return relationalSeats.filter(s => s.status === 'blocked' || s.status === 'maintenance').map(s => s.seat_number);
+    }, [relationalSeats]);
 
     const dbReservedSeats = useMemo(() => {
-        return relationalSeats.filter(s => s.status === 'reserved' || s.status === 'temp_locked').map(s => {
-            const block = event?.blocks?.find(b => b.id === s.block_id) || { name: 'Unknown' };
-            return `${block.name}-${s.row_name}-${s.seat_number}`;
-        });
-    }, [relationalSeats, event?.blocks]);
+        return relationalSeats.filter(s => s.status === 'reserved' || s.status === 'temp_locked').map(s => s.seat_number);
+    }, [relationalSeats]);
 
     // Combine database reservations with real-time locks
     const allReservedSeats = useMemo(() => [...new Set([...dbReservedSeats, ...lockedSeats])], [dbReservedSeats, lockedSeats]);
