@@ -98,13 +98,28 @@ export default function DigitalTicket({ booking, event, ticket: initialTicket, s
             };
         }
 
+        const selectedSeats = booking?.selected_seats || [];
+        const hasSeats = selectedSeats.length > 0;
+        
+        let zone = booking?.metadata?.zone || "General Admission";
+        let seatNo = booking?.metadata?.seat_no || "Open Seating";
+
+        if (hasSeats) {
+            const blocks = [...new Set(selectedSeats.map(s => s.blockName || s.id.split('-')[0]))];
+            zone = blocks.join(', ');
+            seatNo = selectedSeats.map(s => {
+                const parts = s.id.split('-');
+                return parts.length > 1 ? parts.slice(1).join('-') : s.id;
+            }).join(', ');
+        }
+
         return {
             label: category || "Event",
             fields: [
-                { label: "ATTENDEE", value: booking.customer_name || booking.customer_details?.name || booking.customer_email || "Guest" },
-                { label: "EVENT TYPE", value: event.category || "General" },
-                { label: "SEAT CATEGORY", value: booking.metadata?.zone || "General Admission" },
-                { label: "SEAT NO", value: booking.metadata?.seat_no || "Open Seating" }
+                { label: "ATTENDEE", value: booking?.customer_name || booking?.customer_details?.name || booking?.customer_email || "Guest" },
+                { label: "EVENT TYPE", value: event?.category || "General" },
+                { label: "SEAT CATEGORY", value: zone },
+                { label: "SEAT NO", value: seatNo }
             ],
             ...theme
         };
