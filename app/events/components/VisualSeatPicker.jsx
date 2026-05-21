@@ -69,7 +69,7 @@ export default function VisualSeatPicker({
         <div className="w-full bg-white rounded-3xl overflow-hidden border border-slate-200 shadow-sm flex flex-col relative font-sans">
             
             {/* FLOATING ZOOM CONTROLS */}
-            <div className="absolute bottom-32 right-8 z-[70] flex flex-col gap-3">
+            <div className="absolute bottom-32 left-8 z-[70] flex flex-col gap-3">
                 <div className="flex flex-col bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
                     <button onClick={() => handleZoom(0.2)} className="w-10 h-10 flex items-center justify-center text-slate-600 hover:text-pink-600 hover:bg-slate-50 transition-all">
                         <ZoomIn size={18} />
