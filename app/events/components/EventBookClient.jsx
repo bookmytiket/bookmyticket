@@ -1064,9 +1064,9 @@ export default function EventBookClient({ id }) {
                                             onClick={handleContinue}
                                             disabled={selectedSeats.length === 0}
                                             className={`
-                                                w-full py-4 rounded-2xl font-black uppercase tracking-[0.2em] text-[11px] transition-all shadow-lg
+                                                w-full py-5 rounded-[1.25rem] font-black uppercase tracking-[0.2em] text-[12px] transition-all relative overflow-hidden group
                                                 ${selectedSeats.length > 0 
-                                                    ? 'bg-slate-900 text-white shadow-slate-900/20 hover:scale-[1.02] active:scale-95' 
+                                                    ? 'bg-gradient-to-r from-pink-500 via-purple-500 to-pink-500 bg-[length:200%_auto] text-white shadow-[0_20px_40px_-15px_rgba(236,72,153,0.5)] hover:shadow-[0_20px_40px_-15px_rgba(168,85,247,0.6)] hover:bg-[position:right_center] hover:scale-[1.02] active:scale-95' 
                                                     : 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none'}
                                             `}
                                         >
