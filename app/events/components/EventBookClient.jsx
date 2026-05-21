@@ -334,7 +334,8 @@ export default function EventBookClient({ id }) {
             // Try to lock the seat
             const { success, error } = await lockSeat(seatId);
             if (!success) {
-                alert(error || "Seat could not be locked.");
+                setSeatErrorNotification(error || "Seat could not be locked.");
+                setTimeout(() => setSeatErrorNotification(""), 3500);
                 return;
             }
 
@@ -358,6 +359,7 @@ export default function EventBookClient({ id }) {
 
     const [bookingStep, setBookingStep] = useState(1);
     const [participantData, setParticipantData] = useState({});
+    const [seatErrorNotification, setSeatErrorNotification] = useState("");
     const [isCreatingSession, setIsCreatingSession] = useState(false);
     const [teamData, setTeamData] = useState({
         teamName: "",
@@ -1107,6 +1109,16 @@ export default function EventBookClient({ id }) {
                 availableDates={event.dateSlots?.map(s => s.date) || []}
             />
             <Footer />
+
+            {/* Floating Error Notification */}
+            {seatErrorNotification && (
+                <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-bottom-5 duration-300">
+                    <div className="bg-red-500/90 backdrop-blur text-white px-6 py-3 rounded-full shadow-2xl border border-red-400 font-medium text-sm flex items-center gap-3">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                        {seatErrorNotification}
+                    </div>
+                </div>
+            )}
         </main>
     );
 }

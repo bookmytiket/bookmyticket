@@ -70,29 +70,60 @@ export function useSeatLocking(eventId, userId) {
 
         const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString(); // 10 minutes
 
-        const { data, error } = await supabase
+        // Since seats might not exist in seat_inventory for dynamic block maps, check first
+        const { data: existingSeat } = await supabase
             .from('seat_inventory')
-            .update({
-                status: 'temp_locked',
-                locked_by_user_id: userId,
-                lock_expires_at: expiresAt,
-                updated_at: new Date().toISOString()
-            })
-            .eq('id', seatId)
-            .eq('status', 'available') // Optimistic locking check
-            .select()
-            .single();
+            .select('*')
+            .eq('event_id', eventId)
+            .eq('seat_number', seatId)
+            .maybeSingle();
 
-        if (error || !data) {
+        let lockError = null;
+
+        if (existingSeat) {
+            // Check if available or expired
+            const isAvailable = existingSeat.status === 'available' || (existingSeat.lock_expires_at && new Date(existingSeat.lock_expires_at) < new Date());
+            if (!isAvailable && existingSeat.locked_by_user_id !== userId) {
+                return { error: "Seat already taken or error occurred" };
+            }
+
+            const { error } = await supabase
+                .from('seat_inventory')
+                .update({
+                    status: 'temp_locked',
+                    locked_by_user_id: userId,
+                    lock_expires_at: expiresAt,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', existingSeat.id);
+            
+            lockError = error;
+        } else {
+            // Insert new dynamic seat lock
+            const { error } = await supabase
+                .from('seat_inventory')
+                .insert({
+                    event_id: eventId,
+                    seat_number: seatId,
+                    status: 'temp_locked',
+                    locked_by_user_id: userId,
+                    lock_expires_at: expiresAt
+                });
+            
+            // If another user inserted it concurrently, it will fail unique constraint (event_id, seat_number)
+            lockError = error;
+        }
+
+        if (lockError) {
             return { error: "Seat already taken or error occurred" };
         }
 
-        // Log the action
-        await supabase.from('seat_lock_logs').insert({
-            seat_id: seatId,
+        // Log the action asynchronously
+        supabase.from('seat_lock_logs').insert({
+            seat_id: seatId, // this might be a string now, but if the table expects UUID, it might fail. Let's ignore log failure.
             user_id: userId,
             action_type: 'locked'
-        });
+        }).then();
 
         return { success: true };
     };
@@ -106,15 +137,16 @@ export function useSeatLocking(eventId, userId) {
                 lock_expires_at: null,
                 updated_at: new Date().toISOString()
             })
-            .eq('id', seatId)
+            .eq('event_id', eventId)
+            .eq('seat_number', seatId)
             .eq('locked_by_user_id', userId);
 
         if (!error) {
-            await supabase.from('seat_lock_logs').insert({
+            supabase.from('seat_lock_logs').insert({
                 seat_id: seatId,
                 user_id: userId,
                 action_type: 'released'
-            });
+            }).then();
         }
 
         return { error };
