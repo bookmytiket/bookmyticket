@@ -138,9 +138,9 @@ const PhysicalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEdi
         const blockCategories = {};
         postEvent.blocks.forEach(block => {
             const catName = block.category || "General Admission";
-            const slots = (parseInt(block.rows) || 0) * (parseInt(block.cols) || 0);
+            const slots = block.isGeneral ? (block.capacity || 0) : ((parseInt(block.rows) || 0) * (parseInt(block.cols) || 0));
             if (!blockCategories[catName]) {
-                blockCategories[catName] = { slots: 0, color: block.color };
+                blockCategories[catName] = { slots: 0, color: block.color, basePrice: block.basePrice };
             }
             blockCategories[catName].slots += slots;
         });
@@ -150,7 +150,7 @@ const PhysicalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEdi
             return {
                 id: existing?.id || `cat_${Date.now()}_${name}`,
                 name: name,
-                price: existing?.price || (name === "VIP" ? 2000 : name === "Platinum" ? 1500 : name === "Gold" ? 1000 : 500),
+                price: existing?.price || blockCategories[name].basePrice || (name === "VIP" ? 2000 : name === "Platinum" ? 1500 : name === "Gold" ? 1000 : 500),
                 totalSlots: blockCategories[name].slots,
                 color: existing?.color || blockCategories[name].color || "#ec4899"
             };
@@ -515,43 +515,34 @@ const PhysicalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEdi
                             </div>
                             <div className="flex bg-slate-100 p-1.5 rounded-full shadow-inner">
                                 <button 
-                                    onClick={() => setPostEvent(p => ({ ...p, ticketType: 'free' }))}
-                                    className={`px-8 py-3 rounded-full text-[11px] font-black uppercase tracking-widest transition-all ${postEvent.ticketType === 'free' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30' : 'text-slate-500 hover:text-slate-900'}`}
+                                    onClick={() => setPostEvent(p => ({ ...p, ticketType: 'general' }))}
+                                    className={`px-8 py-3 rounded-full text-[11px] font-black uppercase tracking-widest transition-all ${postEvent.ticketType === 'general' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30' : 'text-slate-500 hover:text-slate-900'}`}
                                 >
-                                    Free / General
+                                    General Admission
                                 </button>
                                 <button 
-                                    onClick={() => setPostEvent(p => ({ ...p, ticketType: 'paid' }))}
-                                    className={`px-8 py-3 rounded-full text-[11px] font-black uppercase tracking-widest transition-all ${postEvent.ticketType === 'paid' ? 'bg-pink-500 text-white shadow-lg shadow-pink-500/30' : 'text-slate-500 hover:text-slate-900'}`}
+                                    onClick={() => setPostEvent(p => ({ ...p, ticketType: 'reserved' }))}
+                                    className={`px-8 py-3 rounded-full text-[11px] font-black uppercase tracking-widest transition-all ${postEvent.ticketType === 'reserved' ? 'bg-pink-500 text-white shadow-lg shadow-pink-500/30' : 'text-slate-500 hover:text-slate-900'}`}
                                 >
-                                    Paid / Reserved
+                                    Reserved Seating
                                 </button>
                             </div>
                         </div>
 
-                        {postEvent.ticketType === 'free' && (
-                            <div className="mt-10 pt-10 border-t border-slate-100 animate-in fade-in slide-in-from-top-4">
-                                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] pl-1 mb-4">Total Ticket Available Slots</label>
-                                <div className="relative max-w-md">
-                                    <input 
-                                        type="number"
-                                        value={postEvent.totalCapacity || ''}
-                                        onChange={(e) => setPostEvent(p => ({ ...p, totalCapacity: Number(e.target.value) }))}
-                                        className="w-full bg-slate-50 border border-slate-200 text-slate-900 text-2xl font-black px-6 py-5 rounded-[2rem] focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-300 transition-all placeholder:text-slate-300"
-                                        placeholder="e.g. 500"
-                                    />
-                                    <div className="absolute right-6 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                                        Slots
-                                    </div>
+                        {postEvent.ticketType === 'general' && (
+                            <div className="mt-10 pt-10 border-t border-slate-100 animate-in fade-in slide-in-from-top-4 flex flex-col items-center justify-center py-12">
+                                <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4 border border-slate-100 shadow-inner">
+                                    <Ticket size={24} className="text-emerald-500" />
                                 </div>
-                                <p className="text-[11px] font-medium text-slate-500 mt-4 max-w-md leading-relaxed">
-                                    Since this is a free or general admission event, no physical seating map is required. Simply enter the maximum number of people allowed.
+                                <h4 className="text-xl font-black text-slate-900 uppercase tracking-tight">No Seat Map Required</h4>
+                                <p className="text-[11px] font-medium text-slate-500 mt-2 max-w-md text-center leading-relaxed">
+                                    General Admission events do not require a physical seating layout. You can configure your ticket categories, pricing, and capacity in the next step.
                                 </p>
                             </div>
                         )}
                     </div>
 
-                    {postEvent.ticketType === 'paid' && (
+                    {postEvent.ticketType === 'reserved' && (
                         <BlockMapDesigner 
                             postEvent={postEvent}
                             setPostEvent={setPostEvent}

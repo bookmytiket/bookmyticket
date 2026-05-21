@@ -2,7 +2,7 @@
 
 -- 1. Wallets Table
 CREATE TABLE IF NOT EXISTS public.wallets (
-    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
     wallet_type TEXT NOT NULL CHECK (wallet_type IN ('admin', 'organizer')),
     balance NUMERIC(10, 2) DEFAULT 0.00,
@@ -18,7 +18,7 @@ ALTER TABLE public.wallets ADD COLUMN IF NOT EXISTS wallet_type TEXT DEFAULT 'or
 
 -- 2. Wallet Transactions Table
 CREATE TABLE IF NOT EXISTS public.wallet_transactions (
-    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     wallet_id UUID REFERENCES public.wallets(id) ON DELETE CASCADE,
     booking_id UUID REFERENCES public.bookings(id) ON DELETE SET NULL,
     transaction_type TEXT NOT NULL CHECK (transaction_type IN ('credit', 'debit', 'refund', 'settlement', 'withdrawal')),
@@ -34,7 +34,7 @@ ALTER TABLE public.wallet_transactions ADD COLUMN IF NOT EXISTS transaction_type
 
 -- 3. Booking Financials Table
 CREATE TABLE IF NOT EXISTS public.booking_financials (
-    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     booking_id UUID REFERENCES public.bookings(id) ON DELETE CASCADE UNIQUE,
     ticket_amount NUMERIC(10, 2) NOT NULL DEFAULT 0,
     discount_amount NUMERIC(10, 2) NOT NULL DEFAULT 0,
@@ -50,7 +50,7 @@ CREATE TABLE IF NOT EXISTS public.booking_financials (
 
 -- 4. Payout Requests Table
 CREATE TABLE IF NOT EXISTS public.payout_requests (
-    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     organizer_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
     amount NUMERIC(10, 2) NOT NULL,
     status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'completed', 'rejected')),
@@ -62,7 +62,7 @@ CREATE TABLE IF NOT EXISTS public.payout_requests (
 
 -- 5. Organizer Revenue Ledger Table
 CREATE TABLE IF NOT EXISTS public.organizer_revenue_ledger (
-    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     organizer_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
     event_id UUID REFERENCES public.events(id) ON DELETE CASCADE,
     booking_id UUID REFERENCES public.bookings(id) ON DELETE CASCADE UNIQUE,
@@ -78,7 +78,7 @@ CREATE TABLE IF NOT EXISTS public.organizer_revenue_ledger (
 
 -- 6. Settlement Reconciliation Logs Table
 CREATE TABLE IF NOT EXISTS public.settlement_reconciliation_logs (
-    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     booking_id UUID REFERENCES public.bookings(id) ON DELETE CASCADE UNIQUE,
     customer_paid NUMERIC(10, 2) NOT NULL DEFAULT 0,
     organizer_expected NUMERIC(10, 2) NOT NULL DEFAULT 0,

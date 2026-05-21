@@ -33,12 +33,39 @@ export default function BlockMapDesigner({ postEvent, setPostEvent }) {
 
     // Sync state up
     useEffect(() => {
+        // Map V2 sections and boxes back to V1 blocks format for backend
+        const mappedBlocks = [];
+        sections.forEach(sec => {
+            const seatTypeForColor = sec.isGeneral ? 'general' : (sec.seats[0]?.seatType || 'general');
+            mappedBlocks.push({
+                name: sec.name,
+                category: sec.isGeneral ? 'General' : (sec.seats[0]?.seatType || 'General'),
+                color: THEATRE_SEAT_TYPES[seatTypeForColor]?.color || '#ec4899',
+                basePrice: sec.basePrice,
+                rows: sec.rows,
+                cols: sec.cols,
+                isGeneral: sec.isGeneral,
+                capacity: sec.capacity
+            });
+        });
+        boxes.forEach(box => {
+            mappedBlocks.push({
+                name: box.name,
+                category: 'Box',
+                color: THEATRE_SEAT_TYPES['box']?.color || '#818cf8',
+                basePrice: box.price,
+                rows: 1,
+                cols: box.seatCount,
+                isGeneral: false
+            });
+        });
+
         setPostEvent(prev => ({
             ...prev,
             layoutConfig,
             seatingSections: sections,
             seatingBoxes: boxes,
-            blocks: [] // clear old blocks
+            blocks: mappedBlocks
         }));
     }, [layoutConfig, sections, boxes, setPostEvent]);
 
@@ -49,6 +76,7 @@ export default function BlockMapDesigner({ postEvent, setPostEvent }) {
     const [genStartRow, setGenStartRow] = useState('A');
     const [genEndRow, setGenEndRow] = useState('J');
     const [genSeatsPerRow, setGenSeatsPerRow] = useState(20);
+    const [genCapacity, setGenCapacity] = useState(100);
 
     const [boxName, setBoxName] = useState('');
     const [boxSeats, setBoxSeats] = useState(6);
@@ -57,22 +85,31 @@ export default function BlockMapDesigner({ postEvent, setPostEvent }) {
     const handleGenerateSection = () => {
         if (!genSectionName || !genStartRow || !genEndRow) return;
 
-        const startCharCode = genStartRow.charCodeAt(0);
-        const endCharCode = genEndRow.charCodeAt(0);
+        const isGeneralType = genSeatType === 'general';
         
         let newSeats = [];
-        for (let r = startCharCode; r <= endCharCode; r++) {
-            const rowLabel = String.fromCharCode(r);
-            for (let s = 1; s <= genSeatsPerRow; s++) {
-                newSeats.push({
-                    id: `seat-${Date.now()}-${rowLabel}${s}`,
-                    rowLabel: rowLabel,
-                    seatNumber: s,
-                    seatLabel: `${rowLabel}${s}`,
-                    seatType: genSeatType,
-                    status: 'available',
-                    isAisle: false
-                });
+        let rowCount = 0;
+        let colCount = 0;
+
+        if (!isGeneralType) {
+            const startCharCode = genStartRow.charCodeAt(0);
+            const endCharCode = genEndRow.charCodeAt(0);
+            rowCount = endCharCode - startCharCode + 1;
+            colCount = genSeatsPerRow;
+            
+            for (let r = startCharCode; r <= endCharCode; r++) {
+                const rowLabel = String.fromCharCode(r);
+                for (let s = 1; s <= genSeatsPerRow; s++) {
+                    newSeats.push({
+                        id: `seat-${Date.now()}-${rowLabel}${s}`,
+                        rowLabel: rowLabel,
+                        seatNumber: s,
+                        seatLabel: `${rowLabel}${s}`,
+                        seatType: genSeatType,
+                        status: 'available',
+                        isAisle: false
+                    });
+                }
             }
         }
 
@@ -81,8 +118,10 @@ export default function BlockMapDesigner({ postEvent, setPostEvent }) {
             name: genSectionName,
             basePrice: genBasePrice,
             seats: newSeats,
-            rows: endCharCode - startCharCode + 1,
-            cols: genSeatsPerRow
+            rows: rowCount,
+            cols: colCount,
+            isGeneral: isGeneralType,
+            capacity: isGeneralType ? genCapacity : undefined
         };
 
         setSections([...sections, newSection]);
@@ -93,6 +132,7 @@ export default function BlockMapDesigner({ postEvent, setPostEvent }) {
         setGenStartRow('A');
         setGenEndRow('J');
         setGenSeatsPerRow(20);
+        setGenCapacity(100);
     };
 
     const handleCreateBox = () => {
@@ -146,7 +186,11 @@ export default function BlockMapDesigner({ postEvent, setPostEvent }) {
     const totalCapacity = useMemo(() => {
         let capacity = 0;
         sections.forEach(sec => {
-            capacity += sec.seats.filter(s => !s.isAisle && s.status !== 'blocked').length;
+            if (sec.isGeneral && sec.capacity) {
+                capacity += sec.capacity;
+            } else {
+                capacity += sec.seats.filter(s => !s.isAisle && s.status !== 'blocked').length;
+            }
         });
         boxes.forEach(box => {
             capacity += box.seatCount;
@@ -364,22 +408,37 @@ export default function BlockMapDesigner({ postEvent, setPostEvent }) {
                                 </div>
 
                                 <div className="grid grid-cols-2 md:grid-cols-5 gap-6 items-end">
-                                    <div>
-                                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-2">Start Row</label>
-                                        <input type="text" maxLength={1} value={genStartRow} onChange={e => setGenStartRow(e.target.value.toUpperCase())} className="w-full bg-white border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-800 text-center focus:outline-none focus:border-pink-500 focus:ring-4 focus:ring-pink-500/10 transition-all" />
-                                    </div>
-                                    <div>
-                                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-2">End Row</label>
-                                        <input type="text" maxLength={1} value={genEndRow} onChange={e => setGenEndRow(e.target.value.toUpperCase())} className="w-full bg-white border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-800 text-center focus:outline-none focus:border-pink-500 focus:ring-4 focus:ring-pink-500/10 transition-all" />
-                                    </div>
-                                    <div>
-                                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-2">Seats/Row</label>
-                                        <input type="number" min="1" max="100" value={genSeatsPerRow} onChange={e => setGenSeatsPerRow(Number(e.target.value))} className="w-full bg-white border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-800 text-center focus:outline-none focus:border-pink-500 focus:ring-4 focus:ring-pink-500/10 transition-all" />
-                                    </div>
-                                    <div>
-                                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-2">Base Price (₹)</label>
-                                        <input type="number" value={genBasePrice} onChange={e => setGenBasePrice(Number(e.target.value))} className="w-full bg-white border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-800 focus:outline-none focus:border-pink-500 focus:ring-4 focus:ring-pink-500/10 transition-all" />
-                                    </div>
+                                    {genSeatType === 'general' ? (
+                                        <>
+                                            <div className="md:col-span-3">
+                                                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-2">Total Capacity</label>
+                                                <input type="number" min="1" value={genCapacity} onChange={e => setGenCapacity(Number(e.target.value))} className="w-full bg-white border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-800 focus:outline-none focus:border-pink-500 focus:ring-4 focus:ring-pink-500/10 transition-all" />
+                                            </div>
+                                            <div>
+                                                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-2">Base Price (₹)</label>
+                                                <input type="number" value={genBasePrice} onChange={e => setGenBasePrice(Number(e.target.value))} className="w-full bg-white border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-800 focus:outline-none focus:border-pink-500 focus:ring-4 focus:ring-pink-500/10 transition-all" />
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <div>
+                                                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-2">Start Row</label>
+                                                <input type="text" maxLength={1} value={genStartRow} onChange={e => setGenStartRow(e.target.value.toUpperCase())} className="w-full bg-white border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-800 text-center focus:outline-none focus:border-pink-500 focus:ring-4 focus:ring-pink-500/10 transition-all" />
+                                            </div>
+                                            <div>
+                                                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-2">End Row</label>
+                                                <input type="text" maxLength={1} value={genEndRow} onChange={e => setGenEndRow(e.target.value.toUpperCase())} className="w-full bg-white border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-800 text-center focus:outline-none focus:border-pink-500 focus:ring-4 focus:ring-pink-500/10 transition-all" />
+                                            </div>
+                                            <div>
+                                                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-2">Seats/Row</label>
+                                                <input type="number" min="1" max="100" value={genSeatsPerRow} onChange={e => setGenSeatsPerRow(Number(e.target.value))} className="w-full bg-white border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-800 text-center focus:outline-none focus:border-pink-500 focus:ring-4 focus:ring-pink-500/10 transition-all" />
+                                            </div>
+                                            <div>
+                                                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-2">Base Price (₹)</label>
+                                                <input type="number" value={genBasePrice} onChange={e => setGenBasePrice(Number(e.target.value))} className="w-full bg-white border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-800 focus:outline-none focus:border-pink-500 focus:ring-4 focus:ring-pink-500/10 transition-all" />
+                                            </div>
+                                        </>
+                                    )}
                                     <div className="md:col-span-1 col-span-2">
                                         <button onClick={handleGenerateSection} disabled={!genSectionName} className="w-full h-[52px] bg-pink-500 hover:bg-pink-600 disabled:opacity-50 text-white font-black text-[11px] uppercase tracking-widest rounded-2xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-pink-500/30">
                                             <Plus size={16} /> Generate

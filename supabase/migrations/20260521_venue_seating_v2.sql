@@ -11,7 +11,7 @@ DROP TABLE IF EXISTS seating_sections CASCADE;
 DROP TABLE IF EXISTS seating_layouts CASCADE;
 
 CREATE TABLE IF NOT EXISTS seating_layouts (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     event_id UUID REFERENCES events(id) ON DELETE CASCADE,
     layout_name VARCHAR(255) NOT NULL,
     layout_type VARCHAR(100),
@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS seating_layouts (
 );
 
 CREATE TABLE IF NOT EXISTS seating_sections (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     layout_id UUID REFERENCES seating_layouts(id) ON DELETE CASCADE,
     section_name VARCHAR(255) NOT NULL,
     section_type VARCHAR(100),
@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS seating_sections (
 );
 
 CREATE TABLE IF NOT EXISTS seating_rows (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     layout_id UUID REFERENCES seating_layouts(id) ON DELETE CASCADE,
     section_id UUID REFERENCES seating_sections(id) ON DELETE CASCADE,
     row_label VARCHAR(50) NOT NULL,
@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS seating_rows (
 );
 
 CREATE TABLE IF NOT EXISTS seating_seats (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     layout_id UUID REFERENCES seating_layouts(id) ON DELETE CASCADE,
     section_id UUID REFERENCES seating_sections(id) ON DELETE CASCADE,
     row_id UUID REFERENCES seating_rows(id) ON DELETE CASCADE,
@@ -60,7 +60,7 @@ CREATE TABLE IF NOT EXISTS seating_seats (
 );
 
 CREATE TABLE IF NOT EXISTS seating_boxes (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     layout_id UUID REFERENCES seating_layouts(id) ON DELETE CASCADE,
     section_id UUID REFERENCES seating_sections(id) ON DELETE CASCADE,
     box_name VARCHAR(255) NOT NULL,
@@ -71,7 +71,7 @@ CREATE TABLE IF NOT EXISTS seating_boxes (
 );
 
 CREATE TABLE IF NOT EXISTS showtime_inventory (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     showtime_id UUID, -- assuming event_showtimes table from previous logic, but will link correctly later if needed. For now just UUID.
     seat_id UUID REFERENCES seating_seats(id) ON DELETE CASCADE,
     availability_status VARCHAR(50) DEFAULT 'available',
@@ -81,7 +81,7 @@ CREATE TABLE IF NOT EXISTS showtime_inventory (
 );
 
 CREATE TABLE IF NOT EXISTS seat_reservations (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
     seat_id UUID REFERENCES seating_seats(id) ON DELETE CASCADE,
     showtime_id UUID,

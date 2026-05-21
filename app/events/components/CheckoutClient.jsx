@@ -1356,16 +1356,16 @@ export default function CheckoutClient({ id: propId, sessionToken }) {
                                         
 
 
-                                        <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-100/50">
+                                        <div className="bg-white p-3 rounded-2xl border-2 border-slate-100 shadow-sm transition-all hover:border-pink-100 mb-4">
                                             <label className="flex items-center gap-3 cursor-pointer group">
                                                 <input
                                                     type="checkbox"
                                                     checked={termsAccepted}
                                                     onChange={(e) => setTermsAccepted(e.target.checked)}
-                                                    className="w-5 h-5 rounded border-slate-200 text-pink-500 focus:ring-pink-500 transition-all cursor-pointer"
+                                                    className="w-4 h-4 rounded border-slate-200 text-pink-500 focus:ring-pink-500 transition-all cursor-pointer bg-slate-50 shrink-0"
                                                 />
-                                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-tight">
-                                                    I agree to the <button type="button" onClick={() => setShowTermsModal(true)} className="text-slate-900 underline underline-offset-4 font-black hover:text-pink-500 transition-colors">Event Terms & Conditions</button>
+                                                <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest leading-tight mt-0.5">
+                                                    I agree to the <button type="button" onClick={() => setShowTermsModal(true)} className="text-slate-900 font-black hover:text-pink-500 transition-colors border-b-2 border-slate-200 hover:border-pink-200 pb-0.5">Event Terms & Conditions</button>
                                                 </span>
                                             </label>
                                         </div>
@@ -1374,19 +1374,19 @@ export default function CheckoutClient({ id: propId, sessionToken }) {
                                             onClick={handleConfirmPay}
                                             disabled={!termsAccepted || isProcessing}
                                             className={`
-                                                w-full py-4 rounded-[1.5rem] font-black uppercase tracking-[0.25em] text-[13px] transition-all shadow-2xl flex items-center justify-center gap-4
+                                                w-full py-4 rounded-2xl font-black uppercase tracking-[0.2em] text-[11px] transition-all flex items-center justify-center gap-3
                                                 ${termsAccepted && !isProcessing
-                                                    ? 'bg-slate-900 text-white shadow-slate-900/40 hover:scale-[1.02] active:scale-98 hover:shadow-slate-900/60' 
-                                                    : 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none'}
+                                                    ? 'bg-gradient-to-r from-pink-500 to-purple-600 text-white shadow-[0_20px_40px_-15px_rgba(236,72,153,0.3)] hover:scale-[1.02] active:scale-95' 
+                                                    : 'bg-slate-50 text-slate-400 border-2 border-slate-100 cursor-not-allowed shadow-none'}
                                             `}
                                         >
                                             {isProcessing ? (
-                                                <div className="flex items-center gap-4">
-                                                    <div className="w-5 h-5 border-4 border-white/20 border-t-white rounded-full animate-spin" />
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-4 h-4 border-[3px] border-white/20 border-t-white rounded-full animate-spin" />
                                                     Processing...
                                                 </div>
                                             ) : (
-                                                <>Proceed to Payment <ArrowRight size={20} /></>
+                                                <>Proceed to Payment <ArrowRight size={16} /></>
                                             )}
                                         </button>
                                     </div>

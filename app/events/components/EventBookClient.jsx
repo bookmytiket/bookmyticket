@@ -176,11 +176,14 @@ export default function EventBookClient({ id }) {
     const [relationalSeats, setRelationalSeats] = useState([]);
 
     const isSeating = useMemo(() => {
-        return event &&
-            (
-                (event.seatingEnabled !== false && Array.isArray(event.seatCategories) && event.seatCategories.length > 0 && Number(event.cols) > 0) ||
-                (event.dynamic_config?.seating_type === 'visual' && event.blocks?.length > 0)
-            );
+        if (!event) return false;
+        if (event.event_type === 'general') return false;
+        if (event.event_type === 'reserved') return true;
+
+        return (
+            (event.seatingEnabled !== false && Array.isArray(event.seatCategories) && event.seatCategories.length > 0 && Number(event.cols) > 0) ||
+            (event.dynamic_config?.seating_type === 'visual' && event.blocks?.length > 0)
+        );
     }, [event]);
 
     // Real-time Seat Locking
@@ -284,11 +287,28 @@ export default function EventBookClient({ id }) {
     }, [id, isSeating]);
 
     const bookedSeats = useMemo(() => {
-        return relationalSeats.filter(s => s.status !== 'available').map(s => {
+        return relationalSeats.filter(s => s.status === 'booked' || s.status === 'sold').map(s => {
             const block = event?.blocks?.find(b => b.id === s.block_id) || { name: 'Unknown' };
             return `${block.name}-${s.row_name}-${s.seat_number}`;
         });
     }, [relationalSeats, event?.blocks]);
+
+    const blockedSeats = useMemo(() => {
+        return relationalSeats.filter(s => s.status === 'blocked' || s.status === 'maintenance').map(s => {
+            const block = event?.blocks?.find(b => b.id === s.block_id) || { name: 'Unknown' };
+            return `${block.name}-${s.row_name}-${s.seat_number}`;
+        });
+    }, [relationalSeats, event?.blocks]);
+
+    const dbReservedSeats = useMemo(() => {
+        return relationalSeats.filter(s => s.status === 'reserved' || s.status === 'temp_locked').map(s => {
+            const block = event?.blocks?.find(b => b.id === s.block_id) || { name: 'Unknown' };
+            return `${block.name}-${s.row_name}-${s.seat_number}`;
+        });
+    }, [relationalSeats, event?.blocks]);
+
+    // Combine database reservations with real-time locks
+    const allReservedSeats = useMemo(() => [...new Set([...dbReservedSeats, ...lockedSeats])], [dbReservedSeats, lockedSeats]);
 
     const isSeatBooked = (seatId) => bookedSeats.includes(seatId);
 
@@ -579,7 +599,8 @@ export default function EventBookClient({ id }) {
                                                 blocks={event.blocks}
                                                 categories={event.dynamic_config?.categories || event.seat_categories || []}
                                                 bookedSeats={bookedSeats}
-                                                reservedSeats={lockedSeats} // Others' locks
+                                                blockedSeats={blockedSeats}
+                                                reservedSeats={allReservedSeats} // Realtime locks + DB locks
                                                 selectedSeats={selectedSeats}
                                                 onToggleSeat={toggleSeat}
                                                 backgroundUrl={event.seat_map_background_url}
@@ -607,21 +628,26 @@ export default function EventBookClient({ id }) {
                                                 {!isSeating && (
                                                     <div>
                                                         <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-3">Tickets</p>
-                                                        <div className="flex items-center gap-4 bg-slate-50 p-2 rounded-2xl border border-slate-100">
-                                                            <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="w-10 h-10 rounded-xl bg-white flex items-center justify-center font-black shadow-sm">−</button>
-                                                            <span className="text-xl font-black w-12 text-center">{quantity}</span>
-                                                            <button onClick={() => setQuantity(q => q + 1)} className="w-10 h-10 rounded-xl bg-white flex items-center justify-center font-black shadow-sm">+</button>
+                                                        <div className="flex items-center gap-3 bg-white p-2 rounded-2xl border-2 border-slate-100 shadow-sm">
+                                                            <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="w-10 h-10 rounded-xl bg-slate-50 text-slate-600 flex items-center justify-center font-black hover:bg-pink-50 hover:text-pink-600 transition-colors active:scale-95">−</button>
+                                                            <span className="text-xl font-black w-12 text-center text-slate-900">{quantity}</span>
+                                                            <button onClick={() => setQuantity(q => q + 1)} className="w-10 h-10 rounded-xl bg-slate-50 text-slate-600 flex items-center justify-center font-black hover:bg-pink-50 hover:text-pink-600 transition-colors active:scale-95">+</button>
                                                         </div>
                                                     </div>
                                                 )}
                                                 {isSeating && (
                                                     <div>
-                                                        <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-3">Selected</p>
-                                                        <p className="text-xl font-black">{selectedSeats.length} Seat{selectedSeats.length !== 1 ? 's' : ''}</p>
+                                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Selected</p>
+                                                        <p className="text-xl font-black text-slate-900">{selectedSeats.length} Seat{selectedSeats.length !== 1 ? 's' : ''}</p>
                                                     </div>
                                                 )}
                                             </div>
-                                            <button onClick={handleContinue} className="w-full md:w-auto px-10 py-4 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-[0.2em] text-[11px] shadow-xl">Secure Booking <ArrowRight size={16} /></button>
+                                            <button 
+                                                onClick={handleContinue} 
+                                                className="w-full md:w-auto px-10 py-5 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-[1.25rem] font-black uppercase tracking-[0.2em] text-[11px] shadow-[0_20px_40px_-15px_rgba(236,72,153,0.3)] hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3 whitespace-nowrap"
+                                            >
+                                                Secure Booking <ArrowRight size={16} />
+                                            </button>
                                         </motion.div>
                                     )}
                                 </motion.div>
@@ -966,7 +992,7 @@ export default function EventBookClient({ id }) {
                         
                         {/* Summary Card */}
                         <div className="bg-white rounded-[40px] border border-slate-100 shadow-2xl overflow-hidden">
-                            <div className="h-40 relative">
+                            <div className="h-28 relative">
                                 <img 
                                     src={event.img} 
                                     alt={event.title} 

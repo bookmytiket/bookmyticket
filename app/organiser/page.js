@@ -1176,6 +1176,7 @@ function OrganiserPanel() {
             ...getInitialPostEvent(),
             ...ev,
             id: ev.id,
+            ticketType: ev.event_type || 'reserved',
             bannerPreview: ev.img || ev.banner_preview || ev.bannerPreview,
             seatingEnabled: ev.seating_enabled !== false,
             isFeature: ev.is_featured ? "Yes" : "No",
@@ -2158,6 +2159,7 @@ function OrganiserPanel() {
     zipCode: "",
     countryCode: "",
     stateCode: "",
+    ticketType: 'reserved',
     seatingEnabled: true,
     environment: "Indoor",
     normalTicketCapacity: "",
@@ -2554,7 +2556,7 @@ function OrganiserPanel() {
 
     const firstSlot = effectiveSlots[0] || { date: today, time: "" };
 
-    const isSeating = !isOnline && postEvent.seatingEnabled !== false;
+    const isSeating = !isOnline && postEvent.ticketType === 'reserved';
     const categories = postEvent.categories || [];
 
     // Total Capacity
@@ -2669,6 +2671,7 @@ function OrganiserPanel() {
         typeof postEvent.bannerPreview === "string"
           ? postEvent.bannerPreview
           : undefined,
+      event_type: postEvent.ticketType || 'reserved',
       seating_enabled: isSeating,
       total_seats: totalSeats,
       price: finalPrice,
@@ -2904,8 +2907,9 @@ function OrganiserPanel() {
 
     if (editingEvent) {
       const { organiser_id, ...updatePayload } = payload;
-      updateEventMutation({ id: editingEvent.id, ...updatePayload })
-        .then(async () => {
+      supabase.rpc("update_event_transaction", { p_event_id: editingEvent.id, p_update_payload: updatePayload })
+        .then(async ({ error }) => {
+            if (error) throw error;
             try {
               const isTournament = ["Tournament Event", "Tournament", "Sports Tournament"].includes(postEvent.type);
               const isMarathon = ["Marathon", "Marathon Event"].includes(postEvent.type);
@@ -2959,6 +2963,56 @@ function OrganiserPanel() {
               }
             } catch (err) {
               console.error("Relational update failed:", err);
+            }
+
+            // Sync General Admission Categories & Inventory
+            if (postEvent.ticketType === 'general' && categories.length > 0) {
+              try {
+                // To keep it simple and safe, we can upsert or recreate.
+                // For safety with existing bookings, it's better to update, but since we are replacing categories,
+                // let's just make sure they exist in event_ticket_categories.
+                for (const c of categories) {
+                  // We'll check if the category exists by name for this event.
+                  const { data: existingCat } = await supabase.from('event_ticket_categories')
+                    .select('id')
+                    .eq('event_id', editingEvent.id)
+                    .eq('ticket_name', c.name)
+                    .maybeSingle();
+
+                  let ticketCatId = existingCat?.id;
+
+                  if (!existingCat) {
+                    const { data: newCat } = await supabase.from('event_ticket_categories').insert({
+                      event_id: editingEvent.id,
+                      ticket_name: c.name,
+                      ticket_type: 'general',
+                      price: c.price,
+                      capacity: c.totalSlots || 0,
+                      remaining_count: c.totalSlots || 0
+                    }).select().single();
+                    ticketCatId = newCat?.id;
+
+                    if (ticketCatId) {
+                      await supabase.from('general_inventory').insert({
+                        event_id: editingEvent.id,
+                        ticket_category_id: ticketCatId,
+                        total_capacity: c.totalSlots || 0,
+                        remaining_count: c.totalSlots || 0
+                      });
+                    }
+                  } else {
+                    // Update capacity if it exists
+                    await supabase.from('event_ticket_categories')
+                      .update({ price: c.price, capacity: c.totalSlots || 0 })
+                      .eq('id', ticketCatId);
+                    await supabase.from('general_inventory')
+                      .update({ total_capacity: c.totalSlots || 0 })
+                      .eq('ticket_category_id', ticketCatId);
+                  }
+                }
+              } catch (err) {
+                console.error("Failed to update general categories:", err);
+              }
             }
 
           // Relational Seating Logic
@@ -3096,6 +3150,32 @@ function OrganiserPanel() {
               });
             } catch (err) {
               console.error("Marathon sync failed:", err);
+            }
+          }
+
+          if (postEvent.ticketType === 'general' && categories.length > 0 && newEvent?.id) {
+            try {
+              for (const c of categories) {
+                const { data: ticketCat } = await supabase.from('event_ticket_categories').insert({
+                  event_id: newEvent.id,
+                  ticket_name: c.name,
+                  ticket_type: 'general',
+                  price: c.price,
+                  capacity: c.totalSlots || 0,
+                  remaining_count: c.totalSlots || 0
+                }).select().single();
+
+                if (ticketCat) {
+                  await supabase.from('general_inventory').insert({
+                    event_id: newEvent.id,
+                    ticket_category_id: ticketCat.id,
+                    total_capacity: ticketCat.capacity,
+                    remaining_count: ticketCat.capacity
+                  });
+                }
+              }
+            } catch (err) {
+              console.error("Failed to save general categories:", err);
             }
           }
 
@@ -6648,6 +6728,8 @@ function OrganiserPanel() {
                                               ...getInitialPostEvent(),
                                               ...ev,
                                               // Map snake_case from Convex to camelCase for form state
+                                              ticketType:
+                                                ev.event_type || 'reserved',
                                               seatingEnabled:
                                                 ev.seating_enabled !== undefined
                                                   ? ev.seating_enabled
