@@ -31,6 +31,10 @@ function PWAScanContent() {
     const [isValidating, setIsValidating] = useState(false);
     const [gateName, setGateName] = useState("Main Entrance");
     const [isExpired, setIsExpired] = useState(false);
+    const [isActioning, setIsActioning] = useState(false);
+    const [rejectionReason, setRejectionReason] = useState("");
+    const [showRejectModal, setShowRejectModal] = useState(false);
+
 
     // Fetch Staff Record for restrictions
     const { data: staffRecord } = useSupabaseQuery(
@@ -119,13 +123,64 @@ function PWAScanContent() {
         };
     }, [isScannerOpen, isExpired]);
 
+    const handleAction = async (actionType) => {
+        if (!scanResult || !scanResult.ticket_id) return;
+        setIsActioning(true);
+
+        try {
+            const res = await fetch("/api/scanner/action", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    ticketId: scanResult.ticket_id,
+                    bookingId: scanResult.booking_id,
+                    ticketCode: scanResult.ticket_code,
+                    action: actionType,
+                    idType: "Visual Match",
+                    rejectionReason: actionType === 'reject' ? rejectionReason : null,
+                    deviceUuid: navigator.userAgent,
+                    deviceName: "Staff Scanner Portal",
+                    gateName: gateName,
+                    scannerUserId: user?.id
+                })
+            });
+
+            const data = await res.json();
+            if (res.ok && data.status === "valid") {
+                showToast("Entry Approved", "success");
+                setScanResult({
+                    ...scanResult,
+                    status: "valid",
+                    message: "TICKET APPROVED • WELCOME TO THE EVENT!"
+                });
+                refetchScanLogs();
+            } else if (res.ok && data.status === "rejected") {
+                showToast("Entry Rejected", "error");
+                setScanResult({
+                    ...scanResult,
+                    status: "rejected",
+                    message: "ENTRY REJECTED • " + rejectionReason
+                });
+                setShowRejectModal(false);
+                setRejectionReason("");
+                refetchScanLogs();
+            } else {
+                showToast(data.message || "Action failed", "error");
+            }
+        } catch (err) {
+            showToast("Network error", "error");
+        } finally {
+            setIsActioning(false);
+        }
+    };
+
     const handleValidate = async (id) => {
         if (!id || isExpired) return;
         setIsValidating(true);
         setScanResult(null);
 
         try {
-            const res = await fetch("/api/scanner/validate", {
+            const res = await fetch("/api/scanner/lookup", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"
@@ -142,28 +197,10 @@ function PWAScanContent() {
             const data = await res.json();
 
             if (res.ok) {
-                if (data.status === "valid") {
-                    setScanResult({
-                        status: "valid",
-                        booking: {
-                            id: data.ticket_code || id.slice(-8),
-                            full_name: data.attendee,
-                            event_name: data.event,
-                            ticket_category: data.category
-                        }
-                    });
-                    showToast("Entry Approved", "success");
-                    refetchScanLogs();
+                if (data.status === "requires_action") {
+                    setScanResult(data);
                 } else if (data.status === "already_used") {
-                    setScanResult({
-                        status: "already_used",
-                        booking: {
-                            id: data.ticket_code || id.slice(-8),
-                            full_name: data.attendee,
-                            event_name: data.event,
-                            scanned_at: data.scanned_at || new Date().toISOString()
-                        }
-                    });
+                    setScanResult(data);
                     showToast("Already Checked-In", "warning");
                 } else {
                     setScanResult({
@@ -185,9 +222,7 @@ function PWAScanContent() {
     };
 
     const recentScans = useMemo(() => {
-        return scanLogs
-            .filter(log => log.scan_status?.toLowerCase() === 'success' || log.scan_status?.toLowerCase() === 'scanned')
-            .slice(0, 15);
+        return scanLogs.slice(0, 15);
     }, [scanLogs]);
 
     if (isExpired) {
@@ -343,12 +378,15 @@ function PWAScanContent() {
                                 "bg-red-500 text-[#2C2520] shadow-red-500/20"
                             }`}>
                                 {scanResult.status === "valid" ? <CheckCircle size={36} /> : 
+                                 scanResult.status === "requires_action" ? <AlertCircle size={36} /> :  
                                  scanResult.status === "already_used" ? <AlertCircle size={36} /> : 
                                  <XCircle size={36} />}
                             </div>
                             <div>
                                 <h3 className="text-2xl font-black italic uppercase leading-tight tracking-tight">
                                     {scanResult.status === "valid" ? "Access Granted" : 
+                                     scanResult.status === "requires_action" ? "Verify ID" : 
+                                     scanResult.status === "rejected" ? "Entry Rejected" :  
                                      scanResult.status === "already_used" ? "Ticket Scanned" : 
                                      scanResult.status === "wrong_event" ? "Wrong Event" :
                                      scanResult.status === "unpaid" ? "Payment Pending" :
@@ -356,57 +394,132 @@ function PWAScanContent() {
                                 </h3>
                                 <p className={`text-[10px] font-black uppercase tracking-widest mt-1 ${
                                     scanResult.status === "valid" ? "text-green-500" : 
+                                    scanResult.status === "requires_action" ? "text-blue-500" : 
                                     scanResult.status === "already_used" ? "text-amber-500" : 
                                     "text-red-400"
                                 }`}>
                                     {scanResult.status === "valid" ? "Verified & Checked-In" : 
+                                     scanResult.status === "requires_action" ? "Action Required • Awaiting Approval" :  
                                      scanResult.status === "already_used" ? "Duplicate Scan Blocked" : 
                                      "Security Alert • Blocked"}
                                 </p>
                             </div>
                         </div>
 
-                        {scanResult.booking && (
+                        {scanResult.attendee && (
                             <div className="space-y-4">
                                 <div className="p-5 rounded-3xl bg-[#F2EDE4] border border-[#EFECE6] space-y-4">
                                     <div>
                                         <p className="text-[9px] font-black text-[#7A7067] uppercase tracking-widest mb-1">Attendee</p>
-                                        <p className="text-lg font-black italic uppercase text-[#2C2520]">{scanResult.booking.full_name || scanResult.booking.user_name || "Guest Attendee"}</p>
+                                        <p className="text-lg font-black italic uppercase text-[#2C2520]">{scanResult.attendee || "Guest Attendee"}</p>
                                     </div>
                                     
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
                                             <p className="text-[9px] font-black text-[#7A7067] uppercase tracking-widest mb-1">Ticket ID</p>
-                                            <p className="text-xs font-bold text-[#7A7067]">#{scanResult.booking.id.slice(-8).toUpperCase()}</p>
+                                            <p className="text-xs font-bold text-[#7A7067]">#{(scanResult.booking_id || "00000000").slice(-8).toUpperCase()}</p>
                                         </div>
                                         <div>
                                             <p className="text-[9px] font-black text-[#7A7067] uppercase tracking-widest mb-1">Quantity</p>
-                                            <p className="text-xs font-bold text-[#7A7067]">{scanResult.booking.ticket_count || 1} Person(s)</p>
+                                            <p className="text-xs font-bold text-[#7A7067]">{1} Person(s)</p>
                                         </div>
                                     </div>
 
                                     {/* Marathon Specifics */}
-                                    {scanResult.booking.marathon_details && (
+                                    {scanResult.marathon_details && (
                                         <div className="pt-4 border-t border-[#EFECE6] grid grid-cols-2 gap-4">
                                             <div>
                                                 <p className="text-[9px] font-black text-[#8C7B6B] uppercase tracking-widest mb-1">Bib Number</p>
-                                                <p className="text-sm font-black italic text-[#2C2520]">{scanResult.booking.marathon_details.bib_number || "TBD"}</p>
+                                                <p className="text-sm font-black italic text-[#2C2520]">{scanResult.marathon_details.bib_number || "TBD"}</p>
                                             </div>
                                             <div>
                                                 <p className="text-[9px] font-black text-[#8C7B6B] uppercase tracking-widest mb-1">T-Shirt Size</p>
-                                                <p className="text-sm font-black italic text-[#2C2520]">{scanResult.booking.marathon_details.tshirt_size || "N/A"}</p>
+                                                <p className="text-sm font-black italic text-[#2C2520]">{scanResult.marathon_details.tshirt_size || "N/A"}</p>
                                             </div>
                                         </div>
                                     )}
                                 </div>
                                 
+                                
+                                {scanResult.status === "requires_action" && (
+                                    <div className="pt-4 border-t border-[#EFECE6] space-y-4">
+                                        <div className="p-4 rounded-2xl bg-white border border-[#EFECE6] space-y-2">
+                                            <p className="text-[10px] font-black text-[#8C7B6B] uppercase tracking-widest flex items-center gap-2">
+                                                <ShieldAlert size={14} /> ID Verification Required
+                                            </p>
+                                            <div className="space-y-1">
+                                                {(scanResult.verificationSettings?.accepted_id_types || []).map((idType, idx) => (
+                                                    <label key={idx} className="flex items-center gap-2 text-xs font-bold text-[#2C2520]">
+                                                        <input type="checkbox" className="w-3 h-3 accent-[#8C7B6B]" /> 
+                                                        Check {idType}
+                                                    </label>
+                                                ))}
+                                                <label className="flex items-center gap-2 text-xs font-bold text-[#2C2520]">
+                                                    <input type="checkbox" className="w-3 h-3 accent-[#8C7B6B]" /> 
+                                                    Match Photo & Name
+                                                </label>
+                                            </div>
+                                        </div>
+
+                                        {!showRejectModal ? (
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <button 
+                                                    onClick={() => handleAction('approve')}
+                                                    disabled={isActioning}
+                                                    className="py-4 rounded-2xl bg-green-500 text-white font-black uppercase tracking-widest text-[10px] shadow-lg shadow-green-500/20 active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                                                >
+                                                    <CheckCircle size={16} /> Approve
+                                                </button>
+                                                <button 
+                                                    onClick={() => setShowRejectModal(true)}
+                                                    disabled={isActioning}
+                                                    className="py-4 rounded-2xl bg-red-500 text-white font-black uppercase tracking-widest text-[10px] shadow-lg shadow-red-500/20 active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                                                >
+                                                    <XCircle size={16} /> Reject
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/20 space-y-3">
+                                                <p className="text-[10px] font-black text-red-500 uppercase tracking-widest">Rejection Reason</p>
+                                                <select 
+                                                    value={rejectionReason}
+                                                    onChange={e => setRejectionReason(e.target.value)}
+                                                    className="w-full bg-white border border-red-500/20 rounded-xl px-4 py-3 text-[#2C2520] text-sm font-bold outline-none"
+                                                >
+                                                    <option value="">Select a reason...</option>
+                                                    <option value="Invalid ID Proof">Invalid ID Proof</option>
+                                                    <option value="Name Mismatch">Name Mismatch</option>
+                                                    <option value="Underage">Underage</option>
+                                                    <option value="Suspicious Booking">Suspicious Booking</option>
+                                                    <option value="Intoxicated/Unruly">Intoxicated/Unruly</option>
+                                                </select>
+                                                <div className="flex gap-2">
+                                                    <button 
+                                                        onClick={() => setShowRejectModal(false)}
+                                                        className="flex-1 py-3 rounded-xl bg-white border border-[#EFECE6] text-[#7A7067] font-black uppercase tracking-widest text-[10px]"
+                                                    >
+                                                        Cancel
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => handleAction('reject')}
+                                                        disabled={!rejectionReason || isActioning}
+                                                        className="flex-1 py-3 rounded-xl bg-red-500 text-white font-black uppercase tracking-widest text-[10px] disabled:opacity-50"
+                                                    >
+                                                        Confirm Reject
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
                                 {scanResult.status === "already_used" && (
                                     <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex gap-3 items-start">
                                         <Clock size={16} className="text-amber-500 shrink-0 mt-0.5" />
                                         <div>
                                             <p className="text-[10px] font-black text-amber-500 uppercase tracking-widest mb-0.5">First Scan History</p>
                                             <p className="text-[10px] text-amber-500/80">
-                                                Time: {new Date(scanResult.booking.scanned_at).toLocaleString()}
+                                                Time: {new Date(scanResult.scanned_at).toLocaleString()}
                                             </p>
                                         </div>
                                     </div>
@@ -457,11 +570,21 @@ function PWAScanContent() {
                         {recentScans.map((scan) => (
                             <div key={scan.id} className="group p-4 rounded-3xl bg-[#FFFFFF] border border-[#EFECE6] flex items-center justify-between hover:border-[#8C7B6B]/30 transition-all">
                                 <div className="flex items-center gap-4">
-                                    <div className="w-10 h-10 rounded-xl bg-green-500/10 text-green-500 flex items-center justify-center">
-                                        <UserCheck size={18} />
+                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                                        scan.scan_status?.toLowerCase() === 'success' ? 'bg-green-500/10 text-green-500' :
+                                        scan.scan_status?.toLowerCase() === 'rejected' ? 'bg-red-500/10 text-red-500' :
+                                        'bg-amber-500/10 text-amber-500'
+                                    }`}>
+                                        {scan.scan_status?.toLowerCase() === 'success' ? <UserCheck size={18} /> : 
+                                         scan.scan_status?.toLowerCase() === 'rejected' ? <XCircle size={18} /> : 
+                                         <AlertCircle size={18} />}
                                     </div>
                                     <div>
-                                        <p className="text-xs font-black italic uppercase text-[#2C2520] leading-none mb-1">Ticket Validated</p>
+                                        <p className="text-xs font-black italic uppercase text-[#2C2520] leading-none mb-1">
+                                            {scan.scan_status?.toLowerCase() === 'success' ? 'Entry Approved' :
+                                             scan.scan_status?.toLowerCase() === 'rejected' ? 'Entry Rejected' :
+                                             scan.scan_status}
+                                        </p>
                                         <p className="text-[9px] text-[#7A7067] font-bold uppercase tracking-widest">
                                             Gate: {scan.gate_name || gateName} • {new Date(scan.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                         </p>
