@@ -132,7 +132,7 @@ export default function SignInPage() {
         // 2. Role-based Default Destinations (Primary fallbacks)
         const getRoleDefault = (r) => {
             if (r === 'admin' || r === 'super_admin' || r === 'system_admin') return "/admin";
-            if (r === 'staff' || r === 'scanner') return "/scanner";
+            if (r === 'staff' || r === 'scanner') return "/pwa-scan";
             if (r === 'organiser') return "/organiser";
             if (r === 'vendor' || r === 'branding_partner') return "/vendor/dashboard";
             return "/profile";
