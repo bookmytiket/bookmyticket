@@ -28,7 +28,14 @@ export async function POST(request) {
         }
 
         // 0. Session Authorization Check
-        if (scannerUserId && body.sessionToken) {
+        if (scannerUserId) {
+            if (!body.sessionToken) {
+                return NextResponse.json({
+                    status: "error",
+                    message: "Security update: Please log out and log back in to verify your session."
+                }, { status: 401 });
+            }
+            
             const { data: session } = await supabaseAdmin
                 .from('staff_active_sessions')
                 .select('session_status')

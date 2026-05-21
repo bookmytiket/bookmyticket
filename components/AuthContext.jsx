@@ -347,7 +347,11 @@ export function AuthProvider({ children }) {
 
     const checkStaffSession = async (staffId) => {
         const sessionToken = localStorage.getItem("bt_staff_session_token");
-        if (!sessionToken) return;
+        if (!sessionToken) {
+            console.log("No staff session token found. Enforcing strict security logout.");
+            logout();
+            return;
+        }
 
         const { data: session } = await supabase
             .from('staff_active_sessions')
@@ -355,7 +359,7 @@ export function AuthProvider({ children }) {
             .eq('session_token', sessionToken)
             .maybeSingle();
 
-        if (session && session.session_status !== 'active') {
+        if (!session || session.session_status !== 'active') {
             console.log("Device restriction: Session is no longer active.");
             logout();
             alert("Your session has expired or was terminated. Please log in again.");
@@ -424,7 +428,7 @@ export function AuthProvider({ children }) {
 
                         // Create new session
                         const sessionToken = Math.random().toString(36).substring(2) + Date.now();
-                        await supabase.from('staff_active_sessions').insert({
+                        const { error: insertErr } = await supabase.from('staff_active_sessions').insert({
                             staff_user_id: userData.id,
                             session_token: sessionToken,
                             device_id: deviceId,
@@ -433,6 +437,11 @@ export function AuthProvider({ children }) {
                             user_agent: userAgent,
                             session_status: 'active'
                         });
+                        
+                        if (insertErr) {
+                            console.error("Session Insert Error:", insertErr);
+                            throw insertErr;
+                        }
 
                         localStorage.setItem("bt_staff_session_token", sessionToken);
                         
