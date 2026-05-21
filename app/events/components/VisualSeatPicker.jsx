@@ -2,7 +2,7 @@
 import React, { useState, useRef, useMemo } from 'react';
 import { motion, AnimatePresence, useMotionValue, useSpring } from 'framer-motion';
 import { 
-    ZoomIn, ZoomOut, Move, RefreshCcw, Maximize2, Clock, CheckCircle2, ShoppingCart, Zap, CreditCard, ChevronRight
+    ZoomIn, ZoomOut, Move, RefreshCcw, Maximize2, Clock, CheckCircle2, ShoppingCart, Zap, CreditCard, ChevronRight, X
 } from 'lucide-react';
 
 export default function VisualSeatPicker({ 
@@ -78,6 +78,14 @@ export default function VisualSeatPicker({
                 </button>
             </div>
 
+            {/* SEAT LEGEND */}
+            <div className="absolute top-6 left-1/2 -translate-x-1/2 z-[70] flex items-center gap-4 bg-white/90 backdrop-blur-md px-6 py-3 rounded-2xl shadow-xl border border-slate-100 font-medium text-xs text-slate-600 tracking-wide">
+                <div className="flex items-center gap-2"><div className="w-5 h-5 rounded-lg bg-white border border-emerald-200 shadow-sm flex items-center justify-center"></div>Available</div>
+                <div className="flex items-center gap-2"><div className="w-5 h-5 rounded-lg bg-gradient-to-br from-pink-500 to-rose-600 shadow-sm flex items-center justify-center"></div>Selected</div>
+                <div className="flex items-center gap-2"><div className="w-5 h-5 rounded-lg bg-amber-50 border border-amber-200 text-amber-500 flex items-center justify-center"><Clock size={12} /></div>Processing</div>
+                <div className="flex items-center gap-2"><div className="w-5 h-5 rounded-lg bg-slate-100 border border-slate-200 text-slate-400 flex items-center justify-center opacity-70"><X size={12} strokeWidth={3} /></div>Sold Out</div>
+            </div>
+
             {/* MAIN CANVAS CONTAINER */}
             <div className="h-[600px] md:h-[750px] w-full relative bg-[#f8f9fa] overflow-hidden flex items-center justify-center" ref={containerRef}>
                 {backgroundUrl && (
@@ -129,18 +137,16 @@ export default function VisualSeatPicker({
                                                             const seatId = `${block.name}-${rowLabel}-${seatNum}`;
                                                             const status = getSeatStatus(seatId);
                                                             
-                                                            let seatStyles = "w-10 h-10 rounded-2xl flex shrink-0 items-center justify-center text-[11px] font-black transition-all border cursor-pointer hover:-translate-y-1 hover:scale-105 active:scale-95 ";
+                                                            let seatStyles = "w-10 h-10 rounded-[14px] flex shrink-0 items-center justify-center text-[12px] font-black transition-all border cursor-pointer relative overflow-hidden ";
                                                             
-                                                            if (status === 'sold') {
-                                                                seatStyles += "bg-slate-200 border-slate-200 text-transparent cursor-not-allowed";
-                                                            } else if (status === 'blocked') {
-                                                                seatStyles += "bg-slate-200 border-slate-200 text-transparent cursor-not-allowed";
+                                                            if (status === 'sold' || status === 'blocked') {
+                                                                seatStyles += "bg-slate-50 border-slate-200 text-slate-400 cursor-not-allowed shadow-inner grayscale opacity-90";
                                                             } else if (status === 'temp_locked') {
-                                                                seatStyles += "bg-amber-100 border-amber-300 text-amber-600 cursor-wait";
+                                                                seatStyles += "bg-gradient-to-br from-amber-50 to-orange-50 border-amber-300 text-amber-500 cursor-wait shadow-sm";
                                                             } else if (status === 'selected') {
-                                                                seatStyles += "bg-gradient-to-tr from-emerald-500 to-emerald-400 border-emerald-400 text-white shadow-lg shadow-emerald-500/40";
+                                                                seatStyles += "bg-gradient-to-br from-pink-500 via-rose-500 to-rose-600 border-rose-400 text-white shadow-xl shadow-rose-500/40 ring-4 ring-rose-100 hover:scale-105 active:scale-95";
                                                             } else {
-                                                                seatStyles += "bg-white border-slate-100 text-emerald-600 shadow-sm shadow-slate-200/50 hover:border-emerald-300 hover:shadow-emerald-500/20";
+                                                                seatStyles += "bg-white border-emerald-200 text-emerald-700 shadow-[0_4px_12px_rgba(16,185,129,0.12)] hover:border-emerald-400 hover:shadow-[0_8px_20px_rgba(16,185,129,0.25)] hover:-translate-y-1.5 active:scale-95";
                                                             }
 
                                                             return (
@@ -156,7 +162,8 @@ export default function VisualSeatPicker({
                                                                     className={seatStyles}
                                                                     title={`Row ${rowLabel} - Seat ${seatNum} (₹${blockPrice})`}
                                                                 >
-                                                                    {status === 'temp_locked' ? <Clock size={10} /> : (status === 'sold' || status === 'blocked' ? '' : seatNum)}
+                                                                    {status === 'selected' && <div className="absolute inset-0 bg-white/20 animate-pulse pointer-events-none rounded-[14px]"></div>}
+                                                                    {status === 'temp_locked' ? <Clock size={16} strokeWidth={2.5} className="animate-pulse" /> : (status === 'sold' || status === 'blocked' ? <X size={18} strokeWidth={4} /> : seatNum)}
                                                                 </button>
                                                             );
                                                         })}
