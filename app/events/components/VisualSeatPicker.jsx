@@ -97,7 +97,7 @@ export default function VisualSeatPicker({
                     dragConstraints={containerRef}
                     className="absolute inset-0 flex items-center justify-center cursor-grab active:cursor-grabbing"
                 >
-                    <div className={`relative ${isSpatial ? 'w-[2000px] h-[2000px]' : 'flex flex-col items-center gap-16 py-32'}`}>
+                    <div className={`relative transition-all duration-300 ${isSpatial ? 'w-[2000px] h-[2000px]' : 'flex flex-col items-center gap-24 py-32 min-w-full'}`}>
                         {blocks.map((block, bIdx) => {
                             const blockPrice = categories.find(c => c.name === block.category)?.price || block.price || block.ticket_price || 0;
                             
@@ -114,28 +114,28 @@ export default function VisualSeatPicker({
                                         </h4>
                                     </div>
 
-                                    <div className="flex gap-4 items-start bg-white/40 p-4 rounded-3xl border border-white/50 backdrop-blur-sm shadow-sm">
+                                    <div className="flex gap-6 items-start bg-white/40 p-6 rounded-3xl border border-white/50 backdrop-blur-sm shadow-xl">
                                         {/* ROW LABELS */}
-                                        <div className="flex flex-col gap-1 pt-1 pointer-events-none">
+                                        <div className="flex flex-col gap-2 pt-1 pointer-events-none">
                                             {Array.from({ length: block.rows || 0 }).map((_, rIdx) => (
-                                                <div key={rIdx} className="h-6 flex items-center justify-center text-[10px] font-bold text-slate-500 uppercase">
+                                                <div key={rIdx} className="h-10 flex items-center justify-center text-xs font-bold text-slate-500 uppercase">
                                                     {getRowLabel(rIdx, block.rowNaming)}
                                                 </div>
                                             ))}
                                         </div>
 
                                         {/* SEAT GRID */}
-                                        <div className="flex flex-col gap-1">
+                                        <div className="flex flex-col gap-2">
                                             {Array.from({ length: block.rows || 0 }).map((_, rIdx) => {
                                                 const rowLabel = getRowLabel(rIdx, block.rowNaming);
                                                 return (
-                                                    <div key={rIdx} className="flex gap-1">
+                                                    <div key={rIdx} className="flex gap-2">
                                                         {Array.from({ length: block.cols || 0 }).map((_, cIdx) => {
                                                             const seatNum = block.numberingDirection === 'ltr' ? (cIdx + (block.startNumber || 1)) : ((block.cols || 0) - cIdx + (block.startNumber || 1) - 1);
                                                             const seatId = `${block.name}-${rowLabel}-${seatNum}`;
                                                             const status = getSeatStatus(seatId);
                                                             
-                                                            let seatStyles = "w-6 h-6 rounded flex items-center justify-center text-[8px] font-bold transition-all border ";
+                                                            let seatStyles = "w-10 h-10 rounded-xl flex items-center justify-center text-[11px] font-bold transition-all border cursor-pointer hover:scale-110 hover:shadow-md active:scale-95 ";
                                                             
                                                             if (status === 'sold') {
                                                                 seatStyles += "bg-slate-200 border-slate-200 text-transparent cursor-not-allowed";
