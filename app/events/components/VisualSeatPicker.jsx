@@ -108,7 +108,7 @@ export default function VisualSeatPicker({
                                         </h4>
                                     </div>
 
-                                    <div className="w-max flex gap-3 md:gap-4 items-start bg-white/40 p-4 md:p-6 rounded-3xl border border-white/50 backdrop-blur-sm shadow-xl">
+                                    <div className="w-max flex gap-4 md:gap-6 items-start bg-gradient-to-b from-white/95 to-white/70 p-6 md:p-8 rounded-[2.5rem] border border-white backdrop-blur-xl shadow-[0_30px_60px_-15px_rgba(0,0,0,0.1),0_0_0_1px_rgba(0,0,0,0.02)]">
                                         {/* ROW LABELS */}
                                         <div className="flex flex-col gap-2 pt-1 pointer-events-none">
                                             {Array.from({ length: block.rows || 0 }).map((_, rIdx) => (
@@ -129,7 +129,7 @@ export default function VisualSeatPicker({
                                                             const seatId = `${block.name}-${rowLabel}-${seatNum}`;
                                                             const status = getSeatStatus(seatId);
                                                             
-                                                            let seatStyles = "w-10 h-10 rounded-xl flex shrink-0 items-center justify-center text-[11px] font-bold transition-all border cursor-pointer hover:scale-110 hover:shadow-md active:scale-95 ";
+                                                            let seatStyles = "w-10 h-10 rounded-2xl flex shrink-0 items-center justify-center text-[11px] font-black transition-all border cursor-pointer hover:-translate-y-1 hover:scale-105 active:scale-95 ";
                                                             
                                                             if (status === 'sold') {
                                                                 seatStyles += "bg-slate-200 border-slate-200 text-transparent cursor-not-allowed";
@@ -138,9 +138,9 @@ export default function VisualSeatPicker({
                                                             } else if (status === 'temp_locked') {
                                                                 seatStyles += "bg-amber-100 border-amber-300 text-amber-600 cursor-wait";
                                                             } else if (status === 'selected') {
-                                                                seatStyles += "bg-green-600 border-green-600 text-white shadow-md shadow-green-600/30";
+                                                                seatStyles += "bg-gradient-to-tr from-emerald-500 to-emerald-400 border-emerald-400 text-white shadow-lg shadow-emerald-500/40";
                                                             } else {
-                                                                seatStyles += "bg-white border-green-500 text-green-600 hover:bg-green-50";
+                                                                seatStyles += "bg-white border-slate-100 text-emerald-600 shadow-sm shadow-slate-200/50 hover:border-emerald-300 hover:shadow-emerald-500/20";
                                                             }
 
                                                             return (
