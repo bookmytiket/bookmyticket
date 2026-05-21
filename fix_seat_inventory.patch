@@ -1,0 +1,33 @@
+--- app/api/booking-session/verify-payment/route.js
++++ app/api/booking-session/verify-payment/route.js
+@@ -183,6 +183,30 @@
+         } catch (invErr) {
+             console.warn('[verify-payment] Inventory update error:', invErr.message);
+         }
++
++        // 7.5 Mark individual seats as sold in seat_inventory
++        if (booking.selected_seats && booking.selected_seats.length > 0) {
++            try {
++                for (const seat of booking.selected_seats) {
++                    const seatId = seat.id; // e.g. "VIP-A-1"
++                    // Try to update existing, or insert if not exists
++                    const { data: existingSeat } = await supabaseAdmin
++                        .from('seat_inventory')
++                        .select('id')
++                        .eq('event_id', session.event_id)
++                        .eq('seat_number', seatId)
++                        .maybeSingle();
++
++                    if (existingSeat) {
++                        await supabaseAdmin.from('seat_inventory').update({ status: 'sold' }).eq('id', existingSeat.id);
++                    } else {
++                        await supabaseAdmin.from('seat_inventory').insert({ event_id: session.event_id, seat_number: seatId, status: 'sold' });
++                    }
++                }
++            } catch (seatUpdateErr) {
++                console.warn('[verify-payment] Seat status update error:', seatUpdateErr.message);
++            }
++        }
+ 
+         // 8. Generate Ticket Record with Secure QR Token
+         const ticketId = crypto.randomUUID();

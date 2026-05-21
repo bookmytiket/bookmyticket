@@ -105,7 +105,7 @@ export default function VisualSeatPicker({
                             
                             return (
                                 <div 
-                                    key={block.id}
+                                    key={block.id || bIdx}
                                     className={`w-max ${isSpatial ? 'absolute' : 'relative flex flex-col items-center'}`}
                                     style={isSpatial ? { left: block.x, top: block.y } : {}}
                                 >

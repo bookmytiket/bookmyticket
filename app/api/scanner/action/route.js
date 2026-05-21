@@ -27,6 +27,22 @@ export async function POST(request) {
             return NextResponse.json({ status: "error", message: "Missing required fields" }, { status: 400 });
         }
 
+        // 0. Session Authorization Check
+        if (scannerUserId && body.sessionToken) {
+            const { data: session } = await supabaseAdmin
+                .from('staff_active_sessions')
+                .select('session_status')
+                .eq('session_token', body.sessionToken)
+                .maybeSingle();
+
+            if (!session || session.session_status !== 'active') {
+                return NextResponse.json({
+                    status: "error",
+                    message: "Your scanner session is invalid or has been terminated."
+                }, { status: 401 });
+            }
+        }
+
         // 1. Verify Ticket Current Status
         const { data: ticket, error: ticketErr } = await supabaseAdmin
             .from('tickets')

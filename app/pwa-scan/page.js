@@ -141,7 +141,8 @@ function PWAScanContent() {
                     deviceUuid: navigator.userAgent,
                     deviceName: "Staff Scanner Portal",
                     gateName: gateName,
-                    scannerUserId: user?.id
+                    scannerUserId: user?.id,
+                    sessionToken: localStorage.getItem("bt_staff_session_token")
                 })
             });
 
@@ -190,7 +191,8 @@ function PWAScanContent() {
                     deviceUuid: navigator.userAgent,
                     deviceName: "Staff Scanner Portal",
                     gateName: gateName,
-                    scannerUserId: user?.id
+                    scannerUserId: user?.id,
+                    sessionToken: localStorage.getItem("bt_staff_session_token")
                 })
             });
 

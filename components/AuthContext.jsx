@@ -128,30 +128,46 @@ export function AuthProvider({ children }) {
         };
     }, [user]);
     
-    // Real-time Staff Session Monitoring
+    // Real-time Staff Session Monitoring & Heartbeat
     useEffect(() => {
         if (!user || user.role !== 'staff') return;
 
-        const deviceId = localStorage.getItem("bt_device_id");
+        const sessionToken = localStorage.getItem("bt_staff_session_token");
+        if (!sessionToken) return;
         
         const channel = supabase
-            .channel('staff_session_monitoring')
+            .channel('staff_session_monitoring_v2')
             .on('postgres_changes', {
                 event: 'UPDATE',
                 schema: 'public',
-                table: 'device_sessions',
-                filter: `staff_id=eq.${user.id}`
+                table: 'staff_active_sessions',
+                filter: `staff_user_id=eq.${user.id}`
             }, (payload) => {
-                if (payload.new.login_status === 'logged_out' && payload.new.device_id === deviceId) {
-                    console.log("Session invalidated from server.");
+                if (payload.new.session_token === sessionToken && payload.new.session_status === 'terminated') {
+                    console.log("SESSION TERMINATED: Logged in from another device.");
                     logout();
-                    alert("You have been logged out because a new login was detected on another device.");
+                    alert("SESSION TERMINATED: You have been logged out because a new login was detected on another device.");
+                } else if (payload.new.session_token === sessionToken && payload.new.session_status === 'blocked') {
+                    logout();
+                    alert("ACCESS REVOKED: Your scanner access has been blocked by an administrator.");
                 }
             })
             .subscribe();
 
+        // Heartbeat mechanism - sends ping every 30 seconds
+        const heartbeatInterval = setInterval(async () => {
+            if (sessionToken) {
+                await supabase
+                    .from('staff_active_sessions')
+                    .update({ last_seen: new Date().toISOString() })
+                    .eq('session_token', sessionToken)
+                    .eq('session_status', 'active');
+            }
+        }, 30000);
+
         return () => {
             supabase.removeChannel(channel);
+            clearInterval(heartbeatInterval);
         };
     }, [user]);
 
@@ -330,18 +346,19 @@ export function AuthProvider({ children }) {
     };
 
     const checkStaffSession = async (staffId) => {
-        const deviceId = getDeviceId();
+        const sessionToken = localStorage.getItem("bt_staff_session_token");
+        if (!sessionToken) return;
+
         const { data: session } = await supabase
-            .from('device_sessions')
+            .from('staff_active_sessions')
             .select('*')
-            .eq('staff_id', staffId)
-            .eq('login_status', 'active')
+            .eq('session_token', sessionToken)
             .maybeSingle();
 
-        if (session && session.device_id !== deviceId) {
-            console.log("Device restriction: Logged in on another device.");
+        if (session && session.session_status !== 'active') {
+            console.log("Device restriction: Session is no longer active.");
             logout();
-            alert("Your account has been logged in on another device. This session has been terminated.");
+            alert("Your session has expired or was terminated. Please log in again.");
         }
     };
 
@@ -360,27 +377,73 @@ export function AuthProvider({ children }) {
             
             const userData = await fetchAndSetUser(data.user);
             
-            // DEVICE RESTRICTION LOGIC
-            if (userData && userData.role === 'staff') {
-                const deviceId = getDeviceId();
-                
-                // 1. Invalidate other active sessions
-                await supabase
-                    .from('device_sessions')
-                    .update({ login_status: 'logged_out' })
-                    .eq('staff_id', userData.id)
-                    .eq('login_status', 'active');
+                // DEVICE RESTRICTION LOGIC
+                if (userData && userData.role === 'staff') {
+                    const deviceId = getDeviceId();
+                    const userAgent = navigator.userAgent;
+                    
+                    // Check admin policy
+                    const { data: settings } = await supabase.from('admin_security_settings').select('*').maybeSingle();
+                    const policy = settings?.login_policy || 'replace_existing';
+                    const isEnabled = settings?.single_device_login_enabled !== false;
 
-                // 2. Create new active session
-                await supabase.from('device_sessions').insert({
-                    staff_id: userData.id,
-                    device_id: deviceId,
-                    login_status: 'active'
-                });
+                    if (isEnabled) {
+                        const { data: existingSession } = await supabase
+                            .from('staff_active_sessions')
+                            .select('*')
+                            .eq('staff_user_id', userData.id)
+                            .eq('session_status', 'active')
+                            .maybeSingle();
 
-                // 3. Bind device to staff record
-                await supabase.from('staff').update({ device_id: deviceId }).eq('id', userData.id);
-            }
+                        if (existingSession && existingSession.device_id !== deviceId) {
+                            if (policy === 'strict_block') {
+                                // Block new login
+                                await supabase.auth.signOut();
+                                await supabase.from('staff_login_history').insert({
+                                    staff_user_id: userData.id,
+                                    device_id: deviceId,
+                                    login_status: 'blocked',
+                                    reason: 'Strict Block: Active session on another device.'
+                                });
+                                return { success: false, error: "This staff account is already active on another device. Please logout from the current device first." };
+                            } else {
+                                // Replace existing
+                                await supabase
+                                    .from('staff_active_sessions')
+                                    .update({ session_status: 'terminated' })
+                                    .eq('id', existingSession.id);
+                                    
+                                await supabase.from('staff_login_history').insert({
+                                    staff_user_id: userData.id,
+                                    device_id: deviceId,
+                                    login_status: 'terminated_old_session',
+                                    reason: 'New login replaced old session.'
+                                });
+                            }
+                        }
+
+                        // Create new session
+                        const sessionToken = Math.random().toString(36).substring(2) + Date.now();
+                        await supabase.from('staff_active_sessions').insert({
+                            staff_user_id: userData.id,
+                            session_token: sessionToken,
+                            device_id: deviceId,
+                            device_type: navigator.platform || "Unknown",
+                            browser_name: userAgent.split(' ').pop() || "Unknown",
+                            user_agent: userAgent,
+                            session_status: 'active'
+                        });
+
+                        localStorage.setItem("bt_staff_session_token", sessionToken);
+                        
+                        await supabase.from('staff_login_history').insert({
+                            staff_user_id: userData.id,
+                            device_id: deviceId,
+                            login_status: 'success',
+                            reason: 'Login approved'
+                        });
+                    }
+                }
 
             if (userData) {
                 // ENFORCE BANNED STATUS
@@ -422,12 +485,29 @@ export function AuthProvider({ children }) {
     };
 
     const logout = async () => {
+        const sessionToken = localStorage.getItem("bt_staff_session_token");
+        if (sessionToken) {
+            try {
+                await supabase
+                    .from('staff_active_sessions')
+                    .update({ session_status: 'logged_out' })
+                    .eq('session_token', sessionToken);
+            } catch (err) {}
+        }
+        
         localStorage.removeItem("user");
+        localStorage.removeItem("bt_staff_session_token");
         setUser(null);
         if (supabase) {
             try { await supabase.auth.signOut(); } catch (err) { console.error(err); }
         }
-        router.replace("/");
+        
+        // Use path based on role
+        if (user && user.role === 'staff') {
+            router.replace("/signin");
+        } else {
+            router.replace("/");
+        }
     };
 
     return (

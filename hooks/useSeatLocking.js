@@ -65,7 +65,7 @@ export function useSeatLocking(eventId, userId) {
         };
     }, [eventId, userId, fetchLocks]);
 
-    const lockSeat = async (seatId) => {
+    const lockSeat = useCallback(async (seatId) => {
         if (!userId) return { error: "Login required" };
 
         const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString(); // 10 minutes
@@ -85,9 +85,9 @@ export function useSeatLocking(eventId, userId) {
         } catch (err) {
             return { error: "Network error occurred" };
         }
-    };
+    }, [eventId, userId]);
 
-    const releaseSeat = async (seatId) => {
+    const releaseSeat = useCallback(async (seatId) => {
         try {
             const res = await fetch('/api/seats/unlock', {
                 method: 'POST',
@@ -99,7 +99,7 @@ export function useSeatLocking(eventId, userId) {
         } catch (err) {
             return { error: "Network error" };
         }
-    };
+    }, [eventId, userId]);
 
     return { lockedSeats, myLocks, loading, lockSeat, releaseSeat, refresh: fetchLocks };
 }

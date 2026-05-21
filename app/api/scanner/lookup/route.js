@@ -36,6 +36,24 @@ export async function POST(request) {
             }, { status: 400 });
         }
 
+        // 0. Session Authorization Check
+        if (scannerUserId && body.sessionToken) {
+            const { data: session } = await supabaseAdmin
+                .from('staff_active_sessions')
+                .select('session_status')
+                .eq('session_token', body.sessionToken)
+                .maybeSingle();
+
+            if (!session || session.session_status !== 'active') {
+                return NextResponse.json({
+                    status: "blocked",
+                    title: "SESSION EXPIRED",
+                    message: "Your scanner session is invalid or has been terminated.",
+                    color: "red"
+                }, { status: 401 });
+            }
+        }
+
         // 1. Device Authorization Check (Fraud Protection)
         let deviceAuthorized = true;
         if (deviceUuid) {
