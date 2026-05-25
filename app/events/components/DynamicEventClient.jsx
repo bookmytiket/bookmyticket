@@ -942,17 +942,42 @@ export default function DynamicEventClient({ event }) {
                         <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm p-6">
                             <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-5 text-center">Available Amenities</h3>
                             <div className="grid grid-cols-3 gap-y-6 gap-x-2">
-                                {(config.amenities || config.benefits?.map(b => b.icon_key) || []).map(id => {
-                                    const Icon = AMENITY_ICONS[id] || Star;
-                                    return (
-                                        <div key={id} className="group flex flex-col items-center gap-2 text-center">
-                                            <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-[#ec4899] group-hover:bg-[#ec4899] group-hover:text-white transition-all shadow-sm">
-                                                <Icon size={18} />
+                                {(() => {
+                                    // Normalize amenities to an array of strings
+                                    let list = [];
+                                    if (Array.isArray(config.amenities)) {
+                                        list = config.amenities;
+                                    } else if (config.amenities && typeof config.amenities === 'object') {
+                                        // Map snake_case to PascalCase (e.g. t_shirt -> TShirt, first_aid -> FirstAid)
+                                        const keyMap = {
+                                            ambulance: 'Ambulance', first_aid: 'FirstAid', certificate: 'Certificate',
+                                            medal: 'Medal', t_shirt: 'TShirt', breakfast: 'Breakfast',
+                                            refreshments: 'Refreshments', accommodation: 'Accommodation',
+                                            parking: 'Parking', safety: 'Safety', family: 'Family',
+                                            cash_prize: 'CashPrize', trophy: 'Trophy', bib: 'Bib',
+                                            selfie: 'Selfie', washroom: 'Washroom'
+                                        };
+                                        list = Object.entries(config.amenities)
+                                            .filter(([_, val]) => val === true)
+                                            .map(([key, _]) => keyMap[key] || key);
+                                    } else if (Array.isArray(config.benefits)) {
+                                        list = config.benefits.map(b => b.icon_key).filter(Boolean);
+                                    }
+
+                                    return list.map(id => {
+                                        const Icon = AMENITY_ICONS[id] || Star;
+                                        // Format the display label to be human readable
+                                        const label = String(id).replace(/([A-Z])/g, ' $1').trim();
+                                        return (
+                                            <div key={id} className="group flex flex-col items-center gap-2 text-center">
+                                                <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-[#ec4899] group-hover:bg-[#ec4899] group-hover:text-white transition-all shadow-sm">
+                                                    <Icon size={18} />
+                                                </div>
+                                                <span className="text-[9px] font-bold text-slate-600 uppercase tracking-tight leading-none">{label}</span>
                                             </div>
-                                            <span className="text-[9px] font-bold text-slate-600 uppercase tracking-tight leading-none">{id}</span>
-                                        </div>
-                                    );
-                                })}
+                                        );
+                                    });
+                                })()}
                             </div>
                         </div>
 
