@@ -212,22 +212,44 @@ const AdminReviewsTable = ({ t, theme }) => {
 };
 
 const SubscribersTable = ({ t, theme }) => {
-    const { data: subscribers = [], loading, error } = useSupabaseQuery('subscribers');
-    const [removeSubscriber] = useSupabaseMutation('subscribers', 'delete', (q, p) => q.eq('id', p.id));
+    const [subscribers, setSubscribers] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     const { showToast } = useToast();
 
-    // Fallback if it takes too long or fails
-    const [isStuck, setIsStuck] = useState(false);
-    useEffect(() => {
-        let timer;
-        if (loading) {
-            timer = setTimeout(() => setIsStuck(true), 10000);
+    const fetchSubscribers = async () => {
+        setLoading(true);
+        try {
+            const res = await fetch('/api/admin/subscribers');
+            const data = await res.json();
+            if (data.error) throw new Error(data.error);
+            setSubscribers(data.data || []);
+        } catch (err) {
+            setError(err);
+        } finally {
+            setLoading(false);
         }
-        return () => clearTimeout(timer);
-    }, [loading]);
+    };
+
+    useEffect(() => {
+        fetchSubscribers();
+    }, []);
+
+    const handleDelete = async (id) => {
+        if (!confirm("Are you sure you want to remove this subscriber?")) return;
+        try {
+            const res = await fetch(`/api/admin/subscribers?id=${id}`, { method: 'DELETE' });
+            const data = await res.json();
+            if (data.error) throw new Error(data.error);
+            showToast("Subscriber removed successfully", "success");
+            fetchSubscribers();
+        } catch (err) {
+            showToast(err.message, "error");
+        }
+    };
 
     if (error) return <div style={{ padding: "40px", textAlign: "center", color: "#ef4444" }}>Error loading subscribers: {error.message}</div>;
-    if (loading && !isStuck) return <div style={{ padding: "40px", textAlign: "center", color: t.textSub }}>Loading subscribers...</div>;
+    if (loading) return <div style={{ padding: "40px", textAlign: "center", color: t.textSub }}>Loading subscribers...</div>;
     
     // Safely fallback if data is missing or empty
     const safeSubscribers = Array.isArray(subscribers) ? subscribers : [];
@@ -271,14 +293,7 @@ const SubscribersTable = ({ t, theme }) => {
                         </td>
                         <td style={{ padding: "16px", borderRadius: "0 12px 12px 0" }}>
                             <button 
-                                onClick={async () => { 
-                                    try {
-                                        await removeSubscriber({ id: subs.id }); 
-                                        showToast("Subscriber removed", "success");
-                                    } catch (err) {
-                                        showToast("Error removing subscriber", "error");
-                                    }
-                                }}
+                                onClick={() => handleDelete(subs.id)}
                                 style={{ border: `1px solid ${t.border}`, background: t.cardBg, color: "#ef4444", padding: "6px 12px", borderRadius: "6px", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}
                             >
                                 <Trash2 size={14} />
@@ -2917,33 +2932,42 @@ function AdminHomePage() {
     });
 
     useEffect(() => {
-        if (emailSettingsArr?.[0]) {
-            const dbSettings = emailSettingsArr[0];
-            setLocalEmailSettings({
-                id: dbSettings.id,
-                provider: dbSettings.provider || "SMTP",
-                host: dbSettings.host || "",
-                port: dbSettings.port || 0,
-                user: dbSettings.user_name || "",
-                pass: dbSettings.pass || "",
-                from: dbSettings.from_email || "",
-                fromName: dbSettings.from_name || "",
-                encryption: dbSettings.encryption || "None",
-                authMethod: dbSettings.auth_method || "Basic Authentication",
-                microsoft365: dbSettings.microsoft_365 || {
-                    clientId: "",
-                    tenantId: "",
-                    clientSecret: "",
-                    status: "Not Connected"
+        const fetchEmailSettings = async () => {
+            try {
+                const res = await fetch('/api/admin/email-settings');
+                const { data: dbSettings } = await res.json();
+                if (dbSettings) {
+                    setLocalEmailSettings({
+                        id: dbSettings.id,
+                        provider: dbSettings.provider || "SMTP",
+                        host: dbSettings.host || "",
+                        port: dbSettings.port || 0,
+                        user: dbSettings.user_name || "",
+                        pass: dbSettings.pass || "",
+                        from: dbSettings.from_email || "",
+                        fromName: dbSettings.from_name || "",
+                        encryption: dbSettings.encryption || "None",
+                        authMethod: dbSettings.auth_method || "Basic Authentication",
+                        microsoft365: dbSettings.microsoft_365 || {
+                            clientId: "",
+                            tenantId: "",
+                            clientSecret: "",
+                            status: "Not Connected"
+                        }
+                    });
                 }
-            });
-        }
-    }, [emailSettingsArr]);
+            } catch (err) {
+                console.error("Failed to load email settings", err);
+            }
+        };
+        fetchEmailSettings();
+    }, []);
 
     const handleSaveEmail = async () => {
         setIsSavingEmail(true);
         try {
             const dbPayload = {
+                id: localEmailSettings.id || undefined,
                 provider: localEmailSettings.provider,
                 host: localEmailSettings.host,
                 port: localEmailSettings.port,
@@ -2957,11 +2981,13 @@ function AdminHomePage() {
                 updated_at: new Date().toISOString()
             };
 
-            if (localEmailSettings.id) {
-                await updateEmailSettings({ id: localEmailSettings.id, ...dbPayload });
-            } else {
-                await supabase.from('email_settings').insert(dbPayload);
-            }
+            const response = await fetch('/api/admin/email-settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(dbPayload)
+            });
+
+            if (!response.ok) throw new Error("Failed to save via API");
             showToast("Email settings saved successfully!", "success");
         } catch (err) {
             showToast("Error saving email settings: " + err.message, "error");
@@ -4527,11 +4553,7 @@ function AdminHomePage() {
                         </div>
                     )}
 
-                    {activeTab === "email_settings" && (
-                        <div className="px-8 lg:px-12 py-8 animate-in fade-in slide-in-from-bottom-6 duration-700">
-                            <EmailSettingsAdmin theme={theme} t={t} />
-                        </div>
-                    )}
+
 
                     {activeTab === "contact_settings" && (
                         contactLoading ? (
@@ -6552,7 +6574,7 @@ function AdminHomePage() {
                     )}
 
                     {activeTab === "email_settings" && (
-                        <div style={{ maxWidth: "850px", animation: "fadeIn 0.5s ease-out" }}>
+                        <div style={{ width: "100%", animation: "fadeIn 0.5s ease-out" }}>
                             <div style={{ marginBottom: "24px", display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
                                 <div>
                                     <h2 style={{ fontSize: "24px", fontWeight: 800, color: t.textMain, margin: "0 0 6px 0", letterSpacing: "-0.5px" }}>Email Settings</h2>

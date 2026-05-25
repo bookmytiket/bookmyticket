@@ -6,8 +6,8 @@ import { Save, Mail, Shield, CheckCircle2, Server, Key } from "lucide-react";
 
 export default function EmailSettingsAdmin({ theme, t }) {
     const [settings, setSettings] = useState({
-        provider: 'GOOGLE_OAUTH2',
-        host: 'smtp.gmail.com',
+        provider: 'MICROSOFT_365',
+        host: '',
         port: 465,
         user_name: '',
         pass: '', // Basic SMTP or App Password
@@ -15,10 +15,10 @@ export default function EmailSettingsAdmin({ theme, t }) {
         from_name: 'BookMyTicket',
         encryption: 'TLS',
         auth_method: 'OAuth2', // Basic Authentication, OAuth2
-        google_oauth2: {
+        microsoft_365: {
             clientId: '',
-            clientSecret: '',
-            refreshToken: ''
+            tenantId: '',
+            clientSecret: ''
         }
     });
     const [loading, setLoading] = useState(true);
@@ -30,21 +30,27 @@ export default function EmailSettingsAdmin({ theme, t }) {
 
     const fetchSettings = async () => {
         setLoading(true);
-        const { data, error } = await supabase.from('email_settings').select('*').limit(1).single();
-        if (data) {
-            setSettings({
-                id: data.id,
-                provider: data.provider || 'GOOGLE_OAUTH2',
-                host: data.host || '',
-                port: data.port || 465,
-                user_name: data.user_name || '',
-                pass: data.pass || '',
-                from_email: data.from_email || '',
-                from_name: data.from_name || '',
-                encryption: data.encryption || 'TLS',
-                auth_method: data.auth_method || 'OAuth2',
-                google_oauth2: data.google_oauth2 || { clientId: '', clientSecret: '', refreshToken: '' }
-            });
+        try {
+            const res = await fetch('/api/admin/email-settings');
+            const { data } = await res.json();
+            
+            if (data) {
+                setSettings({
+                    id: data.id,
+                    provider: data.provider || 'MICROSOFT_365',
+                    host: data.host || '',
+                    port: data.port || 465,
+                    user_name: data.user_name || '',
+                    pass: data.pass || '',
+                    from_email: data.from_email || '',
+                    from_name: data.from_name || '',
+                    encryption: data.encryption || 'TLS',
+                    auth_method: data.auth_method || 'OAuth2',
+                    microsoft_365: data.microsoft_365 || { clientId: '', tenantId: '', clientSecret: '' }
+                });
+            }
+        } catch (err) {
+            console.error("Failed to fetch settings:", err);
         }
         setLoading(false);
     };
@@ -52,17 +58,16 @@ export default function EmailSettingsAdmin({ theme, t }) {
     const handleSave = async () => {
         setSaving(true);
         const payload = { ...settings };
-        delete payload.id; // Remove ID for upsert/insert if needed
-
+        
         try {
-            let res;
-            if (settings.id) {
-                res = await supabase.from('email_settings').update(payload).eq('id', settings.id);
-            } else {
-                res = await supabase.from('email_settings').insert([payload]);
-            }
+            const res = await fetch('/api/admin/email-settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const result = await res.json();
 
-            if (res.error) throw res.error;
+            if (result.error) throw new Error(result.error);
             toast.success("Email settings saved successfully!");
             fetchSettings();
         } catch (error) {
@@ -77,38 +82,8 @@ export default function EmailSettingsAdmin({ theme, t }) {
 
     return (
         <div className="space-y-8 max-w-4xl">
-            <div>
-                <h2 className="text-3xl font-black text-slate-900 tracking-tighter uppercase italic leading-none mb-2">Email Configuration</h2>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Manage SMTP and OAuth2 Mail Infrastructure</p>
-            </div>
-
             <div className="bg-white rounded-3xl p-8 border border-slate-100 shadow-sm space-y-8">
-                {/* Auth Method Selection */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div 
-                        onClick={() => setSettings({ ...settings, auth_method: 'OAuth2', provider: 'GOOGLE_OAUTH2', host: 'smtp.gmail.com' })}
-                        className={`p-6 rounded-2xl border-2 cursor-pointer transition-all flex items-start gap-4 ${settings.auth_method === 'OAuth2' ? 'border-pink-500 bg-pink-50/30' : 'border-slate-100 hover:border-slate-300'}`}
-                    >
-                        <Shield className={settings.auth_method === 'OAuth2' ? 'text-pink-500' : 'text-slate-400'} size={24} />
-                        <div>
-                            <h3 className="font-bold text-slate-900 mb-1">OAuth2 (Recommended)</h3>
-                            <p className="text-xs text-slate-500 leading-relaxed">Secure client ID and secret based authentication. Best for Gmail/Google Workspace to avoid App Password limits.</p>
-                        </div>
-                    </div>
-                    
-                    <div 
-                        onClick={() => setSettings({ ...settings, auth_method: 'Basic Authentication' })}
-                        className={`p-6 rounded-2xl border-2 cursor-pointer transition-all flex items-start gap-4 ${settings.auth_method === 'Basic Authentication' ? 'border-blue-500 bg-blue-50/30' : 'border-slate-100 hover:border-slate-300'}`}
-                    >
-                        <Server className={settings.auth_method === 'Basic Authentication' ? 'text-blue-500' : 'text-slate-400'} size={24} />
-                        <div>
-                            <h3 className="font-bold text-slate-900 mb-1">Basic SMTP</h3>
-                            <p className="text-xs text-slate-500 leading-relaxed">Traditional SMTP using Host, Port, Username and App Password. Works with SendGrid, Amazon SES, or custom servers.</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="space-y-6 pt-6 border-t border-slate-100">
+                <div className="space-y-6">
                     <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
                         <Mail className="text-pink-500" size={16} /> Sender Identity
                     </h3>
@@ -133,16 +108,18 @@ export default function EmailSettingsAdmin({ theme, t }) {
                                 placeholder="e.g. hello@bookmyticket.net"
                             />
                         </div>
-                        <div className="md:col-span-2">
-                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Account Username / Email</label>
-                            <input 
-                                type="email" 
-                                value={settings.user_name} 
-                                onChange={e => setSettings({...settings, user_name: e.target.value})} 
-                                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500 transition-all"
-                                placeholder="The email address used to authenticate"
-                            />
-                        </div>
+                        {settings.auth_method !== 'OAuth2' && (
+                            <div className="md:col-span-2">
+                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Account Username / Email</label>
+                                <input 
+                                    type="email" 
+                                    value={settings.user_name} 
+                                    onChange={e => setSettings({...settings, user_name: e.target.value})} 
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500 transition-all"
+                                    placeholder="The email address used to authenticate"
+                                />
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -153,33 +130,33 @@ export default function EmailSettingsAdmin({ theme, t }) {
                         </h3>
                         <div className="space-y-4">
                             <div>
-                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Client ID</label>
+                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Application (Client) ID</label>
                                 <input 
                                     type="text" 
-                                    value={settings.google_oauth2?.clientId || ''} 
-                                    onChange={e => setSettings({...settings, google_oauth2: { ...settings.google_oauth2, clientId: e.target.value }})} 
+                                    value={settings.microsoft_365?.clientId || ''} 
+                                    onChange={e => setSettings({...settings, microsoft_365: { ...settings.microsoft_365, clientId: e.target.value }})} 
                                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:border-pink-500 transition-all"
                                     placeholder="Your OAuth2 Client ID"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Directory (Tenant) ID</label>
+                                <input 
+                                    type="text" 
+                                    value={settings.microsoft_365?.tenantId || ''} 
+                                    onChange={e => setSettings({...settings, microsoft_365: { ...settings.microsoft_365, tenantId: e.target.value }})} 
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:border-pink-500 transition-all"
+                                    placeholder="Your Azure AD Tenant ID"
                                 />
                             </div>
                             <div>
                                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Client Secret</label>
                                 <input 
                                     type="password" 
-                                    value={settings.google_oauth2?.clientSecret || ''} 
-                                    onChange={e => setSettings({...settings, google_oauth2: { ...settings.google_oauth2, clientSecret: e.target.value }})} 
+                                    value={settings.microsoft_365?.clientSecret || ''} 
+                                    onChange={e => setSettings({...settings, microsoft_365: { ...settings.microsoft_365, clientSecret: e.target.value }})} 
                                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:border-pink-500 transition-all"
-                                    placeholder="Your OAuth2 Client Secret"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Refresh Token</label>
-                                <input 
-                                    type="password" 
-                                    value={settings.google_oauth2?.refreshToken || ''} 
-                                    onChange={e => setSettings({...settings, google_oauth2: { ...settings.google_oauth2, refreshToken: e.target.value }})} 
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:border-pink-500 transition-all"
-                                    placeholder="Your OAuth2 Refresh Token"
+                                    placeholder="Your OAuth2 Client Secret Value"
                                 />
                             </div>
                         </div>

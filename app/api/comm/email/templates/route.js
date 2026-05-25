@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
+export const dynamic = 'force-dynamic';
+
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -19,7 +21,18 @@ export async function GET() {
       .order("updated_at", { ascending: false });
 
     if (error) throw error;
-    return NextResponse.json({ success: true, data });
+    
+    const mappedData = data.map(t => ({
+      id: t.id,
+      identifier: t.template_key || "",
+      name: t.name || t.template_name || "",
+      subject: t.subject_template || "",
+      body: t.html_content || "",
+      category: t.category || "Notification",
+      auto_send: t.auto_send || false
+    }));
+    
+    return NextResponse.json({ success: true, data: mappedData });
   } catch (err) {
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });
   }
@@ -31,10 +44,10 @@ export async function POST(req) {
     const { id, identifier, name, subject, body: templateBody, category, auto_send } = body;
 
     const payload = {
-      identifier,
+      template_key: identifier,
       name,
-      subject,
-      body: templateBody,
+      subject_template: subject,
+      html_content: templateBody,
       category,
       auto_send,
       updated_at: new Date().toISOString(),
@@ -48,7 +61,19 @@ export async function POST(req) {
     }
 
     if (result.error) throw result.error;
-    return NextResponse.json({ success: true, data: result.data[0] });
+    
+    const savedData = result.data[0];
+    const mappedResult = {
+      id: savedData.id,
+      identifier: savedData.template_key,
+      name: savedData.name,
+      subject: savedData.subject_template,
+      body: savedData.html_content,
+      category: savedData.category,
+      auto_send: savedData.auto_send
+    };
+    
+    return NextResponse.json({ success: true, data: mappedResult });
   } catch (err) {
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });
   }

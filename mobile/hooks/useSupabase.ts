@@ -156,7 +156,15 @@ export function useAuth() {
   };
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error) {
+        console.error('Session error:', error);
+        setSession(null);
+        setUser(null);
+        setRole(null);
+        setLoading(false);
+        return;
+      }
       setSession(session);
       const currentUser = session?.user ?? null;
       setUser(currentUser);

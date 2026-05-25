@@ -9,6 +9,7 @@ export default function CommunicationCenter() {
     const [templates, setTemplates] = useState([]);
     const [logs, setLogs] = useState([]);
     const [queue, setQueue] = useState([]);
+    const [campaigns, setCampaigns] = useState([]);
     const [branding, setBranding] = useState(null);
     const [loading, setLoading] = useState(true);
     
@@ -36,9 +37,12 @@ export default function CommunicationCenter() {
 
             const { data: qData } = await supabase.from('notification_queue').select('*').order('created_at', { ascending: false }).limit(20);
             setQueue(qData || []);
+
+            const { data: cData } = await supabase.from('event_campaigns').select('*, events(title)').order('created_at', { ascending: false }).limit(20);
+            setCampaigns(cData || []);
         } catch (error) {
             console.error("Failed to load communication data", error);
-            toast.error("Failed to load data");
+            // Ignore PGRST205 errors if migration is not run yet
         }
         setLoading(false);
     };
@@ -72,7 +76,7 @@ export default function CommunicationCenter() {
             </div>
 
             <div style={{ display: 'flex', gap: '16px', marginBottom: '24px', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
-                {['templates', 'branding', 'queue', 'logs'].map(tab => (
+                {['templates', 'campaigns', 'branding', 'queue', 'logs'].map(tab => (
                     <button 
                         key={tab}
                         onClick={() => setActiveTab(tab)}
@@ -152,6 +156,38 @@ export default function CommunicationCenter() {
                             <button onClick={handleSaveBranding} style={{ padding: '10px 24px', background: '#1E40AF', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>
                                 Save Branding
                             </button>
+                        </div>
+                    )}
+
+                    {activeTab === 'campaigns' && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                                <h2 style={{ fontSize: '18px', margin: 0 }}>Event Broadcast Campaigns</h2>
+                            </div>
+                            {campaigns.map(c => (
+                                <div key={c.id} style={{ padding: '20px', border: '1px solid #e2e8f0', borderRadius: '12px', background: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <div>
+                                        <h3 style={{ margin: '0 0 4px 0', fontSize: '16px', color: '#0f172a' }}>{c.campaign_name}</h3>
+                                        <div style={{ fontSize: '13px', color: '#64748b', display: 'flex', gap: '12px' }}>
+                                            <span>Type: <strong>{c.campaign_type.toUpperCase()}</strong></span>
+                                            <span>Audience: <strong>{c.audience_type}</strong></span>
+                                        </div>
+                                    </div>
+                                    <div style={{ textAlign: 'right' }}>
+                                        <div style={{ background: c.status === 'completed' ? '#dcfce7' : c.status === 'processing' ? '#dbeafe' : '#fef3c7', color: c.status === 'completed' ? '#166534' : c.status === 'processing' ? '#1e40af' : '#92400e', padding: '4px 12px', borderRadius: '16px', fontSize: '12px', fontWeight: 'bold', display: 'inline-block', marginBottom: '4px' }}>
+                                            {c.status.toUpperCase()}
+                                        </div>
+                                        <div style={{ fontSize: '11px', color: '#94a3b8' }}>
+                                            {new Date(c.created_at).toLocaleString()}
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                            {campaigns.length === 0 && (
+                                <div style={{ padding: '40px', textAlign: 'center', color: '#64748b', background: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1' }}>
+                                    No broadcast campaigns found. Create and publish an event to see it here.
+                                </div>
+                            )}
                         </div>
                     )}
 

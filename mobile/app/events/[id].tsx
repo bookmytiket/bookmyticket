@@ -16,6 +16,7 @@ import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
+import { isFreeEvent } from '@/lib/eventUtils';
 import { useAuth } from '@/hooks/useSupabase';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -77,7 +78,11 @@ export default function EventDetailScreen() {
     try {
       const { data, error } = await supabase
         .from('events')
-        .select('*')
+        .select(`
+          *,
+          event_ticket_categories (*),
+          ticket_categories (*)
+        `)
         .eq('id', id)
         .single();
       if (error) throw error;
@@ -169,7 +174,7 @@ export default function EventDetailScreen() {
             Alert.alert('Event Removed', 'This event is no longer available.');
             router.back();
           } else {
-            setEvent(payload.new);
+            fetchEvent();
           }
         }
       )
@@ -277,9 +282,32 @@ export default function EventDetailScreen() {
   };
 
   const dynamicConfig = safeParse(event.dynamic_config) || {};
-  const parsedTickets = safeParse(event.tickets) || dynamicConfig.marathonCategories || dynamicConfig.marathon_categories || dynamicConfig.tickets || dynamicConfig.categories || [];
   
-  const ticketTiers = Array.isArray(parsedTickets) ? parsedTickets : [];
+  const ticketTiers = (() => {
+    if (event?.dynamic_config?.categories?.length > 0) return event.dynamic_config.categories;
+    if (event?.event_ticket_categories?.length > 0) {
+      return event.event_ticket_categories.map((c: any) => ({
+        id: c.id, title: c.category_name, price: c.price, description: c.description || 'General Admission Ticket'
+      }));
+    }
+    if (event?.ticket_categories?.length > 0) return event.ticket_categories;
+    if (event?.seat_categories?.length > 0) return event.seat_categories;
+    const ticketsData = safeParse(event?.tickets);
+    if (Array.isArray(ticketsData) && ticketsData.length > 0) return ticketsData;
+    if (Array.isArray(dynamicConfig.tickets) && dynamicConfig.tickets.length > 0) return dynamicConfig.tickets;
+    if (Array.isArray(dynamicConfig.categories) && dynamicConfig.categories.length > 0) return dynamicConfig.categories;
+    if (Array.isArray(dynamicConfig.marathonCategories) && dynamicConfig.marathonCategories.length > 0) return dynamicConfig.marathonCategories;
+    if (Array.isArray(dynamicConfig.marathon_categories) && dynamicConfig.marathon_categories.length > 0) return dynamicConfig.marathon_categories;
+    if (Array.isArray(dynamicConfig.seatingSections) && dynamicConfig.seatingSections.length > 0) {
+      return dynamicConfig.seatingSections.map((sec: any) => ({
+        id: sec.id,
+        title: sec.name,
+        price: sec.basePrice,
+        description: sec.isGeneral ? 'General Admission' : 'Reserved Seating'
+      }));
+    }
+    return [];
+  })();
   
   // Sync sponsors and benefits from dynamic_config if they are empty
   const displaySponsors = sponsors.length > 0 ? sponsors : (dynamicConfig.sponsors || []);
@@ -288,9 +316,10 @@ export default function EventDetailScreen() {
   
   // Robust price calculation for dynamic events
   const getMinPrice = () => {
-    if (ticketTiers.length === 0) return Number(event.price || 0);
+    const allTiers = [...ticketTiers, ...marathonCategories];
+    if (allTiers.length === 0) return Number(event.price || 0);
     
-    const prices = ticketTiers.map((t: any) => {
+    const prices = allTiers.map((t: any) => {
       const rawRates = t.ageRates || t.agePricing || t.age_rates || t.age_pricing || [];
       if (Array.isArray(rawRates) && rawRates.length > 0) {
         return Math.min(...rawRates.map((r: any) => Number(r.price || 0)));
@@ -303,8 +332,8 @@ export default function EventDetailScreen() {
 
   const minPrice = getMinPrice();
   
-  const isFree = event.is_free || (minPrice === 0 && event.type !== 'Dynamic') || event.type === 'Free';
-  const priceLabel = isFree ? 'FREE' : `₹${minPrice.toLocaleString('en-IN')}`;
+  const isFree = isFreeEvent(event);
+  const priceLabel = isFree ? 'FREE' : `₹${minPrice.toLocaleString('en-IN')} + fees`;
   const venueName = event.venue || event.location || dynamicConfig.location?.venueName || dynamicConfig.venue?.name || dynamicConfig.basicInfo?.venue || 'TBA';
   const venueAddress = event.address || dynamicConfig.location?.address || dynamicConfig.venue?.address || '';
   const city = event.city || dynamicConfig.location?.city || dynamicConfig.venue?.city || dynamicConfig.basicInfo?.city || '';

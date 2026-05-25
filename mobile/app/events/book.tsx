@@ -39,7 +39,7 @@ import {
   ArrowRight,
   Star,
 } from 'lucide-react-native';
-import { getFeeBreakdown, resolveFeeSettings } from '@/lib/feeBreakdown';
+import { isFreeEvent } from '@/lib/eventUtils';
 import UnifiedApi from '@/lib/unifiedApi';
 import VisualSeatPicker from '@/components/VisualSeatPicker';
 import { DataService } from '../../services/DataService';
@@ -81,6 +81,16 @@ export default function BookEventScreen() {
   const [selectedSeats, setSelectedSeats] = useState<any[]>([]);
   const [venueLayouts, setVenueLayouts] = useState<any[]>([]);
   const [selectedBlock, setSelectedBlock] = useState<any>(null);
+  
+  const [pricingData, setPricingData] = useState({
+    subtotal: 0,
+    platformFeeBase: 0,
+    taxAmount: 0,
+    addonAmount: 0,
+    discountAmount: 0,
+    finalAmount: 0,
+    loading: false
+  });
   
   const [showtimes, setShowtimes] = useState<any[]>([]);
   const [selectedShowtime, setSelectedShowtime] = useState<any>(null);
@@ -157,8 +167,7 @@ export default function BookEventScreen() {
           filter: `id=eq.${id}`,
         },
         (payload) => {
-          setEvent(payload.new);
-          processEventData(payload.new);
+          fetchEvent();
         }
       )
       .subscribe();
@@ -201,8 +210,17 @@ export default function BookEventScreen() {
     else {
       const ticketsData = safeParse(data.tickets);
       if (Array.isArray(ticketsData) && ticketsData.length > 0) tiers = ticketsData;
-      else if (parsedConfig.marathonCategories || parsedConfig.marathon_categories || parsedConfig.tickets || parsedConfig.categories) {
-        tiers = parsedConfig.marathonCategories || parsedConfig.marathon_categories || parsedConfig.tickets || parsedConfig.categories;
+      else if (Array.isArray(parsedConfig.marathonCategories) && parsedConfig.marathonCategories.length > 0) tiers = parsedConfig.marathonCategories;
+      else if (Array.isArray(parsedConfig.marathon_categories) && parsedConfig.marathon_categories.length > 0) tiers = parsedConfig.marathon_categories;
+      else if (Array.isArray(parsedConfig.tickets) && parsedConfig.tickets.length > 0) tiers = parsedConfig.tickets;
+      else if (Array.isArray(parsedConfig.categories) && parsedConfig.categories.length > 0) tiers = parsedConfig.categories;
+      else if (Array.isArray(parsedConfig.seatingSections) && parsedConfig.seatingSections.length > 0) {
+        tiers = parsedConfig.seatingSections.map((sec: any) => ({
+          id: sec.id,
+          title: sec.name,
+          price: sec.basePrice,
+          description: sec.isGeneral ? 'General Admission' : 'Reserved Seating'
+        }));
       }
       else tiers = [{ id: 'gen', title: 'Ticket', price: parsedConfig.price || data.price || 499, description: 'Standard admission for the event.' }];
     }
@@ -354,7 +372,18 @@ export default function BookEventScreen() {
     if (event?.seat_categories?.length > 0) return event.seat_categories;
     const ticketsData = safeParse(event?.tickets);
     if (Array.isArray(ticketsData) && ticketsData.length > 0) return ticketsData;
-    if (dynamicConfig.tickets || dynamicConfig.categories) return dynamicConfig.tickets || dynamicConfig.categories;
+    if (Array.isArray(dynamicConfig.tickets) && dynamicConfig.tickets.length > 0) return dynamicConfig.tickets;
+    if (Array.isArray(dynamicConfig.categories) && dynamicConfig.categories.length > 0) return dynamicConfig.categories;
+    if (Array.isArray(dynamicConfig.marathonCategories) && dynamicConfig.marathonCategories.length > 0) return dynamicConfig.marathonCategories;
+    if (Array.isArray(dynamicConfig.marathon_categories) && dynamicConfig.marathon_categories.length > 0) return dynamicConfig.marathon_categories;
+    if (Array.isArray(dynamicConfig.seatingSections) && dynamicConfig.seatingSections.length > 0) {
+      return dynamicConfig.seatingSections.map((sec: any) => ({
+        id: sec.id,
+        title: sec.name,
+        price: sec.basePrice,
+        description: sec.isGeneral ? 'General Admission' : 'Reserved Seating'
+      }));
+    }
     return [
       { id: 'gen', title: 'Ticket', price: event?.dynamic_config?.price || event?.price || 499, description: 'Standard admission for the event.' }
     ];
@@ -393,7 +422,28 @@ export default function BookEventScreen() {
   }, [event]);
 
   const isMarathon = event?.type === 'Marathon' || marathonCategories.length > 0;
-  const hasSeatingMap = event?.event_type !== 'general' && (venueLayouts.length > 0 || eventBlocks.length > 0);
+  
+  const hasSeatingMap = React.useMemo(() => {
+      if (!event) return false;
+      if (isMarathon) return false; // Marathons never have seating maps
+      
+      // Check if event blocks are just dummy general admission blocks
+      const hasOnlyGeneralBlocks = eventBlocks.length > 0 && eventBlocks.every((b: any) => 
+          b.isGeneral || (Number(b.cols || 0) === 0 && Number(b.rows || 0) === 0)
+      );
+      
+      if (hasOnlyGeneralBlocks && venueLayouts.length === 0) {
+          return false;
+      }
+
+      if (event.event_type === 'general') return false;
+      if (event.event_type === 'reserved') return true;
+
+      const hasLegacySeatCategories = eventBlocks.length > 0 && Number(event.cols) > 0;
+      const hasVisualBlocks = dynamicConfig?.seating_type === 'visual' && eventBlocks.length > 0;
+      
+      return hasLegacySeatCategories || hasVisualBlocks || (venueLayouts.length > 0);
+  }, [event, isMarathon, eventBlocks, dynamicConfig, venueLayouts]);
   const marathonSteps = [
     { id: 1, title: 'Category', icon: Ticket },
     { id: 2, title: 'Identity', icon: Users },
@@ -430,36 +480,82 @@ export default function BookEventScreen() {
   };
 
   const basePrice = getBasePrice();
-  const { subtotal, convenienceFee, gst, total, paymentTotal, discountAmount } = (() => {
-    // If seating map is used, base price is sum of selected seats
-    let base = selectedSeats.length > 0 
-        ? selectedSeats.reduce((acc, s) => acc + (s.price_override || selectedBlock?.base_price || basePrice), 0)
-        : basePrice * quantity;
-    
-    if (event?.is_free) return { subtotal: 0, convenienceFee: 0, gst: 0, total: 0, paymentTotal: 0, discountAmount: 0 };
-    
-    // Calculate discount
-    let discount = 0;
-    if (appliedCoupon) {
-      if (appliedCoupon.type === 'percent') {
-        discount = (base * Number(appliedCoupon.value)) / 100;
-      } else {
-        discount = Math.min(base, Number(appliedCoupon.value));
+  
+  // Refactored to use centralized API
+  useEffect(() => {
+    const fetchPricing = async () => {
+      if (!event || isFreeEvent(event)) {
+        setPricingData({ subtotal: 0, platformFeeBase: 0, taxAmount: 0, addonAmount: 0, discountAmount: 0, finalAmount: 0, loading: false });
+        return;
       }
-    }
-
-    // Resolve fee settings based on organiser overrides
-    const resolvedSettings = resolveFeeSettings({}, event?.organiser || {}, event?.fee_config || {});
-    const breakdown = getFeeBreakdown(base, resolvedSettings, discount);
-    return {
-      subtotal: base,
-      convenienceFee: breakdown.convenienceFee,
-      gst: breakdown.gst,
-      total: breakdown.total,
-      paymentTotal: breakdown.paymentTotal,
-      discountAmount: discount
+      
+      setPricingData(prev => ({ ...prev, loading: true }));
+      try {
+        const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'http://172.20.10.2:3000';
+        
+        let calculatedBase = selectedSeats.length > 0 
+          ? selectedSeats.reduce((acc, s) => acc + (s.price_override || selectedBlock?.base_price || basePrice), 0)
+          : basePrice * quantity;
+          
+        // Temporary hack to handle base price passing if package is dynamic.
+        // Ideally the API handles everything, but since we have dynamic seating we pass base via query or adjust package logic later
+        const res = await fetch(`${apiUrl}/api/pricing/calculate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            eventId: event.id,
+            packageId: selectedTier?.id,
+            quantity: quantity,
+            couponCode: appliedCoupon?.code || couponCode,
+            addons: []
+          })
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          // If seating map is used, override subtotal and recalculate fees if needed, or better just use the response if packageId is right
+          // To ensure correctness with seating map, we might need a custom endpoint later, but for now fallback to Data
+          if (selectedSeats.length > 0) {
+              const resWithCustomSubtotal = await fetch(`${apiUrl}/api/pricing/calculate`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    eventId: event.id,
+                    customSubtotal: calculatedBase, // A future API improvement can take customSubtotal
+                    packageId: selectedTier?.id,
+                    quantity: quantity,
+                    couponCode: appliedCoupon?.code || couponCode,
+                  })
+              });
+              if(resWithCustomSubtotal.ok) {
+                  const d = await resWithCustomSubtotal.json();
+                  setPricingData({ ...d, subtotal: calculatedBase, loading: false });
+                  return;
+              }
+          }
+          
+          setPricingData({ ...data, loading: false });
+        }
+      } catch (err) {
+        console.error('Pricing calculate error:', err);
+        setPricingData(prev => ({ ...prev, loading: false }));
+      }
     };
-  })();
+    
+    // Add debounce
+    const timer = setTimeout(() => {
+      fetchPricing();
+    }, 300);
+    
+    return () => clearTimeout(timer);
+  }, [event, quantity, selectedTier, appliedCoupon, couponCode, selectedSeats, basePrice]);
+
+  const { subtotal, ticketSubtotal, platformFeeBase, taxAmount, finalAmount, discountAmount } = pricingData;
+  const displaySubtotal = subtotal !== undefined ? subtotal : (ticketSubtotal || 0);
+  const convenienceFee = platformFeeBase || 0;
+  const gst = taxAmount || 0;
+  const total = finalAmount || 0;
+  const discount = discountAmount || 0;
 
   const handleApplyCoupon = async () => {
     const code = couponCode.trim().toUpperCase();
@@ -512,8 +608,6 @@ export default function BookEventScreen() {
 
     setSubmitting(true);
     try {
-      const breakdown = getFeeBreakdown(subtotal, resolveFeeSettings({}, event?.organiser || {}, event?.fee_config || {}), discountAmount);
-
       const bookingPayload = {
         event_id: String(event.id),
         user_id: user?.id,
@@ -521,9 +615,9 @@ export default function BookEventScreen() {
         base_amount: subtotal,
         platform_charge: convenienceFee,
         gst_amount: gst,
-        discount_amount: discountAmount,
+        discount_amount: discount,
         total_price: total,
-        status: (event.is_free || total === 0) ? 'Confirmed' : 'Pending',
+        status: (isFreeEvent(event) || total === 0) ? 'Confirmed' : 'Pending',
         scanned: false,
         event_name: event.name || event.title || dynamicConfig?.title,
         location: venue.name || event.location,
@@ -550,7 +644,7 @@ export default function BookEventScreen() {
       const created = await UnifiedApi.createBooking(bookingPayload);
       const data = created.booking || { id: created.bookingId };
 
-      if (event.is_free) {
+      if (isFreeEvent(event) || total === 0) {
         setSuccess(true);
       } else {
         // Paid Event - Initialize Razorpay via WebView
@@ -1546,13 +1640,13 @@ export default function BookEventScreen() {
           <RNView style={{ gap: 10 }}>
             <RNView style={styles.breakdownRow}>
               <Text style={{ fontSize: 9, fontWeight: '800', color: colors.muted, textTransform: 'uppercase' }}>Ticket Subtotal</Text>
-              <Text style={{ fontSize: 13, fontWeight: '700', color: colors.text }}>₹{subtotal.toLocaleString('en-IN')}</Text>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: colors.text }}>₹{(displaySubtotal || 0).toLocaleString('en-IN')}</Text>
             </RNView>
 
-            {discountAmount > 0 && (
+            {discount > 0 && (
               <RNView style={styles.breakdownRow}>
                 <Text style={{ fontSize: 9, fontWeight: '900', color: '#10b981', textTransform: 'uppercase' }}>Promo Discount</Text>
-                <Text style={{ fontSize: 13, fontWeight: '900', color: '#10b981' }}>- ₹{discountAmount.toLocaleString('en-IN')}</Text>
+                <Text style={{ fontSize: 13, fontWeight: '900', color: '#10b981' }}>- ₹{discount.toLocaleString('en-IN')}</Text>
               </RNView>
             )}
 

@@ -16,10 +16,10 @@ export async function POST(request) {
             return NextResponse.json({ error: "eventId is required" }, { status: 400 });
         }
 
-        // 1. Fetch Event and Organizer details
+        // 1. Fetch Event details
         const { data: event, error: eventErr } = await supabaseAdmin
             .from("events")
-            .select("*, organisers(*)")
+            .select("*")
             .eq("id", eventId)
             .maybeSingle();
 
@@ -30,20 +30,71 @@ export async function POST(request) {
         // 2. Fetch Ticket Subtotal
         let ticketPrice = Number(event.price) || 0;
         if (packageId) {
+            // First check legacy packages table
             const { data: pkg } = await supabaseAdmin
                 .from("packages")
                 .select("price")
                 .eq("id", packageId)
                 .maybeSingle();
+            
             if (pkg) {
                 ticketPrice = Number(pkg.price);
+            } else {
+                // Check if it's a V2 seating section or dynamic category
+                const dynConfig = typeof event.dynamic_config === 'string' ? JSON.parse(event.dynamic_config) : (event.dynamic_config || {});
+                let foundTier = null;
+                
+                if (Array.isArray(dynConfig.seatingSections)) {
+                    foundTier = dynConfig.seatingSections.find(sec => sec.id === packageId);
+                    if (foundTier) ticketPrice = Number(foundTier.basePrice || 0);
+                }
+                
+                if (!foundTier && Array.isArray(dynConfig.categories)) {
+                    foundTier = dynConfig.categories.find(c => c.id === packageId);
+                    if (foundTier) ticketPrice = Number(foundTier.price || 0);
+                }
+                
+                // Check legacy ticket categories
+                if (!foundTier) {
+                    const { data: ticketCat } = await supabaseAdmin
+                        .from("ticket_categories")
+                        .select("price")
+                        .eq("id", packageId)
+                        .maybeSingle();
+                    if (ticketCat) ticketPrice = Number(ticketCat.price);
+                }
+
+                // Check event_ticket_categories
+                if (!foundTier) {
+                    const { data: eventTicketCat } = await supabaseAdmin
+                        .from("event_ticket_categories")
+                        .select("price")
+                        .eq("id", packageId)
+                        .maybeSingle();
+                    if (eventTicketCat) ticketPrice = Number(eventTicketCat.price);
+                }
+                
+                // Fallback custom subtotal if passed (useful for custom seat selection)
+                if (!foundTier && body.customSubtotal !== undefined) {
+                    ticketPrice = Number(body.customSubtotal) / quantity;
+                }
             }
+        } else if (body.customSubtotal !== undefined) {
+            ticketPrice = Number(body.customSubtotal) / quantity;
         }
+        
         const ticketSubtotal = ticketPrice * quantity;
 
         // 3. Fetch Configured Fee and Tax Settings from DB
         const { data: feeSettingsRaw } = await supabaseAdmin.from("fee_settings").select("*").eq("is_active", true).limit(1).maybeSingle();
         const { data: taxSettingsRaw } = await supabaseAdmin.from("tax_settings").select("*").eq("is_active", true).limit(1).maybeSingle();
+
+        // Resolve Organiser Profile
+        const { data: organiserProfile } = await supabaseAdmin
+            .from("profiles")
+            .select("*")
+            .eq("id", event.organiser_id || event.organiserId)
+            .maybeSingle();
 
         // 4. Resolve Fees
         const feeConfig = {
@@ -51,11 +102,14 @@ export async function POST(request) {
             convenienceFeeValue: Number(feeSettingsRaw?.fee_value) || 40,
             gstPercent: Number(taxSettingsRaw?.tax_percentage) || 18,
             gstApplyOn: taxSettingsRaw?.apply_on || 'platform_fee',
+            organiserCustomFeeType: event.fee_config?.custom_fee_type || organiserProfile?.fee_config?.custom_fee_type || null,
+            organiserCustomFeeValue: Number(event.fee_config?.custom_fee_value) || Number(organiserProfile?.fee_config?.custom_fee_value) || 0,
+            absorbFees: event.fee_config?.absorb_fees || organiserProfile?.fee_config?.absorb_fees || false
         };
 
         const resolvedFeeSettings = resolveFeeSettings(
-            feeConfig,
-            event.organisers?.fee_config,
+            feeSettingsRaw,
+            organiserProfile?.fee_config,
             event.fee_config
         );
 

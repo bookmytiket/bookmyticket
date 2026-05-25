@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import nodemailer from 'nodemailer';
 
 // Helper: Microsoft 365 Graph API Email Dispatch
 const sendM365Email = async (m365Config, fromEmail, toEmail, subject, content) => {
@@ -96,14 +97,31 @@ export async function POST(request) {
     if (action === "validate-email-settings") {
       const { settings } = data;
       const m365Config = settings.microsoft365 || settings.microsoft_365;
+      
       if (settings.provider === "MICROSOFT_365" && m365Config) {
         await sendM365Email(
           m365Config,
-          settings.from,
-          settings.from, // Send test to self
+          settings.from_email || settings.from,
+          settings.from_email || settings.from, // Send test to self
           "Microsoft 365 Connection Test",
           "Success! Your Microsoft 365 Graph API integration is correctly configured."
         );
+      } else {
+        // SMTP Handling
+        if (!settings.host || !settings.port) {
+          return NextResponse.json({ error: "SMTP Host and Port are required" }, { status: 400 });
+        }
+        const transporter = nodemailer.createTransport({
+          host: settings.host,
+          port: Number(settings.port),
+          secure: Number(settings.port) === 465 || settings.encryption === 'TLS' || settings.encryption === 'SSL', 
+          auth: {
+            user: settings.user_name || settings.user,
+            pass: settings.pass,
+          },
+        });
+        
+        await transporter.verify();
       }
       return NextResponse.json({ success: true });
     }
@@ -111,14 +129,37 @@ export async function POST(request) {
     if (action === "send-test-email") {
       const { settings, to, subject, html } = data;
       const m365Config = settings.microsoft365 || settings.microsoft_365;
+      const fromAddress = settings.from_email || settings.from;
+      
       if (settings.provider === "MICROSOFT_365" && m365Config) {
         await sendM365Email(
           m365Config,
-          settings.from,
+          fromAddress,
           to,
           subject || "Test Email",
           html || "This is a test email."
         );
+      } else {
+        // SMTP Handling
+        if (!settings.host || !settings.port) {
+          return NextResponse.json({ error: "SMTP Host and Port are required" }, { status: 400 });
+        }
+        const transporter = nodemailer.createTransport({
+          host: settings.host,
+          port: Number(settings.port),
+          secure: Number(settings.port) === 465 || settings.encryption === 'TLS' || settings.encryption === 'SSL', 
+          auth: {
+            user: settings.user_name || settings.user,
+            pass: settings.pass,
+          },
+        });
+        
+        await transporter.sendMail({
+          from: `"${settings.from_name || 'BookMyTicket'}" <${fromAddress}>`,
+          to,
+          subject: subject || "Test Email from BookMyTicket Admin",
+          html: html || "<h1>Connection Test Successful!</h1><p>Your email settings are working perfectly. 🎉</p>"
+        });
       }
       return NextResponse.json({ success: true });
     }

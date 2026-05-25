@@ -26,7 +26,11 @@ export async function POST(req) {
         .eq("id", templateId)
         .single();
       if (error) throw new Error("Template not found");
-      template = data;
+      template = {
+        ...data,
+        subject: data.subject_template || data.subject,
+        body: data.html_content || data.body
+      };
     }
 
     if (!template.subject || !template.body) {
@@ -103,6 +107,15 @@ export async function POST(req) {
 
     const successCount = results.filter(r => r.status === "success").length;
     const failCount = results.length - successCount;
+
+    if (successCount === 0 && failCount > 0) {
+      // If everything failed (e.g. invalid credentials), show the exact error from the first failure
+      return NextResponse.json({
+        success: false,
+        error: `Failed to send email. Reason: ${results[0].error}`,
+        results: results.slice(0, 100)
+      });
+    }
 
     return NextResponse.json({ 
       success: true, 
