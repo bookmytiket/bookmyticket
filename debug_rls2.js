@@ -6,10 +6,11 @@ const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function check() {
-  const { data, error } = await supabase
-      .from('withdraw_requests')
-      .select('*, bank_details:bank_details_id(*)');
-  if (error) console.error("Query Error:", error);
-  else console.log("Success with bank_details");
+  const { data, error } = await supabase.from('withdraw_requests').select('*');
+  console.log("Service role:", data?.length);
+
+  // Now create an authenticated client using an admin JWT
+  // But wait, I don't have the admin's JWT. 
+  // Let me just check if RLS is enabled on withdraw_requests using psql.
 }
 check();

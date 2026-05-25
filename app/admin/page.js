@@ -1568,38 +1568,13 @@ const PayoutRequestsTable = ({ t, theme }) => {
     const fetchRequests = async () => {
         setLoading(true);
         try {
-            // Unify with organiser panel's withdraw_requests table
-            const { data } = await supabase
-                .from('withdraw_requests')
-                .select('*, organisers:organiser_id(full_name, id, email), bank_details:bank_details_id(*)')
-                .order('created_at', { ascending: false });
-            
-            if (data) {
-                const enriched = await Promise.all(data.map(async (req) => {
-                    const type = 'organiser'; // Default to organiser for withdraw_requests
-                    const walletTable = 'organiser_wallet';
-                    const walletCol = 'organiser_id';
-                    
-                    const pid = req.organiser_id;
-                    
-                    if (pid) {
-                        const { data: w } = await supabase.from(walletTable).select('balance').eq(walletCol, pid).maybeSingle();
-                        return { 
-                            ...req, 
-                            current_balance: w?.balance || 0, 
-                            provider_id: pid, 
-                            wallet_table: walletTable, 
-                            wallet_col: walletCol,
-                            // Map for UI compatibility
-                            requester_name: req.organisers?.full_name || req.organisers?.business_name || 'Partner',
-                            requester_type: 'organiser',
-                            requested_amount: req.amount
-                        };
-                    }
-                    return { ...req, current_balance: 0, requester_name: 'Partner', requester_type: 'organiser' };
-                }));
-                setRequests(enriched);
+            const response = await fetch('/api/admin/withdraw-requests');
+            if (!response.ok) {
+                const errData = await response.json();
+                throw new Error(errData.error || 'Failed to fetch withdraw requests');
             }
+            const enriched = await response.json();
+            setRequests(enriched || []);
         } catch (err) {
             console.error("Fetch requests error:", err);
         } finally {
@@ -1609,7 +1584,7 @@ const PayoutRequestsTable = ({ t, theme }) => {
 
     useEffect(() => { fetchRequests(); }, []);
 
-    const [updateStatus] = useSupabaseMutation('withdraw_requests', 'update', (q, p) => q.eq('id', p.id));
+    // const [updateStatus] = useSupabaseMutation('withdraw_requests', 'update', (q, p) => q.eq('id', p.id));
     const [addTransaction] = useSupabaseMutation('wallet_transactions', 'insert');
     const { showToast } = useToast();
     const refresh = fetchRequests;
@@ -1617,7 +1592,12 @@ const PayoutRequestsTable = ({ t, theme }) => {
     const handleAction = async (request, newStatus) => {
         try {
             if (newStatus === 'approved') {
-                await updateStatus({ id: request.id, status: 'approved' });
+                const response = await fetch('/api/admin/withdraw-requests', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: request.id, status: 'approved' })
+                });
+                if (!response.ok) throw new Error("Failed to update status");
 
                 await supabase.from('wallet_transactions')
                     .update({ description: 'Withdrawal Completed' })
@@ -1625,7 +1605,12 @@ const PayoutRequestsTable = ({ t, theme }) => {
 
                 showToast("Payout marked as approved", "success");
             } else if (newStatus === 'rejected') {
-                await updateStatus({ id: request.id, status: 'rejected' });
+                const response = await fetch('/api/admin/withdraw-requests', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: request.id, status: 'rejected' })
+                });
+                if (!response.ok) throw new Error("Failed to update status");
 
                 // Refund to appropriate wallet
                 if (request.provider_id && request.wallet_table && request.wallet_col) {
