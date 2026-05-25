@@ -60,7 +60,7 @@ export default function OnboardingPage() {
             return;
         }
 
-        const isLegacyActive = user?.kyc_status?.toLowerCase() === 'active' || user?.status?.toLowerCase() === 'active';
+        const isLegacyActive = user?.kyc_status?.toLowerCase() === 'active';
         const dashboardAccess = user?.verification_status?.dashboard_access === true || isLegacyActive;
         
         console.log("Onboarding Check:", { dashboardAccess, role: user?.role, isLegacyActive });
