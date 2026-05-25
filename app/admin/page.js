@@ -25,6 +25,7 @@ import FlashAdmin from "@/app/admin/components/FlashAdmin";
 import PushCenter from "@/app/admin/components/PushCenter";
 import FinanceCrossVerificationAdmin from "@/app/admin/components/FinanceCrossVerificationAdmin";
 import EmailDashboard from "@/app/admin/components/EmailDashboard";
+import EmailSettingsAdmin from "@/app/admin/components/EmailSettingsAdmin";
 import { 
     MoreVertical, Zap, Briefcase, LayoutDashboard, Settings, Video, Image as ImageIcon, 
     Sparkles, CheckCircle, Ticket, Users, Menu, Bell, Save, X, Plus, Trash2, Mail, Lock, 
@@ -3299,6 +3300,7 @@ function AdminHomePage() {
                                 <NavLink id="api_settings" label="API Gateway" icon={Code} active={activeTab === "api_settings"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
                                 <NavLink id="meta_management" label="Meta / SEO" icon={Globe} active={activeTab === "meta_management"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
                                 <NavLink id="contact_settings" label="Contact Settings" icon={Phone} active={activeTab === "contact_settings"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
+                                <NavLink id="email_settings" label="Email Settings" icon={Mail} active={activeTab === "email_settings"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
                     </div>
                 </div>
 
@@ -4522,6 +4524,12 @@ function AdminHomePage() {
                                     </tbody>
                                 </table>
                             </div>
+                        </div>
+                    )}
+
+                    {activeTab === "email_settings" && (
+                        <div className="px-8 lg:px-12 py-8 animate-in fade-in slide-in-from-bottom-6 duration-700">
+                            <EmailSettingsAdmin theme={theme} t={t} />
                         </div>
                     )}
 
