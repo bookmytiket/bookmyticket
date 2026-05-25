@@ -11,6 +11,7 @@ import MobileBannersAdmin from "@/app/admin/components/MobileBannersAdmin";
 import AdminPartnerRequestsTable from "@/app/admin/components/AdminPartnerRequestsTable";
 import AdminServiceRequestsTable from "@/app/admin/components/AdminServiceRequestsTable";
 import AdminOrgRequestsTable from "@/app/admin/components/AdminOrgRequestsTable";
+import AdminKycReview from "@/app/admin/components/AdminKycReview";
 import EmailCommSystem from "@/app/admin/components/EmailCommSystem";
 import SeoAnalyticsAdmin from "@/app/admin/components/SeoAnalyticsAdmin";
 import CareersAdmin from "@/app/admin/components/CareersAdmin";
@@ -5600,11 +5601,21 @@ function AdminHomePage() {
                         </div>
                     )}
 
-                    {(activeTab === "kyc" || activeTab === "partner_requests") && (
+                    {activeTab === "kyc" && (
                         <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
                             <div className="mb-8">
-                                <h2 className="text-3xl font-black text-slate-900 tracking-tighter uppercase italic leading-none mb-2">KYC Intelligence</h2>
+                                <h2 className="text-3xl font-black text-slate-900 tracking-tighter uppercase italic leading-none mb-2">Organizer Verification Center</h2>
                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Identity Verification & Compliance Audit</p>
+                            </div>
+                             <AdminKycReview t={t} />
+                        </div>
+                    )}
+
+                    {activeTab === "partner_requests" && (
+                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
+                            <div className="mb-8">
+                                <h2 className="text-3xl font-black text-slate-900 tracking-tighter uppercase italic leading-none mb-2">Partner Signups</h2>
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Review Initial Partnership Requests</p>
                             </div>
                              <AdminPartnerRequestsTable t={t} theme={theme} />
                         </div>

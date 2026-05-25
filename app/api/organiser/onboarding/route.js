@@ -77,8 +77,17 @@ export async function POST(request) {
             submitted_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
         }, { onConflict: 'organizer_id' });
-        
         if (statusError) throw statusError;
+
+        // 5. Update legacy organisers table for Admin Panel UI backwards compatibility
+        await supabaseAdmin.from('organisers').update({
+            kyc_status: 'Submitted'
+        }).eq('id', user.id);
+        
+        // Also update partner_requests just in case the admin panel reads from there
+        await supabaseAdmin.from('partner_requests').update({
+            status: 'KYC Submitted'
+        }).eq('email', user.email);
 
         return NextResponse.json({ success: true });
     } catch (err) {
