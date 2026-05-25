@@ -1571,7 +1571,7 @@ const PayoutRequestsTable = ({ t, theme }) => {
             // Unify with organiser panel's withdraw_requests table
             const { data } = await supabase
                 .from('withdraw_requests')
-                .select('*, organisers:organiser_id(business_name, id, email), bank_details:bank_details_id(*)')
+                .select('*, organisers:organiser_id(full_name, id, email), bank_details:bank_details_id(*)')
                 .order('created_at', { ascending: false });
             
             if (data) {
@@ -1591,7 +1591,7 @@ const PayoutRequestsTable = ({ t, theme }) => {
                             wallet_table: walletTable, 
                             wallet_col: walletCol,
                             // Map for UI compatibility
-                            requester_name: req.organisers?.business_name || 'Partner',
+                            requester_name: req.organisers?.full_name || req.organisers?.business_name || 'Partner',
                             requester_type: 'organiser',
                             requested_amount: req.amount
                         };
