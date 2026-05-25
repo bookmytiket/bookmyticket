@@ -120,7 +120,9 @@ export default function AdminOrgRequestsTable({ t }) {
 
     const filteredRequests = useMemo(() => {
         return requests.filter(req => {
-            const matchesTab = req.status === activeTab || (activeTab === "Pending" && req.status === "Pending");
+            const matchesTab = activeTab === "KYC Initiated" 
+                ? ["Approved", "KYC Initiated", "Access Granted"].includes(req.status)
+                : (req.status === activeTab || (activeTab === "Pending" && req.status === "Pending"));
             const search = searchTerm.toLowerCase();
             const matchesSearch = !searchTerm || 
                 (req.full_name || "").toLowerCase().includes(search) || 
