@@ -119,6 +119,25 @@ export default function DesktopDashboard({
                                                 >
                                                     Invoice
                                                 </button>
+                                                {!booking.isVendorBooking && (
+                                                    <button 
+                                                        onClick={async (e) => {
+                                                            e.target.innerText = "Sending...";
+                                                            try {
+                                                                const res = await fetch(`/api/v1/tickets/${booking.id || booking._id}/resend`, { method: 'POST' });
+                                                                const data = await res.json();
+                                                                e.target.innerText = "Resent!";
+                                                                setTimeout(() => e.target.innerText = "Resend Email", 2000);
+                                                            } catch (err) {
+                                                                e.target.innerText = "Error";
+                                                                setTimeout(() => e.target.innerText = "Resend Email", 2000);
+                                                            }
+                                                        }}
+                                                        className="text-purple-500 text-[10px] font-black uppercase tracking-widest hover:text-slate-900 transition-colors"
+                                                    >
+                                                        Resend Email
+                                                    </button>
+                                                )}
                                                 <JoinNowButton 
                                                     eventId={booking.eventId} 
                                                     className="h-7 !px-3 !py-0 !rounded-lg !text-[9px]"

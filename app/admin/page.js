@@ -24,8 +24,7 @@ import FraudDashboard from "@/app/admin/components/FraudDashboard";
 import FlashAdmin from "@/app/admin/components/FlashAdmin";
 import PushCenter from "@/app/admin/components/PushCenter";
 import FinanceCrossVerificationAdmin from "@/app/admin/components/FinanceCrossVerificationAdmin";
-
-
+import EmailDashboard from "@/app/admin/components/EmailDashboard";
 import { 
     MoreVertical, Zap, Briefcase, LayoutDashboard, Settings, Video, Image as ImageIcon, 
     Sparkles, CheckCircle, Ticket, Users, Menu, Bell, Save, X, Plus, Trash2, Mail, Lock, 
@@ -3282,6 +3281,7 @@ function AdminHomePage() {
                                 <NavLink id="fraud_monitoring" label="Fraud Detection" icon={ShieldCheck} active={activeTab === "fraud_monitoring" || activeTab === "fraud_dashboard"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
                                 <NavLink id="scanner_monitor" label="Scanner Analytics" icon={Activity} active={activeTab === "scanner_monitor"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
                                 <NavLink id="audit_logs" label="Audit Logs" icon={Archive} active={activeTab === "audit_logs"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
+                                <NavLink id="email_logs" label="Email Engine" icon={Mail} active={activeTab === "email_logs"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
 
                                 <GroupTitle title="Reports" t={t} />
                                 <NavLink id="support_tickets" label="Ticket System" icon={MessageCircle} active={activeTab === "support_tickets"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
@@ -5602,6 +5602,12 @@ function AdminHomePage() {
                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Service Provider Onboarding</p>
                             </div>
                              <AdminServiceRequestsTable t={t} />
+                        </div>
+                    )}
+
+                    {activeTab === "email_logs" && (
+                        <div className="px-8 py-6">
+                            <EmailDashboard t={t} theme={theme} />
                         </div>
                     )}
 
@@ -7927,7 +7933,7 @@ function AdminHomePage() {
                         </div>
                     )}
 
-                    {(["dashboard", "banner_ads", "revenue", "payout_requests", "fee_settings", "exclusive_settings", "email_broadcast", "careers", "subscribers", "subscriptions", "turf_partners", "turf_active", "turf_banned", "branding", "categories", "subnav", "events_settings", "event_partners", "pages", "sections", "all_org", "active_org", "banned_org", "email_unverified", "mobile_unverified", "kyc_unverified", "kyc_pending", "kyc_verified", "with_balance", "org_requests", "partner_requests", "service_active", "service_banned", "send_notif", "payment_settings", "ticket_settings", "comm_hub", "email_settings", "email_templates", "disclaimer_settings", "sso_settings", "api_settings", "meta_management", "all_events", "tournaments", "marathons", "customers", "bookings", "all_turfs", "turf_active", "turf_banned", "turf_bookings", "pool_bookings", "gst", "coupons", "promotions", "financials", "support_tickets", "branding_partners", "hero", "video", "video_banner", "mobile_banners", "site_branding", "memories", "copyright", "meeting_settings", "admin_management", "ad_popups", "meetings", "checkout_footer", "careers_admin", "careers_banner", "contact_inquiries", "contact_settings", "scanner_monitor", "fraud_dashboard", "flash_deals", "audit_logs", "settlement_verification"].includes(activeTab)) ? null : (
+                    {(["dashboard", "banner_ads", "revenue", "payout_requests", "fee_settings", "exclusive_settings", "email_broadcast", "careers", "subscribers", "subscriptions", "turf_partners", "turf_active", "turf_banned", "branding", "categories", "subnav", "events_settings", "event_partners", "pages", "sections", "all_org", "active_org", "banned_org", "email_unverified", "mobile_unverified", "kyc_unverified", "kyc_pending", "kyc_verified", "with_balance", "org_requests", "partner_requests", "service_active", "service_banned", "send_notif", "payment_settings", "ticket_settings", "comm_hub", "email_settings", "email_templates", "disclaimer_settings", "sso_settings", "api_settings", "meta_management", "all_events", "tournaments", "marathons", "customers", "bookings", "all_turfs", "turf_active", "turf_banned", "turf_bookings", "pool_bookings", "gst", "coupons", "promotions", "financials", "support_tickets", "branding_partners", "hero", "video", "video_banner", "mobile_banners", "site_branding", "memories", "copyright", "meeting_settings", "admin_management", "ad_popups", "meetings", "checkout_footer", "careers_admin", "careers_banner", "contact_inquiries", "contact_settings", "scanner_monitor", "fraud_dashboard", "flash_deals", "audit_logs", "settlement_verification", "email_logs"].includes(activeTab)) ? null : (
                         <div style={{ backgroundColor: t.cardBg, padding: "60px 24px", textAlign: "center", borderRadius: "10px", border: `1px solid ${t.border}` }}>
                             <h2 style={{ fontSize: "20px", fontWeight: 800, color: t.textMain }}>{activeTab.replace(/_/g, ' ').toUpperCase()}</h2>
                             <p style={{ color: t.textSub, marginTop: "8px", maxWidth: "350px", margin: "8px auto", fontSize: "14px" }}>This management module is currently being configured. You will be able to manage these settings shortly.</p>
