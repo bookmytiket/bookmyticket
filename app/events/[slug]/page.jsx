@@ -70,10 +70,11 @@ export default async function SlugEventPage({ params }) {
     
     console.log('[SlugEventPage] RECEIVED params slug:', slug);
 
-    try {
-        if (!supabase) {
-            notFound();
-        }
+    console.log('[SlugEventPage] RECEIVED params slug:', slug);
+
+    if (!supabase) {
+        notFound();
+    }
 
         // Fetch by slug first
         let { data: event, error: slugError } = await supabase
@@ -154,8 +155,4 @@ export default async function SlugEventPage({ params }) {
                 )}
             </>
         );
-    } catch (error) {
-        log(`CRITICAL ERROR: ${error.message}`);
-        throw error;
-    }
 }
