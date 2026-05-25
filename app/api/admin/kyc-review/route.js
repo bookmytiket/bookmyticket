@@ -57,6 +57,16 @@ export async function POST(request) {
             kyc_status: kycStatus === 'approved' ? 'Active' : 'Pending',
             status: kycStatus === 'approved' ? 'Active' : 'Pending'
         }).eq('id', organizer_id);
+        
+        // 4. Clean up partner_requests queue
+        if (kycStatus === 'approved') {
+            const { data: targetUser } = await supabaseAdmin.auth.admin.getUserById(organizer_id);
+            if (targetUser?.user?.email) {
+                await supabaseAdmin.from('partner_requests').update({
+                    status: 'Active'
+                }).eq('email', targetUser.user.email);
+            }
+        }
 
         return NextResponse.json({ success: true });
     } catch (err) {
