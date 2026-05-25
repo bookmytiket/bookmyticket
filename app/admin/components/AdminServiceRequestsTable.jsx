@@ -18,13 +18,16 @@ export default function AdminServiceRequestsTable({ t }) {
     const fetchRequests = useCallback(async () => {
         setLoading(true);
         try {
-            const { data, error } = await supabase
-                .from('partner_requests')
-                .select('*')
-                .eq('type', 'professional_service')
-                .order('created_at', { ascending: false });
-            if (error) throw error;
-            setRequests((data || []).map(r => ({
+            const { data: { session } } = await supabase.auth.getSession();
+            const res = await fetch('/api/admin/partner-requests?type=professional_service', {
+                headers: {
+                    'Authorization': `Bearer ${session?.access_token || ""}`
+                }
+            });
+            const payload = await res.json();
+            if (!res.ok) throw new Error(payload.error || "Failed to fetch");
+            
+            setRequests((payload.requests || []).map(r => ({
                 ...r,
                 full_name: r.full_name || `${r.first_name} ${r.last_name}`,
                 mobile: r.mobile || r.phone,

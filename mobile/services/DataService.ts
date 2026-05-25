@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import UnifiedApi from '../lib/unifiedApi';
 
 /**
  * Unified Data Service to ensure consistent data fetching and structures
@@ -11,17 +12,12 @@ const DataService = {
    */
   async getPublicEvents(city?: string, district?: string) {
     try {
-      const baseUrl = process.env.EXPO_PUBLIC_API_URL || 'https://bookmyticket.com'; // Adjust to real production URL
-      let queryParams = [];
-      if (district) queryParams.push(`district=${district}`);
-      else if (city) queryParams.push(`city=${city}`);
-      
-      const url = `${baseUrl}/api/events/public?${queryParams.length > 0 ? `${queryParams.join('&')}&` : ''}t=${Date.now()}`;
-      
-      const response = await fetch(url);
-      if (!response.ok) throw new Error('API fetch failed');
-      
-      return await response.json();
+      const events = await UnifiedApi.getEvents({ district, city, t: Date.now() });
+      if (Array.isArray(events) && events.length > 0) return events;
+
+      // If the canonical API has stricter publish/location filters than older
+      // mobile data, keep the home feed populated from the same Supabase source.
+      return this.getEvents();
     } catch (err) {
       console.warn('DataService.getPublicEvents failed, falling back to direct Supabase:', err);
       // Fallback to legacy direct fetch if API is unreachable
@@ -42,7 +38,7 @@ const DataService = {
     if (error) throw error;
     
     // Consistent filtering: status != 'draft', 'inactive', 'expired'
-    return (data || []).filter(ev => {
+    return (Array.isArray(data) ? data : []).filter(ev => {
       const status = String(ev.status || '').toLowerCase();
       const publishStatus = String(ev.publish_status || '').toLowerCase();
       return !['draft', 'inactive', 'expired'].includes(status) || publishStatus === 'published';
@@ -86,14 +82,19 @@ const DataService = {
    * Fetches a single event by ID with all related data.
    */
   async getEventDetail(id: string) {
-    const { data, error } = await supabase
-      .from('events')
-      .select('*')
-      .eq('id', id)
-      .single();
-    
-    if (error) throw error;
-    return data;
+    try {
+      return await UnifiedApi.getEvent(id);
+    } catch (err) {
+      console.warn('DataService.getEventDetail failed, falling back to direct Supabase:', err);
+      const { data, error } = await supabase
+        .from('events')
+        .select('*')
+        .eq('id', id)
+        .single();
+      
+      if (error) throw error;
+      return data;
+    }
   },
 
   /**
@@ -155,8 +156,8 @@ const DataService = {
    */
   async getBrandingAssets() {
     const [banners, coupons] = await Promise.all([
-      supabase.from('branding_banners').select('*').eq('status', 'Active'),
-      supabase.from('branding_coupons').select('*').eq('status', 'Active')
+      supabase.from('brand_banners').select('*').eq('status', 'Active'),
+      supabase.from('brand_coupons').select('*').eq('status', 'Active')
     ]);
     
     return {
@@ -208,14 +209,18 @@ const AuthService = {
  */
 const BookingService = {
   async createBooking(bookingData: any) {
-    const { data, error } = await supabase.from('bookings').insert(bookingData).select().single();
-    if (error) throw error;
-    return data;
+    const baseUrl = process.env.EXPO_PUBLIC_API_URL || 'https://bookmyticket.com';
+    const response = await fetch(`${baseUrl}/api/mobile/create-booking`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(bookingData),
+    });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.error || 'Booking creation failed');
+    return payload;
   },
   async getMyBookings(userId: string) {
-    const { data, error } = await supabase.from('bookings').select('*, events(*)').eq('user_id', userId);
-    if (error) throw error;
-    return data;
+    return await UnifiedApi.getBookings();
   }
 };
 

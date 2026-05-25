@@ -155,7 +155,8 @@ export async function POST(request) {
             total_amount: booking.total_price,
             base_amount: booking.base_amount,
             platform_fee: booking.platform_charge,
-            gst_amount_col: booking.gst_amount
+            gst_amount_col: booking.gst_amount,
+            showtime_id: booking.showtime_id || null
         }).select().single();
 
         // 7. Decrement event ticket inventory
@@ -190,17 +191,31 @@ export async function POST(request) {
                 for (const seat of booking.selected_seats) {
                     const seatId = seat.id; // e.g. "VIP-A-1"
                     // Try to update existing, or insert if not exists
-                    const { data: existingSeat } = await supabaseAdmin
+                    const showtimeId = booking.showtime_id || session.participant_data?.showtimeId || null;
+                    
+                    let query = supabaseAdmin
                         .from('seat_inventory')
                         .select('id')
                         .eq('event_id', session.event_id)
-                        .eq('seat_number', seatId)
-                        .maybeSingle();
+                        .eq('seat_number', seatId);
+                        
+                    if (showtimeId) {
+                        query = query.eq('showtime_id', showtimeId);
+                    } else {
+                        query = query.is('showtime_id', null);
+                    }
+                    
+                    const { data: existingSeat } = await query.maybeSingle();
 
                     if (existingSeat) {
                         await supabaseAdmin.from('seat_inventory').update({ status: 'sold' }).eq('id', existingSeat.id);
                     } else {
-                        await supabaseAdmin.from('seat_inventory').insert({ event_id: session.event_id, seat_number: seatId, status: 'sold' });
+                        await supabaseAdmin.from('seat_inventory').insert({ 
+                            event_id: session.event_id, 
+                            seat_number: seatId, 
+                            status: 'sold', 
+                            showtime_id: showtimeId 
+                        });
                     }
                 }
             } catch (seatUpdateErr) {
@@ -225,7 +240,8 @@ export async function POST(request) {
             qr_token: qrCodeToken,
             issued_at: nowIso,
             status: 'active',
-            qr_code: qrCodeToken
+            qr_code: qrCodeToken,
+            showtime_id: booking.showtime_id || session.participant_data?.showtimeId || null
         });
 
         // 9. Record Coupon / Partner Campaign Voucher Usage

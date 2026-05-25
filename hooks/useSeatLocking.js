@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase';
  * useSeatLocking Hook
  * Handles real-time temporary seat locking for BookMyTicket.
  */
-export function useSeatLocking(eventId, userId) {
+export function useSeatLocking(eventId, userId, showtimeId = null) {
     const [lockedSeats, setLockedSeats] = useState([]); // Seats locked by other users
     const [myLocks, setMyLocks] = useState([]); // Seats locked by current user
     const [loading, setLoading] = useState(true);
@@ -15,11 +15,19 @@ export function useSeatLocking(eventId, userId) {
         if (!eventId) return;
         setLoading(true);
         
-        const { data, error } = await supabase
+        let query = supabase
             .from('seat_inventory')
             .select('id, seat_number, status, locked_by, lock_expires_at')
             .eq('event_id', eventId)
             .or(`status.eq.locked,status.eq.temp_locked`);
+            
+        if (showtimeId) {
+            query = query.eq('showtime_id', showtimeId);
+        } else {
+            query = query.is('showtime_id', null);
+        }
+
+        const { data, error } = await query;
 
         if (!error && data) {
             const others = data.filter(s => s.locked_by !== userId && new Date(s.lock_expires_at) > new Date());
@@ -28,19 +36,22 @@ export function useSeatLocking(eventId, userId) {
             setMyLocks(mine.map(s => s.seat_number));
         }
         setLoading(false);
-    }, [eventId, userId]);
+    }, [eventId, userId, showtimeId]);
 
     useEffect(() => {
         fetchLocks();
 
         // Subscribe to real-time updates
+        let filterStr = `event_id=eq.${eventId}`;
+        if (showtimeId) filterStr += `&showtime_id=eq.${showtimeId}`;
+
         const channel = supabase
-            .channel(`seat_locks_${eventId}`)
+            .channel(`seat_locks_${eventId}_${showtimeId || 'base'}`)
             .on('postgres_changes', { 
                 event: '*', 
                 schema: 'public', 
                 table: 'seat_inventory',
-                filter: `event_id=eq.${eventId}`
+                filter: filterStr
             }, (payload) => {
                 const { new: newSeat, old: oldSeat } = payload;
                 
@@ -63,7 +74,7 @@ export function useSeatLocking(eventId, userId) {
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [eventId, userId, fetchLocks]);
+    }, [eventId, userId, showtimeId, fetchLocks]);
 
     const lockSeat = useCallback(async (seatId) => {
         if (!userId) return { error: "Login required" };
@@ -74,7 +85,7 @@ export function useSeatLocking(eventId, userId) {
             const res = await fetch('/api/seats/lock', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ eventId, seatId, userId, expiresAt })
+                body: JSON.stringify({ eventId, seatId, userId, expiresAt, showtimeId })
             });
             const data = await res.json();
             
@@ -85,21 +96,21 @@ export function useSeatLocking(eventId, userId) {
         } catch (err) {
             return { error: "Network error occurred" };
         }
-    }, [eventId, userId]);
+    }, [eventId, userId, showtimeId]);
 
     const releaseSeat = useCallback(async (seatId) => {
         try {
             const res = await fetch('/api/seats/unlock', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ eventId, seatId, userId })
+                body: JSON.stringify({ eventId, seatId, userId, showtimeId })
             });
             const data = await res.json();
             return { error: data.error };
         } catch (err) {
             return { error: "Network error" };
         }
-    }, [eventId, userId]);
+    }, [eventId, userId, showtimeId]);
 
     return { lockedSeats, myLocks, loading, lockSeat, releaseSeat, refresh: fetchLocks };
 }

@@ -55,6 +55,8 @@ export async function POST(request) {
                     phone: booking.customer_details?.phone || "",
                     applied_campaign_id: pricingSnapshot.appliedCampaignId || null,
                     applied_campaign_code: pricingSnapshot.appliedCampaignCode || null,
+                    showtime_id: participantData.showtimeId || null,
+                    showtime_name: participantData.showtimeName || null,
                     ...participantData
                 };
 
@@ -73,7 +75,8 @@ export async function POST(request) {
                         coupon_id: pricingSnapshot.appliedCouponId || null,
                         total_price: Number(pricingSnapshot.totalPrice) || 0,
                         selected_seats: participantData.selectedSeats || [],
-                        customer_details: customerDetails
+                        customer_details: customerDetails,
+                        showtime_id: participantData.showtimeId || null
                     })
                     .eq("id", bookingId)
                     .select()
@@ -99,6 +102,8 @@ export async function POST(request) {
                 phone: profile?.phone || "",
                 applied_campaign_id: pricingSnapshot.appliedCampaignId || null,
                 applied_campaign_code: pricingSnapshot.appliedCampaignCode || null,
+                showtime_id: participantData.showtimeId || null,
+                showtime_name: participantData.showtimeName || null,
                 ...participantData
             };
 
@@ -123,7 +128,8 @@ export async function POST(request) {
                     selected_seats: participantData.selectedSeats || [],
                     event_name: event.title,
                     location: event.location,
-                    customer_details: customerDetails
+                    customer_details: customerDetails,
+                    showtime_id: participantData.showtimeId || null
                 }])
                 .select()
                 .single();

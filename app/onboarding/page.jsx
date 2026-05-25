@@ -60,21 +60,18 @@ export default function OnboardingPage() {
             return;
         }
 
-        const kycStatus = (user?.kyc_status || user?.kyc_details?.status || "").toLowerCase();
-        const isApproved = ["approved", "active", "kyc completed", "kyc verified"].includes(kycStatus) || 
-                          user?.is_approved === true || 
-                          (user?.kyc_details?.status || "").toLowerCase() === "active";
+        const dashboardAccess = user?.verification_status?.dashboard_access === true;
         
-        console.log("Onboarding Check:", { kycStatus, isApproved, role: user?.role, kyc_status_raw: user?.kyc_status, details_status: user?.kyc_details?.status });
+        console.log("Onboarding Check:", { dashboardAccess, role: user?.role });
 
-        if (user && isApproved) {
+        if (user && dashboardAccess) {
             console.log("Redirecting to /organiser...");
             router.push("/organiser");
             return;
         }
 
         // If not approved, force a profile refresh to catch any recent admin approvals
-        if (user && !isApproved && !loading) {
+        if (user && !dashboardAccess && !loading) {
             fetchAndSetUser(user);
         }
 
@@ -99,19 +96,16 @@ export default function OnboardingPage() {
         try {
             // Speed up load by only fetching what is needed for initialization
             const { data, error } = await supabase
-                .from("kyc_details")
+                .from("organizer_verification_status")
                 .select("*")
-                .eq("id", user.id)
+                .eq("organizer_id", user.id)
                 .maybeSingle();
             
             if (data) {
                 setKycData(data);
-                // Pre-fill category if it was previously selected
-                if (data.business_category) {
-                    setForm(prev => ({ ...prev, category: data.business_category }));
-                }
+                
                 // If already submitted, skip to review step
-                if (data.status === "Submitted" || data.status === "Under Review" || data.status === "Pending") {
+                if (data.kyc_status === "submitted" || data.kyc_status === "under_review" || data.kyc_status === "pending") {
                     setStep(5);
                 }
             }
@@ -144,7 +138,7 @@ export default function OnboardingPage() {
         }
     };
 
-    const uploadFile = async (file, bucket = 'kyc-docs') => {
+    const uploadFile = async (file, bucket = 'organizer-kyc-documents') => {
         if (!file) return null;
         const fileExt = file.name.split('.').pop();
         const fileName = `${user.id}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
@@ -179,38 +173,44 @@ export default function OnboardingPage() {
             const addressProofUrl = await uploadFile(files.addressProof);
             const chequeUrl = await uploadFile(files.cancelledCheque);
 
-            const kycPayload = {
-                id: user.id,
-                org_name: form.orgName,
-                contact_person: form.contactPerson,
-                business_category: form.category,
-                id_proof_url: idProofUrl,
-                business_proof_url: businessProofUrl,
-                address_proof_url: addressProofUrl,
-                bank_details: {
+            const payload = {
+                full_name: form.contactPerson,
+                phone: user.phone || "",
+                business_name: form.orgName,
+                business_type: form.category,
+                pan_number: form.panNumber,
+                gst_number: form.gstNumber,
+                business_address: form.address,
+                city: user.selected_city || "",
+                state: "",
+                pincode: "",
+                country: "India",
+                bank: {
+                    account_holder_name: form.orgName, // Or collect this
                     bank_name: form.bankName,
                     account_number: form.accountNumber,
                     ifsc_code: form.ifscCode,
-                    cheque_url: chequeUrl
                 },
-                status: "Submitted",
-                submitted_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
+                documents: {
+                    identity: idProofUrl,
+                    business: businessProofUrl,
+                    address: addressProofUrl,
+                    bank: chequeUrl
+                }
             };
 
-            const { error: kycError } = await supabase
-                .from("kyc_details")
-                .upsert(kycPayload);
+            const session = await supabase.auth.getSession();
+            const res = await fetch("/api/organiser/onboarding", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${session.data.session?.access_token}`
+                },
+                body: JSON.stringify(payload)
+            });
 
-            if (kycError) throw kycError;
-
-            // Update organisers table status
-            const { error: orgError } = await supabase
-                .from("organisers")
-                .update({ kyc_status: "Submitted" })
-                .eq("id", user.id);
-
-            if (orgError) throw orgError;
+            const resData = await res.json();
+            if (!res.ok) throw new Error(resData.error || "Submission failed");
 
             showToast("KYC Application submitted successfully!", "success");
             setStep(5);
@@ -265,7 +265,7 @@ export default function OnboardingPage() {
                         <div className="bg-white border border-slate-200 rounded-3xl p-8 mb-8 text-left space-y-4 shadow-sm">
                             <div className="flex justify-between items-center text-xs">
                                 <span className="text-slate-400 uppercase font-black tracking-widest">Current Status</span>
-                                <span className="px-4 py-1.5 bg-blue-100 text-blue-600 rounded-full font-black uppercase tracking-widest text-[10px]">{kycData?.status || "Submitted"}</span>
+                                <span className="px-4 py-1.5 bg-blue-100 text-blue-600 rounded-full font-black uppercase tracking-widest text-[10px]">{kycData?.kyc_status || "Submitted"}</span>
                             </div>
                             <div className="flex justify-between items-center text-xs">
                                 <span className="text-slate-400 uppercase font-black tracking-widest">Submitted On</span>

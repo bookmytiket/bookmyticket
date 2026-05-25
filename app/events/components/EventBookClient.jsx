@@ -58,6 +58,8 @@ export default function EventBookClient({ id }) {
     const router = useRouter();
     const [rawEvent, setRawEvent] = useState(null);
     const [eventLoading, setEventLoading] = useState(true);
+    const [showtimes, setShowtimes] = useState([]);
+    const [selectedShowtime, setSelectedShowtime] = useState(null);
 
     useEffect(() => {
         if (!id) return;
@@ -67,8 +69,21 @@ export default function EventBookClient({ id }) {
                 if (!res.ok) throw new Error('Failed to fetch event');
                 return res.json();
             })
-            .then(data => {
+            .then(async (data) => {
                 setRawEvent(data);
+                if (data?.booking_mode === 'multi_show') {
+                    const { data: shows } = await supabase
+                        .from('event_showtimes')
+                        .select('*')
+                        .eq('event_id', id)
+                        .eq('status', 'active')
+                        .order('show_date', { ascending: true })
+                        .order('start_time', { ascending: true });
+                    if (shows && shows.length > 0) {
+                        setShowtimes(shows);
+                        setSelectedShowtime(shows[0]);
+                    }
+                }
                 setEventLoading(false);
             })
             .catch(err => {
@@ -101,8 +116,8 @@ export default function EventBookClient({ id }) {
         if (validBlocks.length === 0 && seatCategories.length > 0 && Number(rawEvent.cols) > 0) {
             validBlocks = seatCategories.map((cat, i) => ({
                 id: cat.id || `block_${i}`,
-                name: cat.name,
-                category: cat.name,
+                name: cat.name || cat.category_name || cat.title || `Block ${i + 1}`,
+                category: cat.name || cat.category_name || cat.title || `Category ${i + 1}`,
                 price: cat.price,
                 rows: Math.max(1, Math.floor(Number(rawEvent.cols) || 10)),
                 cols: Math.max(1, Number(rawEvent.cols) || 10),
@@ -187,7 +202,7 @@ export default function EventBookClient({ id }) {
     }, [event]);
 
     // Real-time Seat Locking
-    const { lockedSeats, myLocks, lockSeat, releaseSeat } = useSeatLocking(id, user?.id);
+    const { lockedSeats, myLocks, lockSeat, releaseSeat } = useSeatLocking(id, user?.id, selectedShowtime?.id);
 
 
     const { data: seatingSectionsData } = useSupabaseQuery('seating_sections', (q) => 
@@ -250,18 +265,25 @@ export default function EventBookClient({ id }) {
             }
         }
     }, [computedPackages, searchParams, selectedPackage]);
-
     useEffect(() => {
         const fetchRelationalData = async () => {
             if (!id || !isSeating) return;
             
             try {
                 // Fetch permanent seat states from seat_inventory
-                const { data: invSeats } = await supabase
+                let query = supabase
                     .from('seat_inventory')
                     .select('seat_number, status')
                     .eq('event_id', id)
                     .in('status', ['sold', 'booked', 'blocked', 'maintenance']);
+
+                if (selectedShowtime) {
+                    query = query.eq('showtime_id', selectedShowtime.id);
+                } else if (event?.booking_mode === 'multi_show') {
+                    query = query.is('showtime_id', null);
+                }
+
+                const { data: invSeats } = await query;
                 
                 if (invSeats) {
                     setRelationalSeats(invSeats);
@@ -269,8 +291,12 @@ export default function EventBookClient({ id }) {
 
                 // Subscribe to Realtime Updates on seat_inventory
                 const subscription = supabase
-                    .channel(`inventory_${id}`)
+                    .channel(`inventory_${id}_${selectedShowtime?.id || 'base'}`)
                     .on('postgres_changes', { event: '*', schema: 'public', table: 'seat_inventory', filter: `event_id=eq.${id}` }, (payload) => {
+                        const targetShowtimeId = selectedShowtime?.id || null;
+                        if (targetShowtimeId && payload.new.showtime_id !== targetShowtimeId) return;
+                        if (!targetShowtimeId && payload.new.showtime_id !== null) return;
+
                         setRelationalSeats(current => {
                             if (payload.eventType === 'INSERT') {
                                 return [...current, payload.new];
@@ -292,8 +318,11 @@ export default function EventBookClient({ id }) {
             }
         };
 
-        fetchRelationalData();
-    }, [id, isSeating]);
+        const cleanup = fetchRelationalData();
+        return () => {
+            cleanup.then(clean => clean && clean());
+        };
+    }, [id, isSeating, selectedShowtime, event?.booking_mode]);
 
     const bookedSeats = useMemo(() => {
         return relationalSeats.filter(s => s.status === 'booked' || s.status === 'sold').map(s => s.seat_number);
@@ -474,7 +503,11 @@ export default function EventBookClient({ id }) {
                         participant: participantData,
                         team: teamData,
                         bookingType,
-                        price: currentPrice
+                        price: currentPrice,
+                        showtimeId: selectedShowtime?.id,
+                        showtimeName: selectedShowtime?.show_name,
+                        showtimeDate: selectedShowtime?.show_date,
+                        showtimeStart: selectedShowtime?.start_time
                     },
                     pricingSnapshot: {
                         baseAmount: baseAmount,
@@ -604,9 +637,35 @@ export default function EventBookClient({ id }) {
                                                 <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter italic leading-none">Select Your Seats</h2>
                                                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.3em]">Interactive Venue Map</p>
                                             </div>
+
+                                            {event?.booking_mode === 'multi_show' && showtimes.length > 0 && (
+                                                <div className="w-full overflow-x-auto no-scrollbar mb-8">
+                                                    <div className="flex items-center justify-center gap-4 min-w-max pb-4">
+                                                        {showtimes.map((show) => (
+                                                            <button
+                                                                key={show.id}
+                                                                onClick={() => {
+                                                                    setSelectedShowtime(show);
+                                                                    setSelectedSeats([]); // clear selections on showtime change
+                                                                }}
+                                                                className={`px-6 py-4 rounded-2xl border-2 font-black uppercase tracking-widest text-[11px] transition-all flex flex-col items-center gap-1 ${
+                                                                    selectedShowtime?.id === show.id 
+                                                                    ? 'border-pink-500 bg-pink-50 text-pink-600 shadow-md shadow-pink-100' 
+                                                                    : 'border-slate-100 bg-white text-slate-400 hover:border-slate-300'
+                                                                }`}
+                                                            >
+                                                                <span className="text-[9px] text-slate-500 font-bold">{new Date(show.show_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                                                                <span>{new Date(`2000-01-01T${show.start_time}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}</span>
+                                                                {show.show_name && <span className="text-[8px] text-pink-500">{show.show_name}</span>}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+
                                             <VisualSeatPicker 
                                                 blocks={event.blocks}
-                                                categories={event.dynamic_config?.categories || event.seat_categories || []}
+                                                categories={event.dynamic_config?.categories || event.seatCategories || []}
                                                 bookedSeats={bookedSeats}
                                                 blockedSeats={blockedSeats}
                                                 reservedSeats={allReservedSeats} // Realtime locks + DB locks

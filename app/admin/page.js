@@ -10,6 +10,7 @@ import AdminCheckoutFooter from "@/app/admin/components/AdminCheckoutFooter";
 import MobileBannersAdmin from "@/app/admin/components/MobileBannersAdmin";
 import AdminPartnerRequestsTable from "@/app/admin/components/AdminPartnerRequestsTable";
 import AdminServiceRequestsTable from "@/app/admin/components/AdminServiceRequestsTable";
+import AdminOrgRequestsTable from "@/app/admin/components/AdminOrgRequestsTable";
 import EmailCommSystem from "@/app/admin/components/EmailCommSystem";
 import SeoAnalyticsAdmin from "@/app/admin/components/SeoAnalyticsAdmin";
 import CareersAdmin from "@/app/admin/components/CareersAdmin";
@@ -3230,6 +3231,15 @@ function AdminHomePage() {
                         
                         <GroupTitle title="Partners" t={t} />
                         <NavLink 
+                            id="org_requests" 
+                            label="Organiser Requests" 
+                            icon={Briefcase} 
+                            active={activeTab === "org_requests"} 
+                            setActiveTab={setActiveTab}
+                            router={router}
+                            setIsSidebarOpen={setIsSidebarOpen}
+                        />
+                        <NavLink 
                             id="kyc" 
                             label="KYC Verification" 
                             icon={ShieldCheck} 
@@ -5580,6 +5590,15 @@ function AdminHomePage() {
                     )}
 
 
+                    {activeTab === "org_requests" && (
+                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
+                            <div className="mb-8">
+                                <h2 className="text-3xl font-black text-slate-900 tracking-tighter uppercase italic leading-none mb-2">Event Organisers</h2>
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Partner Onboarding & Approval</p>
+                            </div>
+                             <AdminOrgRequestsTable t={t} />
+                        </div>
+                    )}
 
                     {(activeTab === "kyc" || activeTab === "partner_requests") && (
                         <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>

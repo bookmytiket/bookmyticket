@@ -130,8 +130,8 @@ export default function HomeScreen() {
   const { signOut, user, role } = useAuth();
 
   // Fetch Data with Realtime Sync
-  const { data: banners, refresh: refreshBanners } = useSupabaseQuery('branding_banners', (q) => q.eq('status', 'Active'), [], { realtime: true });
-  const { data: couponsRaw, refresh: refreshCoupons } = useSupabaseQuery('branding_coupons', (q) => q.eq('status', 'Active'), [], { realtime: true });
+  const { data: banners, refresh: refreshBanners } = useSupabaseQuery('brand_banners', (q) => q.eq('status', 'Active'), [], { realtime: true });
+  const { data: couponsRaw, refresh: refreshCoupons } = useSupabaseQuery('brand_coupons', (q) => q.eq('status', 'Active'), [], { realtime: true });
   const { data: memoriesData, refresh: refreshMemories } = useSupabaseQuery('memories', (q) => q, [], { realtime: true });
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -212,16 +212,15 @@ export default function HomeScreen() {
 
   const fetchUnifiedEvents = useCallback(async () => {
     try {
-      const city = userLocationData.city || '';
-      const district = userLocationData.district || '';
-      const data = await DataService.getPublicEvents(city === 'Select City' ? '' : city, district);
-      setApiEvents(data || []);
-    } catch (err) {
-      console.warn('Failed to fetch unified events:', err);
-    } finally {
+		      const data = await DataService.getPublicEvents();
+		      setApiEvents(Array.isArray(data) ? data : []);
+		    } catch (err) {
+	      console.warn('Failed to fetch unified events:', err);
+	      setApiEvents([]);
+	    } finally {
       setEventsLoading(false);
     }
-  }, [userLocationData.city, userLocationData.district]);
+  }, []);
 
   useEffect(() => {
     fetchUnifiedEvents();
@@ -240,9 +239,10 @@ export default function HomeScreen() {
     };
   }, [fetchUnifiedEvents]);
   
-   const events = useMemo(() => {
-    return apiEvents.map(ev => ({
-        ...ev,
+	   const events = useMemo(() => {
+	    const rows = Array.isArray(apiEvents) ? apiEvents : [];
+	    return rows.map(ev => ({
+	        ...ev,
         // Ensure compatibility with mobile EventCard
         tournament_events: ev.tournament_data ? [ev.tournament_data] : [],
         marathon_events: ev.marathon_data ? [ev.marathon_data] : []
@@ -451,9 +451,9 @@ export default function HomeScreen() {
     
     const targetCities = cityVariations[cityFilter] || [cityFilter];
 
-    return allLiveEvents.filter(ev => {
-      const isVirtual = ev.virtual === true || ev.virtual === "Yes";
-      if (isVirtual) return true;
+	    const localEvents = allLiveEvents.filter(ev => {
+	      const isVirtual = ev.virtual === true || ev.virtual === "Yes";
+	      if (isVirtual) return true;
 
       const evCity = String(ev.city || '').toLowerCase().trim();
       const evLoc = String(ev.location || '').toLowerCase().trim();
@@ -466,15 +466,17 @@ export default function HomeScreen() {
       // If no location info at all, show it anyway
       if (!evCity && !evLoc && !evVenue && !evDistrict && !configCity) return true;
 
-      return targetCities.some(tc => 
-        evCity.includes(tc) || 
-        evLoc.includes(tc) || 
-        evVenue.includes(tc) || 
-        evDistrict.includes(tc) ||
-        configCity.includes(tc)
-      );
-    });
-  }, [allLiveEvents, userLocation]);
+	      return targetCities.some(tc => 
+	        evCity.includes(tc) || 
+	        evLoc.includes(tc) || 
+	        evVenue.includes(tc) || 
+	        evDistrict.includes(tc) ||
+	        configCity.includes(tc)
+	      );
+	    });
+	
+	    return localEvents.length > 0 ? localEvents : allLiveEvents;
+	  }, [allLiveEvents, userLocation]);
 
   const heroSlides = useMemo(() => {
     if (!banners || banners.length === 0) return [];
@@ -503,11 +505,11 @@ export default function HomeScreen() {
     return activeEvents.filter(e => e.is_spotlight).slice(0, 5);
   }, [activeEvents]);
 
-  const justInEventsList = useMemo(() => {
-    return [...activeEvents]
-      .sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())
-      .slice(0, 5);
-  }, [activeEvents]);
+	  const justInEventsList = useMemo(() => {
+	    return [...allLiveEvents]
+	      .sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())
+	      .slice(0, 5);
+	  }, [allLiveEvents]);
 
   const comingSoonEvents = useMemo(() => {
     const today = new Date();

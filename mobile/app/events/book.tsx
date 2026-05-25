@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   StyleSheet,
   ScrollView,
@@ -7,7 +7,9 @@ import {
   Alert,
   TextInput,
   Modal,
-  Linking
+  Linking,
+  View,
+  ActivityIndicator
 } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { Text } from '@/components/Themed';
@@ -38,6 +40,7 @@ import {
   Star,
 } from 'lucide-react-native';
 import { getFeeBreakdown, resolveFeeSettings } from '@/lib/feeBreakdown';
+import UnifiedApi from '@/lib/unifiedApi';
 import VisualSeatPicker from '@/components/VisualSeatPicker';
 import { DataService } from '../../services/DataService';
 import TournamentRegistrationWizard from '@/components/TournamentRegistrationWizard';
@@ -78,19 +81,41 @@ export default function BookEventScreen() {
   const [selectedSeats, setSelectedSeats] = useState<any[]>([]);
   const [venueLayouts, setVenueLayouts] = useState<any[]>([]);
   const [selectedBlock, setSelectedBlock] = useState<any>(null);
+  
+  const [showtimes, setShowtimes] = useState<any[]>([]);
+  const [selectedShowtime, setSelectedShowtime] = useState<any>(null);
+  const couponList = useMemo(
+    () => Array.isArray(availableCoupons) ? availableCoupons : [],
+    [availableCoupons]
+  );
 
   // Auto-apply best bulk discount
   useEffect(() => {
-    if (!availableCoupons || availableCoupons.length === 0) return;
+    if (couponList.length === 0) return;
     
-    const applicableBulkCoupons = availableCoupons.filter(c => 
+    const applicableBulkCoupons = couponList.filter(c => 
       c.code?.startsWith('BULK_AUTO_') && quantity >= (c.min_tickets || 1)
     );
     
     if (applicableBulkCoupons.length > 0) {
-      let bestCoupon = null;
+      let bestCoupon: any = null;
       let maxDiscount = 0;
-      const base = ticketPrice * quantity; // Simplified base for bulk checking
+      
+      // Calculate a simple base price for the check
+      let currentBasePrice = event?.price || 499;
+      if (selectedTier) {
+          if (selectedTier.price !== undefined) {
+              currentBasePrice = Number(selectedTier.price);
+          } else {
+              const rawRates = selectedTier.ageRates || selectedTier.agePricing || selectedTier.age_rates || selectedTier.age_pricing || [];
+              if (Array.isArray(rawRates) && rawRates.length > 0) {
+                  currentBasePrice = Number(rawRates[0].price || 0);
+              }
+          }
+      }
+      if (selectedAgeGroup) currentBasePrice = Number(selectedAgeGroup.price || 0);
+
+      const base = currentBasePrice * quantity; // Simplified base for bulk checking
       
       applicableBulkCoupons.forEach(coupon => {
         let currentDiscount = 0;
@@ -111,7 +136,7 @@ export default function BookEventScreen() {
     } else if (appliedCoupon?.code?.startsWith('BULK_AUTO_')) {
       setAppliedCoupon(null);
     }
-  }, [availableCoupons, quantity, ticketPrice]);
+  }, [couponList, quantity, event, selectedTier, selectedAgeGroup, appliedCoupon]);
 
   useEffect(() => {
     if (!id) return;
@@ -172,7 +197,7 @@ export default function BookEventScreen() {
       tiers = data.event_ticket_categories.map((c: any) => ({
         id: c.id, title: c.category_name, price: c.price, description: c.description || 'General Admission Ticket'
       }));
-    } else if (data.seat_categories?.length > 0) tiers = data.seat_categories;
+    } else if (data.ticket_categories?.length > 0) tiers = data.ticket_categories;
     else {
       const ticketsData = safeParse(data.tickets);
       if (Array.isArray(ticketsData) && ticketsData.length > 0) tiers = ticketsData;
@@ -222,50 +247,11 @@ export default function BookEventScreen() {
 
   const fetchCoupons = async () => {
     try {
-      // 1. Fetch standard platform coupons
-      const { data: stdCoupons, error } = await supabase
-        .from('coupons')
-        .select('*')
-        .eq('is_active', true)
-        .order('created_at', { ascending: false });
-        
-      if (error) throw error;
-      
-      let allOffers = [...(stdCoupons || [])];
-      
-      // 2. Fetch Partner Campaigns (Brand Offers)
-      const { data: campaigns } = await supabase
-        .from('partner_campaigns')
-        .select('*, partner_campaign_coupons!inner(*)')
-        .eq('partner_campaign_coupons.status', 'Active');
-        
-      if (campaigns && campaigns.length > 0) {
-        const campaignOffers = campaigns.map(camp => {
-           const activeCoupon = Array.isArray(camp.partner_campaign_coupons) 
-              ? camp.partner_campaign_coupons.find((c: any) => c.status === 'Active') 
-              : camp.partner_campaign_coupons;
-              
-           if (!activeCoupon) return null;
-           
-           return {
-             id: activeCoupon.id,
-             code: activeCoupon.coupon_code,
-             type: camp.discount_type === 'Percentage' ? 'percent' : 'fixed',
-             value: camp.discount_value,
-             isCampaign: true,
-             campaignId: camp.id,
-             offerTitle: camp.campaign_name || (camp.discount_type === 'Percentage' ? `Flat ${camp.discount_value}% OFF` : `Flat ₹${camp.discount_value} OFF`),
-             partnerName: 'Brand Offer',
-             min_tickets: 1 // default for campaigns
-           };
-        }).filter(Boolean);
-        
-        allOffers = [...allOffers, ...campaignOffers];
-      }
-      
-      setAvailableCoupons(allOffers);
+      const offers = await UnifiedApi.getCoupons({ event_id: String(id || '') });
+      setAvailableCoupons(Array.isArray(offers) ? offers : []);
     } catch (err) {
-      console.error('Error fetching coupons:', err);
+      console.warn('Error fetching coupons:', err);
+      setAvailableCoupons([]);
     }
   };
 
@@ -278,13 +264,27 @@ export default function BookEventScreen() {
           *,
           organiser:profiles!events_organiser_id_fkey (*),
           event_ticket_categories (*),
-          seat_categories (*)
+          ticket_categories (*)
         `)
         .eq('id', id)
         .single();
       if (error) throw error;
       setEvent(data);
       processEventData(data);
+
+      if (data.booking_mode === 'multi_show') {
+          const { data: shows } = await supabase
+            .from('event_showtimes')
+            .select('*')
+            .eq('event_id', id)
+            .order('show_date', { ascending: true })
+            .order('start_time', { ascending: true });
+          
+          if (shows && shows.length > 0) {
+              setShowtimes(shows);
+              setSelectedShowtime(shows[0]);
+          }
+      }
 
       // Fetch Marathon Categories
       const { data: cats, error: catError } = await supabase
@@ -359,8 +359,41 @@ export default function BookEventScreen() {
       { id: 'gen', title: 'Ticket', price: event?.dynamic_config?.price || event?.price || 499, description: 'Standard admission for the event.' }
     ];
   })();
+  const eventBlocks = React.useMemo(() => {
+      if (!event) return [];
+      const seatCategories = typeof event.seat_categories === 'string' 
+        ? safeParse(event.seat_categories) 
+        : (event.seat_categories || event.ticket_categories || []);
+      
+      let validBlocks = event.blocks || [];
+      if (validBlocks.length === 0 && seatCategories?.length > 0 && Number(event.cols) > 0) {
+          validBlocks = seatCategories.map((cat: any, i: number) => ({
+              id: cat.id || `block_${i}`,
+              name: cat.name || cat.category_name || cat.title,
+              category: cat.name || cat.category_name || cat.title,
+              price: cat.price,
+              rows: Math.max(1, Math.floor(Number(event.cols) || 10)),
+              cols: Math.max(1, Number(event.cols) || 10),
+              rowNaming: 'alphabetic',
+              numberingDirection: 'ltr',
+              startNumber: 1
+          }));
+      } else {
+          validBlocks = validBlocks.map((b: any, i: number) => ({
+              ...b,
+              id: b.id || `block_${i}`,
+              rows: b.rows || Math.max(1, Math.floor(Number(event.cols) || 10)),
+              cols: b.cols || Math.max(1, Number(event.cols) || 10),
+              rowNaming: b.rowNaming || 'alphabetic',
+              numberingDirection: b.numberingDirection || 'ltr',
+              startNumber: b.startNumber || 1
+          }));
+      }
+      return validBlocks;
+  }, [event]);
+
   const isMarathon = event?.type === 'Marathon' || marathonCategories.length > 0;
-  const hasSeatingMap = event?.event_type !== 'general' && venueLayouts.length > 0;
+  const hasSeatingMap = event?.event_type !== 'general' && (venueLayouts.length > 0 || eventBlocks.length > 0);
   const marathonSteps = [
     { id: 1, title: 'Category', icon: Ticket },
     { id: 2, title: 'Identity', icon: Users },
@@ -434,54 +467,11 @@ export default function BookEventScreen() {
     
     setValidatingCoupon(true);
     try {
-      const { data, error } = await supabase
-        .from('coupons')
-        .select('*')
-        .eq('code', code)
-        .eq('is_active', true)
-        .maybeSingle();
-
-      let appliedData = data;
-
-      if (!appliedData) {
-        // Try partner campaigns
-        const { data: campaign } = await supabase
-          .from('partner_campaigns')
-          .select('*, partner_campaign_coupons!inner(*)')
-          .eq('partner_campaign_coupons.coupon_code', code)
-          .eq('partner_campaign_coupons.status', 'Active')
-          .maybeSingle();
-          
-        if (campaign) {
-          appliedData = {
-            code: code,
-            type: campaign.discount_type === 'Percentage' ? 'percent' : 'fixed',
-            value: campaign.discount_value,
-            isCampaign: true,
-            campaignId: campaign.id
-          };
-        }
-      }
-
-      if (!appliedData) {
-        Alert.alert('Invalid Coupon', 'This coupon code does not exist or is expired.');
-        return;
-      }
-
-      // Check constraints
-      if (appliedData.expiry_date && new Date(appliedData.expiry_date) < new Date()) {
-        Alert.alert('Expired', 'This coupon has expired.');
-        return;
-      }
-      if (quantity < (appliedData.min_tickets || 1)) {
-        Alert.alert('Limit Not Met', `Minimum ${appliedData.min_tickets || 1} tickets required.`);
-        return;
-      }
-
+      const appliedData = await UnifiedApi.validateCoupon({ code, quantity, event_id: id });
       setAppliedCoupon(appliedData);
       Alert.alert('Success', `Coupon ${code} applied successfully!`);
     } catch (err) {
-      Alert.alert('Error', 'Failed to validate coupon.');
+      Alert.alert('Error', err instanceof Error ? err.message : 'Failed to validate coupon.');
     } finally {
       setValidatingCoupon(false);
     }
@@ -549,28 +539,16 @@ export default function BookEventScreen() {
             : (selectedTier?.min_age !== undefined ? `${selectedTier.min_age}-${selectedTier.max_age} Yrs` : null),
           ticket_type: selectedTier?.title || selectedTier?.name || selectedTier?.type || 'General',
           selected_seats: selectedSeats.map(s => ({ id: s.id, number: s.seat_number, row: s.row_name, block: s.block_id })),
+          showtimeId: selectedShowtime?.id || null,
+          showtimeName: selectedShowtime?.show_name || null,
+          showtimeDate: selectedShowtime?.show_date || null,
+          showtimeStart: selectedShowtime?.start_time || null,
           ...formResponses
         },
       };
 
-      const { data, error } = await supabase
-        .from('bookings')
-        .insert(bookingPayload)
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      // Insert seat bookings if applicable
-      if (selectedSeats.length > 0) {
-        const seatBookings = selectedSeats.map(s => ({
-            seat_id: s.id,
-            user_id: user?.id,
-            order_id: data.id,
-            booking_status: (event.is_free || total === 0) ? 'confirmed' : 'pending'
-        }));
-        await supabase.from('seat_bookings').insert(seatBookings);
-      }
+      const created = await UnifiedApi.createBooking(bookingPayload);
+      const data = created.booking || { id: created.bookingId };
 
       if (event.is_free) {
         setSuccess(true);
@@ -907,11 +885,47 @@ export default function BookEventScreen() {
           </RNView>
         </RNView>
 
+        {/* Showtime Selector */}
+        {showtimes.length > 0 && (
+          <RNView style={{ marginHorizontal: 20, marginBottom: 20 }}>
+            <Text style={{ fontSize: 14, fontWeight: '800', color: colors.text, marginBottom: 12, textTransform: 'uppercase', letterSpacing: 1 }}>Select Showtime</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
+              {showtimes.map((show) => {
+                const isSelected = selectedShowtime?.id === show.id;
+                return (
+                  <Pressable
+                    key={show.id}
+                    onPress={() => {
+                        setSelectedShowtime(show);
+                        setSelectedSeats([]); // Clear seats on time change
+                    }}
+                    style={[
+                      { paddingHorizontal: 16, paddingVertical: 12, borderRadius: 16, borderWidth: 1.5 },
+                      isSelected ? { backgroundColor: '#fdf2f8', borderColor: '#ec4899' } : { backgroundColor: colors.card, borderColor: colors.border }
+                    ]}
+                  >
+                    <Text style={{ fontSize: 14, fontWeight: '900', color: isSelected ? '#ec4899' : colors.text }}>
+                      {new Date(`2000-01-01T${show.start_time}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
+                    </Text>
+                    {show.show_name && (
+                      <Text style={{ fontSize: 10, fontWeight: '700', color: isSelected ? '#ec4899' : colors.muted, marginTop: 4 }}>
+                        {show.show_name}
+                      </Text>
+                    )}
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </RNView>
+        )}
+
         {/* Interactive Seating Map */}
         {hasSeatingMap && (!isMarathon || bookingStep === 1) && (
           <VisualSeatPicker 
             eventId={String(event.id)} 
+            showtimeId={selectedShowtime?.id || null}
             selectedSeats={selectedSeats}
+            eventBlocks={eventBlocks}
             onSeatSelect={(seats) => {
                 setSelectedSeats(seats);
                 if (seats.length > 0) setQuantity(seats.length);
@@ -1195,7 +1209,7 @@ export default function BookEventScreen() {
         <RNView style={styles.section}>
           <RNView style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
             <Text style={[styles.sectionTitle, { marginBottom: 0, color: colors.text }]}>Apply Coupon</Text>
-            {availableCoupons.length > 0 && (
+            {couponList.length > 0 && (
               <Pressable onPress={() => setShowCouponsModal(true)}>
                 <Text style={{ color: colors.tint, fontWeight: '800', fontSize: 13 }}>View All</Text>
               </Pressable>
@@ -1238,7 +1252,7 @@ export default function BookEventScreen() {
         <RNView style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Participant Details</Text>
           <RNView style={styles.formFields}>
-            {(parsedConfig.registrationForm || parsedConfig.form_fields || [])
+            {(dynamicConfig.registrationForm || dynamicConfig.form_fields || [])
               .filter((field: any, index: number, self: any[]) => {
                 const label = (field.label || '').toLowerCase();
                 // Deduplicate email fields: Skip "Email ID" if "Email Address" exists
@@ -1248,8 +1262,8 @@ export default function BookEventScreen() {
                 }
                 return true;
               })
-              .map((field: any) => (
-              <RNView key={field.id} style={styles.fieldWrapper}>
+              .map((field: any, i: number) => (
+              <RNView key={field.id || field.label || `field_${i}`} style={styles.fieldWrapper}>
                 <Text style={[styles.label, { color: colors.muted }]}>
                   {field.label} {field.required ? '*' : ''}
                 </Text>
@@ -1361,8 +1375,8 @@ export default function BookEventScreen() {
           <RNView style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Participant Details</Text>
             <RNView style={styles.formFields}>
-              {(dynamicConfig.form_fields || dynamicConfig.registrationForm || []).map((field: any) => (
-                <RNView key={field.id} style={styles.fieldWrapper}>
+              {(dynamicConfig.form_fields || dynamicConfig.registrationForm || []).map((field: any, i: number) => (
+                <RNView key={field.id || field.label || `dyn_field_${i}`} style={styles.fieldWrapper}>
                   <Text style={[styles.label, { color: colors.muted }]}>
                     {field.label} {field.required ? '*' : ''}
                   </Text>
@@ -1461,7 +1475,7 @@ export default function BookEventScreen() {
                 </Pressable>
               </RNView>
               <ScrollView showsVerticalScrollIndicator={false}>
-                {availableCoupons.map((c) => (
+                {couponList.map((c) => (
                   <Pressable 
                     key={c.id}
                     onPress={() => {

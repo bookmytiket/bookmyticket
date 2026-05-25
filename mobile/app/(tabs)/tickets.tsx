@@ -10,8 +10,9 @@ import { Text, View } from '@/components/Themed';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useRouter } from 'expo-router';
-import { supabase } from '@/lib/supabase';
-import { useAuth, useSupabaseQuery } from '@/hooks/useSupabase';
+import { useAuth } from '@/hooks/useSupabase';
+import { useUnifiedResource } from '@/hooks/useUnifiedSync';
+import UnifiedApi from '@/lib/unifiedApi';
 import { Calendar, MapPin, Ticket, ChevronRight, QrCode } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
@@ -24,17 +25,19 @@ export default function TicketsScreen() {
   const { user, loading: authLoading } = useAuth();
 
   // Real-time Bookings with Event Data
-  const { data: bookingsRaw, loading, refresh } = useSupabaseQuery(
+  const { data: bookingsRaw, loading, refresh, error } = useUnifiedResource(
     'bookings',
-    (q) => q.select('*, events(*)').eq('user_id', user?.id).order('created_at', { ascending: false }),
+    () => UnifiedApi.getBookings(),
     [user?.id],
-    { realtime: true, enabled: !!user }
+    { enabled: !!user, realtimeTables: ['bookings', 'tickets', 'payments'] }
   );
 
   const bookings = useMemo(() => {
-    if (!bookingsRaw) return [];
-    return (bookingsRaw as any[]).filter(b => {
-      if (b.payment_status === 'pending' || b.status === 'Pending') {
+    const rawData = Array.isArray(bookingsRaw) ? bookingsRaw : [];
+    if (!rawData || typeof rawData.filter !== 'function') return [];
+    
+    return rawData.filter((b: any) => {
+      if (b?.payment_status === 'pending' || b?.status === 'Pending') {
         const diff = Date.now() - new Date(b.created_at).getTime();
         return diff < (24 * 60 * 60 * 1000);
       }
@@ -113,12 +116,13 @@ export default function TicketsScreen() {
 
 function TicketCard({ booking, colors, index, onPress }: any) {
   const event = booking.events || {};
-  const statusColor =
-    booking.payment_status === 'paid'
-      ? '#22c55e'
+  const isPaid = booking.payment_status === 'paid' || booking.payment_status === 'confirmed';
+  
+  const statusColor = isPaid
+      ? '#10b981' // emerald-500
       : booking.payment_status === 'pending'
-      ? '#f59e0b'
-      : '#ef4444';
+      ? '#f59e0b' // amber-500
+      : '#ef4444'; // red-500
 
   const safeParse = (val: any) => {
     if (!val) return null;
@@ -130,75 +134,94 @@ function TicketCard({ booking, colors, index, onPress }: any) {
   const dynamicConfig = safeParse(event.dynamic_config) || {};
   const eventVenue = event.venue || event.location || dynamicConfig.location?.venueName || dynamicConfig.venue?.name || dynamicConfig.basicInfo?.venue || event.city;
   const eventDate = event.start_date || event.date || dynamicConfig.date || dynamicConfig.basicInfo?.date || dynamicConfig.basicInfo?.expiryDate;
+  const eventTitle = event.name || event.title || dynamicConfig?.basicInfo?.eventName || dynamicConfig?.title || 'Event';
+  const eventImage = event.image_url || event.img || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800';
 
   return (
     <MotiView
       from={{ opacity: 0, translateY: 20 }}
       animate={{ opacity: 1, translateY: 0 }}
-      transition={{ type: 'timing', duration: 400, delay: index * 80 }}
+      transition={{ type: 'spring', damping: 15, delay: index * 100 }}
     >
       <Pressable
         style={[
           styles.card,
-          { backgroundColor: colors.card, borderColor: colors.border },
+          { backgroundColor: colors.card, shadowColor: colors.tint },
         ]}
         onPress={onPress}
       >
-        {/* Top: Event image + info */}
-        <RNView style={styles.cardTop}>
+        {/* Top: Banner Image */}
+        <RNView style={styles.bannerContainer}>
           <Image
-            source={{
-              uri:
-                event.image_url ||
-                event.img ||
-                'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=200',
-            }}
-            style={styles.eventThumb}
+            source={{ uri: eventImage }}
+            style={styles.bannerImage}
             contentFit="cover"
           />
-          <RNView style={styles.eventInfo}>
-            <Text style={[styles.eventTitle, { color: colors.text }]} numberOfLines={2}>
-              {event.name || event.title || dynamicConfig?.basicInfo?.eventName || dynamicConfig?.title || 'Event'}
+          <LinearGradient
+            colors={['transparent', 'rgba(0,0,0,0.85)']}
+            style={styles.bannerGradient}
+          >
+            <RNView style={styles.bannerStatus}>
+              <RNView style={[styles.statusBadge, { backgroundColor: statusColor }]}>
+                <Text style={styles.statusTextWhite}>
+                  {(booking.payment_status || 'confirmed').toUpperCase()}
+                </Text>
+              </RNView>
+            </RNView>
+            <Text style={styles.bannerTitle} numberOfLines={2}>
+              {eventTitle}
             </Text>
-            {eventDate && (
-              <RNView style={styles.metaRow}>
-                <Calendar size={12} color={colors.tint} />
-                <Text style={[styles.metaText, { color: colors.muted }]}>
-                  {eventDate}
-                </Text>
-              </RNView>
-            )}
-            {eventVenue && (
-              <RNView style={styles.metaRow}>
-                <MapPin size={12} color={colors.error} />
-                <Text style={[styles.metaText, { color: colors.muted }]} numberOfLines={1}>
-                  {eventVenue}
-                </Text>
-              </RNView>
-            )}
-          </RNView>
-          <ChevronRight size={18} color={colors.muted} />
+          </LinearGradient>
         </RNView>
 
-        {/* Divider dashed */}
-        <RNView style={[styles.divider, { borderColor: colors.border }]} />
+        {/* Middle: Info */}
+        <RNView style={styles.infoContainer}>
+          {eventDate && (
+            <RNView style={styles.infoRow}>
+              <RNView style={[styles.iconBox, { backgroundColor: colors.tint + '15' }]}>
+                <Calendar size={16} color={colors.tint} />
+              </RNView>
+              <RNView style={styles.infoTextContainer}>
+                <Text style={[styles.infoLabel, { color: colors.muted }]}>Date & Time</Text>
+                <Text style={[styles.infoValue, { color: colors.text }]}>{eventDate}</Text>
+              </RNView>
+            </RNView>
+          )}
+          {eventVenue && (
+            <RNView style={styles.infoRow}>
+              <RNView style={[styles.iconBox, { backgroundColor: colors.tint + '15' }]}>
+                <MapPin size={16} color={colors.tint} />
+              </RNView>
+              <RNView style={styles.infoTextContainer}>
+                <Text style={[styles.infoLabel, { color: colors.muted }]}>Venue</Text>
+                <Text style={[styles.infoValue, { color: colors.text }]} numberOfLines={1}>{eventVenue}</Text>
+              </RNView>
+            </RNView>
+          )}
+        </RNView>
 
-        {/* Bottom: ticket info */}
-        <RNView style={styles.cardBottom}>
-          <RNView style={styles.ticketMeta}>
-            <Ticket size={14} color={colors.tint} />
-            <Text style={[styles.ticketCount, { color: colors.text }]}>
-              {booking.quantity || 1}x {booking.ticket_type || 'General'}
-            </Text>
+        {/* Cutout Divider */}
+        <RNView style={styles.dividerContainer}>
+          <RNView style={[styles.cutout, styles.cutoutLeft, { backgroundColor: colors.background }]} />
+          <RNView style={[styles.dashedLine, { borderColor: colors.border }]} />
+          <RNView style={[styles.cutout, styles.cutoutRight, { backgroundColor: colors.background }]} />
+        </RNView>
+
+        {/* Bottom: Ticket details */}
+        <RNView style={styles.bottomContainer}>
+          <RNView style={styles.ticketDetails}>
+            <Text style={[styles.ticketLabel, { color: colors.muted }]}>Ticket Type</Text>
+            <RNView style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Ticket size={16} color={colors.tint} />
+              <Text style={[styles.ticketValue, { color: colors.text }]}>
+                {booking.quantity || 1}x {booking.ticket_type || 'General'}
+              </Text>
+            </RNView>
           </RNView>
-          <RNView style={[styles.statusBadge, { backgroundColor: statusColor + '20' }]}>
-            <Text style={[styles.statusText, { color: statusColor }]}>
-              {(booking.payment_status || 'confirmed').toUpperCase()}
-            </Text>
-          </RNView>
-          <RNView style={styles.qrHint}>
-            <QrCode size={16} color={colors.muted} />
-            <Text style={[styles.qrText, { color: colors.muted }]}>View QR</Text>
+          
+          <RNView style={[styles.qrButton, { backgroundColor: colors.tint }]}>
+            <QrCode size={18} color="#fff" />
+            <Text style={styles.qrButtonText}>View QR</Text>
           </RNView>
         </RNView>
       </Pressable>
@@ -208,51 +231,144 @@ function TicketCard({ booking, colors, index, onPress }: any) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  list: { padding: 16, gap: 14, paddingBottom: 40 },
-  skeleton: { height: 130, borderRadius: 20, marginBottom: 14 },
+  list: { padding: 16, gap: 20, paddingBottom: 40 },
+  skeleton: { height: 280, borderRadius: 24, marginBottom: 14 },
   card: {
-    borderRadius: 20,
-    borderWidth: 1,
+    borderRadius: 24,
+    borderWidth: 0,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 8,
+    marginBottom: 6,
   },
-  cardTop: {
+  bannerContainer: {
+    height: 150,
+    width: '100%',
+    position: 'relative',
+  },
+  bannerImage: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  bannerGradient: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'space-between',
+    padding: 16,
+  },
+  bannerStatus: {
     flexDirection: 'row',
-    alignItems: 'center',
-    padding: 14,
-    gap: 12,
+    justifyContent: 'flex-end',
   },
-  eventThumb: { width: 64, height: 64, borderRadius: 12 },
-  eventInfo: { flex: 1, gap: 4 },
-  eventTitle: { fontSize: 15, fontWeight: '800', lineHeight: 20 },
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  metaText: { fontSize: 12, fontWeight: '600' },
-  divider: {
-    borderBottomWidth: 1,
-    borderStyle: 'dashed',
-    marginHorizontal: 14,
-  },
-  cardBottom: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    paddingHorizontal: 14,
-    gap: 10,
-  },
-  ticketMeta: { flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 },
-  ticketCount: { fontSize: 13, fontWeight: '700' },
   statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 20,
   },
-  statusText: { fontSize: 10, fontWeight: '900' },
-  qrHint: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  qrText: { fontSize: 12, fontWeight: '600' },
+  statusTextWhite: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+  },
+  bannerTitle: {
+    color: '#fff',
+    fontSize: 22,
+    fontWeight: '900',
+    textShadowColor: 'rgba(0,0,0,0.4)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 6,
+    lineHeight: 28,
+  },
+  infoContainer: {
+    padding: 18,
+    gap: 16,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
+  iconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  infoTextContainer: {
+    flex: 1,
+  },
+  infoLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 2,
+  },
+  infoValue: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  dividerContainer: {
+    height: 30,
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  dashedLine: {
+    borderBottomWidth: 2,
+    borderStyle: 'dashed',
+    marginHorizontal: 28,
+  },
+  cutout: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    position: 'absolute',
+    top: 0,
+    zIndex: 10,
+  },
+  cutoutLeft: {
+    left: -15,
+  },
+  cutoutRight: {
+    right: -15,
+  },
+  bottomContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 18,
+    paddingTop: 8,
+    paddingBottom: 22,
+  },
+  ticketDetails: {
+    flex: 1,
+  },
+  ticketLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  ticketValue: {
+    fontSize: 16,
+    fontWeight: '900',
+  },
+  qrButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 14,
+  },
+  qrButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '800',
+  },
   center: {
     flex: 1,
     alignItems: 'center',

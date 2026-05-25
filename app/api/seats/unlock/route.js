@@ -11,7 +11,7 @@ export async function POST(request) {
 
     try {
         const body = await request.json();
-        const { eventId, seatId, userId } = body;
+        const { eventId, seatId, userId, showtimeId } = body;
 
         if (!eventId || !seatId || !userId) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -19,17 +19,24 @@ export async function POST(request) {
 
         const supabase = createClient(supabaseUrl, supabaseKey);
 
-        const { error } = await supabase
+        let query = supabase
             .from('seat_inventory')
             .update({
                 status: 'available',
                 locked_by: null,
-                lock_expires_at: null,
-                updated_at: new Date().toISOString()
+                lock_expires_at: null
             })
             .eq('event_id', eventId)
             .eq('seat_number', seatId)
             .eq('locked_by', userId);
+
+        if (showtimeId) {
+            query = query.eq('showtime_id', showtimeId);
+        } else {
+            query = query.is('showtime_id', null);
+        }
+
+        const { error } = await query;
 
         if (!error) {
             supabase.from('seat_lock_logs').insert({

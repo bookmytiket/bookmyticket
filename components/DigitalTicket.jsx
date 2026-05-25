@@ -239,8 +239,24 @@ export default function DigitalTicket({ booking, event, ticket: initialTicket, s
                                         <Calendar size={10} />
                                         <p className="text-[8px] font-black uppercase tracking-widest">Date</p>
                                     </div>
-                                    <p className="text-xs font-black text-white">{event.date || "TBA"}</p>
+                                    <p className="text-xs font-black text-white">
+                                        {booking?.customer_details?.showtimeDate 
+                                            ? new Date(booking.customer_details.showtimeDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) 
+                                            : (event.date || "TBA")}
+                                    </p>
                                 </div>
+                                {booking?.customer_details?.showtimeStart && (
+                                    <div className="space-y-1">
+                                        <div className="flex items-center gap-1.5 text-white/60">
+                                            <Zap size={10} />
+                                            <p className="text-[8px] font-black uppercase tracking-widest">Time</p>
+                                        </div>
+                                        <p className="text-xs font-black text-white">
+                                            {new Date(`2000-01-01T${booking.customer_details.showtimeStart}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
+                                            {booking.customer_details.showtimeName && ` (${booking.customer_details.showtimeName})`}
+                                        </p>
+                                    </div>
+                                )}
                                 <div className="space-y-1">
                                     <div className="flex items-center gap-1.5 text-white/60">
                                         <MapPin size={10} />

@@ -14,6 +14,7 @@ import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
+import UnifiedApi from '@/lib/unifiedApi';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MotiView, MotiText } from 'moti';
 import { 
@@ -81,7 +82,7 @@ export default function TicketDetailScreen() {
     if (id) {
       fetchBooking();
       
-      const channel = supabase
+      const bookingChannel = supabase
         .channel(`ticket-${id}`)
         .on('postgres_changes', { 
           event: '*', 
@@ -95,8 +96,18 @@ export default function TicketDetailScreen() {
         })
         .subscribe();
 
+      const ticketChannel = supabase
+        .channel(`ticket-record-${id}`)
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'tickets',
+        }, fetchBooking)
+        .subscribe();
+
       return () => {
-        supabase.removeChannel(channel);
+        supabase.removeChannel(bookingChannel);
+        supabase.removeChannel(ticketChannel);
       };
     }
   }, [id]);
@@ -104,28 +115,34 @@ export default function TicketDetailScreen() {
   const fetchBooking = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('bookings')
-        .select(`
-          *,
-          events:events!event_id(*)
-        `)
-        .eq('id', id)
-        .maybeSingle();
-      
-      if (error) throw error;
-      if (!data) throw new Error('Booking not found');
-
+      const data = await UnifiedApi.getTicket(String(id));
       setBooking(data);
 
       if (data.event_id) {
-        const { data: sponsorData } = await supabase
-          .from('sponsors')
+        // Fetch modern event_branding table if it exists
+        const { data: brandingData } = await supabase
+          .from('event_branding')
           .select('*')
-          .eq('event_id', data.event_id);
+          .eq('event_id', data.event_id)
+          .maybeSingle();
         
-        if (sponsorData) {
-          setSponsors(sponsorData);
+        if (brandingData) {
+          const logos = [];
+          if (brandingData.sponsor_logo) logos.push({ url: brandingData.sponsor_logo, role: 'Official Sponsor' });
+          if (brandingData.co_sponsor_logo) logos.push({ url: brandingData.co_sponsor_logo, role: 'Co-Sponsor' });
+          if (brandingData.partner_logo) logos.push({ url: brandingData.partner_logo, role: 'Event Partner' });
+          if (brandingData.venue_logo) logos.push({ url: brandingData.venue_logo, role: 'Venue Partner' });
+          setSponsors(logos);
+        } else {
+          // Fallback to legacy sponsors table
+          const { data: sponsorData } = await supabase
+            .from('sponsors')
+            .select('*')
+            .eq('event_id', data.event_id);
+          
+          if (sponsorData && sponsorData.length > 0) {
+            setSponsors(sponsorData.map((s: any) => ({ url: s.logo_url, role: s.sponsor_name || s.type || 'Partner' })));
+          }
         }
       }
     } catch (err) {
@@ -328,6 +345,35 @@ export default function TicketDetailScreen() {
                 </View>
               </RNView>
 
+              {/* Dynamic Seat Allocation / Ticket Type */}
+              {booking.booking_items && booking.booking_items.length > 0 ? (
+                <RNView style={styles.seatsSection}>
+                  <Text style={styles.seatsTitle}>SEAT ALLOCATION</Text>
+                  <RNView style={styles.seatGrid}>
+                    {booking.booking_items.map((item: any, idx: number) => (
+                      <View key={idx} style={styles.seatBadge}>
+                        <Text style={styles.seatLabel} numberOfLines={1}>
+                          {item.block_name || item.ticket_category || item.section_name || 'Seat'}
+                        </Text>
+                        <Text style={styles.seatNumber}>
+                          {item.row_label ? `${item.row_label}-` : ''}{item.seat_number}
+                        </Text>
+                      </View>
+                    ))}
+                  </RNView>
+                </RNView>
+              ) : (
+                <RNView style={styles.seatsSection}>
+                  <Text style={styles.seatsTitle}>TICKET TYPE</Text>
+                  <RNView style={styles.seatGrid}>
+                    <View style={[styles.seatBadge, { flex: 1, alignItems: 'center', backgroundColor: '#f1f5f9' }]}>
+                      <Text style={styles.seatLabel}>General Admission</Text>
+                      <Text style={styles.seatNumber}>{booking.ticket_type || 'Standard Entry'} (x{booking.quantity || 1})</Text>
+                    </View>
+                  </RNView>
+                </RNView>
+              )}
+
               {/* Perforation */}
               <RNView style={styles.perforationRow}>
                 <View style={styles.perfCircleLeft} />
@@ -377,12 +423,12 @@ export default function TicketDetailScreen() {
         {/* Sponsor Branding Section */}
         {sponsors.length > 0 && (
           <View style={styles.sponsorSection}>
-            <Text style={styles.sponsorTitle}>OFFICIAL PARTNERS</Text>
+            <Text style={styles.sponsorTitle}>OFFICIAL PARTNERS & SPONSORS</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.sponsorScroll}>
               {sponsors.map((sponsor, idx) => (
                 <View key={idx} style={styles.sponsorCard}>
-                  <Image source={{ uri: sponsor.logo_url }} style={styles.sponsorLogo} contentFit="contain" />
-                  <Text style={styles.sponsorName}>{sponsor.sponsor_name}</Text>
+                  <Image source={{ uri: sponsor.url }} style={styles.sponsorLogo} contentFit="contain" />
+                  <Text style={styles.sponsorName}>{sponsor.role}</Text>
                 </View>
               ))}
             </ScrollView>
@@ -493,6 +539,12 @@ const styles = StyleSheet.create({
   infoCol: { gap: 4 },
   infoLabel: { fontSize: 9, fontWeight: '700', color: '#94a3b8', letterSpacing: 1 },
   infoValue: { fontSize: 12, fontWeight: '800', color: '#1e293b' },
+  seatsSection: { marginTop: -4 },
+  seatsTitle: { fontSize: 10, fontWeight: '700', color: '#94a3b8', letterSpacing: 1, marginBottom: 12 },
+  seatGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  seatBadge: { backgroundColor: '#f8fafc', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, borderWidth: 1, borderColor: '#e2e8f0', minWidth: 80 },
+  seatLabel: { fontSize: 10, fontWeight: '700', color: '#64748b', marginBottom: 2 },
+  seatNumber: { fontSize: 15, fontWeight: '900', color: '#1e293b' },
   perforationRow: { flexDirection: 'row', alignItems: 'center', height: 2, marginHorizontal: -24 },
   perfCircleLeft: { width: 24, height: 24, borderRadius: 12, backgroundColor: '#f8fafc', marginLeft: -12 },
   perfCircleRight: { width: 24, height: 24, borderRadius: 12, backgroundColor: '#f8fafc', marginRight: -12 },

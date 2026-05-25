@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView, Dimensions, ActivityIndicator } from 'react-native';
 import { MotiView, AnimatePresence } from 'moti';
 import { supabase } from '@/lib/supabase';
-import { DataService } from '../services/DataService';
-import { ChevronLeft, CheckCircle2, XCircle } from 'lucide-react-native';
+import UnifiedApi from '@/lib/unifiedApi';
+import { ChevronLeft, CheckCircle2, XCircle, Heart } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -12,54 +12,108 @@ interface VisualSeatPickerProps {
     eventId: string;
     onSeatSelect: (seats: any[]) => void;
     selectedSeats: any[];
+    showtimeId?: string | null;
+    eventBlocks?: any[];
 }
 
-export default function VisualSeatPicker({ eventId, onSeatSelect, selectedSeats }: VisualSeatPickerProps) {
-    const [layouts, setLayouts] = useState<any[]>([]);
-    const [selectedLayout, setSelectedLayout] = useState<any>(null);
+export default function VisualSeatPicker({ eventId, onSeatSelect, selectedSeats, showtimeId, eventBlocks = [] }: VisualSeatPickerProps) {
     const [selectedBlock, setSelectedBlock] = useState<any>(null);
     const [seats, setSeats] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [inventory, setInventory] = useState<any[]>([]);
     const [seatsLoading, setSeatsLoading] = useState(false);
 
-    useEffect(() => {
-        fetchLayouts();
-    }, [eventId]);
-
-    const fetchLayouts = async () => {
-        setLoading(true);
-        try {
-            const data = await DataService.getVenueLayouts(eventId);
-            setLayouts(data || []);
-            if (data && data.length > 0) {
-                setSelectedLayout(data[0]);
-            }
-        } catch (err) {
-            console.error('Error fetching layouts:', err);
-        } finally {
-            setLoading(false);
+    const getRowLabel = (index: number, rowNaming: string) => {
+        if (rowNaming === 'numeric') return String(index + 1);
+        let label = '';
+        let n = index;
+        while (n >= 0) {
+            label = String.fromCharCode((n % 26) + 65) + label;
+            n = Math.floor(n / 26) - 1;
         }
+        return label;
     };
 
-    const fetchSeats = async (blockId: string) => {
+    async function fetchInventoryAndGenerateSeats(block: any) {
         setSeatsLoading(true);
         try {
-            const data = await DataService.getSeats(blockId);
-            setSeats(data || []);
+            // Generate static seats based on block properties (cols, rows)
+            const generatedSeats = [];
+            const rowCount = block.rows || block.rows_count || 1;
+            const colCount = block.cols || 10;
+            
+            for (let rIdx = 0; rIdx < rowCount; rIdx++) {
+                const rowLabel = getRowLabel(rIdx, block.rowNaming || 'alphabetic');
+                for (let cIdx = 0; cIdx < colCount; cIdx++) {
+                    const seatNum = block.numberingDirection === 'ltr' 
+                        ? (cIdx + (block.startNumber || 1)) 
+                        : (colCount - cIdx + (block.startNumber || 1) - 1);
+                    const seatId = `${block.name || block.block_name}-${rowLabel}-${seatNum}`;
+                    
+                    generatedSeats.push({
+                        id: seatId,
+                        seat_number: seatId,
+                        row_name: rowLabel,
+                        column_number: seatNum,
+                        price: block.price || block.base_price || 0,
+                        status: 'available'
+                    });
+                }
+            }
+            setSeats(generatedSeats);
+            
+            const invData = await UnifiedApi.getSeatInventory(eventId, showtimeId || undefined);
+            setInventory(Array.isArray(invData) ? invData : []);
         } catch (err) {
-            console.error('Error fetching seats:', err);
+            console.error('Error fetching inventory:', err);
         } finally {
             setSeatsLoading(false);
         }
-    };
+    }
+
+    useEffect(() => {
+        if (selectedBlock) {
+            queueMicrotask(() => fetchInventoryAndGenerateSeats(selectedBlock));
+            
+            // Subscribe to realtime updates for this showtime/event
+            const subscription = supabase
+                .channel(`inventory_mobile_${eventId}_${showtimeId || 'base'}`)
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'seat_inventory', filter: `event_id=eq.${eventId}` }, (payload) => {
+                    const next = (payload.new || {}) as any;
+                    // Filter by showtimeId if provided, otherwise only accept null showtime_id
+                    if (showtimeId && next.showtime_id !== showtimeId) return;
+                    if (!showtimeId && next.showtime_id !== null) return;
+                    
+                    setInventory(current => {
+                        const safeCurrent = Array.isArray(current) ? current : [];
+                        if (payload.eventType === 'INSERT') {
+                            return [...safeCurrent, next];
+                        }
+                        const existingIdx = safeCurrent.findIndex(s => s.seat_number === next.seat_number);
+                        if (existingIdx >= 0) {
+                            const newArr = [...safeCurrent];
+                            newArr[existingIdx] = next;
+                            return newArr;
+                        }
+                        return [...safeCurrent, next];
+                    });
+                })
+                .subscribe();
+
+            return () => {
+                supabase.removeChannel(subscription);
+            };
+        }
+    }, [selectedBlock, showtimeId]);
 
     const handleBlockSelect = (block: any) => {
         setSelectedBlock(block);
-        fetchSeats(block.id);
     };
 
     const toggleSeat = (seat: any) => {
-        if (seat.status !== 'available') return;
+        // If seat is booked/blocked, ignore
+        const safeInventory = Array.isArray(inventory) ? inventory : [];
+        const inv = safeInventory.find(i => i.seat_number === seat.seat_number);
+        if (inv && ['sold', 'booked', 'blocked', 'maintenance', 'temp_locked', 'reserved'].includes(inv.status)) return;
         
         const isSelected = selectedSeats.find(s => s.id === seat.id);
         if (isSelected) {
@@ -69,22 +123,13 @@ export default function VisualSeatPicker({ eventId, onSeatSelect, selectedSeats 
         }
     };
 
-    if (loading) {
-        return (
-            <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#f84464" />
-                <Text style={styles.loadingText}>Loading Seating Map...</Text>
-            </View>
-        );
-    }
-
-    if (layouts.length === 0) {
+    if (eventBlocks.length === 0) {
         return null; // Fallback to standard category booking
     }
 
     return (
         <View style={styles.container}>
-            <AnimatePresence mode="wait">
+            <AnimatePresence>
                 {!selectedBlock ? (
                     <MotiView
                         key="blocks"
@@ -95,16 +140,16 @@ export default function VisualSeatPicker({ eventId, onSeatSelect, selectedSeats 
                     >
                         <Text style={styles.sectionTitle}>Select a Section</Text>
                         <View style={styles.blocksGrid}>
-                            {selectedLayout?.seat_blocks?.map((block: any) => (
+                            {eventBlocks.map((block: any) => (
                                 <Pressable
                                     key={block.id}
                                     onPress={() => handleBlockSelect(block)}
-                                    style={[styles.blockCard, { borderColor: block.color_code || '#ccc' }]}
+                                    style={[styles.blockCard, { borderColor: block.color_code || '#fbcfe8' }]}
                                 >
-                                    <View style={[styles.blockColor, { backgroundColor: block.color_code || '#ccc' }]} />
+                                    <View style={[styles.blockColor, { backgroundColor: block.color_code || '#fbcfe8' }]} />
                                     <View style={styles.blockInfo}>
-                                        <Text style={styles.blockName}>{block.block_name}</Text>
-                                        <Text style={styles.blockPrice}>₹{block.base_price}</Text>
+                                        <Text style={styles.blockName}>{block.name || block.block_name}</Text>
+                                        <Text style={styles.blockPrice}>₹{block.price || block.base_price}</Text>
                                     </View>
                                 </Pressable>
                             ))}
@@ -123,7 +168,7 @@ export default function VisualSeatPicker({ eventId, onSeatSelect, selectedSeats 
                                 <ChevronLeft size={20} color="#1e293b" />
                                 <Text style={styles.backText}>Back to Sections</Text>
                             </Pressable>
-                            <Text style={styles.blockTitle}>{selectedBlock.block_name}</Text>
+                            <Text style={styles.blockTitle}>{selectedBlock.name || selectedBlock.block_name}</Text>
                         </View>
 
                         {seatsLoading ? (
@@ -132,12 +177,18 @@ export default function VisualSeatPicker({ eventId, onSeatSelect, selectedSeats 
                             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.seatsScroll}>
                                 <View style={styles.seatsGrid}>
                                     {/* Simplified grid layout based on row/cols count */}
-                                    {Array.from({ length: selectedBlock.rows_count || 1 }).map((_, rowIndex) => (
+                                    {Array.from({ length: selectedBlock.rows || selectedBlock.rows_count || 1 }).map((_, rowIndex) => {
+                                        const rowLabel = getRowLabel(rowIndex, selectedBlock.rowNaming || 'alphabetic');
+                                        return (
                                         <View key={rowIndex} style={styles.seatRow}>
-                                            {seats.filter(s => s.row_name === String.fromCharCode(65 + rowIndex) || s.row_name === String(rowIndex + 1))
+                                            <Text style={styles.rowLabel}>{rowLabel}</Text>
+                                            {seats.filter(s => s.row_name === rowLabel)
                                                 .map(seat => {
                                                     const isSelected = selectedSeats.find(s => s.id === seat.id);
-                                                    const isBooked = seat.status !== 'available';
+                                                    const safeInventory = Array.isArray(inventory) ? inventory : [];
+                                                    const inv = safeInventory.find(i => i.seat_number === seat.seat_number);
+                                                    
+                                                    const isSold = !isSelected && inv && ['sold', 'booked', 'blocked', 'maintenance', 'temp_locked', 'reserved'].includes(inv.status);
                                                     
                                                     return (
                                                         <Pressable
@@ -145,22 +196,30 @@ export default function VisualSeatPicker({ eventId, onSeatSelect, selectedSeats 
                                                             onPress={() => toggleSeat(seat)}
                                                             style={[
                                                                 styles.seat,
-                                                                isBooked && styles.seatBooked,
-                                                                isSelected && styles.seatSelected,
-                                                                { borderColor: selectedBlock.color_code }
+                                                                isSold && styles.seatBooked,
+                                                                isSelected && styles.seatSelected
                                                             ]}
                                                         >
-                                                            <Text style={[
-                                                                styles.seatText,
-                                                                (isSelected || isBooked) && { color: '#fff' }
-                                                            ]}>
-                                                                {seat.seat_number}
-                                                            </Text>
+                                                            {isSold ? (
+                                                                <Text style={{ fontSize: 14, fontWeight: '900', color: '#166534' }}>X</Text>
+                                                            ) : isSelected ? (
+                                                                <View style={{ flex: 1, width: '100%', alignItems: 'center', justifyContent: 'center' }}>
+                                                                    <View style={{ position: 'absolute' }}>
+                                                                        <Heart size={26} color="#fff" fill="#fff" />
+                                                                    </View>
+                                                                    <Text style={[styles.seatText, { color: '#ef4444', zIndex: 1, marginTop: -2 }]}>{seat.column_number}</Text>
+                                                                </View>
+                                                            ) : (
+                                                                <Text style={styles.seatText}>
+                                                                    {seat.column_number}
+                                                                </Text>
+                                                            )}
                                                         </Pressable>
                                                     );
                                                 })}
                                         </View>
-                                    ))}
+                                        );
+                                    })}
                                 </View>
                             </ScrollView>
                         )}
@@ -171,12 +230,18 @@ export default function VisualSeatPicker({ eventId, onSeatSelect, selectedSeats 
                                 <Text style={styles.legendText}>Available</Text>
                             </View>
                             <View style={styles.legendItem}>
-                                <View style={[styles.seat, styles.seatSelected, { width: 16, height: 16 }]} />
+                                <View style={[styles.seat, styles.seatSelected, { width: 16, height: 16, justifyContent: 'center', alignItems: 'center' }]}>
+                                    <View style={{position: 'absolute'}}>
+                                        <Heart size={14} color="#fff" fill="#fff" />
+                                    </View>
+                                </View>
                                 <Text style={styles.legendText}>Selected</Text>
                             </View>
                             <View style={styles.legendItem}>
-                                <View style={[styles.seat, styles.seatBooked, { width: 16, height: 16 }]} />
-                                <Text style={styles.legendText}>Booked</Text>
+                                <View style={[styles.seat, styles.seatBooked, { width: 16, height: 16, justifyContent: 'center', alignItems: 'center' }]}>
+                                    <Text style={{fontSize: 8, fontWeight: '900', color: '#166534'}}>X</Text>
+                                </View>
+                                <Text style={styles.legendText}>Sold</Text>
                             </View>
                         </View>
                     </MotiView>
@@ -282,29 +347,37 @@ const styles = StyleSheet.create({
     seatRow: {
         flexDirection: 'row',
         gap: 8,
+        alignItems: 'center',
+    },
+    rowLabel: {
+        width: 20,
+        fontSize: 12,
+        fontWeight: '800',
+        color: '#64748b',
+        textAlign: 'center',
     },
     seat: {
-        width: 32,
+        width: 36,
         height: 32,
         borderRadius: 8,
         borderWidth: 1.5,
-        borderColor: '#e2e8f0',
-        backgroundColor: '#fff',
+        borderColor: '#bfdbfe',
+        backgroundColor: '#eff6ff',
         justifyContent: 'center',
         alignItems: 'center',
     },
     seatSelected: {
-        backgroundColor: '#f84464',
-        borderColor: '#f84464',
+        backgroundColor: '#ef4444',
+        borderColor: '#dc2626',
     },
     seatBooked: {
-        backgroundColor: '#94a3b8',
-        borderColor: '#94a3b8',
+        backgroundColor: '#dcfce7',
+        borderColor: '#86efac',
     },
     seatText: {
         fontSize: 10,
         fontWeight: '800',
-        color: '#1e293b',
+        color: '#1d4ed8',
     },
     legend: {
         flexDirection: 'row',

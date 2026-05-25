@@ -165,7 +165,7 @@ export async function POST(request) {
             <tr><td style="padding: 8px 0; border-bottom: 1px solid #fce7f3;"><strong>Remarks:</strong></td><td style="padding: 8px 0; border-bottom: 1px solid #fce7f3;">${remarks || 'N/A'}</td></tr>
           </table>
           <div style="margin-top: 30px; text-align: center;">
-            <a href="${process.env.NEXT_PUBLIC_BASE_URL}/admin?tab=partner_requests" style="background: #db2777; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">Review in Admin Panel</a>
+            <a href="${process.env.NEXT_PUBLIC_BASE_URL}/admin?tab=org_requests" style="background: #db2777; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">Review in Admin Panel</a>
           </div>
         </div>
       `;

@@ -202,17 +202,21 @@ export function AuthProvider({ children }) {
                     try { return await supabase.from('brand_kyc').select('*').eq('brand_id', supabaseUser.id).maybeSingle(); }
                     catch (e) { return { data: null, error: e }; }
                 })(),
+                (async () => {
+                    try { return await supabase.from('organizer_verification_status').select('*').eq('organizer_id', supabaseUser.id).maybeSingle(); }
+                    catch (e) { return { data: null, error: e }; }
+                })(),
             ]);
 
             const timeoutPromise = new Promise((_, reject) => 
                 setTimeout(() => reject(new Error("Database timeout")), 10000)
             );
 
-            let profileResult, adminResult, organiserResult, vendorResult, providerResult, brandResult;
+            let profileResult, adminResult, organiserResult, vendorResult, providerResult, brandResult, verificationStatusResult;
             try {
                 const results = await Promise.race([fetchPromise, timeoutPromise]);
                 if (!Array.isArray(results)) throw new Error("Database timeout");
-                [profileResult, adminResult, organiserResult, vendorResult, providerResult, brandResult] = results;
+                [profileResult, adminResult, organiserResult, vendorResult, providerResult, brandResult, verificationStatusResult] = results;
             } catch (err) {
                 const minimalUser = {
                     id: supabaseUser.id,
@@ -231,6 +235,7 @@ export function AuthProvider({ children }) {
             const vendorRecord    = vendorResult?.data || null;
             const providerRecord  = providerResult?.data || null;
             const brandRecord     = brandResult?.data || null;
+            const verificationStatusRecord = verificationStatusResult?.data || null;
 
             let role = (profile?.role || supabaseUser.user_metadata?.role || 'user').toLowerCase().replace(/\s+/g, '_');
             if (role === 'organizer') role = 'organiser';
@@ -265,6 +270,7 @@ export function AuthProvider({ children }) {
                 ...specializedData,
                 is_temporary_password: profile?.is_temporary_password || specializedData?.is_temporary_password || false,
                 role,
+                verification_status: verificationStatusRecord
             };
 
             // ENFORCE BANNED STATUS

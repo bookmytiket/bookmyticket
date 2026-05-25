@@ -3,6 +3,8 @@ import { StyleSheet, FlatList, TextInput, Pressable, ScrollView, View, Text, Ima
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useSupabaseQuery } from '@/hooks/useSupabase';
+import { useUnifiedResource } from '@/hooks/useUnifiedSync';
+import UnifiedApi from '@/lib/unifiedApi';
 import * as SecureStore from 'expo-secure-store';
 import EventCard from '@/components/EventCard';
 import { useRouter } from 'expo-router';
@@ -31,11 +33,11 @@ export default function EventsScreen() {
     });
   }, []);
 
-  const { data: events, loading: eventsLoading, refresh: refreshEvents } = useSupabaseQuery(
+  const { data: events, loading: eventsLoading, refresh: refreshEvents } = useUnifiedResource(
     'events',
-    (q) => q.order('created_at', { ascending: false }),
-    [],
-    { realtime: true, refreshOn: ['event_like_counts'] }
+    () => UnifiedApi.getEvents({ city: selectedCity || userLocation || undefined }),
+    [selectedCity, userLocation],
+    { realtimeTables: ['events', 'event_showtimes', 'general_inventory'] }
   );
 
   const { data: professionals, loading: prosLoading, refresh: refreshPros } = useSupabaseQuery(

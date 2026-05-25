@@ -2,7 +2,9 @@ import React from 'react';
 import { View, Text, StyleSheet, FlatList, Pressable, Platform } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { Bell, ChevronLeft, Calendar, Info } from 'lucide-react-native';
-import { useSupabaseQuery, useAuth } from '@/hooks/useSupabase';
+import { useAuth } from '@/hooks/useSupabase';
+import { useUnifiedResource } from '@/hooks/useUnifiedSync';
+import UnifiedApi from '@/lib/unifiedApi';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { MotiView } from 'moti';
@@ -13,11 +15,11 @@ export default function NotificationsScreen() {
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
 
-  const { data: notifications, loading, refresh } = useSupabaseQuery(
+  const { data: notifications, loading, refresh } = useUnifiedResource(
     'notifications',
-    (q) => q.eq('user_id', user?.id).order('created_at', { ascending: false }),
+    () => UnifiedApi.getNotifications(),
     [user?.id],
-    { enabled: !!user }
+    { enabled: !!user, realtimeTables: ['notifications'] }
   );
 
   const sampleNotifications = [

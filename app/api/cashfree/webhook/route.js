@@ -65,6 +65,43 @@ export async function POST(request) {
                 })
                 .eq('id', bookingId);
 
+            // 2.5 Mark individual seats as sold in seat_inventory
+            if (booking.selected_seats && booking.selected_seats.length > 0) {
+                try {
+                    for (const seat of booking.selected_seats) {
+                        const seatId = seat.id;
+                        const showtimeId = booking.showtime_id || booking.customer_details?.showtimeId || null;
+                        
+                        let query = supabaseAdmin
+                            .from('seat_inventory')
+                            .select('id')
+                            .eq('event_id', booking.event_id)
+                            .eq('seat_number', seatId);
+                            
+                        if (showtimeId) {
+                            query = query.eq('showtime_id', showtimeId);
+                        } else {
+                            query = query.is('showtime_id', null);
+                        }
+                        
+                        const { data: existingSeat } = await query.maybeSingle();
+
+                        if (existingSeat) {
+                            await supabaseAdmin.from('seat_inventory').update({ status: 'sold' }).eq('id', existingSeat.id);
+                        } else {
+                            await supabaseAdmin.from('seat_inventory').insert({ 
+                                event_id: booking.event_id, 
+                                seat_number: seatId, 
+                                status: 'sold',
+                                showtime_id: showtimeId
+                            });
+                        }
+                    }
+                } catch (seatErr) {
+                    console.error("Seat update error in cashfree/webhook:", seatErr.message);
+                }
+            }
+
             // 3. Record Payment
             const { data: paymentRecord } = await supabaseAdmin.from('payments').insert({
                 booking_id: bookingId,

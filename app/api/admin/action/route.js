@@ -137,7 +137,7 @@ export async function POST(request) {
 
       // 2. Generate temporary password if not provided
       const pwd = (manualPassword || "").trim();
-      const tempPassword = pwd || Math.random().toString(36).slice(-10);
+      const tempPassword = pwd || Math.random().toString(36).slice(-10) + 'A1!';
 
       const email = partnerReq.email.trim().toLowerCase();
       let userId;
@@ -299,7 +299,7 @@ export async function POST(request) {
         try {
           await sendM365Email(m365Config, fromEmail, email, subject, emailContent);
           console.log(`[approve-partner] ✅ Credentials email sent to ${email}`);
-          const { error: logError } = await supabaseAdmin.from('notifications_log').insert({
+          const { error: logError } = await supabaseAdmin.from('notification_logs').insert({
             user_id: newUserId, 
             type: 'Email', 
             recipient: email,

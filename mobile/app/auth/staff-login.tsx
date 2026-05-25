@@ -59,6 +59,50 @@ export default function StaffLoginScreen() {
 
         const role = profile.role?.toLowerCase();
         if (['staff', 'admin', 'organiser', 'superadmin'].includes(role)) {
+          // IMPLEMENT DEVICE RESTRICTION LOGIC FOR STAFF
+          if (role === 'staff') {
+             const deviceId = 'mob_' + Math.random().toString(36).substring(2, 15);
+             const sessionToken = 'sess_' + Math.random().toString(36).substring(2, 15);
+
+             const { data: settings } = await supabase.from('admin_security_settings').select('*').maybeSingle();
+             const policy = settings?.login_policy || 'replace_existing';
+             const isEnabled = settings?.single_device_login_enabled !== false;
+
+             if (isEnabled) {
+                 if (policy === 'strict_block') {
+                     const { data: activeSession } = await supabase
+                         .from('staff_active_sessions')
+                         .select('*')
+                         .eq('staff_user_id', data.user.id)
+                         .eq('session_status', 'active')
+                         .maybeSingle();
+
+                     if (activeSession) {
+                         await supabase.auth.signOut();
+                         throw new Error('Access Denied: You are already logged in on another device.');
+                     }
+                 } else if (policy === 'replace_existing') {
+                     await supabase
+                         .from('staff_active_sessions')
+                         .update({ session_status: 'terminated' })
+                         .eq('staff_user_id', data.user.id)
+                         .eq('session_status', 'active');
+                 }
+             }
+
+             // Insert new session
+             await supabase.from('staff_active_sessions').insert({
+                 staff_user_id: data.user.id,
+                 session_token: sessionToken,
+                 device_id: deviceId,
+                 device_name: 'Mobile App Scanner',
+                 device_type: 'Mobile',
+                 session_status: 'active'
+             });
+             // We can't use localStorage easily in all environments, but we can pass it or just let it exist.
+             // Usually mobile uses AsyncStorage. We will skip storing it unless needed for heartbeat.
+          }
+
           router.replace('/staff');
         } else {
           // Not authorized, sign out immediately

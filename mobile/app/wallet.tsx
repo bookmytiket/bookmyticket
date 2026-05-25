@@ -13,7 +13,9 @@ import {
 import { Stack, useRouter } from 'expo-router';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
-import { useAuth, useSupabaseQuery, useSupabaseMutation } from '@/hooks/useSupabase';
+import { useAuth, useSupabaseMutation } from '@/hooks/useSupabase';
+import { useUnifiedResource } from '@/hooks/useUnifiedSync';
+import UnifiedApi from '@/lib/unifiedApi';
 import {
   Wallet,
   ArrowUpRight,
@@ -44,31 +46,19 @@ export default function WalletScreen() {
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawNotes, setWithdrawNotes] = useState('');
 
-  // Real-time Wallet Data
-  const { data: wallets, loading: walletLoading } = useSupabaseQuery(
-    'wallets',
-    (q) => q.eq('organiser_id', user?.id).single(),
+  // Real-time Wallet Data from the unified API gateway.
+  const { data: walletBundle, loading: walletLoading, refresh: refreshWallet } = useUnifiedResource(
+    'wallet',
+    () => UnifiedApi.getWallet(),
     [user?.id],
-    { realtime: true, enabled: !!user }
-  );
-
-  const { data: transactions, loading: txLoading } = useSupabaseQuery(
-    'wallet_transactions',
-    (q) => q.eq('organiser_id', user?.id).order('created_at', { ascending: false }),
-    [user?.id],
-    { realtime: true, enabled: !!user }
-  );
-
-  const { data: withdrawRequests, loading: wrLoading } = useSupabaseQuery(
-    'withdraw_requests',
-    (q) => q.eq('organiser_id', user?.id).order('created_at', { ascending: false }),
-    [user?.id],
-    { realtime: true, enabled: !!user }
+    { enabled: !!user, realtimeTables: ['wallets', 'wallet_transactions', 'withdraw_requests', 'payments'] }
   );
 
   const [createWithdrawRequest, { loading: isSubmitting }] = useSupabaseMutation('withdraw_requests');
 
-  const wallet = wallets?.[0] || wallets; // handle single() vs array
+  const wallet = walletBundle?.wallet;
+  const transactions = walletBundle?.transactions || [];
+  const withdrawRequests = walletBundle?.withdrawRequests || [];
 
   const handleWithdrawRequest = async () => {
     const amount = parseFloat(withdrawAmount);
@@ -92,6 +82,7 @@ export default function WalletScreen() {
       setWithdrawAmount('');
       setWithdrawNotes('');
       setShowWithdrawModal(false);
+      refreshWallet();
       Alert.alert('Success', 'Withdrawal request submitted successfully');
     } else {
       Alert.alert('Error', (error as any)?.message || 'Failed to submit request');

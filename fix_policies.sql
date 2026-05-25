@@ -45,3 +45,4 @@ CREATE POLICY "Enable write access for organisers" ON public.event_verification_
 
 -- Notify pgrst to reload schema
 NOTIFY pgrst, 'reload schema';
+ALTER PUBLICATION supabase_realtime ADD TABLE public.seat_inventory;

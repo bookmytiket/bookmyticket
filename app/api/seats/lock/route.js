@@ -11,7 +11,7 @@ export async function POST(request) {
 
     try {
         const body = await request.json();
-        const { eventId, seatId, userId, expiresAt } = body;
+        const { eventId, seatId, userId, expiresAt, showtimeId } = body;
 
         if (!eventId || !seatId || !userId) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -20,12 +20,19 @@ export async function POST(request) {
         const supabase = createClient(supabaseUrl, supabaseKey);
 
         // 1. Check if seat exists
-        const { data: existingSeat } = await supabase
+        let query = supabase
             .from('seat_inventory')
             .select('*')
             .eq('event_id', eventId)
-            .eq('seat_number', seatId)
-            .maybeSingle();
+            .eq('seat_number', seatId);
+
+        if (showtimeId) {
+            query = query.eq('showtime_id', showtimeId);
+        } else {
+            query = query.is('showtime_id', null);
+        }
+
+        const { data: existingSeat } = await query.maybeSingle();
 
         if (existingSeat) {
             // 2. Check if available
@@ -40,8 +47,7 @@ export async function POST(request) {
                 .update({
                     status: 'temp_locked',
                     locked_by: userId,
-                    lock_expires_at: expiresAt,
-                    updated_at: new Date().toISOString()
+                    lock_expires_at: expiresAt
                 })
                 .eq('id', existingSeat.id);
             
@@ -53,6 +59,7 @@ export async function POST(request) {
                 .insert({
                     event_id: eventId,
                     seat_number: seatId,
+                    showtime_id: showtimeId || null,
                     status: 'temp_locked',
                     locked_by: userId,
                     lock_expires_at: expiresAt

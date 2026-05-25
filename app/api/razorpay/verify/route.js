@@ -65,6 +65,7 @@ export async function POST(request) {
                 .from('bookings')
                 .update({ 
                     status: 'Confirmed',
+                    booking_status: 'Confirmed',
                     payment_status: 'paid',
                     confirmed_at: nowIso,
                     booking_ref: id.slice(-8).toUpperCase()
@@ -76,21 +77,73 @@ export async function POST(request) {
                 try {
                     for (const seat of booking.selected_seats) {
                         const seatId = seat.id;
-                        const { data: existingSeat } = await supabaseAdmin
+                        const showtimeId = booking.showtime_id || booking.customer_details?.showtimeId || null;
+                        
+                        let query = supabaseAdmin
                             .from('seat_inventory')
                             .select('id')
                             .eq('event_id', booking.event_id)
-                            .eq('seat_number', seatId)
-                            .maybeSingle();
+                            .eq('seat_number', seatId);
+                            
+                        if (showtimeId) {
+                            query = query.eq('showtime_id', showtimeId);
+                        } else {
+                            query = query.is('showtime_id', null);
+                        }
+                        
+                        const { data: existingSeat } = await query.maybeSingle();
 
                         if (existingSeat) {
-                            await supabaseAdmin.from('seat_inventory').update({ status: 'sold' }).eq('id', existingSeat.id);
+                            await supabaseAdmin.from('seat_inventory').update({
+                                status: 'sold',
+                                locked_by: null,
+                                lock_expires_at: null,
+                                reserved_until: null,
+                                updated_at: nowIso
+                            }).eq('id', existingSeat.id);
                         } else {
-                            await supabaseAdmin.from('seat_inventory').insert({ event_id: booking.event_id, seat_number: seatId, status: 'sold' });
+                            await supabaseAdmin.from('seat_inventory').insert({ 
+                                event_id: booking.event_id, 
+                                seat_number: seatId, 
+                                status: 'sold',
+                                showtime_id: showtimeId,
+                                updated_at: nowIso
+                            });
                         }
                     }
                 } catch (seatErr) {
                     console.error("Seat update error in razorpay/verify:", seatErr.message);
+                }
+            } else {
+                try {
+                    const showtimeId = booking.showtime_id || booking.customer_details?.showtimeId || null;
+                    let inventoryQuery = supabaseAdmin
+                        .from('general_inventory')
+                        .select('*')
+                        .eq('event_id', booking.event_id)
+                        .limit(1);
+
+                    inventoryQuery = showtimeId ? inventoryQuery.eq('showtime_id', showtimeId) : inventoryQuery.is('showtime_id', null);
+                    const { data: inventory } = await inventoryQuery.maybeSingle();
+
+                    if (inventory) {
+                        const qty = Number(booking.ticket_count || booking.quantity || 1);
+                        const reserved = Math.max(0, Number(inventory.reserved_count || 0) - qty);
+                        const sold = Number(inventory.sold_count || 0) + qty;
+                        const remaining = Math.max(0, Number(inventory.total_capacity || inventory.remaining_count || 0) - sold - reserved);
+
+                        await supabaseAdmin
+                            .from('general_inventory')
+                            .update({
+                                sold_count: sold,
+                                reserved_count: reserved,
+                                remaining_count: remaining,
+                                updated_at: nowIso
+                            })
+                            .eq('id', inventory.id);
+                    }
+                } catch (inventoryErr) {
+                    console.error("General inventory update error in razorpay/verify:", inventoryErr.message);
                 }
             }
 

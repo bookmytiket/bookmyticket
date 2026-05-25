@@ -29,19 +29,24 @@ import {
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/hooks/useSupabase';
+import UnifiedApi from '@/lib/unifiedApi';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 
 export default function TicketScanningScreen() {
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
   const router = useRouter();
+  const { user } = useAuth();
 
   const [permission, requestPermission] = useCameraPermissions();
   const [scanning, setScanning] = useState(true);
   const [verifying, setVerifying] = useState(false);
   const [lastResult, setLastResult] = useState<any>(null);
-  const [scanStatus, setScanStatus] = useState<'idle' | 'success' | 'duplicate' | 'invalid' | 'expired'>('idle');
+  const [scanStatus, setScanStatus] = useState<'idle' | 'success' | 'duplicate' | 'invalid' | 'expired' | 'requires_action'>('idle');
   const [scanHistory, setScanHistory] = useState<any[]>([]);
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [isActioning, setIsActioning] = useState(false);
 
   useEffect(() => {
     if (!permission) {
@@ -179,32 +184,71 @@ export default function TicketScanningScreen() {
         return;
       }
 
-      const { error: updateError } = await supabase
-        .from('tickets')
-        .update({ status: 'scanned', scanned_at: new Date().toISOString() })
-        .eq('id', ticket.id);
-
-      if (updateError) throw updateError;
-
+      // DO NOT UPDATE YET - Require ID Verification Action
       const successResult = {
-        title: booking.event_name,
+        title: event.title || booking.event_name,
         customer: customer.name || 'Guest',
         category: customer.ticket_type || 'General',
         quantity: booking.ticket_count || 1,
         ticketNo: ticket.ticket_number,
-        message: 'Access Granted'
+        ticketId: ticket.id,
+        bookingId: booking.id,
+        message: 'ID VERIFICATION REQUIRED'
       };
       
-      setScanStatus('success');
+      setScanStatus('requires_action');
       setLastResult(successResult);
-      setScanHistory(prev => [{ ...successResult, id: Math.random().toString(), time: new Date().toISOString() }, ...prev].slice(0, 10));
-      Vibration.vibrate(200);
+      Vibration.vibrate([100, 100]);
 
     } catch (err: any) {
       setScanStatus('invalid');
       setLastResult({ message: err.message || 'Verification system error' });
     } finally {
       setVerifying(false);
+    }
+  };
+
+  const handleAction = async (action: 'approve' | 'reject') => {
+    if (!lastResult?.ticketId) return;
+    setIsActioning(true);
+    
+    try {
+      if (action === 'approve') {
+        await UnifiedApi.submitTicketScanAction({
+          ticketId: lastResult.ticketId,
+          bookingId: lastResult.bookingId,
+          ticketCode: lastResult.ticketNo,
+          action: 'approve',
+          gateName: 'Main Entry',
+          scannerUserId: user?.id,
+        });
+        
+        const finalResult = { ...lastResult, message: 'Access Granted', status: 'success' };
+        setScanStatus('success');
+        setLastResult(finalResult);
+        setScanHistory(prev => [{ ...finalResult, id: Math.random().toString(), time: new Date().toISOString() }, ...prev].slice(0, 10));
+        Vibration.vibrate(200);
+      } else {
+        await UnifiedApi.submitTicketScanAction({
+          ticketId: lastResult.ticketId,
+          bookingId: lastResult.bookingId,
+          ticketCode: lastResult.ticketNo,
+          action: 'reject',
+          rejectionReason: rejectionReason || 'No ID',
+          gateName: 'Main Entry',
+          scannerUserId: user?.id,
+        });
+
+        const finalResult = { ...lastResult, message: `Entry Rejected: ${rejectionReason || 'No ID'}`, status: 'invalid' };
+        setScanStatus('invalid');
+        setLastResult(finalResult);
+        Vibration.vibrate([300]);
+      }
+    } catch (err: any) {
+      Alert.alert('Error', err.message);
+    } finally {
+      setIsActioning(false);
+      setRejectionReason("");
     }
   };
 
@@ -246,7 +290,7 @@ export default function TicketScanningScreen() {
           </MotiView>
         ) : (
           <AnimatePresence>
-            {scanStatus !== 'idle' && scanStatus !== 'invalid' && (
+            {scanStatus !== 'idle' && scanStatus !== 'invalid' && scanStatus !== 'requires_action' && (
               <MotiView from={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} style={[styles.resultCard, scanStatus === 'success' ? styles.resultSuccess : styles.resultDuplicate]}>
                 <View style={styles.resultHeader}>
                   {scanStatus === 'success' ? <CheckCircle size={54} color="#10b981" /> : <AlertCircle size={54} color="#f59e0b" />}
@@ -277,14 +321,47 @@ export default function TicketScanningScreen() {
                 </Pressable>
               </MotiView>
             )}
-            
+            {scanStatus === 'requires_action' && (
+              <MotiView from={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} style={[styles.resultCard, { borderColor: '#3b82f6' }]}>
+                <View style={styles.resultHeader}>
+                  <User size={54} color="#3b82f6" />
+                  <Text style={[styles.resultStatusText, { color: '#3b82f6' }]}>ID VERIFICATION</Text>
+                </View>
+                
+                <Text style={[styles.resultTitle, { color: '#000' }]}>{lastResult.title}</Text>
+                <View style={styles.resultDetails}>
+                  <DetailItem icon={<User size={18} color="#666" />} label="Expected Name" value={lastResult.customer} colors={{ text: '#000', muted: '#666' }} />
+                  <DetailItem icon={<Layers size={18} color="#666" />} label="Category" value={lastResult.category} colors={{ text: '#000', muted: '#666' }} />
+                  <DetailItem icon={<Ticket size={18} color="#666" />} label="Quantity" value={`${lastResult.quantity} Tickets`} colors={{ text: '#000', muted: '#666' }} />
+                </View>
+                <Text style={[styles.resultMessage, { color: '#444' }]}>Please check government ID against expected name.</Text>
+
+                <View style={{ flexDirection: 'row', gap: 10, width: '100%' }}>
+                  <Pressable 
+                    style={[styles.continueBtn, { flex: 1, backgroundColor: '#ef4444' }]}
+                    onPress={() => { setRejectionReason('No Match'); handleAction('reject'); }}
+                    disabled={isActioning}
+                  >
+                    <Text style={styles.continueBtnText}>Reject</Text>
+                  </Pressable>
+                  <Pressable 
+                    style={[styles.continueBtn, { flex: 2, backgroundColor: '#10b981' }]}
+                    onPress={() => handleAction('approve')}
+                    disabled={isActioning}
+                  >
+                    <Text style={styles.continueBtnText}>Approve Entry</Text>
+                  </Pressable>
+                </View>
+              </MotiView>
+            )}
+
             {scanStatus === 'invalid' && (
               <MotiView from={{ opacity: 0, translateY: 20 }} animate={{ opacity: 1, translateY: 0 }} style={styles.errorCard}>
                 <XCircle size={64} color="#ef4444" />
-                <Text style={styles.errorTitle}>Invalid Ticket</Text>
+                <Text style={styles.errorTitle}>{lastResult.message?.includes('Rejected') ? 'Entry Rejected' : 'Invalid Ticket'}</Text>
                 <Text style={styles.errorText}>{lastResult.message}</Text>
                 <Pressable style={styles.retryBtn} onPress={() => { setScanStatus('idle'); setScanning(true); }}>
-                  <Text style={styles.retryBtnText}>Try Again</Text>
+                  <Text style={styles.retryBtnText}>Continue Scanning</Text>
                 </Pressable>
               </MotiView>
             )}
