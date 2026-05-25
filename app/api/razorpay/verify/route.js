@@ -60,17 +60,17 @@ export async function POST(request) {
 
             if (fetchErr) throw fetchErr;
 
-            // 3. Update Booking Status immediately
-            await supabaseAdmin
+            const { error: updateErr } = await supabaseAdmin
                 .from('bookings')
                 .update({ 
                     status: 'Confirmed',
-                    booking_status: 'Confirmed',
                     payment_status: 'paid',
                     confirmed_at: nowIso,
                     booking_ref: id.slice(-8).toUpperCase()
                 })
                 .eq('id', id);
+
+            if (updateErr) throw updateErr;
 
             // 3.5 Mark individual seats as sold in seat_inventory
             if (booking.selected_seats && booking.selected_seats.length > 0) {
