@@ -33,6 +33,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import SportsEventForm from "./components/SportsEventForm";
 import UniversalEventForm from "./components/UniversalEventForm";
 import PhysicalEventForm from "./components/PhysicalEventForm";
+import UnifiedEventForm from "./components/UnifiedEventForm";
 import VirtualEventForm from "./components/VirtualEventForm";
 import MarathonEventForm from "./components/MarathonEventForm";
 import TournamentEventForm from "./components/TournamentEventForm";
@@ -842,6 +843,7 @@ function OrganiserPanel() {
   const {
     data: organiserData,
     loading: isOrgLoading,
+    error: orgError,
     refresh: refreshOrganiserData,
   } = useSupabaseQuery(
     "organisers",
@@ -1176,6 +1178,7 @@ function OrganiserPanel() {
             ...getInitialPostEvent(),
             ...ev,
             id: ev.id,
+            zipCode: ev.pincode || ev.zipCode || "",
             ticketType: ev.event_type || 'reserved',
             bannerPreview: ev.img || ev.banner_preview || ev.bannerPreview,
             seatingEnabled: ev.seating_enabled !== false,
@@ -1503,31 +1506,25 @@ function OrganiserPanel() {
   }, [organiserData, userProfile, user]);
 
   useEffect(() => {
-    let timeoutId;
-
     const evaluateState = () => {
       // Priority 1: Auth or Profile still physically loading from network
       if (loading || isOrgLoading) {
         setCurrentStage("loading");
-
-        // Safety: if stuck in loading for > 2s, force a fallback
-        if (!timeoutId) {
-          timeoutId = setTimeout(() => {
-            console.warn(
-              "OrganiserPanel: Session loading timeout. Forcing fallback evaluation.",
-            );
-            evaluateStateImpl(true);
-          }, 2000);
-        }
         return;
+      }
+
+      // Priority 2: If we expect an organiser but data is null and no error, it might be a split-second React state gap.
+      // Wait for it. (orgError will be populated if it actually failed to find a row).
+      if (user?.id && (user?.role === "admin" || user?.role === "organiser") && !organiserData && !orgError) {
+          // It's likely about to start loading, just wait.
+          setCurrentStage("loading");
+          return;
       }
 
       evaluateStateImpl(false);
     };
 
     const evaluateStateImpl = (isFallback) => {
-      if (timeoutId) clearTimeout(timeoutId);
-
       // 1. Staff and Admins bypass onboarding
       if (isStaff || user?.role === "admin") {
         setCurrentStage("approved");
@@ -1578,9 +1575,6 @@ function OrganiserPanel() {
     };
 
     evaluateState();
-    return () => {
-      if (timeoutId) clearTimeout(timeoutId);
-    };
   }, [
     organiserData,
     isOrgLoading,
@@ -1588,6 +1582,8 @@ function OrganiserPanel() {
     loading,
     isProfessionalService,
     router,
+    orgError,
+    user,
   ]);
 
   const [createEventMutation] = useSupabaseMutation("events", "insert");
@@ -2558,10 +2554,12 @@ function OrganiserPanel() {
       ? (postEvent.dateSlots || []).filter((s) => s.date)
       : [{ date: startDate, time: startTime }];
 
-    const firstSlot = effectiveSlots[0] || { date: today, time: "" };
-
-    const isSeating = !isOnline && postEvent.ticketType === 'reserved';
-    const categories = postEvent.categories || [];
+    const isSeating = !isOnline && (postEvent.ticketType === 'reserved' || postEvent.isReservedSeating);
+    const categories = (postEvent.categories || []).map(c => ({
+        ...c,
+        price: postEvent.ticketMode === 'free' ? 0 : c.price,
+        isFree: postEvent.ticketMode === 'free' ? true : !!c.isFree
+    }));
 
     // Total Capacity
     let totalSeats = 100;
@@ -2826,6 +2824,11 @@ function OrganiserPanel() {
       video_trailer_url: postEvent.videoTrailerUrl || undefined,
       dynamic_config: {
         ...(postEvent.dynamic_config || {}),
+        basicInfo: {
+          ...(postEvent.dynamic_config?.basicInfo || {}),
+          isFree: postEvent.ticketMode === 'free',
+          ticketMode: postEvent.ticketMode || 'paid',
+        },
         organiser_name: postEvent.organiser_name || (postEvent.dynamic_config && postEvent.dynamic_config.organiser_name) || undefined,
         marathonCategories: postEvent.marathonCategories || [],
         seatingSections: postEvent.seatingSections || [],
@@ -6783,6 +6786,7 @@ function OrganiserPanel() {
                                             setPostEvent({
                                               ...getInitialPostEvent(),
                                               ...ev,
+                                              zipCode: ev.pincode || ev.zipCode || "",
                                               // Map snake_case from Convex to camelCase for form state
                                               ticketType:
                                                 ev.event_type || 'reserved',
@@ -7362,7 +7366,7 @@ function OrganiserPanel() {
           if (addEventStep === "form") {
             if (postEvent.type === "Physical Event") {
               return (
-                <PhysicalEventForm
+                <UnifiedEventForm
                   postEvent={postEvent}
                   setPostEvent={setPostEvent}
                   onCancel={() => {

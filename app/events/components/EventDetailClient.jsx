@@ -626,7 +626,7 @@ export default function EventDetailClient({ id }) {
                                         <div className="space-y-4">
                                             <button 
                                                 onClick={() => router.push('/events/book?id=' + id)}
-                                                className="w-full py-5 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-[24px] font-black uppercase tracking-[0.3em] text-[12px] shadow-2xl shadow-pink-500/40 hover:scale-[1.02] active:scale-95 transition-all"
+                                                className="w-full py-5 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-[24px] font-black uppercase tracking-widest text-[12px] shadow-2xl shadow-pink-500/40 hover:scale-[1.02] active:scale-95 transition-all"
                                             >
                                                 Register Team
                                             </button>
@@ -646,9 +646,14 @@ export default function EventDetailClient({ id }) {
                                                 if (!user) router.push(`/signin?redirect=${encodeURIComponent(bookUrl)}`);
                                                 else router.push(bookUrl);
                                             }}
-                                            className="w-full py-4 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-[24px] font-bold uppercase tracking-[0.3em] text-[12px] shadow-2xl shadow-pink-500/40 hover:scale-[1.02] active:scale-95 transition-all"
+                                            className="relative overflow-hidden w-full py-4 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-[24px] font-bold uppercase tracking-widest text-[12px] shadow-2xl shadow-pink-500/40 hover:scale-[1.02] active:scale-95 transition-all"
                                         >
-                                            {event.isFree ? "Register for Free" : (isMarathon ? "Register Now" : "Reserve Spot Now")}
+                                            {event.isFree && (
+                                                <div className="absolute inset-0 bg-white/20 animate-pulse rounded-[24px]"></div>
+                                            )}
+                                            <span className="relative z-10">
+                                                {event.isFree ? "Register for Free" : (isMarathon ? "Register Now" : "Reserve Spot Now")}
+                                            </span>
                                         </button>
                                     )}
                                 </>

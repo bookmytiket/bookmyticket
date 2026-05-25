@@ -28,6 +28,7 @@ export function isFreeEvent(event) {
     const isFreeFlag = (val) => val === true || val === "true" || val === "yes" || val === "Yes";
 
     // 1. Explicit top-level FREE flags take ultimate precedence
+    if (String(event.ticket_mode || event.ticketMode || '').toLowerCase() === 'free') return true;
     if (isFreeFlag(event.isFree) || isFreeFlag(event.is_free)) return true;
     if (isFreeFlag(event.ticketsAreFree) || isFreeFlag(event.tickets_are_free)) return true;
     if (String(event.type || '').toLowerCase() === 'free') return true;
