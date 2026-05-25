@@ -15,6 +15,10 @@ export default function AdminOrgRequestsTable({ t }) {
     const [selectedRequest, setSelectedRequest] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [requestToDelete, setRequestToDelete] = useState(null);
+    const [isDeleting, setIsDeleting] = useState(false);
+
     const fetchRequests = useCallback(async () => {
         setLoading(true);
         try {
@@ -106,15 +110,20 @@ export default function AdminOrgRequestsTable({ t }) {
         }
     };
 
-    const handleDelete = async (id) => {
-        if (!confirm("Delete this request? This cannot be undone.")) return;
+    const handleDelete = async () => {
+        if (!requestToDelete) return;
+        setIsDeleting(true);
         try {
-            const { error } = await supabase.from('partner_requests').delete().eq('id', id);
+            const { error } = await supabase.from('partner_requests').delete().eq('id', requestToDelete.id);
             if (error) throw error;
             showToast("Request deleted", "info");
+            setShowDeleteModal(false);
+            setRequestToDelete(null);
             fetchRequests();
         } catch (err) {
             showToast(err.message, "error");
+        } finally {
+            setIsDeleting(false);
         }
     };
 
@@ -230,7 +239,7 @@ export default function AdminOrgRequestsTable({ t }) {
                                     </button>
                                 )}
                                 <button 
-                                    onClick={() => handleDelete(req.id)}
+                                    onClick={() => { setRequestToDelete(req); setShowDeleteModal(true); }}
                                     className="w-10 h-10 rounded-xl bg-slate-100 text-slate-400 flex items-center justify-center hover:bg-red-500 hover:text-white transition-all"
                                     title="Delete Request"
                                 >
@@ -274,6 +283,39 @@ export default function AdminOrgRequestsTable({ t }) {
                                 className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/20 disabled:opacity-50"
                             >
                                 {isSubmitting ? "Processing..." : "Approve & Create Account"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {showDeleteModal && requestToDelete && (
+                <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[100] flex items-center justify-center p-6">
+                    <div className="premium-glass max-w-md w-full rounded-[32px] overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-300">
+                        <div className="bg-gradient-to-br from-red-500 to-red-600 p-8 text-white relative">
+                            <button onClick={() => setShowDeleteModal(false)} className="absolute top-6 right-6 text-white/60 hover:text-white transition-colors">
+                                <X size={24} />
+                            </button>
+                            <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mb-4">
+                                <Trash2 size={32} />
+                            </div>
+                            <h2 className="text-2xl font-black mb-1">Delete Request?</h2>
+                            <p className="text-white/70 text-sm font-medium">Are you sure you want to permanently delete the request from {requestToDelete.business_name || requestToDelete.full_name}?</p>
+                        </div>
+                        <div className="p-8 space-y-6">
+                            <button 
+                                onClick={handleDelete}
+                                disabled={isDeleting}
+                                className="w-full py-4 bg-red-600 text-white rounded-2xl font-black hover:bg-red-700 transition-all shadow-xl shadow-red-600/20 disabled:opacity-50"
+                            >
+                                {isDeleting ? "Deleting..." : "Yes, Delete Permanently"}
+                            </button>
+                            <button 
+                                onClick={() => setShowDeleteModal(false)}
+                                disabled={isDeleting}
+                                className="w-full py-4 bg-slate-100 text-slate-600 rounded-2xl font-black hover:bg-slate-200 transition-all disabled:opacity-50"
+                            >
+                                Cancel
                             </button>
                         </div>
                     </div>
