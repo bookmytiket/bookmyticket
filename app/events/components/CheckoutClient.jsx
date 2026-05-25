@@ -941,7 +941,9 @@ export default function CheckoutClient({ id: propId, sessionToken }) {
                                 body: JSON.stringify({
                                     razorpay_order_id: response.razorpay_order_id,
                                     razorpay_payment_id: response.razorpay_payment_id,
-                                    razorpay_signature: response.razorpay_signature
+                                    razorpay_signature: response.razorpay_signature,
+                                    id: booking.id,
+                                    type: "booking"
                                 })
                             });
                             const verifyData = await verifyRes.json();
