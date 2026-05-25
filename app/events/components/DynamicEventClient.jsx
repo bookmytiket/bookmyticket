@@ -78,28 +78,39 @@ export default function DynamicEventClient({ event }) {
     const [notification, setNotification] = useState(null);
     const [marathonCategories, setMarathonCategories] = useState([]);
 
+    const baseCategories = useMemo(() => {
+        if (marathonCategories.length > 0) return marathonCategories;
+        if ((config?.marathonCategories || config?.marathon_categories)?.length > 0) return config.marathonCategories || config.marathon_categories;
+        if (config?.seatingSections?.length > 0) return config.seatingSections.map(s => ({ ...s, category_name: s.name, price: s.basePrice }));
+        if (config?.categories?.length > 0) return config.categories;
+        return [];
+    }, [marathonCategories, config]);
+
+    const hasDistances = useMemo(() => baseCategories.some(c => c.distance_km !== undefined && c.distance_km !== null), [baseCategories]);
+
     // Initialize selected KM if marathon categories exist
     useEffect(() => {
-        const categories = marathonCategories.length > 0 ? marathonCategories : (config?.marathonCategories || config?.marathon_categories || []);
-        if (categories.length > 0 && !selectedKM) {
-            const kms = [...new Set(categories.map(c => Number(c.distance_km)))].sort((a, b) => a - b);
+        if (hasDistances && !selectedKM) {
+            const kms = [...new Set(baseCategories.filter(c => c.distance_km != null).map(c => Number(c.distance_km)))].sort((a, b) => a - b);
             if (kms.length > 0) setSelectedKM(kms[0]);
         }
-    }, [marathonCategories, config?.marathonCategories, config?.marathon_categories, selectedKM]);
+    }, [hasDistances, baseCategories, selectedKM]);
 
-    // Auto-select category when KM changes to keep Order Details in sync
+    // Auto-select category
     useEffect(() => {
-        const allCategories = marathonCategories.length > 0 ? marathonCategories : (config.marathonCategories || config.marathon_categories || []);
-        const filtered = allCategories.filter(c => Number(c.distance_km) === Number(selectedKM));
-        
-        if (filtered.length > 0) {
-            // Auto-select if nothing is selected OR if current selection doesn't match new KM
-            if (!selectedCategory || Number(selectedCategory.distance_km) !== Number(selectedKM)) {
-                setSelectedCategory(filtered[0]);
-                setSelectedAgeRate(null);
+        if (baseCategories.length > 0) {
+            let filtered = baseCategories;
+            if (hasDistances && selectedKM != null) {
+                filtered = baseCategories.filter(c => Number(c.distance_km) === Number(selectedKM));
+            }
+            if (filtered.length > 0) {
+                if (!selectedCategory || (hasDistances && Number(selectedCategory.distance_km) !== Number(selectedKM))) {
+                    setSelectedCategory(filtered[0]);
+                    setSelectedAgeRate(null);
+                }
             }
         }
-    }, [selectedKM, marathonCategories, config.marathonCategories, config.marathon_categories, selectedCategory]);
+    }, [selectedKM, baseCategories, selectedCategory, hasDistances]);
 
     // Handle timer
     useEffect(() => {
@@ -544,24 +555,28 @@ export default function DynamicEventClient({ event }) {
                                 </div>
 
                                 <div className="space-y-6 pt-8 border-t border-slate-50">
-                                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                                        <div className="space-y-2 flex-1">
-                                            <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Select Distance</h4>
-                                            {(config.marathonCategories || config.marathon_categories)?.length > 0 && (
+                                    {hasDistances && (
+                                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                                            <div className="space-y-2 flex-1">
+                                                <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Select Distance</h4>
                                                 <div className="w-full">
                                                     <CustomSelect 
-                                                        options={[...new Set((config.marathonCategories || config.marathon_categories).map(c => `${c.distance_km} KM`))].sort()}
+                                                        options={[...new Set(baseCategories.filter(c => c.distance_km != null).map(c => `${c.distance_km} KM`))].sort()}
                                                         value={selectedKM ? `${selectedKM} KM` : "Select Distance"}
                                                         onChange={(val) => setSelectedKM(parseInt(val))}
                                                         placeholder="Choose KM"
                                                     />
                                                 </div>
-                                            )}
+                                            </div>
                                         </div>
-                                    </div>
+                                    )}
+
+                                    {!hasDistances && (
+                                        <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Select Ticket Type</h4>
+                                    )}
 
                                     <div className="flex flex-col gap-6">
-                                        {(marathonCategories.length > 0 ? marathonCategories : (config.marathonCategories || config.marathon_categories || [])).filter(c => Number(c.distance_km) === Number(selectedKM)).map((cat, idx) => {
+                                        {(hasDistances && selectedKM != null ? baseCategories.filter(c => Number(c.distance_km) === Number(selectedKM)) : baseCategories).map((cat, idx) => {
                                             const isSelected = selectedCategory?.id === cat.id || (selectedCategory?.category_name === cat.category_name && !cat.id);
                                             const priceDisplay = (() => {
                                                 if (cat.price !== undefined) return Number(cat.price) === 0 ? 'FREE' : `₹${cat.price}`;
@@ -576,7 +591,7 @@ export default function DynamicEventClient({ event }) {
                                             })();
                                             
                                             // Handle various slot field names
-                                            const slotsAvailable = cat.slots_total || cat.total_slots || cat.slots || cat.totalSlots;
+                                            const slotsAvailable = cat.slots_total || cat.total_slots || cat.slots || cat.totalSlots || cat.capacity;
                                             
                                             return (
                                                 <div 
@@ -855,7 +870,7 @@ export default function DynamicEventClient({ event }) {
                                         <div className="flex justify-between items-start py-1 border-b border-slate-100/50">
                                             <div className="space-y-0.5">
                                                 <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Selected Plan</span>
-                                                <p className="text-[10px] font-black text-slate-900 uppercase leading-none">{selectedKM}KM - {selectedCategory?.category_name || selectedCategory?.title}</p>
+                                                <p className="text-[10px] font-black text-slate-900 uppercase leading-none">{hasDistances ? `${selectedKM}KM - ` : ''}{selectedCategory?.category_name || selectedCategory?.title || selectedCategory?.name}</p>
                                             </div>
                                             <span className="text-[10px] font-black text-pink-500 uppercase">{quantity}x</span>
                                         </div>
