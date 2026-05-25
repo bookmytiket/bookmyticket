@@ -180,7 +180,7 @@ export default function FinanceCrossVerificationAdmin({ t, theme }) {
                     {reconciliations.length > 0 && (
                         <tfoot>
                             <tr style={{ backgroundColor: t.bg, borderTop: `2px solid ${t.border}` }}>
-                                <td colSpan="2" style={{ padding: "14px", fontWeight: 900, color: t.textMain, textAlign: "right", fontSize: "12px", textTransform: "uppercase" }}>Totals:</td>
+                                <td colSpan="2" style={{ padding: "14px", fontWeight: 900, color: "#ec4899", textAlign: "right", fontSize: "12px", textTransform: "uppercase" }}>Totals:</td>
                                 <td style={{ padding: "14px", fontWeight: 900, color: t.textMain }}>₹{stats.totalCustomerPaid.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                                 <td style={{ padding: "14px", fontWeight: 900, color: "#3b82f6" }}>₹{stats.totalOrganizerRev.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                                 <td style={{ padding: "14px", fontWeight: 900, color: "#10b981" }}>₹{stats.totalAdminRev.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
