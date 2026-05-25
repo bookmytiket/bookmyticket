@@ -1030,7 +1030,7 @@ function OrganiserPanel() {
   );
 
   const { data: staffPackages = [] } = useSupabaseQuery("staff_packages", (q) =>
-    q.order("package_price", { ascending: true }),
+    q.order("monthly_price", { ascending: true }),
   );
   const { data: organiserSub, refresh: refreshSub } = useSupabaseQuery(
     "organiser_subscriptions",
@@ -1089,7 +1089,7 @@ function OrganiserPanel() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           id: pkg.id,
-          amount: pkg.package_price,
+          amount: pkg.monthly_price,
           type: "subscription",
         }),
       });
@@ -14743,7 +14743,7 @@ function OrganiserPanel() {
               }}
             >
               {staffPackages
-                .filter((p) => p.package_price > 0)
+                .filter((p) => p.monthly_price > 0)
                 .map((pkg) => (
                   <div
                     key={pkg.id}
@@ -14780,7 +14780,7 @@ function OrganiserPanel() {
                         marginBottom: "16px",
                       }}
                     >
-                      ₹{pkg.package_price}
+                      ₹{pkg.monthly_price}
                       <span
                         style={{
                           fontSize: "14px",

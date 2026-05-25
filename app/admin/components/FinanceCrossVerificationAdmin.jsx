@@ -177,6 +177,20 @@ export default function FinanceCrossVerificationAdmin({ t, theme }) {
                             </tr>
                         ))}
                     </tbody>
+                    {reconciliations.length > 0 && (
+                        <tfoot>
+                            <tr style={{ backgroundColor: t.bg, borderTop: `2px solid ${t.border}` }}>
+                                <td colSpan="2" style={{ padding: "14px", fontWeight: 900, color: t.textMain, textAlign: "right", fontSize: "12px", textTransform: "uppercase" }}>Totals:</td>
+                                <td style={{ padding: "14px", fontWeight: 900, color: t.textMain }}>₹{stats.totalCustomerPaid.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                <td style={{ padding: "14px", fontWeight: 900, color: "#3b82f6" }}>₹{stats.totalOrganizerRev.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                <td style={{ padding: "14px", fontWeight: 900, color: "#10b981" }}>₹{stats.totalAdminRev.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                <td style={{ padding: "14px", fontWeight: 900, color: reconciliations.reduce((acc, row) => acc + Number(row.variance_amount || 0), 0) !== 0 ? "#ef4444" : t.textSub }}>
+                                    ₹{reconciliations.reduce((acc, row) => acc + Number(row.variance_amount || 0), 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    )}
                 </table>
             </div>
         </div>

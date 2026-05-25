@@ -143,6 +143,19 @@ export default function RevenueDashboard({ t, theme }) {
                                     </tr>
                                 ))}
                             </tbody>
+                            <tfoot className="bg-slate-50 border-t border-slate-200">
+                                <tr>
+                                    <td className="p-4 text-[10px] font-black text-slate-600 uppercase tracking-widest text-right">Totals:</td>
+                                    <td className="p-4 text-[11px] font-black text-pink-500">₹{stats.recentTransactions.reduce((acc, tx) => acc + (tx.platform_fee || 0), 0).toFixed(2)}</td>
+                                    <td className="p-4 text-[11px] font-bold text-slate-600">₹{stats.recentTransactions.reduce((acc, tx) => acc + (tx.gst_amount || 0), 0).toFixed(2)}</td>
+                                    <td className="p-4 text-[11px] font-bold text-amber-500">₹{stats.recentTransactions.reduce((acc, tx) => acc + (tx.partner_share || 0), 0).toFixed(2)}</td>
+                                    <td className="p-4">
+                                        <span className="bg-slate-900 text-white px-3 py-1 rounded-full text-[10px] font-black">
+                                            ₹{stats.recentTransactions.reduce((acc, tx) => acc + (tx.net_platform_revenue || (tx.platform_fee - (tx.partner_share || 0))), 0).toFixed(2)}
+                                        </span>
+                                    </td>
+                                </tr>
+                            </tfoot>
                         </table>
                     </div>
                 </div>
