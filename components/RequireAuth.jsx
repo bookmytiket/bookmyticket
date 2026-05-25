@@ -50,7 +50,9 @@ export default function RequireAuth({ children, allowedRoles }) {
 
     // KYC CHECK FOR ORGANISERS: strictly enforce onboarding for organizers
     const isAdmin = user.role === "admin" || user.role === "super_admin" || user.role === "system_admin";
-    const dashboardAccess = user.verification_status?.dashboard_access === true;
+    // Legacy support: Existing active organizers should not be locked out
+    const isLegacyActive = user.kyc_status?.toLowerCase() === 'active' || user.status?.toLowerCase() === 'active';
+    const dashboardAccess = user.verification_status?.dashboard_access === true || isLegacyActive;
     
     if (!isAdmin && user.role === "organiser" && !dashboardAccess && !pathname.startsWith("/onboarding")) {
       console.log(`[RequireAuth] Organiser dashboard access denied. Redirecting to /onboarding`);

@@ -60,9 +60,10 @@ export default function OnboardingPage() {
             return;
         }
 
-        const dashboardAccess = user?.verification_status?.dashboard_access === true;
+        const isLegacyActive = user?.kyc_status?.toLowerCase() === 'active' || user?.status?.toLowerCase() === 'active';
+        const dashboardAccess = user?.verification_status?.dashboard_access === true || isLegacyActive;
         
-        console.log("Onboarding Check:", { dashboardAccess, role: user?.role });
+        console.log("Onboarding Check:", { dashboardAccess, role: user?.role, isLegacyActive });
 
         if (user && dashboardAccess) {
             console.log("Redirecting to /organiser...");
