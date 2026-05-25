@@ -76,25 +76,15 @@ export default function DigitalTicket({ booking, event, ticket: initialTicket, s
 
         if (c.includes('marathon') || c.includes('sport')) {
             theme = {
-                icon: <Trophy className="text-emerald-400" size={20} />,
-                accent: "text-emerald-400",
-                titleStyle: { fontFamily: "'Impact', 'Arial Black', sans-serif", letterSpacing: "-0.05em", transform: "skewX(-10deg)", textShadow: "0 2px 15px rgba(16,185,129,0.5)" },
-                overlay: "from-emerald-900/90 via-teal-900/80 to-slate-900/90",
-                glow1: "bg-emerald-600",
-                glow2: "bg-teal-600",
-                border: "border-emerald-500/30",
-                fallbackBg: "#064e3b"
+                ...theme,
+                icon: <Trophy className="text-pink-400" size={20} />,
+                titleStyle: { fontFamily: "'Impact', 'Arial Black', sans-serif", letterSpacing: "-0.05em", transform: "skewX(-10deg)", textShadow: "0 2px 15px rgba(236,72,153,0.5)" },
             };
         } else if (c.includes('corporate') || c.includes('business')) {
             theme = {
-                icon: <Briefcase className="text-blue-400" size={20} />,
-                accent: "text-blue-400",
-                titleStyle: { fontWeight: "300", letterSpacing: "0.05em", textShadow: "0 2px 15px rgba(59,130,246,0.5)" },
-                overlay: "from-blue-900/90 via-indigo-900/80 to-slate-900/90",
-                glow1: "bg-blue-600",
-                glow2: "bg-indigo-600",
-                border: "border-blue-500/30",
-                fallbackBg: "#1e1b4b"
+                ...theme,
+                icon: <Briefcase className="text-pink-400" size={20} />,
+                titleStyle: { fontWeight: "300", letterSpacing: "0.05em", textShadow: "0 2px 15px rgba(236,72,153,0.5)" },
             };
         }
 
