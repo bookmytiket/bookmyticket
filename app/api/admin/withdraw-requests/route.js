@@ -15,7 +15,7 @@ export async function GET(request) {
         // Unify with organiser panel's withdraw_requests table
         const { data, error } = await supabase
             .from('withdraw_requests')
-            .select('*, organisers:organiser_id(full_name, id, email, business_name), bank_details:bank_details_id(*)')
+            .select('*, organisers:organiser_id(full_name, id, email), bank_details:bank_details_id(*)')
             .order('created_at', { ascending: false });
 
         if (error) {
