@@ -20,6 +20,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/components/AuthContext";
 import { triggerNotification } from "@/lib/notificationHelper";
 import TermsModal from "@/components/TermsModal";
+import { isFreeEvent } from '@/app/utils/eventUtils';
 
 const DEFAULT_IMG = 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200&h=600&fit=crop';
 
@@ -42,7 +43,7 @@ function getEventById(id, convexEvents) {
     return {
         ...raw,
         id: raw.id,
-        img: raw.img || raw.bannerPreview || DEFAULT_IMG,
+        img: raw.image_url || raw.img || raw.bannerPreview || DEFAULT_IMG,
         title: raw.title || 'Event',
         date: raw.date || 'TBA',
         time: raw.time || '',
@@ -132,7 +133,11 @@ export default function CheckoutClient({ id: propId, sessionToken }) {
                 setSelectedSeats(participantData.selectedSeats || []);
                 setSelectedPackageName(session.package_id || '');
                 setBookingType(participantData.bookingType || 'standard');
-                setTicketPrice(Number(participantData.price) || Number(session.events?.price) || 499);
+                setTicketPrice(
+                    isFreeEvent(session.events) ? 0 : (participantData.price !== undefined 
+                        ? Number(participantData.price) 
+                        : (session.events?.price !== undefined ? Number(session.events.price) : 499))
+                );
 
                 if (participantData.participant) {
                     setParticipantParam(JSON.stringify(participantData.participant));
@@ -221,7 +226,11 @@ export default function CheckoutClient({ id: propId, sessionToken }) {
         setParticipantParam(searchParams.get('participant') || '');
         setTeamParam(searchParams.get('team') || '');
         setBookingType(searchParams.get('type') || 'standard');
-        setTicketPrice(parseFloat(searchParams.get('price') || '499'));
+        setTicketPrice(
+            searchParams.get('price') !== null 
+                ? parseFloat(searchParams.get('price')) 
+                : 499
+        );
     }, [searchParams, sessionToken]);
 
     useEffect(() => {
@@ -281,7 +290,7 @@ export default function CheckoutClient({ id: propId, sessionToken }) {
         return {
             ...rawEvent,
             id: rawEvent.id,
-            img: rawEvent.img || rawEvent.bannerPreview || DEFAULT_IMG,
+            img: rawEvent.image_url || rawEvent.img || rawEvent.bannerPreview || DEFAULT_IMG,
             title: rawEvent.title || 'Event',
             date: rawEvent.date || 'TBA',
             time: rawEvent.time || '',

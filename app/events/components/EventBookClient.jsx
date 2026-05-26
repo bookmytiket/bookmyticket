@@ -13,6 +13,7 @@ import {
 import { supabase } from "@/lib/supabase";
 import { HOME_EVENTS } from '@/app/data/homeEvents';
 import { getFeeBreakdown, DEFAULT_FEE_SETTINGS, resolveFeeSettings } from '@/app/utils/feeBreakdown';
+import { isFreeEvent } from '@/app/utils/eventUtils';
 import { useSupabaseQuery } from "@/hooks/useSupabase";
 import { useAuth } from '@/components/AuthContext';
 import CalendarModal from '@/components/booking/CalendarModal';
@@ -140,7 +141,8 @@ export default function EventBookClient({ id }) {
         return {
             ...rawEvent,
             id: rawEvent.id,
-            img: rawEvent.img || rawEvent.bannerPreview || DEFAULT_IMG,
+            isFree: isFreeEvent(rawEvent),
+            img: rawEvent.image_url || rawEvent.img || rawEvent.bannerPreview || DEFAULT_IMG,
             title: rawEvent.title || 'Event',
             date: rawEvent.date || 'TBA',
             time: rawEvent.time || '',
@@ -192,6 +194,7 @@ export default function EventBookClient({ id }) {
 
     const isSeating = useMemo(() => {
         if (!event) return false;
+        if (event.isFree) return false;
         if (event.event_type === 'general') return false;
         if (event.event_type === 'reserved') return true;
 
@@ -230,13 +233,17 @@ export default function EventBookClient({ id }) {
             })).sort((a, b) => b.price - a.price);
         }
         if (relationalSeats && relationalSeats.length > 0 && event.blocks && event.blocks.length > 0) {
-            return event.blocks.map(b => ({
-                id: b.id,
-                title: b.name,
-                price: b.price || b.ticket_price || event?.dynamic_config?.price || event?.price || 499,
-                description: `Access to ${b.name} zone.`,
-                features: ['Assigned Seating']
-            }));
+            return event.blocks.map(b => {
+                const bPrice = b.price !== undefined ? b.price : (b.ticket_price !== undefined ? b.ticket_price : undefined);
+                const evPrice = event?.dynamic_config?.price !== undefined ? event.dynamic_config.price : (event?.price !== undefined ? event.price : undefined);
+                return {
+                    id: b.id,
+                    title: b.name,
+                    price: event?.isFree ? 0 : (bPrice !== undefined ? Number(bPrice) : (evPrice !== undefined ? Number(evPrice) : 499)),
+                    description: `Access to ${b.name} zone.`,
+                    features: ['Assigned Seating']
+                };
+            });
         }
         if (event.seatCategories?.length > 0 || event.dynamic_config?.categories?.length > 0 || event.ticketTypes?.length > 0) {
             return (event.seatCategories || event.dynamic_config?.categories || event.ticketTypes).map((cat, i) => ({
@@ -247,8 +254,9 @@ export default function EventBookClient({ id }) {
                 features: cat.features || ['Access to main area']
             }));
         }
+        const evPriceFallback = event?.dynamic_config?.price !== undefined ? event.dynamic_config.price : (event?.price !== undefined ? event.price : 499);
         return [
-            { id: 'gen', title: 'Ticket', price: event?.dynamic_config?.price || event?.price || 499, description: 'Standard admission for the event.', features: ['Access to main area', 'General Seating'] }
+            { id: 'gen', title: 'Ticket', price: event?.isFree ? 0 : Number(evPriceFallback), description: 'Standard admission for the event.', features: ['Access to main area', 'General Seating'] }
         ];
     }, [event, seatingSectionsData, relationalSeats]);
 
@@ -378,9 +386,9 @@ export default function EventBookClient({ id }) {
     };
 
     const totalSeatPrice = selectedSeats.reduce((s, seat) => s + (seat.isFree ? 0 : seat.price), 0);
-    const ticketPrice = isSeating
+    const ticketPrice = event?.isFree ? 0 : (isSeating
         ? (selectedSeats.length > 0 ? totalSeatPrice : 0)
-        : (event?.dynamic_config?.price || event?.price || 499);
+        : (event?.dynamic_config?.price !== undefined ? Number(event.dynamic_config.price) : (event?.price !== undefined ? Number(event.price) : 499)));
     const currentPrice = selectedPackage ? selectedPackage.price : ticketPrice;
     const baseAmount = isSeating ? totalSeatPrice : currentPrice * quantity;
     const breakdown = getFeeBreakdown(bookingType === 'audience_free' ? 0 : baseAmount, feeSettings);

@@ -158,12 +158,12 @@ export default function DigitalTicket({ booking, event, ticket: initialTicket, s
                 }
             `}} />
             
-            {/* Standard Size Container (800x400) */}
+            {/* Standard Size Container */}
             <div 
                 ref={ticketRef}
-                className={`group relative w-full flex flex-row transition-all duration-500 overflow-hidden shadow-2xl ${isCapturing ? 'rounded-none' : 'rounded-3xl hover:shadow-[0_20px_50px_rgba(0,0,0,0.5)] hover:-translate-y-1'} ${!isTabActive && !isCapturing ? 'blur-2xl' : ''} ${details.border}`}
+                className={`group relative w-full flex flex-col md:flex-row transition-all duration-500 overflow-hidden shadow-2xl ${isCapturing ? 'rounded-none' : 'rounded-3xl hover:shadow-[0_20px_50px_rgba(0,0,0,0.5)] hover:-translate-y-1'} ${!isTabActive && !isCapturing ? 'blur-2xl' : ''} ${details.border}`}
                 style={{ 
-                    aspectRatio: "2/1",
+                    aspectRatio: isCapturing ? "2/1" : undefined,
                     minHeight: "350px",
                     maxWidth: "800px",
                     backgroundImage: 'url("/bookmyticket/eventticket.jpg")',
@@ -263,10 +263,10 @@ export default function DigitalTicket({ booking, event, ticket: initialTicket, s
                     </div>
                 </div>
 
-                {/* Vertical Divider */}
-                <div className="w-px border-l border-dashed border-white/10 relative z-20">
-                    <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-slate-950 border border-white/10" />
-                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-8 h-8 rounded-full bg-slate-950 border border-white/10" />
+                {/* Divider (Horizontal on Mobile, Vertical on Desktop) */}
+                <div className="w-full md:w-px h-px md:h-auto border-t md:border-t-0 md:border-l border-dashed border-white/20 relative z-20">
+                    <div className="absolute top-1/2 md:-top-4 -left-4 md:left-1/2 -translate-y-1/2 md:-translate-y-0 md:-translate-x-1/2 w-8 h-8 rounded-full bg-slate-950 border border-white/10" />
+                    <div className="absolute top-1/2 md:-bottom-4 -right-4 md:left-1/2 md:right-auto -translate-y-1/2 md:translate-y-0 md:-translate-x-1/2 w-8 h-8 rounded-full bg-slate-950 border border-white/10" />
                 </div>
 
                 {/* Right Section: Stub */}

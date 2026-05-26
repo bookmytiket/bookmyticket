@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import { getFeeBreakdown, DEFAULT_FEE_SETTINGS, resolveFeeSettings } from "@/app/utils/feeBreakdown";
+import { isFreeEvent } from "@/app/utils/eventUtils";
 
 const supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -31,7 +32,9 @@ export async function GET(request) {
         const participantData = session.participant_data || {};
         const quantity = participantData.quantity || 1;
         const selectedSeats = participantData.selectedSeats || [];
-        const ticketPrice = Number(participantData.price) || Number(event?.price) || 499;
+        const ticketPrice = isFreeEvent(event) ? 0 : (participantData.price !== undefined 
+            ? Number(participantData.price) 
+            : (event?.price !== undefined ? Number(event.price) : 499));
 
         // Calculate base amount
         let baseAmount = ticketPrice * quantity;

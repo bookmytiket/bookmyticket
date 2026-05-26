@@ -96,10 +96,14 @@ export async function POST(request) {
                 .eq("id", session.user_id)
                 .maybeSingle();
 
+            const { data: authUserData } = await supabaseAdmin.auth.admin.getUserById(session.user_id);
+            const authUser = authUserData?.user;
+            const fallbackName = authUser?.user_metadata?.full_name || authUser?.email || "Guest User";
+
             const customerDetails = {
-                name: profile?.full_name || "Guest User",
-                email: profile?.email || "",
-                phone: profile?.phone || "",
+                name: profile?.full_name || fallbackName,
+                email: profile?.email || authUser?.email || "",
+                phone: profile?.phone || authUser?.phone || "",
                 applied_campaign_id: pricingSnapshot.appliedCampaignId || null,
                 applied_campaign_code: pricingSnapshot.appliedCampaignCode || null,
                 showtime_id: participantData.showtimeId || null,
