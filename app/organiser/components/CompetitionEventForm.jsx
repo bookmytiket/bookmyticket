@@ -139,6 +139,27 @@ const CompetitionEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, is
         }
     }, [postEvent.dynamic_config?.categories]);
 
+    const handleImageUpload = async (file) => {
+        try {
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${Math.random()}.${fileExt}`;
+            const filePath = `competitions/${fileName}`;
+
+            let { error: uploadError } = await supabase.storage
+                .from('event-images')
+                .upload(filePath, file);
+
+            if (uploadError) throw uploadError;
+
+            const { data } = supabase.storage.from('event-images').getPublicUrl(filePath);
+            return data.publicUrl;
+        } catch (error) {
+            console.error('Error uploading image:', error);
+            showToast(`Upload failed: ${error.message || 'Unknown error'}`, "error");
+            return null;
+        }
+    };
+
     const updateConfig = (key, value) => {
         setPostEvent(prev => ({
             ...prev,
@@ -297,12 +318,13 @@ const CompetitionEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, is
                                 <label className="flex flex-col items-center justify-center h-40 border-2 border-dashed border-pink-300 rounded-2xl cursor-pointer bg-pink-50">
                                     <Camera size={24} className="text-pink-500 mb-2" />
                                     <span className="text-[10px] font-bold text-pink-600 uppercase">Upload Poster</span>
-                                    <input type="file" className="hidden" onChange={(e) => {
+                                    <input type="file" className="hidden" onChange={async (e) => {
                                         const f = e.target.files[0];
                                         if(f) {
-                                            const reader = new FileReader();
-                                            reader.onload = (ev) => setPostEvent(p => ({ ...p, image_url: ev.target.result }));
-                                            reader.readAsDataURL(f);
+                                            const url = await handleImageUpload(f);
+                                            if (url) {
+                                                setPostEvent(p => ({ ...p, image_url: url }));
+                                            }
                                         }
                                     }} />
                                 </label>
