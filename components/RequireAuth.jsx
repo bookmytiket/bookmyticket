@@ -51,7 +51,8 @@ export default function RequireAuth({ children, allowedRoles }) {
     // KYC CHECK FOR ORGANISERS: strictly enforce onboarding for organizers
     const isAdmin = user.role === "admin" || user.role === "super_admin" || user.role === "system_admin";
     // Legacy support: Existing active organizers should not be locked out
-    const isLegacyActive = user.kyc_status?.toLowerCase() === 'active';
+    const kycStatus = user.kyc_status?.toLowerCase() || "";
+    const isLegacyActive = kycStatus === 'active' || kycStatus === 'kyc verified' || kycStatus === 'approved' || user.is_approved === true || user.isApproved === true;
     const dashboardAccess = user.verification_status?.dashboard_access === true || isLegacyActive;
     
     if (!isAdmin && user.role === "organiser" && !dashboardAccess && !pathname.startsWith("/onboarding")) {
