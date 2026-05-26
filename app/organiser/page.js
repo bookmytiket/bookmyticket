@@ -2981,6 +2981,39 @@ function OrganiserPanel() {
                 }
               }
 
+              if (postEvent.type === "Sports Event") {
+                try {
+                  const dc = postEvent.dynamic_config || {};
+                  
+                  // Upsert sports_events
+                  const { data: sportsEvent, error: seErr } = await supabase.from("sports_events").upsert({
+                    event_id: editingEvent.id,
+                    sport_type: dc.sport_type || "Generic",
+                    competition_format: dc.competition_format || "Knockout",
+                    team_enabled: dc.team_enabled ?? true
+                  }).select().single();
+
+                  if (sportsEvent && !seErr) {
+                    // Sync categories
+                    if (dc.sports_categories?.length > 0) {
+                      await supabase.from("sports_categories").delete().eq("sports_event_id", sportsEvent.id);
+                      await supabase.from("sports_categories").insert(dc.sports_categories.map(c => ({
+                        sports_event_id: sportsEvent.id, category_name: c.category_name, min_age: c.min_age, max_age: c.max_age, gender: c.gender
+                      })));
+                    }
+                    // Sync match types
+                    if (dc.sports_match_types?.length > 0) {
+                      await supabase.from("sports_match_types").delete().eq("sports_event_id", sportsEvent.id);
+                      await supabase.from("sports_match_types").insert(dc.sports_match_types.map(m => ({
+                        sports_event_id: sportsEvent.id, match_type: m.match_type, entry_mode: m.entry_mode, team_size: m.team_size, price: m.price
+                      })));
+                    }
+                  }
+                } catch (e) {
+                  console.error("Sports Event sync failed:", e);
+                }
+              }
+
               // Sync Categories
               if (postEvent.categories?.length > 0) {
                 await supabase
@@ -3204,6 +3237,33 @@ function OrganiserPanel() {
               }
             } catch (err) {
               console.error("Competition sync failed:", err);
+            }
+          }
+
+          if (postEvent.type === "Sports Event" && newEvent?.id) {
+            try {
+              const dc = postEvent.dynamic_config || {};
+              const { data: sportsEvent, error: seErr } = await supabase.from("sports_events").insert({
+                event_id: newEvent.id,
+                sport_type: dc.sport_type || "Generic",
+                competition_format: dc.competition_format || "Knockout",
+                team_enabled: dc.team_enabled ?? true
+              }).select().single();
+
+              if (sportsEvent && !seErr) {
+                if (dc.sports_categories?.length > 0) {
+                  await supabase.from("sports_categories").insert(dc.sports_categories.map(c => ({
+                    sports_event_id: sportsEvent.id, category_name: c.category_name, min_age: c.min_age, max_age: c.max_age, gender: c.gender
+                  })));
+                }
+                if (dc.sports_match_types?.length > 0) {
+                  await supabase.from("sports_match_types").insert(dc.sports_match_types.map(m => ({
+                    sports_event_id: sportsEvent.id, match_type: m.match_type, entry_mode: m.entry_mode, team_size: m.team_size, price: m.price
+                  })));
+                }
+              }
+            } catch (err) {
+              console.error("Sports Event creation failed:", err);
             }
           }
 

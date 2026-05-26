@@ -1,25 +1,21 @@
+"use strict";
 "use client";
 import React, { useState, useEffect } from "react";
 import { 
-    Trophy, Activity, Goal, Users, ArrowLeft, ArrowRight, Settings, 
-    Calendar, Clock, MapPin, DollarSign, Shield, CheckCircle2,
-    ChevronRight, Info, HeartPulse, GraduationCap, Briefcase, Timer, Target,
-    Bike, Award, Utensils, Shirt, Coffee, Car, Smile, Camera, Home, FileText,
-    TrendingUp, Trash2, Trash, Zap, Wallet, Sparkles, Search, Monitor, ShieldCheck,
-    Dribbble, Sword, Flag, Medal, Footprints, Plus, Image as ImageIcon
+    Trophy, MapPin, Calendar, Users, DollarSign, FileText, CheckCircle2,
+    ArrowRight, ArrowLeft, Plus, Trash, Image as ImageIcon, Camera, Layout
 } from "lucide-react";
 import CalendarPicker from "./CalendarPicker";
 import TimePicker from "./TimePicker";
-import { useAuth } from '@/components/AuthContext';
-import LocationSelectionModal from "@/components/LocationSelectionModal";
-import BlockMapDesigner from "./BlockMapDesigner";
 import CustomSelect from "./CustomSelect";
 import GoogleInlineMap from "./GoogleInlineMap";
-import { geocode, reverseGeocode } from "@/lib/googleMaps";
+import LocationSelectionModal from "@/components/LocationSelectionModal";
+import { reverseGeocode, geocode } from "@/lib/googleMaps";
 import { COUNTRIES } from "@/app/data/locationData";
 import { State, City } from 'country-state-city';
-import { INDIAN_STATES, getIndianDistricts, getIndianCities } from "@/app/data/indianLocations";
+import { getIndianDistricts, getIndianCities } from "@/app/data/indianLocations";
 import { supabase } from "@/lib/supabase";
+import { useToast } from "@/context/ToastContext";
 
 const renderInput = (label, value, onChange, type = "text", placeholder = "", fullWidth = false) => (
     <div className={`space-y-3 ${fullWidth ? 'md:col-span-2' : ''}`}>
@@ -49,559 +45,390 @@ const renderInput = (label, value, onChange, type = "text", placeholder = "", fu
 );
 
 const SportsEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEditing }) => {
-    const { user } = useAuth();
+    const { showToast } = useToast();
     const [currentStep, setCurrentStep] = useState(1);
-    const [showLocationModal, setShowLocationModal] = useState(false);
-    const [dbDistricts, setDbDistricts] = useState([]);
-    const [dbCities, setDbCities] = useState([]);
-    const [distLoading, setDistLoading] = useState(false);
-    const [cityLoading, setCityLoading] = useState(false);
-
-    useEffect(() => {
-        if (!postEvent.country) {
-            setPostEvent(prev => ({ 
-                ...prev, 
-                country: prev.country || "India",
-                countryCode: prev.countryCode || "IN"
-            }));
-        }
-    }, []);
-
-    useEffect(() => {
-        const fetchDistricts = async () => {
-            if (!postEvent.state || postEvent.country !== "India") {
-                setDbDistricts([]);
-                return;
-            }
-            setDistLoading(true);
-            try {
-                const { data: stateData } = await supabase.from('states').select('id').eq('name', postEvent.state).maybeSingle();
-                if (stateData) {
-                    const { data: dists } = await supabase.from('districts').select('name').eq('state_id', stateData.id).order('name');
-                    setDbDistricts(dists?.map(d => d.name) || []);
-                }
-            } catch (err) { console.error(err); } finally { setDistLoading(false); }
+    
+    // Config State mimicking the new DB schema
+    const [config, setConfig] = useState(() => {
+        const base = postEvent.dynamic_config || {};
+        return {
+            ...base,
+            sport_type: base.sport_type || "Badminton Championship",
+            competition_format: base.competition_format || "Knockout",
+            team_enabled: base.team_enabled ?? true,
+            location: {
+                venueName: "", address: "", city: "", pincode: "", coordinates: { lat: 11.0168, lng: 76.9558 },
+                ...(base.location || {})
+            },
+            sports_categories: base.sports_categories || [
+                { id: Date.now(), category_name: "U-15", min_age: 10, max_age: 15, gender: "All" },
+                { id: Date.now()+1, category_name: "Open", min_age: 16, max_age: 99, gender: "All" }
+            ],
+            sports_match_types: base.sports_match_types || [
+                { id: Date.now(), match_type: "Men Singles", entry_mode: "Individual", team_size: 1, price: 299 },
+                { id: Date.now()+1, match_type: "Men Doubles", entry_mode: "Doubles", team_size: 2, price: 599 },
+                { id: Date.now()+2, match_type: "Team Tournament", entry_mode: "Team", team_size: 5, price: 2499 }
+            ],
+            required_documents: base.required_documents || ["Aadhaar", "Age Proof"]
         };
-        fetchDistricts();
-    }, [postEvent.state, postEvent.country]);
+    });
 
     useEffect(() => {
-        const fetchCities = async () => {
-            if (!postEvent.district || postEvent.country !== "India") {
-                setDbCities([]);
-                return;
-            }
-            setCityLoading(true);
-            try {
-                const { data: distData } = await supabase.from('districts').select('id').eq('name', postEvent.district).maybeSingle();
-                if (distData) {
-                    const { data: cts } = await supabase.from('cities').select('name').eq('district_id', distData.id).order('name');
-                    setDbCities(cts?.map(c => c.name) || []);
-                }
-            } catch (err) { console.error(err); } finally { setCityLoading(false); }
-        };
-        fetchCities();
-    }, [postEvent.district, postEvent.country]);
-
-    useEffect(() => {
-        if (!postEvent.sportType) {
-            setPostEvent(prev => ({ 
-                ...prev, 
-                type: "Sports Event", 
-                sportType: "Tournament",
-                categories: prev.categories || []
-            }));
-        }
-    }, []);
+        setPostEvent(prev => ({ 
+            ...prev, 
+            dynamic_config: config,
+            type: "Sports Event",
+            sportName: config.sport_type,
+            city: config.location?.city || prev.city,
+            venue: config.location?.venueName || prev.venue,
+            latitude: config.location?.coordinates?.lat || prev.latitude,
+            longitude: config.location?.coordinates?.lng || prev.longitude,
+        }));
+    }, [config]);
 
     const steps = [
-        { id: 1, title: "Category", icon: Trophy },
-        { id: 2, title: "Grounds", icon: MapPin },
-        { id: 3, title: "Schedule", icon: Timer },
-        { id: 4, title: "Ticketing", icon: DollarSign },
-        { id: 5, title: isEditing ? "Update" : "Deploy", icon: Zap }
+        { id: 1, title: "Event Info", icon: Trophy },
+        { id: 2, title: "Venue", icon: MapPin },
+        { id: 3, title: "Age Categories", icon: Users },
+        { id: 4, title: "Match Types", icon: Layout },
+        { id: 5, title: "Documents", icon: FileText },
+        { id: 6, title: "Publish", icon: CheckCircle2 }
     ];
 
-    const nextStep = () => setCurrentStep(prev => Math.min(prev + 1, steps.length));
-    const prevStep = () => setCurrentStep(prev => Math.max(prev - 1, 1));
-
-    const sportModes = [
-        { id: 'Tournament', label: 'Tournament', desc: 'League or Knockout matches', icon: Trophy, color: 'orange' },
-        { id: 'Coaching', label: 'Academy/Camp', desc: 'Training & Skill workshops', icon: GraduationCap, color: 'emerald' }
+    const AVAILABLE_SPORTS = [
+        "Badminton Championship", "Cricket Tournament", "Football Tournament", 
+        "Swimming Competition", "Tennis Championship", "Kabaddi Tournament", 
+        "Volleyball League", "Chess Tournament", "Athletics Meet", "Table Tennis Championship"
     ];
+
+    const DOC_TYPES = ["Aadhaar", "Age Proof", "School ID", "Club ID", "Medical Fitness Certificate", "Passport Photo", "Parent Consent (minor)"];
 
     return (
-        <div className="max-w-5xl mx-auto py-12 px-6">
-            {/* Step Indicator */}
-            <div className="flex items-center justify-between mb-16 overflow-x-auto pb-4 scrollbar-hide">
+        <div className="max-w-5xl mx-auto py-8">
+            <div className="flex items-center justify-between mb-12 px-6 overflow-x-auto pb-4 scrollbar-hide">
                 {steps.map((s, idx) => (
                     <React.Fragment key={s.id}>
-                        <div className="flex flex-col items-center gap-4 shrink-0">
-                            <div 
-                                onClick={() => currentStep > s.id && setCurrentStep(s.id)}
-                                className={`w-14 h-14 rounded-[2rem] flex items-center justify-center transition-all duration-500 border-2 cursor-pointer ${
-                                    currentStep >= s.id 
-                                    ? 'bg-gradient-to-br from-orange-500 to-red-600 border-transparent text-white shadow-xl shadow-orange-500/20 scale-110' 
-                                    : 'bg-white border-slate-100 text-slate-400'
-                                }`}
-                            >
-                                <s.icon size={22} strokeWidth={2.5} />
+                        <div className="flex flex-col items-center gap-3 shrink-0">
+                            <div className={`w-14 h-14 rounded-[2rem] flex items-center justify-center transition-all border-2 ${
+                                currentStep >= s.id ? 'bg-orange-500 border-orange-500 text-white shadow-xl shadow-orange-200' : 'bg-white border-slate-100 text-slate-800'
+                            }`}>
+                                <s.icon size={22} />
                             </div>
-                            <span className={`text-[9px] font-black uppercase tracking-[0.2em] ${currentStep >= s.id ? 'text-orange-600' : 'text-slate-400'}`}>
+                            <span className={`text-[9px] font-bold uppercase tracking-[0.2em] ${currentStep >= s.id ? 'text-orange-500' : 'text-slate-800'}`}>
                                 {s.title}
                             </span>
                         </div>
-                        {idx < steps.length - 1 && (
-                            <div className={`w-full h-[2px] mx-4 rounded-full transition-all duration-700 ${currentStep > s.id ? 'bg-gradient-to-r from-orange-500 to-red-600' : 'bg-slate-100'}`} />
-                        )}
+                        {idx < steps.length - 1 && <div className={`w-12 h-0.5 mx-2 ${currentStep > s.id ? 'bg-orange-500' : 'bg-slate-100'}`} />}
                     </React.Fragment>
                 ))}
             </div>
 
-            {/* Step 1: Sport Category */}
             {currentStep === 1 && (
-                <div className="bg-white rounded-[3rem] border border-slate-100 shadow-[0_50px_100px_-20px_rgba(0,0,0,0.05)] p-12 space-y-12 animate-in fade-in slide-in-from-bottom-8 duration-700">
-                    <div className="flex items-center gap-6">
-                        <div className="w-16 h-16 rounded-3xl bg-orange-50 flex items-center justify-center text-orange-600 shadow-inner">
-                            <Trophy size={32} strokeWidth={1.5} />
+                <div className="bg-white rounded-[2rem] md:rounded-[3.5rem] border border-slate-100 shadow-2xl p-5 md:p-14 space-y-8 md:space-y-10">
+                    <div className="flex items-center gap-5">
+                        <div className="w-12 h-12 rounded-2xl bg-orange-50 flex items-center justify-center text-orange-500">
+                            <Trophy size={24} />
                         </div>
                         <div>
-                            <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter italic leading-none">Tournament Details</h2>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">Enter the basic details for your {postEvent.sportType} event</p>
+                            <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Sports Event Setup</h2>
+                            <p className="text-[10px] font-bold text-slate-800 uppercase tracking-widest">Select sport and basic details</p>
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-10 pt-6">
-                        {renderInput("Event Name*", postEvent.title, (v) => setPostEvent(p => ({ ...p, title: v })), "text", "e.g. Pro Cricket League 2026", true)}
-                        {renderInput("Organised By (Name)", postEvent.organiser_name, (v) => setPostEvent(p => ({ ...p, organiser_name: v })), "text", "e.g. Partner Name")}
-                        {renderInput("Sport Name*", postEvent.sportName, (v) => setPostEvent(p => ({ ...p, sportName: v })), "text", "e.g. Cricket, Football")}
-                        {renderInput("Age Category", postEvent.ageGroup, (v) => setPostEvent(p => ({ ...p, ageGroup: v })), "text", "e.g. U-19, Open")}
-
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="md:col-span-2">
+                            <CustomSelect 
+                                label="Sport Type*"
+                                value={config.sport_type}
+                                options={AVAILABLE_SPORTS}
+                                onChange={(v) => setConfig({ ...config, sport_type: v })}
+                            />
+                        </div>
+                        <div className="md:col-span-2">
+                            {renderInput("Event Title*", postEvent.title, (v) => setPostEvent(p => ({ ...p, title: v })), "text", "e.g. Tamil Nadu State Badminton Championship")}
+                        </div>
                         <div className="md:col-span-2 space-y-4">
-                            <label className="block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] pl-1">Tournament Banner*</label>
-                            <div className="relative group h-64 rounded-[2.5rem] border-2 border-dashed border-slate-200 bg-slate-50 overflow-hidden hover:border-orange-300 transition-all flex items-center justify-center">
-                                {postEvent.bannerPreview ? (
+                            <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-widest pl-1">Event Banner</label>
+                            <div className="relative group h-40 rounded-[2.5rem] border-2 border-dashed border-slate-200 bg-slate-50 overflow-hidden hover:border-orange-300 transition-all flex items-center justify-center">
+                                {postEvent.image_url ? (
                                     <>
-                                        <img src={postEvent.bannerPreview} className="absolute inset-0 w-full h-full object-cover" />
-                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                            <button 
-                                                onClick={() => setPostEvent(p => ({ ...p, bannerPreview: "" }))}
-                                                className="p-4 bg-white/20 backdrop-blur-xl rounded-2xl text-white hover:bg-red-500 transition-all"
-                                            >
-                                                <Trash2 size={24} />
-                                            </button>
-                                        </div>
+                                        <img src={postEvent.image_url} className="absolute inset-0 w-full h-full object-cover" />
+                                        <button onClick={() => setPostEvent(p => ({ ...p, image_url: "" }))} className="absolute top-3 right-3 p-2 bg-white/90 backdrop-blur rounded-xl text-red-500 shadow-lg"><Trash size={16} /></button>
                                     </>
                                 ) : (
-                                    <label className="cursor-pointer flex flex-col items-center gap-4 group/label">
-                                        <div className="w-16 h-16 rounded-2xl bg-white shadow-sm flex items-center justify-center text-slate-400 group-hover/label:text-orange-500 group-hover/label:scale-110 transition-all">
-                                            <ImageIcon size={32} strokeWidth={1.5} />
-                                        </div>
-                                        <div className="text-center">
-                                            <span className="block text-[10px] font-black text-slate-900 uppercase tracking-widest">Upload Main Banner</span>
-                                            <span className="block text-[8px] font-bold text-slate-400 uppercase tracking-tight mt-1">Recommended: 1200x600px</span>
-                                        </div>
-                                        <input 
-                                            type="file" 
-                                            className="hidden" 
-                                            accept="image/*"
-                                            onChange={(e) => {
-                                                const file = e.target.files[0];
-                                                if (file) {
-                                                    const reader = new FileReader();
-                                                    reader.onload = (ev) => setPostEvent(p => ({ ...p, bannerPreview: ev.target.result }));
-                                                    reader.readAsDataURL(file);
-                                                }
-                                            }} 
-                                        />
+                                    <label className="cursor-pointer flex flex-col items-center gap-2">
+                                        <Camera size={24} className="text-slate-800" />
+                                        <span className="text-[10px] font-bold text-slate-800 uppercase tracking-widest">Upload Banner</span>
+                                        <input type="file" className="hidden" onChange={(e) => {
+                                            const f = e.target.files[0];
+                                            if(f) {
+                                                const reader = new FileReader();
+                                                reader.onload = (ev) => setPostEvent(p => ({ ...p, image_url: ev.target.result }));
+                                                reader.readAsDataURL(f);
+                                            }
+                                        }} />
                                     </label>
                                 )}
                             </div>
                         </div>
+                        {renderInput("Event Start Date*", postEvent.startDate, (v) => setPostEvent(p => ({ ...p, startDate: v })), "date")}
+                        {renderInput("Registration Closes*", postEvent.endDate, (v) => setPostEvent(p => ({ ...p, endDate: v })), "date")}
+                        
+                        {renderInput("Organised By (Name)", postEvent.organiser_name, (v) => setPostEvent(p => ({ ...p, organiser_name: v })), "text", "e.g. Partner Name", true)}
                     </div>
 
                     <div className="pt-10 flex justify-end">
-                        <button onClick={nextStep} className="px-12 py-5 bg-slate-900 text-white rounded-[2.5rem] text-[11px] font-black uppercase tracking-widest flex items-center gap-4 hover:bg-orange-600 transition-all shadow-2xl">Next: Ground Selection <ArrowRight size={18} /></button>
+                        <button onClick={() => setCurrentStep(2)} className="px-12 py-4 bg-slate-900 text-white rounded-[2rem] text-xs font-bold uppercase tracking-widest flex items-center gap-3">Next: Venue <ArrowRight size={18} /></button>
                     </div>
                 </div>
             )}
 
-            {/* Step 2: Grounds */}
             {currentStep === 2 && (
-                <div className="bg-white rounded-[3rem] border border-slate-100 shadow-[0_50px_100px_-20px_rgba(0,0,0,0.05)] p-12 space-y-12 animate-in fade-in slide-in-from-right-8 duration-700">
-                    <div className="flex items-center gap-6">
-                        <div className="w-16 h-16 rounded-3xl bg-blue-50 flex items-center justify-center text-blue-600 shadow-inner">
-                            <MapPin size={32} strokeWidth={1.5} />
-                        </div>
-                        <div className="flex-1">
-                            <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter italic leading-none">Arena Selection</h2>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">Geospatial positioning & stadium mapping</p>
-                        </div>
-                        {/* Locate Ground button removed */}
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        {renderInput("Stadium/Ground Name*", postEvent.venue, (v) => setPostEvent(p => ({ ...p, venue: v })), "text", "e.g. Chinnaswamy Stadium", true)}
-                        {renderInput("Full Address*", postEvent.address, (v) => setPostEvent(p => ({ ...p, address: v })), "text", "Full venue location", true)}
-                        
-                        <CustomSelect 
-                            label="Country"
-                            value={postEvent.country}
-                            options={COUNTRIES}
-                            onChange={(v) => {
-                                const countryData = COUNTRIES.find(c => (c.label || c) === v);
-                                setPostEvent(p => ({ ...p, country: v, countryCode: countryData?.code || "IN", state: "", district: "", city: "", zipCode: "" }));
-                            }}
-                        />
-                        <CustomSelect 
-                            label="State / Province"
-                            value={postEvent.state}
-                            options={State.getStatesOfCountry(postEvent.countryCode || 'IN').map(s => s.name)}
-                            onChange={(v) => {
-                                const stateObj = State.getStatesOfCountry(postEvent.countryCode || 'IN').find(s => s.name === v);
-                                setPostEvent(p => ({ ...p, state: v, stateCode: stateObj?.isoCode || "", district: "", city: "" }));
-                            }}
-                        />
-
-                        {postEvent.countryCode === "IN" ? (
-                            <>
-                                <CustomSelect 
-                                    label="District"
-                                    value={postEvent.district}
-                                    options={Array.from(new Set([...dbDistricts, ...getIndianDistricts(postEvent.state)])).sort()}
-                                    isLoading={distLoading}
-                                    onChange={(v) => setPostEvent(prev => ({ ...prev, district: v, city: "", zipCode: "" }))}
-                                />
-                                <CustomSelect 
-                                    label="City"
-                                    value={postEvent.city}
-                                    options={Array.from(new Set([...dbCities, ...getIndianCities(postEvent.district)])).sort()}
-                                    isLoading={cityLoading}
-                                    onChange={async (v) => {
-                                        setPostEvent(prev => ({ ...prev, city: v }));
-                                        try {
-                                            const coords = await geocode(`${v}, ${postEvent.state}, ${postEvent.country}`);
-                                            if (coords) setPostEvent(prev => ({ ...prev, latitude: coords.lat, longitude: coords.lng }));
-                                        } catch (err) {}
-                                    }}
-                                />
-                            </>
-                        ) : (
-                            <CustomSelect 
-                                label="City"
-                                value={postEvent.city}
-                                options={City.getCitiesOfState(postEvent.countryCode || 'IN', postEvent.stateCode).map(c => c.name)}
-                                onChange={async (v) => {
-                                    setPostEvent(prev => ({ ...prev, city: v }));
-                                    try {
-                                        const coords = await geocode(`${v}, ${postEvent.state}, ${postEvent.country}`);
-                                        if (coords) setPostEvent(prev => ({ ...prev, latitude: coords.lat, longitude: coords.lng }));
-                                    } catch (err) {}
-                                }}
-                            />
-                        )}
-
-                        <div className="space-y-3">
-                            <label className="block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] pl-1">Pincode / Zip Code</label>
-                            <input 
-                                type="text"
-                                value={postEvent.zipCode || ""}
-                                onChange={(e) => setPostEvent(prev => ({ ...prev, zipCode: e.target.value }))}
-                                className="w-full bg-slate-50/50 border border-slate-100 text-slate-900 text-sm font-bold px-6 py-4 rounded-2xl focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-orange-200 transition-all placeholder:text-slate-400"
-                                placeholder="Enter Pincode"
-                            />
-                        </div>
-
-                        <div className="md:col-span-2 h-[350px] rounded-[3rem] overflow-hidden border border-slate-100 shadow-2xl relative">
-                            <GoogleInlineMap 
-                                lat={postEvent.latitude || 20.5937} 
-                                lng={postEvent.longitude || 78.9629}
-                                onLocationSelect={async (lat, lng) => {
-                                    setPostEvent(p => ({ ...p, latitude: lat, longitude: lng }));
-                                    try {
-                                        const geo = await reverseGeocode(lat, lng);
-                                        if (geo) {
-                                            setPostEvent(p => ({ 
-                                                ...p, 
-                                                address: geo.fullAddress,
-                                                city: geo.city,
-                                                state: geo.state,
-                                                country: geo.country,
-                                                zipCode: geo.pincode
-                                            }));
-                                        }
-                                    } catch (err) {}
-                                }}
-                            />
-                        </div>
-                    </div>
-
-                    <div className="space-y-6 pt-6">
-                        <label className="block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] pl-1">Arena Seating Designer (Optional)</label>
-                        <BlockMapDesigner postEvent={postEvent} setPostEvent={setPostEvent} />
-                    </div>
-
-                    <div className="pt-10 flex justify-between">
-                        <button onClick={prevStep} className="px-10 py-5 text-slate-400 font-black uppercase tracking-widest text-[10px] flex items-center gap-3 hover:text-slate-900 transition-colors"><ArrowLeft size={18} /> Category Return</button>
-                        <button onClick={nextStep} className="px-12 py-5 bg-slate-900 text-white rounded-[2.5rem] text-[11px] font-black uppercase tracking-widest flex items-center gap-4 hover:bg-orange-600 transition-all shadow-2xl">Next: Match Schedule <ArrowRight size={18} /></button>
-                    </div>
-                </div>
-            )}
-
-            {/* Step 3: Schedule */}
-            {currentStep === 3 && (
-                <div className="bg-white rounded-[3rem] border border-slate-100 shadow-[0_50px_100px_-20px_rgba(0,0,0,0.05)] p-12 space-y-12 animate-in fade-in slide-in-from-right-8 duration-700">
-                    <div className="flex items-center gap-6">
-                        <div className="w-16 h-16 rounded-3xl bg-indigo-50 flex items-center justify-center text-indigo-600 shadow-inner">
-                            <Timer size={32} strokeWidth={1.5} />
+                <div className="bg-white rounded-[2rem] md:rounded-[3.5rem] border border-slate-100 shadow-2xl p-5 md:p-14 space-y-8 md:space-y-10">
+                    <div className="flex items-center gap-5">
+                        <div className="w-12 h-12 rounded-2xl bg-orange-50 flex items-center justify-center text-orange-500">
+                            <MapPin size={24} />
                         </div>
                         <div>
-                            <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter italic leading-none">Match Scheduling</h2>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">Temporal parameters & fixture timeline</p>
+                            <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Venue Details</h2>
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                        {renderInput("Registration Start*", postEvent.startDate, (v) => setPostEvent(p => ({ ...p, startDate: v })), "date")}
-                        {renderInput("Tournament Start*", postEvent.tournamentStartDate, (v) => setPostEvent(p => ({ ...p, tournamentStartDate: v })), "date")}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        {renderInput("Venue Name*", config.location.venueName, (v) => setConfig({ ...config, location: { ...config.location, venueName: v } }), "text", "e.g. Indoor Sports Arena, Chennai", true)}
+                        {renderInput("City*", config.location.city, (v) => setConfig({ ...config, location: { ...config.location, city: v } }), "text", "e.g. Chennai")}
                         {renderInput("Reporting Time*", postEvent.startTime, (v) => setPostEvent(p => ({ ...p, startTime: v })), "time")}
-                        {renderInput("Estimated End Time", postEvent.endTime, (v) => setPostEvent(p => ({ ...p, endTime: v })), "time")}
-                        {renderInput("Video Trailer URL", postEvent.videoTrailerUrl, (v) => setPostEvent(p => ({ ...p, videoTrailerUrl: v })), "url", "YouTube/Vimeo link", true)}
-                        
-                        <div className="md:col-span-2 space-y-6">
-                            <label className="block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] pl-1">Sporting Visuals (Gallery)</label>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                                {(postEvent.galleryPreviews || []).map((img, idx) => (
-                                    <div key={idx} className="group relative h-32 rounded-3xl overflow-hidden border border-slate-100 shadow-sm">
-                                        <img src={img} className="w-full h-full object-cover" />
-                                        <button 
-                                            onClick={() => {
-                                                const next = postEvent.galleryPreviews.filter((_, i) => i !== idx);
-                                                setPostEvent(p => ({ ...p, galleryPreviews: next }));
-                                            }}
-                                            className="absolute top-2 right-2 p-1.5 bg-white/90 backdrop-blur rounded-xl text-red-500 opacity-0 group-hover:opacity-100 transition-all"
-                                        >
-                                            <Trash2 size={14} />
-                                        </button>
-                                    </div>
-                                ))}
-                                <button 
-                                    onClick={() => document.getElementById('sports-gallery-upload').click()}
-                                    className="h-32 rounded-3xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center gap-2 text-slate-400 hover:border-orange-300 hover:text-orange-500 transition-all bg-slate-50/50"
-                                >
-                                    <Plus size={24} strokeWidth={1.5} />
-                                    <span className="text-[8px] font-black uppercase tracking-widest">Add Action</span>
-                                </button>
-                                <input 
-                                    id="sports-gallery-upload" 
-                                    type="file" 
-                                    multiple 
-                                    className="hidden" 
-                                    onChange={(e) => {
-                                        const files = Array.from(e.target.files);
-                                        files.forEach(file => {
-                                            const reader = new FileReader();
-                                            reader.onload = (ev) => {
-                                                setPostEvent(p => ({ 
-                                                    ...p, 
-                                                    galleryPreviews: [...(p.galleryPreviews || []), ev.target.result] 
-                                                }));
-                                            };
-                                            reader.readAsDataURL(file);
-                                        });
-                                    }} 
-                                />
-                            </div>
-                        </div>
-                        
-                        <div className="md:col-span-2 space-y-6">
-                            <label className="block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] pl-1">Operational Windows</label>
-                            <div className="bg-slate-50 p-8 rounded-[2.5rem] border border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-8">
-                                <div className="space-y-4">
-                                    <div className="flex items-center gap-3 text-orange-600">
-                                        <ShieldCheck size={18} />
-                                        <span className="text-[10px] font-black uppercase tracking-widest">Medical Coverage</span>
-                                    </div>
-                                    <p className="text-[9px] font-bold text-slate-400 uppercase leading-relaxed">Paramedic teams & ambulance presence duration</p>
-                                </div>
-                                <div className="space-y-4">
-                                    <div className="flex items-center gap-3 text-indigo-600">
-                                        <Monitor size={18} />
-                                        <span className="text-[10px] font-black uppercase tracking-widest">Live Telecast</span>
-                                    </div>
-                                    <p className="text-[9px] font-bold text-slate-400 uppercase leading-relaxed">Broadcast team setup and transmission windows</p>
-                                </div>
-                            </div>
-                        </div>
                     </div>
 
                     <div className="pt-10 flex justify-between">
-                        <button onClick={prevStep} className="px-10 py-5 text-slate-400 font-black uppercase tracking-widest text-[10px] flex items-center gap-3 hover:text-slate-900 transition-colors"><ArrowLeft size={18} /> Arena Return</button>
-                        <button onClick={nextStep} className="px-12 py-5 bg-slate-900 text-white rounded-[2.5rem] text-[11px] font-black uppercase tracking-widest flex items-center gap-4 hover:bg-orange-600 transition-all shadow-2xl">Next: Ticketing <ArrowRight size={18} /></button>
+                        <button onClick={() => setCurrentStep(1)} className="px-10 py-4 text-slate-800 font-bold uppercase tracking-widest text-[10px] flex items-center gap-2"><ArrowLeft size={16} /> Back</button>
+                        <button onClick={() => setCurrentStep(3)} className="px-12 py-4 bg-slate-900 text-white rounded-[2rem] text-xs font-bold uppercase tracking-widest flex items-center gap-3">Next: Categories <ArrowRight size={18} /></button>
                     </div>
                 </div>
             )}
 
-            {/* Step 4: Ticketing */}
-            {currentStep === 4 && (
-                <div className="bg-white rounded-[3rem] border border-slate-100 shadow-[0_50px_100px_-20px_rgba(0,0,0,0.05)] p-12 space-y-12 animate-in fade-in slide-in-from-right-8 duration-700">
-                    <div className="flex items-center gap-6">
-                        <div className="w-16 h-16 rounded-3xl bg-emerald-50 flex items-center justify-center text-emerald-600 shadow-inner">
-                            <DollarSign size={32} strokeWidth={1.5} />
+            {currentStep === 3 && (
+                <div className="bg-white rounded-[2rem] md:rounded-[3.5rem] border border-slate-100 shadow-2xl p-5 md:p-14 space-y-8">
+                    <div className="flex items-center gap-5">
+                        <div className="w-12 h-12 rounded-2xl bg-orange-50 flex items-center justify-center text-orange-500">
+                            <Users size={24} />
                         </div>
-                        <div className="flex-1">
-                            <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter italic leading-none">Inventory Control</h2>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">Registration tiers & participation fees</p>
+                        <div className="flex-1 flex justify-between items-center">
+                            <div>
+                                <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Age Categories</h2>
+                                <p className="text-[10px] font-bold text-slate-800 uppercase tracking-widest">Define age limits (e.g. U-15, Senior)</p>
+                            </div>
+                            <button 
+                                onClick={() => {
+                                    setConfig({ ...config, sports_categories: [...config.sports_categories, { id: Date.now(), category_name: "New Category", min_age: 0, max_age: 99, gender: "All" }] });
+                                }}
+                                className="w-10 h-10 bg-orange-50 text-orange-500 rounded-xl flex items-center justify-center"
+                            >
+                                <Plus size={20} />
+                            </button>
                         </div>
-                        <button 
-                            onClick={() => {
-                                const next = [...(postEvent.categories || [])];
-                                next.push({ id: Date.now(), name: "Standard Entry", price: 500, totalSlots: 200, color: "#f97316" });
-                                setPostEvent(p => ({ ...p, categories: next }));
-                            }}
-                            className="flex items-center gap-3 px-8 py-4 bg-emerald-50 text-emerald-600 rounded-[2rem] text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 hover:text-white transition-all shadow-sm border border-emerald-100"
-                        >
-                            <Plus size={16} /> Add Category
-                        </button>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        {(postEvent.categories || []).map((cat, idx) => (
-                            <div key={cat.id} className="group relative bg-slate-50/50 p-8 rounded-[2.5rem] border border-slate-100 hover:border-emerald-200 transition-all shadow-sm">
+                    <div className="space-y-4">
+                        {config.sports_categories.map((cat, idx) => (
+                            <div key={cat.id} className="p-6 bg-slate-50 rounded-[2rem] border border-slate-100 grid grid-cols-1 md:grid-cols-12 gap-4 items-center group relative">
                                 <button 
                                     onClick={() => {
-                                        const next = postEvent.categories.filter((_, i) => i !== idx);
-                                        setPostEvent(p => ({ ...p, categories: next }));
+                                        const nc = [...config.sports_categories]; nc.splice(idx, 1); setConfig({ ...config, sports_categories: nc });
                                     }}
-                                    className="absolute -top-3 -right-3 w-10 h-10 bg-white text-slate-400 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all border border-slate-100 shadow-lg hover:text-red-500"
+                                    className="absolute -top-2 -right-2 w-8 h-8 bg-red-50 text-red-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all border border-red-100"
                                 >
-                                    <Trash2 size={16} />
+                                    <Trash size={14} />
                                 </button>
-                                
-                                <div className="space-y-6">
-                                    <input 
-                                        className="bg-transparent text-lg font-black text-slate-900 uppercase tracking-tight w-full focus:outline-none border-b border-transparent focus:border-emerald-200 pb-1"
-                                        value={cat.name}
-                                        onChange={e => {
-                                            const next = [...postEvent.categories];
-                                            next[idx].name = e.target.value;
-                                            setPostEvent(p => ({ ...p, categories: next }));
-                                        }}
+                                <div className="md:col-span-4">
+                                    <label className="text-[10px] font-bold text-slate-700 uppercase block mb-1">Category Name</label>
+                                    <input className="w-full bg-white border border-slate-200 p-3 rounded-xl text-sm font-bold" value={cat.category_name} onChange={e => { const nc = [...config.sports_categories]; nc[idx].category_name = e.target.value; setConfig({ ...config, sports_categories: nc }); }} />
+                                </div>
+                                <div className="md:col-span-2">
+                                    <label className="text-[10px] font-bold text-slate-700 uppercase block mb-1">Min Age</label>
+                                    <input type="number" className="w-full bg-white border border-slate-200 p-3 rounded-xl text-sm font-bold" value={cat.min_age} onChange={e => { const nc = [...config.sports_categories]; nc[idx].min_age = parseInt(e.target.value)||0; setConfig({ ...config, sports_categories: nc }); }} />
+                                </div>
+                                <div className="md:col-span-2">
+                                    <label className="text-[10px] font-bold text-slate-700 uppercase block mb-1">Max Age</label>
+                                    <input type="number" className="w-full bg-white border border-slate-200 p-3 rounded-xl text-sm font-bold" value={cat.max_age} onChange={e => { const nc = [...config.sports_categories]; nc[idx].max_age = parseInt(e.target.value)||0; setConfig({ ...config, sports_categories: nc }); }} />
+                                </div>
+                                <div className="md:col-span-4">
+                                    <label className="text-[10px] font-bold text-slate-700 uppercase block mb-1">Gender Restriction</label>
+                                    <CustomSelect 
+                                        value={cat.gender}
+                                        options={["All", "Male", "Female"]}
+                                        onChange={v => { const nc = [...config.sports_categories]; nc[idx].gender = v; setConfig({ ...config, sports_categories: nc }); }}
                                     />
-                                    
-                                    <div className="grid grid-cols-2 gap-6">
-                                        <div className="space-y-2">
-                                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1">Entry Fee (₹)</label>
-                                            <input 
-                                                type="number"
-                                                className="w-full bg-white border border-slate-100 text-sm font-black p-4 rounded-2xl text-emerald-600 focus:outline-none"
-                                                value={cat.price}
-                                                onChange={e => {
-                                                    const next = [...postEvent.categories];
-                                                    next[idx].price = parseFloat(e.target.value) || 0;
-                                                    setPostEvent(p => ({ ...p, categories: next }));
-                                                }}
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1">Team/Slot Limit</label>
-                                            <input 
-                                                type="number"
-                                                className="w-full bg-white border border-slate-100 text-sm font-black p-4 rounded-2xl text-slate-900 focus:outline-none"
-                                                value={cat.totalSlots}
-                                                onChange={e => {
-                                                    const next = [...postEvent.categories];
-                                                    next[idx].totalSlots = parseInt(e.target.value) || 0;
-                                                    setPostEvent(p => ({ ...p, categories: next }));
-                                                }}
-                                            />
-                                        </div>
-                                    </div>
                                 </div>
                             </div>
                         ))}
                     </div>
 
                     <div className="pt-10 flex justify-between">
-                        <button onClick={prevStep} className="px-10 py-5 text-slate-400 font-black uppercase tracking-widest text-[10px] flex items-center gap-3 hover:text-slate-900 transition-colors"><ArrowLeft size={18} /> Schedule Return</button>
-                        <button onClick={nextStep} className="px-12 py-5 bg-slate-900 text-white rounded-[2.5rem] text-[11px] font-black uppercase tracking-widest flex items-center gap-4 hover:bg-orange-600 transition-all shadow-2xl">Next: Deploy Launch <ArrowRight size={18} /></button>
+                        <button onClick={() => setCurrentStep(2)} className="px-10 py-4 text-slate-800 font-bold uppercase tracking-widest text-[10px] flex items-center gap-2"><ArrowLeft size={16} /> Back</button>
+                        <button onClick={() => setCurrentStep(4)} className="px-12 py-4 bg-slate-900 text-white rounded-[2rem] text-xs font-bold uppercase tracking-widest flex items-center gap-3">Next: Match Types <ArrowRight size={18} /></button>
                     </div>
                 </div>
             )}
 
-            {/* Step 5: Deploy */}
+            {currentStep === 4 && (
+                <div className="bg-white rounded-[2rem] md:rounded-[3.5rem] border border-slate-100 shadow-2xl p-5 md:p-14 space-y-8">
+                    <div className="flex items-center gap-5">
+                        <div className="w-12 h-12 rounded-2xl bg-orange-50 flex items-center justify-center text-orange-500">
+                            <Layout size={24} />
+                        </div>
+                        <div className="flex-1 flex justify-between items-center">
+                            <div>
+                                <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Match Types & Pricing</h2>
+                                <p className="text-[10px] font-bold text-slate-800 uppercase tracking-widest">Singles, Doubles, Team pricing</p>
+                            </div>
+                            <button 
+                                onClick={() => {
+                                    setConfig({ ...config, sports_match_types: [...config.sports_match_types, { id: Date.now(), match_type: "New Match", entry_mode: "Individual", team_size: 1, price: 0 }] });
+                                }}
+                                className="w-10 h-10 bg-orange-50 text-orange-500 rounded-xl flex items-center justify-center"
+                            >
+                                <Plus size={20} />
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="space-y-4">
+                        {config.sports_match_types.map((match, idx) => (
+                            <div key={match.id} className="p-6 bg-slate-50 rounded-[2rem] border border-slate-100 grid grid-cols-1 md:grid-cols-12 gap-4 items-center group relative">
+                                <button 
+                                    onClick={() => {
+                                        const nm = [...config.sports_match_types]; nm.splice(idx, 1); setConfig({ ...config, sports_match_types: nm });
+                                    }}
+                                    className="absolute -top-2 -right-2 w-8 h-8 bg-red-50 text-red-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all border border-red-100"
+                                >
+                                    <Trash size={14} />
+                                </button>
+                                <div className="md:col-span-4">
+                                    <label className="text-[10px] font-bold text-slate-700 uppercase block mb-1">Match Type</label>
+                                    <input className="w-full bg-white border border-slate-200 p-3 rounded-xl text-sm font-bold" value={match.match_type} placeholder="e.g. Men Singles" onChange={e => { const nm = [...config.sports_match_types]; nm[idx].match_type = e.target.value; setConfig({ ...config, sports_match_types: nm }); }} />
+                                </div>
+                                <div className="md:col-span-3">
+                                    <label className="text-[10px] font-bold text-slate-700 uppercase block mb-1">Entry Mode</label>
+                                    <CustomSelect 
+                                        value={match.entry_mode}
+                                        options={["Individual", "Doubles", "Team"]}
+                                        onChange={v => { 
+                                            const nm = [...config.sports_match_types]; 
+                                            nm[idx].entry_mode = v; 
+                                            nm[idx].team_size = v === "Individual" ? 1 : v === "Doubles" ? 2 : 5;
+                                            setConfig({ ...config, sports_match_types: nm }); 
+                                        }}
+                                    />
+                                </div>
+                                <div className="md:col-span-2">
+                                    <label className="text-[10px] font-bold text-slate-700 uppercase block mb-1">Team Size</label>
+                                    <input type="number" disabled={match.entry_mode !== "Team"} className="w-full bg-white border border-slate-200 p-3 rounded-xl text-sm font-bold disabled:bg-slate-100" value={match.team_size} onChange={e => { const nm = [...config.sports_match_types]; nm[idx].team_size = parseInt(e.target.value)||1; setConfig({ ...config, sports_match_types: nm }); }} />
+                                </div>
+                                <div className="md:col-span-3">
+                                    <label className="text-[10px] font-bold text-[#f97316] uppercase block mb-1">Entry Fee (₹)</label>
+                                    <input type="number" className="w-full bg-orange-50 border border-orange-100 p-3 rounded-xl text-sm font-black text-[#f97316]" value={match.price} onChange={e => { const nm = [...config.sports_match_types]; nm[idx].price = parseInt(e.target.value)||0; setConfig({ ...config, sports_match_types: nm }); }} />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="pt-10 flex justify-between">
+                        <button onClick={() => setCurrentStep(3)} className="px-10 py-4 text-slate-800 font-bold uppercase tracking-widest text-[10px] flex items-center gap-2"><ArrowLeft size={16} /> Back</button>
+                        <button onClick={() => setCurrentStep(5)} className="px-12 py-4 bg-slate-900 text-white rounded-[2rem] text-xs font-bold uppercase tracking-widest flex items-center gap-3">Next: Documents <ArrowRight size={18} /></button>
+                    </div>
+                </div>
+            )}
+
             {currentStep === 5 && (
-                <div className="bg-white rounded-[3rem] border border-slate-100 shadow-[0_50px_100px_-20px_rgba(0,0,0,0.05)] p-12 space-y-12 animate-in zoom-in duration-700">
-                    <div className="flex flex-col items-center text-center space-y-8">
-                        <div className="w-24 h-24 rounded-[3rem] bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center text-white shadow-2xl shadow-orange-500/20 animate-pulse">
-                            <Zap size={48} strokeWidth={1.5} />
+                <div className="bg-white rounded-[2rem] md:rounded-[3.5rem] border border-slate-100 shadow-2xl p-5 md:p-14 space-y-8">
+                    <div className="flex items-center gap-5">
+                        <div className="w-12 h-12 rounded-2xl bg-orange-50 flex items-center justify-center text-orange-500">
+                            <FileText size={24} />
                         </div>
                         <div>
-                            <h2 className="text-4xl font-black text-slate-900 uppercase tracking-tighter italic leading-none">Sporting Arena Ready</h2>
-                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.3em] mt-4">All match parameters have been verified and locked</p>
+                            <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Required Documents</h2>
+                            <p className="text-[10px] font-bold text-slate-800 uppercase tracking-widest">Select mandatory participant uploads</p>
                         </div>
+                    </div>
 
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 w-full max-w-2xl pt-8">
-                            <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100">
-                                <span className="block text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Sport</span>
-                                <span className="text-[10px] font-black text-slate-900 uppercase truncate block">{postEvent.sportName || 'Generic'}</span>
-                            </div>
-                            <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100">
-                                <span className="block text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Arena</span>
-                                <span className="text-[10px] font-black text-slate-900 uppercase truncate block">{postEvent.venue || 'TBD'}</span>
-                            </div>
-                            <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100">
-                                <span className="block text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Categories</span>
-                                <span className="text-[10px] font-black text-slate-900 uppercase block">{(postEvent.categories || []).length}</span>
-                            </div>
-                            <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100">
-                                <span className="block text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Status</span>
-                                <span className="text-[10px] font-black text-orange-600 uppercase block">Operational</span>
-                            </div>
-                        </div>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        {DOC_TYPES.map(doc => {
+                            const isActive = config.required_documents.includes(doc);
+                            return (
+                                <button 
+                                    key={doc}
+                                    onClick={() => {
+                                        const nd = isActive ? config.required_documents.filter(d => d !== doc) : [...config.required_documents, doc];
+                                        setConfig({ ...config, required_documents: nd });
+                                    }}
+                                    className={`p-4 rounded-[1.5rem] border flex items-center justify-center gap-3 transition-all ${
+                                        isActive ? 'bg-orange-50 border-orange-500 text-orange-600 font-black' : 'bg-white border-slate-200 text-slate-500 font-bold'
+                                    }`}
+                                >
+                                    {isActive ? <CheckCircle2 size={16} /> : <div className="w-4 h-4 rounded-full border-2 border-slate-200" />}
+                                    <span className="text-[10px] uppercase">{doc}</span>
+                                </button>
+                            );
+                        })}
+                    </div>
 
-                        <button 
-                            onClick={onPublish}
-                            className="mt-12 px-20 py-8 bg-gradient-to-r from-orange-500 via-red-600 to-pink-600 text-white rounded-[4rem] text-sm font-black uppercase tracking-[0.4em] shadow-2xl shadow-orange-500/40 hover:scale-105 transition-all group relative overflow-hidden"
-                        >
-                            <span className="relative z-10 flex items-center gap-4">
-                                <ShieldCheck size={24} strokeWidth={2.5} />
-                                {isEditing ? "Update Sports Event" : "Execute Event Launch"}
-                            </span>
-                            <div className="absolute inset-0 bg-gradient-to-r from-pink-600 via-red-600 to-orange-500 opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
-                        </button>
-
-                        <button onClick={prevStep} className="text-slate-400 hover:text-slate-900 text-[10px] font-black uppercase tracking-[0.2em] transition-colors py-4">Verification Audit: Return to Previous Modules</button>
+                    <div className="pt-10 flex justify-between">
+                        <button onClick={() => setCurrentStep(4)} className="px-10 py-4 text-slate-800 font-bold uppercase tracking-widest text-[10px] flex items-center gap-2"><ArrowLeft size={16} /> Back</button>
+                        <button onClick={() => setCurrentStep(6)} className="px-12 py-4 bg-slate-900 text-white rounded-[2rem] text-xs font-bold uppercase tracking-widest flex items-center gap-3">Review & Publish <ArrowRight size={18} /></button>
                     </div>
                 </div>
             )}
 
-            {/* Cancel Button */}
-            <div className="mt-12 flex justify-center">
-                <button onClick={onCancel} className="text-slate-400 hover:text-red-500 text-[10px] font-black uppercase tracking-[0.2em] transition-colors py-4">
-                    {isEditing ? "Cancel Update & Return" : "Discard & Terminate Creation"}
-                </button>
-            </div>
+            {currentStep === 6 && (
+                <div className="bg-white rounded-[2rem] md:rounded-[3.5rem] border border-slate-100 shadow-2xl p-5 md:p-14 space-y-8">
+                    <div className="flex items-center gap-5">
+                        <div className="w-12 h-12 rounded-2xl bg-orange-50 flex items-center justify-center text-orange-500">
+                            <CheckCircle2 size={24} />
+                        </div>
+                        <div>
+                            <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Ready to Publish</h2>
+                            <p className="text-[10px] font-bold text-slate-800 uppercase tracking-widest">Review your Sports Event Configuration</p>
+                        </div>
+                    </div>
 
-            <LocationSelectionModal 
-                isOpen={showLocationModal}
-                onClose={() => setShowLocationModal(false)}
-                selectedCity={postEvent.city}
-                updateCity={(cityName, details) => {
-                    if (details) {
-                        setPostEvent(p => ({
-                            ...p,
-                            country: details.country || p.country,
-                            state: details.state || p.state,
-                            city: details.city || cityName,
-                            address: details.address || details.fullAddress || p.address,
-                            zipCode: details.pincode || details.zipCode || p.zipCode,
-                            latitude: details.lat || p.latitude,
-                            longitude: details.lng || p.longitude
-                        }));
-                    }
-                }}
-            />
+                    <div className="p-8 bg-slate-50 rounded-[2.5rem] border border-slate-100 space-y-6">
+                        <div>
+                            <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">{postEvent.title || "Untitled Event"}</h3>
+                            <p className="text-[10px] font-bold text-slate-500 uppercase">{config.sport_type} • {config.location.city || "No Venue"}</p>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-6 pt-6 border-t border-slate-200">
+                            <div>
+                                <h4 className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Age Categories</h4>
+                                <div className="flex flex-wrap gap-2">
+                                    {config.sports_categories.map(c => (
+                                        <span key={c.id} className="px-3 py-1 bg-white border border-slate-200 rounded-lg text-[9px] font-bold text-slate-700">{c.category_name}</span>
+                                    ))}
+                                </div>
+                            </div>
+                            <div>
+                                <h4 className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Match Types</h4>
+                                <div className="flex flex-wrap gap-2">
+                                    {config.sports_match_types.map(m => (
+                                        <span key={m.id} className="px-3 py-1 bg-orange-50 border border-orange-100 rounded-lg text-[9px] font-bold text-orange-600">{m.match_type} (₹{m.price})</span>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="pt-10 flex justify-between">
+                        <button onClick={() => setCurrentStep(5)} className="px-10 py-4 text-slate-800 font-bold uppercase tracking-widest text-[10px] flex items-center gap-2"><ArrowLeft size={16} /> Back</button>
+                        <div className="flex gap-4">
+                            <button onClick={onCancel} className="px-10 py-4 bg-slate-100 text-slate-900 rounded-[2rem] text-xs font-bold uppercase tracking-widest hover:bg-slate-200 transition-all">Cancel</button>
+                            <button onClick={onPublish} className="px-12 py-4 bg-orange-500 text-white rounded-[2rem] text-xs font-bold uppercase tracking-widest hover:bg-orange-600 shadow-xl shadow-orange-200 transition-all flex items-center gap-3">
+                                {isEditing ? "Update Sports Event" : "Publish to Platform"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

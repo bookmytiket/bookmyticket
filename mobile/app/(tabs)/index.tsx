@@ -157,12 +157,21 @@ export default function HomeScreen() {
     }
   }, [locationLoading, userLocationData.city]);
 
-  // Auto-redirect staff to dashboard on initial app load
+  // Auto-redirect to dashboard based on role on initial app load
   const [hasCheckedRedirect, setHasCheckedRedirect] = useState(false);
   useEffect(() => {
-    if (!hasCheckedRedirect && user && role && ['staff', 'admin', 'organiser', 'superadmin', 'provider'].includes(role.toLowerCase())) {
-      setHasCheckedRedirect(true);
-      router.replace('/staff');
+    if (!hasCheckedRedirect && user && role) {
+      const userRole = role.toLowerCase();
+      if (userRole === 'organiser') {
+        setHasCheckedRedirect(true);
+        router.replace('/organiser-dashboard');
+      } else if (userRole === 'provider') {
+        setHasCheckedRedirect(true);
+        router.replace('/provider-dashboard');
+      } else if (['staff', 'admin', 'superadmin'].includes(userRole)) {
+        setHasCheckedRedirect(true);
+        router.replace('/staff');
+      }
     }
   }, [user, role, hasCheckedRedirect]);
 

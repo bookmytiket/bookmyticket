@@ -426,6 +426,7 @@ export default function BookEventScreen() {
   const hasSeatingMap = React.useMemo(() => {
       if (!event) return false;
       if (isMarathon) return false; // Marathons never have seating maps
+      if (isFreeEvent(event)) return false; // Free events shouldn't require seating
       
       // Check if event blocks are just dummy general admission blocks
       const hasOnlyGeneralBlocks = eventBlocks.length > 0 && eventBlocks.every((b: any) => 

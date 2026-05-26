@@ -9,7 +9,9 @@ import {
   Alert, 
   ActivityIndicator,
   Vibration,
-  Image
+  Image,
+  TextInput,
+  KeyboardAvoidingView
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Colors } from '@/constants/Colors';
@@ -25,7 +27,8 @@ import {
   Layers, 
   History,
   XCircle,
-  Camera as CameraIcon
+  Camera as CameraIcon,
+  Search
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { supabase } from '@/lib/supabase';
@@ -47,6 +50,7 @@ export default function TicketScanningScreen() {
   const [scanHistory, setScanHistory] = useState<any[]>([]);
   const [rejectionReason, setRejectionReason] = useState("");
   const [isActioning, setIsActioning] = useState(false);
+  const [manualCode, setManualCode] = useState('');
 
   useEffect(() => {
     if (!permission) {
@@ -107,98 +111,116 @@ export default function TicketScanningScreen() {
         return;
       }
 
-      // Standard Ticket Scan
-      const { data: ticket, error: ticketError } = await supabase
-        .from('tickets')
+      // 1. Try Sports QR Ticket (from new workflow)
+      const { data: sportsTicket } = await supabase
+        .from('qr_tickets')
         .select(`
           *,
-          bookings (
+          sports_registrations (
             id,
-            ticket_count,
-            event_name,
-            customer_details,
-            status,
-            user_id,
-            event_id,
-            events (
-              id,
-              title,
-              date,
-              start_date,
-              start_time
-            )
-          )
+            booking_status,
+            payment_status,
+            participants (full_name, dob, gender),
+            sports_match_types (match_type),
+            sports_events (sport_type)
+          ),
+          checkins (id)
         `)
-        .eq('ticket_number', data)
-        .single();
+        .eq('qr_token', data)
+        .maybeSingle();
 
-      if (ticketError || !ticket) {
-        setScanStatus('invalid');
-        setLastResult({ message: 'Invalid Ticket QR Code' });
-        return;
-      }
+      if (sportsTicket && sportsTicket.sports_registrations) {
+        const reg = sportsTicket.sports_registrations;
+        const participant = reg.participants || {};
+        const match = reg.sports_match_types || {};
+        const event = reg.sports_events || {};
 
-      const booking = ticket.bookings;
-      const event = booking?.events || {};
-      const customer = booking?.customer_details || {};
-
-      // 1. Check Expiration
-      const eventDateStr = event.start_date || event.date;
-      if (eventDateStr) {
-        let eventDate: Date;
-        if (eventDateStr.includes('/')) {
-          const [d, m, y] = eventDateStr.split('/');
-          eventDate = new Date(`${y}-${m}-${d}T23:59:59`);
-        } else {
-          eventDate = new Date(eventDateStr);
-          eventDate.setHours(23, 59, 59, 999);
-        }
-
-        if (eventDate < new Date()) {
-          setScanStatus('expired');
+        if (sportsTicket.status === 'Scanned' || (sportsTicket.checkins && sportsTicket.checkins.length > 0)) {
+          setScanStatus('duplicate');
           setLastResult({
-            title: event.title || booking.event_name,
-            customer: customer.name || 'Guest',
-            category: customer.ticket_type || 'General',
-            quantity: booking.ticket_count || 1,
-            eventDate: eventDateStr,
-            message: 'This event has already ended. Access denied.'
+            title: event.sport_type || 'Sports Event',
+            customer: participant.full_name || 'Participant',
+            category: match.match_type || 'General',
+            quantity: 1,
+            scannedAt: sportsTicket.created_at, // proxy for now
+            message: 'Already Scanned! This participant was previously verified.'
           });
-          Vibration.vibrate([100, 300]);
+          Vibration.vibrate([100, 200, 100]);
           return;
         }
-      }
 
-      // 2. Check Duplicate
-      if (ticket.status === 'scanned' || ticket.scanned_at) {
-        setScanStatus('duplicate');
-        setLastResult({
-          title: event.title || booking.event_name,
-          customer: customer.name || 'Guest',
-          category: customer.ticket_type || 'General',
-          quantity: booking.ticket_count || 1,
-          scannedAt: ticket.scanned_at,
-          message: 'Already Scanned! This ticket was previously verified.'
-        });
-        Vibration.vibrate([100, 200, 100]);
+        const successResult = {
+          title: event.sport_type || 'Sports Event',
+          customer: participant.full_name || 'Participant',
+          category: match.match_type || 'General',
+          quantity: 1,
+          ticketNo: sportsTicket.qr_token,
+          qrTicketId: sportsTicket.id,
+          registrationId: reg.id,
+          message: 'ID VERIFICATION REQUIRED (Sports)',
+          isSports: true
+        };
+        
+        setScanStatus('requires_action');
+        setLastResult(successResult);
+        Vibration.vibrate([100, 100]);
         return;
       }
 
-      // DO NOT UPDATE YET - Require ID Verification Action
-      const successResult = {
-        title: event.title || booking.event_name,
-        customer: customer.name || 'Guest',
-        category: customer.ticket_type || 'General',
-        quantity: booking.ticket_count || 1,
-        ticketNo: ticket.ticket_number,
-        ticketId: ticket.id,
-        bookingId: booking.id,
-        message: 'ID VERIFICATION REQUIRED'
-      };
-      
-      setScanStatus('requires_action');
-      setLastResult(successResult);
-      Vibration.vibrate([100, 100]);
+      // 2. Standard Ticket Scan Fallback (Uses API to decode JWTs)
+      try {
+        const apiResult = await UnifiedApi.validateTicketScan({ 
+          qrPayload: data, 
+          scannerUserId: user?.id 
+        });
+
+        if (apiResult.status === 'invalid' || apiResult.status === 'error') {
+          setScanStatus('invalid');
+          setLastResult({ message: apiResult.message || 'Invalid Ticket QR Code' });
+          return;
+        }
+
+        if (apiResult.status === 'already_used') {
+          setScanStatus('duplicate');
+          setLastResult({
+            title: apiResult.event || 'Event',
+            customer: apiResult.attendee || 'Guest',
+            category: apiResult.category || 'General',
+            quantity: 1,
+            scannedAt: apiResult.scanned_at,
+            message: apiResult.message || 'Already Scanned! This ticket was previously verified.'
+          });
+          Vibration.vibrate([100, 200, 100]);
+          return;
+        }
+
+        if (apiResult.status === 'blocked') {
+          setScanStatus('invalid');
+          setLastResult({ message: apiResult.message || 'Access Blocked' });
+          Vibration.vibrate([300, 300]);
+          return;
+        }
+
+        const successResult = {
+          title: apiResult.event || 'Event',
+          customer: apiResult.attendee || 'Guest',
+          category: apiResult.category || 'General',
+          quantity: 1,
+          ticketNo: apiResult.ticket_code,
+          ticketId: apiResult.ticket_id,
+          bookingId: apiResult.booking_id,
+          message: apiResult.message || 'ID VERIFICATION REQUIRED',
+          isSports: false
+        };
+        
+        setScanStatus('requires_action');
+        setLastResult(successResult);
+        Vibration.vibrate([100, 100]);
+        
+      } catch (err: any) {
+        setScanStatus('invalid');
+        setLastResult({ message: err.message || 'Invalid Ticket QR Code' });
+      }
 
     } catch (err: any) {
       setScanStatus('invalid');
@@ -214,14 +236,26 @@ export default function TicketScanningScreen() {
     
     try {
       if (action === 'approve') {
-        await UnifiedApi.submitTicketScanAction({
-          ticketId: lastResult.ticketId,
-          bookingId: lastResult.bookingId,
-          ticketCode: lastResult.ticketNo,
-          action: 'approve',
-          gateName: 'Main Entry',
-          scannerUserId: user?.id,
-        });
+        if (lastResult.isSports) {
+          // Update sports checkins table
+          await supabase.from('checkins').insert({
+            registration_id: lastResult.registrationId,
+            staff_id: user?.id,
+            verification_status: 'Checked-In',
+            remarks: 'Verified at Main Entry'
+          });
+          await supabase.from('qr_tickets').update({ status: 'Scanned' }).eq('id', lastResult.qrTicketId);
+        } else {
+          // Update regular tickets
+          await UnifiedApi.submitTicketScanAction({
+            ticketId: lastResult.ticketId,
+            bookingId: lastResult.bookingId,
+            ticketCode: lastResult.ticketNo,
+            action: 'approve',
+            gateName: 'Main Entry',
+            scannerUserId: user?.id,
+          });
+        }
         
         const finalResult = { ...lastResult, message: 'Access Granted', status: 'success' };
         setScanStatus('success');
@@ -278,20 +312,65 @@ export default function TicketScanningScreen() {
         </Pressable>
       </LinearGradient>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {scanning ? (
-          <MotiView from={{ opacity: 0 }} animate={{ opacity: 1 }} style={styles.scannerWrapper}>
-            <CameraView
-              style={StyleSheet.absoluteFill}
-              onBarcodeScanned={handleBarCodeScanned}
-              barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
-            />
-            <View style={styles.overlay}><View style={styles.scanFrame} /><Text style={styles.scanHint}>Align QR code within the frame</Text></View>
-          </MotiView>
-        ) : (
-          <AnimatePresence>
-            {scanStatus !== 'idle' && scanStatus !== 'invalid' && scanStatus !== 'requires_action' && (
-              <MotiView from={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} style={[styles.resultCard, scanStatus === 'success' ? styles.resultSuccess : styles.resultDuplicate]}>
+      <View style={styles.cameraContainer}>
+        {/* Scanner is always mounted in background, but active only when scanning */}
+        <MotiView animate={{ opacity: scanning ? 1 : 0.4 }} style={StyleSheet.absoluteFill}>
+          <CameraView
+            style={StyleSheet.absoluteFill}
+            onBarcodeScanned={scanning ? handleBarCodeScanned : undefined}
+            barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
+          />
+          <View style={styles.overlay}><View style={styles.scanFrame} /><Text style={styles.scanHint}>{scanning ? "Align QR code within the frame" : "Processing..."}</Text></View>
+        </MotiView>
+
+        {scanning && scanStatus === 'idle' && (
+          <KeyboardAvoidingView 
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
+            style={styles.manualEntryContainer}
+            keyboardVerticalOffset={0}
+          >
+            <View style={styles.manualEntryBox}>
+              <Search size={20} color="#a1a1aa" />
+              <TextInput
+                style={styles.manualInput}
+                placeholder="Enter Booking ID or Code"
+                placeholderTextColor="#a1a1aa"
+                value={manualCode}
+                onChangeText={setManualCode}
+                autoCapitalize="characters"
+                onSubmitEditing={() => {
+                  if (manualCode.trim()) {
+                    handleBarCodeScanned({ data: manualCode.trim() });
+                    setManualCode('');
+                  }
+                }}
+              />
+              <Pressable 
+                style={[styles.manualVerifyBtn, !manualCode.trim() && { opacity: 0.5 }]}
+                onPress={() => {
+                  if (manualCode.trim()) {
+                    handleBarCodeScanned({ data: manualCode.trim() });
+                    setManualCode('');
+                  }
+                }}
+                disabled={!manualCode.trim()}
+              >
+                <Text style={styles.manualVerifyBtnText}>Verify</Text>
+              </Pressable>
+            </View>
+          </KeyboardAvoidingView>
+        )}
+
+        <AnimatePresence>
+          {!scanning && scanStatus !== 'idle' && (
+            <MotiView 
+              from={{ opacity: 0, scale: 0.9, translateY: 50 }} 
+              animate={{ opacity: 1, scale: 1, translateY: 0 }} 
+              exit={{ opacity: 0, scale: 0.9, translateY: 50 }}
+              style={styles.popupContainer}
+            >
+              {scanStatus !== 'invalid' && scanStatus !== 'requires_action' && (
+                <View style={[styles.resultCard, scanStatus === 'success' ? styles.resultSuccess : styles.resultDuplicate]}>
                 <View style={styles.resultHeader}>
                   {scanStatus === 'success' ? <CheckCircle size={54} color="#10b981" /> : <AlertCircle size={54} color="#f59e0b" />}
                   <Text style={[styles.resultStatusText, { color: scanStatus === 'success' ? '#10b981' : '#f59e0b' }]}>
@@ -319,7 +398,7 @@ export default function TicketScanningScreen() {
                 >
                   <Text style={styles.continueBtnText}>Continue Scanning</Text>
                 </Pressable>
-              </MotiView>
+              </View>
             )}
             {scanStatus === 'requires_action' && (
               <MotiView from={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} style={[styles.resultCard, { borderColor: '#3b82f6' }]}>
@@ -365,41 +444,10 @@ export default function TicketScanningScreen() {
                 </Pressable>
               </MotiView>
             )}
-          </AnimatePresence>
-        )}
-
-        <View style={styles.historySection}>
-          <View style={styles.historyHeader}>
-            <History size={20} color="#000" />
-            <Text style={[styles.historyTitle, { color: '#000' }]}>Recent Scans</Text>
-          </View>
-          
-          {scanHistory.length === 0 ? (
-            <View style={[styles.emptyHistory, { backgroundColor: 'rgba(0,0,0,0.05)' }]}>
-              <Text style={{ color: '#666' }}>No tickets scanned yet</Text>
-            </View>
-          ) : (
-            scanHistory.map((item, index) => (
-              <MotiView 
-                key={index} 
-                from={{ opacity: 0, translateX: -20 }} 
-                animate={{ opacity: 1, translateX: 0 }}
-                transition={{ delay: index * 100 }}
-                style={[styles.historyItem, { backgroundColor: '#fff', borderColor: 'rgba(0,0,0,0.1)' }]}
-              >
-                <View style={styles.historyItemLeft}>
-                  <View style={[styles.statusIndicator, { backgroundColor: item.status === 'success' ? '#10b981' : '#f59e0b' }]} />
-                  <View>
-                    <Text style={[styles.historyItemName, { color: '#000' }]}>{item.customer}</Text>
-                    <Text style={{ color: '#666', fontSize: 12 }}>{item.category} • {new Date(item.time).toLocaleTimeString()}</Text>
-                  </View>
-                </View>
-                <CheckCircle size={20} color="#10b981" />
               </MotiView>
-            ))
-          )}
-        </View>
-      </ScrollView>
+            )}
+          </AnimatePresence>
+      </View>
       {verifying && <View style={styles.verifyingOverlay}><ActivityIndicator size="large" color="#fff" /></View>}
     </View>
   );
@@ -424,11 +472,12 @@ const styles = StyleSheet.create({
   backBtn: { padding: 4 },
   headerTitle: { color: '#fff', fontSize: 18, fontWeight: '900' },
   scrollContent: { padding: 20 },
-  scannerWrapper: { height: 400, borderRadius: 24, overflow: 'hidden', backgroundColor: '#000' },
-  overlay: { ...StyleSheet.absoluteFillObject, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.3)' },
-  scanFrame: { width: 250, height: 250, borderWidth: 2, borderColor: '#a855f7', borderRadius: 24 },
-  scanHint: { color: '#fff', marginTop: 20, fontWeight: '700', fontSize: 14, backgroundColor: 'rgba(0,0,0,0.6)', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
-  resultCard: { padding: 24, borderRadius: 24, borderWidth: 2, alignItems: 'center', backgroundColor: '#fff' },
+  cameraContainer: { flex: 1, position: 'relative', backgroundColor: '#000' },
+  overlay: { ...StyleSheet.absoluteFillObject, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.4)' },
+  scanFrame: { width: 280, height: 280, borderWidth: 3, borderColor: '#fff', borderRadius: 30, shadowColor: '#000', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.5, shadowRadius: 10 },
+  scanHint: { color: '#fff', marginTop: 24, fontWeight: '800', fontSize: 15, backgroundColor: 'rgba(0,0,0,0.7)', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20, overflow: 'hidden' },
+  popupContainer: { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, justifyContent: 'center', alignItems: 'center', padding: 24, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 100 },
+  resultCard: { width: '100%', padding: 28, borderRadius: 32, borderWidth: 0, alignItems: 'center', backgroundColor: '#fff', shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.2, shadowRadius: 20, elevation: 10 },
   resultSuccess: { borderColor: '#10b981' },
   resultDuplicate: { borderColor: '#f59e0b' },
   resultHeader: { alignItems: 'center', marginBottom: 20 },
@@ -453,4 +502,9 @@ const styles = StyleSheet.create({
   statusIndicator: { width: 8, height: 8, borderRadius: 4 },
   historyItemName: { fontSize: 15, fontWeight: '700' },
   verifyingOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(15, 23, 42, 0.8)', justifyContent: 'center', alignItems: 'center' },
+  manualEntryContainer: { position: 'absolute', bottom: Platform.OS === 'ios' ? 50 : 30, left: 20, right: 20, zIndex: 10 },
+  manualEntryBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 16, paddingHorizontal: 16, paddingVertical: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 10, elevation: 10 },
+  manualInput: { flex: 1, marginLeft: 12, fontSize: 16, fontWeight: '700', color: '#000', padding: 0, minHeight: 24 },
+  manualVerifyBtn: { backgroundColor: '#a855f7', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10, marginLeft: 12 },
+  manualVerifyBtnText: { color: '#fff', fontSize: 13, fontWeight: '900', textTransform: 'uppercase' },
 });

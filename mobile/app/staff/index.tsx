@@ -45,6 +45,8 @@ export default function UnifiedManagerDashboard() {
   const { user, role, signOut } = useAuth();
 
   const [refreshing, setRefreshing] = useState(false);
+  const [apiStats, setApiStats] = useState<any>(null);
+  const [apiLoading, setApiLoading] = useState(false);
 
   // 1. Fetch Role-Specific Data
   const lowerRole = (role || '').trim().toLowerCase();
@@ -86,22 +88,49 @@ export default function UnifiedManagerDashboard() {
     { enabled: !!user && (isProvider || (isOrganiser && (eventIds.length > 0 || role?.includes('admin')))) }
   );
 
-  const walletBalance = isOrganiser ? organiserWallet?.[0]?.balance : providerWallet?.[0]?.balance;
+  const walletBalance = isOrganiser ? (apiStats?.walletBalance || 0) : providerWallet?.[0]?.balance;
+
+  const fetchApiStats = async () => {
+    if (!user || !isOrganiser) return;
+    try {
+      setApiLoading(true);
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+      if (!token) return;
+
+      const res = await fetch('https://bookmyticket.net/api/organiser/dashboard/summary', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setApiStats(data.stats);
+      }
+    } catch (err) {
+      console.error('Failed to fetch API stats:', err);
+    } finally {
+      setApiLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    fetchApiStats();
+  }, [user, isOrganiser]);
 
   const onRefresh = async () => {
     setRefreshing(true);
-    // Refresh logic handled by useSupabaseQuery automatically on focus/realtime
+    await fetchApiStats();
     setTimeout(() => setRefreshing(false), 1000);
   };
 
   const STATS = useMemo(() => {
     if (isOrganiser) {
-      const confirmedBookings = (bookings || []).filter(b => b.status === 'Confirmed' || b.status === 'Paid');
-      const totalRevenue = confirmedBookings.reduce((sum, b) => sum + (b.total_price || 0), 0);
+      const stats = apiStats || { totalEvents: 0, activeEvents: 0, totalBookings: 0, revenue: 0, expiredEvents: 0 };
       return [
-        { label: 'Total Revenue', value: `₹${totalRevenue.toLocaleString()}`, icon: <TrendingUp size={20} color="#fff" />, colors: ['#3b82f6', '#2563eb'] },
-        { label: 'Active Events', value: events?.length || 0, icon: <CalendarDays size={20} color="#fff" />, colors: ['#f59e0b', '#d97706'] },
-        { label: 'Total Bookings', value: bookings?.length || 0, icon: <Users size={20} color="#fff" />, colors: ['#10b981', '#059669'] },
+        { label: 'Total Revenue', value: `₹${Number(stats.revenue).toLocaleString()}`, icon: <TrendingUp size={20} color="#fff" />, colors: ['#f59e0b', '#d97706'] },
+        { label: 'Total Events', value: stats.totalEvents, icon: <LayoutDashboard size={20} color="#fff" />, colors: ['#3b82f6', '#2563eb'] },
+        { label: 'Total Bookings', value: stats.totalBookings, icon: <Users size={20} color="#fff" />, colors: ['#a855f7', '#7c3aed'] },
+        { label: 'Active Events', value: stats.activeEvents, icon: <Activity size={20} color="#fff" />, colors: ['#10b981', '#059669'] },
+        { label: 'Expired Events', value: stats.expiredEvents, icon: <CalendarDays size={20} color="#fff" />, colors: ['#64748b', '#475569'] },
       ];
     } else if (isProvider) {
       return [
@@ -341,11 +370,11 @@ const styles = StyleSheet.create({
   staffActionSection: { marginTop: 10 },
   staffScannerBtn: { backgroundColor: '#fff', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, paddingVertical: 16, borderRadius: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 4 },
   staffScannerBtnText: { color: '#10b981', fontSize: 16, fontWeight: '900', letterSpacing: 0.5 },
-  statsGrid: { flexDirection: 'row', gap: 12, marginBottom: 24 },
-  statItem: { flex: 1, padding: 16, borderRadius: 20, borderWidth: 1, alignItems: 'center' },
-  statIcon: { width: 36, height: 36, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginBottom: 10 },
-  statValue: { fontSize: 16, fontWeight: '900' },
-  statLabel: { fontSize: 10, fontWeight: '700', textTransform: 'uppercase', marginTop: 2 },
+  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 24 },
+  statItem: { width: '31%', minWidth: 100, padding: 12, borderRadius: 20, borderWidth: 1, alignItems: 'center' },
+  statIcon: { width: 36, height: 36, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
+  statValue: { fontSize: 16, fontWeight: '900', textAlign: 'center' },
+  statLabel: { fontSize: 9, fontWeight: '800', textTransform: 'uppercase', marginTop: 2, textAlign: 'center' },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   sectionTitle: { fontSize: 18, fontWeight: '900', marginBottom: 16 },
   actionsGrid: { flexDirection: 'row', gap: 12, marginBottom: 30 },
