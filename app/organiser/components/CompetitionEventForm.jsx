@@ -201,11 +201,19 @@ const CompetitionEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, is
                     registrationForm: [
                         { id: 1, label: "Full Name", type: "text", required: true, isDefault: true },
                         { id: 2, label: "Date of Birth", type: "date", required: true, isDefault: true },
-                        { id: 3, label: "Email Address", type: "email", required: true, isDefault: true },
-                        { id: 4, label: "Phone Number", type: "tel", required: true, isDefault: true },
-                        { id: 5, label: "Age Category", type: "select", options: ["U-8", "U-10", "U-12", "U-15", "U-17", "U-19", "Senior", "Veterans", "Open"], required: true },
-                        { id: 6, label: "Event/Stroke", type: "select", options: ["FR", "BR", "BAK", "FLY", "IM", "OPEN"], required: true },
-                        { id: 7, label: "Distance", type: "select", options: ["25M", "50M", "100M", "4x50M"], required: true }
+                        { id: 3, label: "Age", type: "number", required: true, isDefault: true },
+                        { id: 4, label: "Gender", type: "select", options: ["Male", "Female", "Other"], required: true },
+                        { id: 5, label: "Email", type: "email", required: true, isDefault: true },
+                        { id: 6, label: "Mobile", type: "tel", required: true, isDefault: true },
+                        { id: 7, label: "Address", type: "text", required: true },
+                        { id: 8, label: "City", type: "text", required: true },
+                        { id: 9, label: "State", type: "text", required: true },
+                        { id: 10, label: "School/Club Name", type: "text", required: false },
+                        { id: 11, label: "Coach Name", type: "text", required: false },
+                        { id: 12, label: "Blood Group", type: "select", options: ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"], required: true },
+                        { id: 13, label: "Emergency Contact", type: "tel", required: true },
+                        { id: 14, label: "Medical Notes", type: "text", required: false },
+                        { id: 15, label: "Aadhaar Number", type: "text", required: true }
                     ],
                     documents: [
                         { type: "School ID / Govt ID", mandatory: true },
@@ -245,11 +253,19 @@ const CompetitionEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, is
         registrationForm: baseConfig.registrationForm || [
             { id: 1, label: "Full Name", type: "text", required: true, isDefault: true },
             { id: 2, label: "Date of Birth", type: "date", required: true, isDefault: true },
-            { id: 3, label: "Email Address", type: "email", required: true, isDefault: true },
-            { id: 4, label: "Phone Number", type: "tel", required: true, isDefault: true },
-            { id: 5, label: "Age Category", type: "select", options: ["U-8", "U-10", "U-12", "U-15", "U-17", "U-19", "Senior", "Veterans", "Open"], required: true },
-            { id: 6, label: "Event/Stroke", type: "select", options: ["FR", "BR", "BAK", "FLY", "IM", "OPEN"], required: true },
-            { id: 7, label: "Distance", type: "select", options: ["25M", "50M", "100M", "4x50M"], required: true }
+            { id: 3, label: "Age", type: "number", required: true, isDefault: true },
+            { id: 4, label: "Gender", type: "select", options: ["Male", "Female", "Other"], required: true },
+            { id: 5, label: "Email", type: "email", required: true, isDefault: true },
+            { id: 6, label: "Mobile", type: "tel", required: true, isDefault: true },
+            { id: 7, label: "Address", type: "text", required: true },
+            { id: 8, label: "City", type: "text", required: true },
+            { id: 9, label: "State", type: "text", required: true },
+            { id: 10, label: "School/Club Name", type: "text", required: false },
+            { id: 11, label: "Coach Name", type: "text", required: false },
+            { id: 12, label: "Blood Group", type: "select", options: ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"], required: true },
+            { id: 13, label: "Emergency Contact", type: "tel", required: true },
+            { id: 14, label: "Medical Notes", type: "text", required: false },
+            { id: 15, label: "Aadhaar Number", type: "text", required: true }
         ],
         documents: baseConfig.documents || [
             { type: "School ID / Govt ID", mandatory: true },
