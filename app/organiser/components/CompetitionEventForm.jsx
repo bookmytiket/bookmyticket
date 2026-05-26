@@ -129,6 +129,16 @@ const CompetitionEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, is
         fetchCities();
     }, [postEvent.district, postEvent.country]);
 
+    useEffect(() => {
+        const config = postEvent.dynamic_config;
+        if (config?.categories?.length > 0) {
+            const minPrice = Math.min(...config.categories.map(c => c.price || 0));
+            if (postEvent.price !== minPrice) {
+                setPostEvent(prev => ({ ...prev, price: minPrice }));
+            }
+        }
+    }, [postEvent.dynamic_config?.categories]);
+
     const updateConfig = (key, value) => {
         setPostEvent(prev => ({
             ...prev,
@@ -139,26 +149,100 @@ const CompetitionEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, is
         }));
     };
 
-    const config = postEvent.dynamic_config || {
-        registrationMode: 'Individual', // Individual, Relay, Both
-        competitionCategories: [
-            { id: 1, name: "U-15", minAge: 13, maxAge: 15, gender: "All", isCustom: false }
+    // Ensure defaults are pushed to the parent's postEvent immediately so onPublish has the correct data
+    useEffect(() => {
+        if (!postEvent.dynamic_config || !postEvent.dynamic_config.competitionAgeGroups) {
+            setPostEvent(prev => ({
+                ...prev,
+                dynamic_config: {
+                    ...(prev.dynamic_config || {}),
+                    competitionType: 'Swimming Competition',
+                    organiser_name: "Real Sports Academy",
+                    supportEmail: "",
+                    supportPhone: "9787286909, 9092856286",
+                    subtitle: "Tamilnadu Open State Level",
+                    categories: [
+                        { id: 1, name: "Individual Event", price: 249, totalSlots: 500, description: "Entry fee for individual races" },
+                        { id: 2, name: "Relay Event", price: 599, totalSlots: 100, description: "Entry fee for relay races" }
+                    ],
+                    competitionAgeGroups: [
+                        { id: 1, name: "U-8", minAge: 0, maxAge: 7, distances: "25M, 4x50M" },
+                        { id: 2, name: "U-10", minAge: 8, maxAge: 9, distances: "50M, 100M, 4x50M" },
+                        { id: 3, name: "U-12", minAge: 10, maxAge: 11, distances: "50M, 100M, 4x50M" },
+                        { id: 4, name: "U-15", minAge: 12, maxAge: 14, distances: "50M, 100M, 4x50M" },
+                        { id: 5, name: "U-17", minAge: 15, maxAge: 16, distances: "50M, 100M, 4x50M" },
+                        { id: 6, name: "U-19", minAge: 17, maxAge: 18, distances: "50M, 100M, 4x50M" },
+                        { id: 7, name: "Senior", minAge: 19, maxAge: 34, distances: "50M, 100M, 4x50M" },
+                        { id: 8, name: "Veterans", minAge: 35, maxAge: 99, distances: "50M, 100M, 4x50M" },
+                        { id: 9, name: "Open", minAge: 0, maxAge: 99, distances: "50M, 100M, 4x50M" }
+                    ],
+                    competitionStrokes: "FR, BR, BAK, FLY, IM, OPEN",
+                    registrationForm: [
+                        { id: 1, label: "Full Name", type: "text", required: true, isDefault: true },
+                        { id: 2, label: "Date of Birth", type: "date", required: true, isDefault: true },
+                        { id: 3, label: "Email Address", type: "email", required: true, isDefault: true },
+                        { id: 4, label: "Phone Number", type: "tel", required: true, isDefault: true },
+                        { id: 5, label: "Age Category", type: "select", options: ["U-8", "U-10", "U-12", "U-15", "U-17", "U-19", "Senior", "Veterans", "Open"], required: true },
+                        { id: 6, label: "Event/Stroke", type: "select", options: ["FR", "BR", "BAK", "FLY", "IM", "OPEN"], required: true },
+                        { id: 7, label: "Distance", type: "select", options: ["25M", "50M", "100M", "4x50M"], required: true }
+                    ],
+                    documents: [
+                        { type: "School ID / Govt ID", mandatory: true },
+                        { type: "Aadhaar Card", mandatory: true }
+                    ],
+                    rules: "1. Time trials basis\n2. Referee's Decision is Final\n3. No Protests Allowed\n4. Valid ID required for Age verification.",
+                    baseYear: new Date().getFullYear()
+                }
+            }));
+        }
+    }, [postEvent.dynamic_config?.competitionAgeGroups]);
+
+    const baseConfig = postEvent.dynamic_config || {};
+    const config = {
+        ...baseConfig,
+        competitionType: baseConfig.competitionType || 'Swimming Competition',
+        organiser_name: baseConfig.organiser_name || "Real Sports Academy",
+        supportEmail: baseConfig.supportEmail || "",
+        supportPhone: baseConfig.supportPhone || "9787286909, 9092856286",
+        subtitle: baseConfig.subtitle || "Tamilnadu Open State Level",
+        categories: baseConfig.categories || [
+            { id: 1, name: "Individual Event", price: 249, totalSlots: 500, description: "Entry fee for individual races" },
+            { id: 2, name: "Relay Event", price: 599, totalSlots: 100, description: "Entry fee for relay races" }
         ],
-        competitionEvents: [
-            { id: 1, name: "50M Freestyle", distance: "50M", fee: 249, gender: "All" }
+        competitionAgeGroups: baseConfig.competitionAgeGroups || [
+            { id: 1, name: "U-8", minAge: 0, maxAge: 7, distances: "25M, 4x50M" },
+            { id: 2, name: "U-10", minAge: 8, maxAge: 9, distances: "50M, 100M, 4x50M" },
+            { id: 3, name: "U-12", minAge: 10, maxAge: 11, distances: "50M, 100M, 4x50M" },
+            { id: 4, name: "U-15", minAge: 12, maxAge: 14, distances: "50M, 100M, 4x50M" },
+            { id: 5, name: "U-17", minAge: 15, maxAge: 16, distances: "50M, 100M, 4x50M" },
+            { id: 6, name: "U-19", minAge: 17, maxAge: 18, distances: "50M, 100M, 4x50M" },
+            { id: 7, name: "Senior", minAge: 19, maxAge: 34, distances: "50M, 100M, 4x50M" },
+            { id: 8, name: "Veterans", minAge: 35, maxAge: 99, distances: "50M, 100M, 4x50M" },
+            { id: 9, name: "Open", minAge: 0, maxAge: 99, distances: "50M, 100M, 4x50M" }
         ],
-        documents: [
-            { type: "Aadhaar Card", mandatory: true },
-            { type: "Birth Certificate", mandatory: true }
+        competitionStrokes: baseConfig.competitionStrokes || "FR, BR, BAK, FLY, IM, OPEN",
+        registrationForm: baseConfig.registrationForm || [
+            { id: 1, label: "Full Name", type: "text", required: true, isDefault: true },
+            { id: 2, label: "Date of Birth", type: "date", required: true, isDefault: true },
+            { id: 3, label: "Email Address", type: "email", required: true, isDefault: true },
+            { id: 4, label: "Phone Number", type: "tel", required: true, isDefault: true },
+            { id: 5, label: "Age Category", type: "select", options: ["U-8", "U-10", "U-12", "U-15", "U-17", "U-19", "Senior", "Veterans", "Open"], required: true },
+            { id: 6, label: "Event/Stroke", type: "select", options: ["FR", "BR", "BAK", "FLY", "IM", "OPEN"], required: true },
+            { id: 7, label: "Distance", type: "select", options: ["25M", "50M", "100M", "4x50M"], required: true }
         ],
-        rules: "1. Referee decision is final.\n2. No protests allowed."
+        documents: baseConfig.documents || [
+            { type: "School ID / Govt ID", mandatory: true },
+            { type: "Aadhaar Card", mandatory: true }
+        ],
+        rules: baseConfig.rules || "1. Time trials basis\n2. Referee's Decision is Final\n3. No Protests Allowed\n4. Valid ID required for Age verification.",
+        baseYear: baseConfig.baseYear || new Date().getFullYear()
     };
 
     const steps = [
         { id: 1, title: "Basic Details", icon: FileText },
         { id: 2, title: "Venue", icon: MapPin },
         { id: 3, title: "Date & Time", icon: Calendar },
-        { id: 4, title: "Categories & Events", icon: Trophy },
+        { id: 4, title: "Categories & Pricing", icon: Trophy },
         { id: 5, title: "Rules & Publish", icon: ShieldCheck }
     ];
 
@@ -225,7 +309,10 @@ const CompetitionEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, is
                             )}
                         </div>
                         {renderInput("Organizer Name", config.organiser_name, (v) => updateConfig('organiser_name', v))}
-                        {renderInput("Contact Email", config.supportEmail, (v) => updateConfig('supportEmail', v))}
+                        <div className="grid grid-cols-2 gap-4 md:col-span-2">
+                            {renderInput("Contact Phone", config.supportPhone, (v) => updateConfig('supportPhone', v), "text", "e.g., 9787286909")}
+                            {renderInput("Contact Email", config.supportEmail, (v) => updateConfig('supportEmail', v))}
+                        </div>
                     </div>
                     <div className="pt-10 flex justify-end">
                         <button onClick={() => setCurrentStep(2)} className="px-12 py-4 bg-slate-900 text-white rounded-full text-xs font-bold uppercase flex items-center gap-2">Next <ArrowRight size={16} /></button>
@@ -360,135 +447,160 @@ const CompetitionEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, is
 
             {currentStep === 4 && (
                 <div className="bg-white rounded-[2rem] border border-slate-100 shadow-2xl p-5 md:p-14 space-y-8">
-                    <h2 className="text-2xl font-black text-slate-900 uppercase">Categories & Events</h2>
+                    <h2 className="text-2xl font-black text-slate-900 uppercase">Categories & Pricing</h2>
                     
+                    {/* PRICING TIERS */}
                     <div className="space-y-4">
                         <div className="flex justify-between items-center">
-                            <h3 className="text-sm font-bold uppercase">Age Categories</h3>
+                            <h3 className="text-sm font-bold uppercase text-[#ec4899]">Registration Fees (Tickets)</h3>
                             <button onClick={() => {
-                                const cats = [...config.competitionCategories];
-                                cats.push({ id: Date.now(), name: "", minAge: 0, maxAge: 0, gender: "All" });
-                                updateConfig('competitionCategories', cats);
-                            }} className="text-pink-500 text-[10px] font-bold uppercase border border-pink-500 px-3 py-1 rounded-full">+ Add Category</button>
+                                const cats = [...(config.categories || [])];
+                                cats.push({ id: Date.now(), name: "New Event", price: 0, totalSlots: 100, description: "" });
+                                updateConfig('categories', cats);
+                            }} className="text-pink-500 text-[10px] font-bold uppercase border border-pink-500 px-3 py-1 rounded-full">+ Add Fee Tier</button>
                         </div>
-                        {config.competitionCategories?.map((cat, idx) => (
-                            <div key={idx} className="grid grid-cols-5 gap-4 bg-slate-50 p-4 rounded-xl items-end">
+                        {config.categories?.map((cat, idx) => (
+                            <div key={idx} className="grid grid-cols-5 gap-4 bg-pink-50/50 p-4 rounded-xl border border-pink-100 items-end">
                                 <div className="col-span-2">
-                                    <label className="text-[10px] font-bold uppercase">Category Name</label>
-                                    <div className="flex gap-2">
-                                        <div className="flex-1 min-w-[150px]">
-                                            <CustomSelect 
-                                                value={cat.isCustom ? "Custom" : cat.name} 
-                                                onChange={val => {
-                                                    const c = [...config.competitionCategories];
-                                                    if (val === "Custom") {
-                                                        c[idx].isCustom = true;
-                                                        c[idx].name = "";
-                                                    } else {
-                                                        c[idx].isCustom = false;
-                                                        c[idx].name = val;
-                                                        // Auto-fill typical age ranges if possible
-                                                        if (val.startsWith("U-")) {
-                                                            const age = parseInt(val.split("-")[1]);
-                                                            if (!isNaN(age)) {
-                                                                c[idx].maxAge = age;
-                                                                c[idx].minAge = Math.max(0, age - 2);
-                                                            }
-                                                        } else if (val === "Open") {
-                                                            c[idx].minAge = 0; c[idx].maxAge = 99;
-                                                        } else if (val === "Senior" || val === "Masters") {
-                                                            c[idx].minAge = 35; c[idx].maxAge = 99;
-                                                        }
-                                                    }
-                                                    updateConfig('competitionCategories', c);
-                                                }}
-                                                options={[
-                                                    "U-6", "U-7", "U-8", "U-9", "U-10", "U-11", 
-                                                    "U-13", "U-15", "U-17", "U-19", "Open", "Senior", "Masters", "Custom"
-                                                ]}
-                                            />
-                                        </div>
-                                        {cat.isCustom && (
-                                            <input 
-                                                value={cat.name} 
-                                                onChange={e => {
-                                                    const c = [...config.competitionCategories];
-                                                    c[idx].name = e.target.value;
-                                                    updateConfig('competitionCategories', c);
-                                                }} 
-                                                className="w-full p-2 text-sm border rounded-lg" 
-                                                placeholder="e.g. Under-21" 
-                                            />
-                                        )}
-                                    </div>
+                                    <label className="text-[10px] font-bold uppercase text-slate-700">Ticket / Event Type</label>
+                                    <input value={cat.name} onChange={e => {
+                                        const c = [...(config.categories || [])];
+                                        c[idx].name = e.target.value;
+                                        updateConfig('categories', c);
+                                    }} className="w-full p-2 text-sm border rounded-lg bg-white text-slate-900" placeholder="Individual Event" />
                                 </div>
                                 <div>
-                                    <label className="text-[10px] font-bold uppercase">Min Age</label>
-                                    <input type="number" value={cat.minAge} onChange={e => {
-                                        const c = [...config.competitionCategories];
-                                        c[idx].minAge = parseInt(e.target.value) || 0;
-                                        updateConfig('competitionCategories', c);
-                                    }} className="w-full p-2 text-sm border rounded-lg" />
+                                    <label className="text-[10px] font-bold uppercase text-slate-700">Price (₹)</label>
+                                    <input type="number" value={cat.price} onChange={e => {
+                                        const c = [...(config.categories || [])];
+                                        c[idx].price = parseInt(e.target.value) || 0;
+                                        updateConfig('categories', c);
+                                    }} className="w-full p-2 text-sm border rounded-lg bg-white text-slate-900" />
                                 </div>
                                 <div>
-                                    <label className="text-[10px] font-bold uppercase">Max Age</label>
-                                    <input type="number" value={cat.maxAge} onChange={e => {
-                                        const c = [...config.competitionCategories];
-                                        c[idx].maxAge = parseInt(e.target.value) || 0;
-                                        updateConfig('competitionCategories', c);
-                                    }} className="w-full p-2 text-sm border rounded-lg" />
+                                    <label className="text-[10px] font-bold uppercase text-slate-700">Total Slots</label>
+                                    <input type="number" value={cat.totalSlots} onChange={e => {
+                                        const c = [...(config.categories || [])];
+                                        c[idx].totalSlots = parseInt(e.target.value) || 0;
+                                        updateConfig('categories', c);
+                                    }} className="w-full p-2 text-sm border rounded-lg bg-white text-slate-900" />
                                 </div>
                                 <button onClick={() => {
-                                    const c = [...config.competitionCategories];
+                                    const c = [...(config.categories || [])];
                                     c.splice(idx, 1);
-                                    updateConfig('competitionCategories', c);
+                                    updateConfig('categories', c);
                                 }} className="p-2 text-red-500"><Trash2 size={18} /></button>
                             </div>
                         ))}
                     </div>
 
+                    {/* AGE GROUPS */}
                     <div className="space-y-4 pt-6 border-t border-slate-100">
                         <div className="flex justify-between items-center">
-                            <h3 className="text-sm font-bold uppercase">Competition Events / Races</h3>
-                            <button onClick={() => {
-                                const evts = [...config.competitionEvents];
-                                evts.push({ id: Date.now(), name: "", distance: "", fee: 0, gender: "All" });
-                                updateConfig('competitionEvents', evts);
-                            }} className="text-pink-500 text-[10px] font-bold uppercase border border-pink-500 px-3 py-1 rounded-full">+ Add Event</button>
-                        </div>
-                        {config.competitionEvents?.map((evt, idx) => (
-                            <div key={idx} className="grid grid-cols-5 gap-4 bg-slate-50 p-4 rounded-xl items-end">
-                                <div className="col-span-2">
-                                    <label className="text-[10px] font-bold uppercase">Event Name</label>
-                                    <input value={evt.name} onChange={e => {
-                                        const c = [...config.competitionEvents];
-                                        c[idx].name = e.target.value;
-                                        updateConfig('competitionEvents', c);
-                                    }} className="w-full p-2 text-sm border rounded-lg" placeholder="50M Freestyle" />
-                                </div>
-                                <div>
-                                    <label className="text-[10px] font-bold uppercase">Distance</label>
-                                    <input value={evt.distance} onChange={e => {
-                                        const c = [...config.competitionEvents];
-                                        c[idx].distance = e.target.value;
-                                        updateConfig('competitionEvents', c);
-                                    }} className="w-full p-2 text-sm border rounded-lg" placeholder="50M" />
-                                </div>
-                                <div>
-                                    <label className="text-[10px] font-bold uppercase">Reg Fee (₹)</label>
-                                    <input type="number" value={evt.fee} onChange={e => {
-                                        const c = [...config.competitionEvents];
-                                        c[idx].fee = parseInt(e.target.value) || 0;
-                                        updateConfig('competitionEvents', c);
-                                    }} className="w-full p-2 text-sm border rounded-lg" />
+                            <div>
+                                <h3 className="text-sm font-bold uppercase text-slate-900">Age Categories & Validation</h3>
+                                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Configure age cutoff calculation (e.g. Base Year {config.baseYear})</p>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-2">
+                                    <label className="text-[10px] font-bold uppercase text-slate-700">Base Year:</label>
+                                    <input type="number" value={config.baseYear} onChange={e => updateConfig('baseYear', parseInt(e.target.value) || new Date().getFullYear())} className="w-20 p-2 text-sm border rounded-lg bg-white text-slate-900" />
                                 </div>
                                 <button onClick={() => {
-                                    const c = [...config.competitionEvents];
-                                    c.splice(idx, 1);
-                                    updateConfig('competitionEvents', c);
-                                }} className="p-2 text-red-500"><Trash2 size={18} /></button>
+                                    const ags = [...(config.competitionAgeGroups || [])];
+                                    ags.push({ id: Date.now(), name: "", minAge: 0, maxAge: 99, distances: "" });
+                                    updateConfig('competitionAgeGroups', ags);
+                                    
+                                    // Auto-update registration form
+                                    const newOpts = [...ags].map(a => a.name).filter(Boolean);
+                                    const form = [...(config.registrationForm || [])];
+                                    const ageField = form.find(f => f.label === "Age Category");
+                                    if (ageField) ageField.options = newOpts;
+                                    updateConfig('registrationForm', form);
+                                    
+                                }} className="text-slate-500 text-[10px] font-bold uppercase border border-slate-300 px-3 py-1 rounded-full">+ Add Age Group</button>
+                            </div>
+                        </div>
+                        {config.competitionAgeGroups?.map((ag, idx) => (
+                            <div key={idx} className="grid grid-cols-12 gap-4 bg-slate-50 p-4 rounded-xl items-end border border-slate-100">
+                                <div className="col-span-12 md:col-span-3">
+                                    <label className="text-[10px] font-bold uppercase text-slate-700">Category Name</label>
+                                    <input value={ag.name} onChange={e => {
+                                        const a = [...(config.competitionAgeGroups || [])];
+                                        a[idx].name = e.target.value;
+                                        updateConfig('competitionAgeGroups', a);
+                                        
+                                        // Auto-update registration form
+                                        const newOpts = [...a].map(x => x.name).filter(Boolean);
+                                        const form = [...(config.registrationForm || [])];
+                                        const ageField = form.find(f => f.label === "Age Category");
+                                        if (ageField) ageField.options = newOpts;
+                                        updateConfig('registrationForm', form);
+                                        
+                                    }} className="w-full p-2 text-sm border rounded-lg bg-white text-slate-900" placeholder="e.g. U-12" />
+                                </div>
+                                <div className="col-span-6 md:col-span-2">
+                                    <label className="text-[10px] font-bold uppercase text-slate-700">Min Age</label>
+                                    <input type="number" value={ag.minAge} onChange={e => {
+                                        const a = [...(config.competitionAgeGroups || [])];
+                                        a[idx].minAge = parseInt(e.target.value) || 0;
+                                        updateConfig('competitionAgeGroups', a);
+                                    }} className="w-full p-2 text-sm border rounded-lg bg-white text-slate-900" placeholder="0" />
+                                </div>
+                                <div className="col-span-6 md:col-span-2">
+                                    <label className="text-[10px] font-bold uppercase text-slate-700">Max Age</label>
+                                    <input type="number" value={ag.maxAge} onChange={e => {
+                                        const a = [...(config.competitionAgeGroups || [])];
+                                        a[idx].maxAge = parseInt(e.target.value) || 0;
+                                        updateConfig('competitionAgeGroups', a);
+                                    }} className="w-full p-2 text-sm border rounded-lg bg-white text-slate-900" placeholder="12" />
+                                </div>
+                                <div className="col-span-10 md:col-span-4">
+                                    <label className="text-[10px] font-bold uppercase text-slate-700">Distances (comma separated)</label>
+                                    <input value={ag.distances} onChange={e => {
+                                        const a = [...(config.competitionAgeGroups || [])];
+                                        a[idx].distances = e.target.value;
+                                        updateConfig('competitionAgeGroups', a);
+                                        
+                                        // Collect all unique distances to update distance dropdown
+                                        const allDistances = new Set();
+                                        a.forEach(grp => {
+                                            if (grp.distances) {
+                                                grp.distances.split(',').forEach(d => allDistances.add(d.trim()));
+                                            }
+                                        });
+                                        const form = [...(config.registrationForm || [])];
+                                        const distField = form.find(f => f.label === "Distance");
+                                        if (distField) distField.options = Array.from(allDistances).filter(Boolean);
+                                        updateConfig('registrationForm', form);
+                                        
+                                    }} className="w-full p-2 text-sm border rounded-lg bg-white text-slate-900" placeholder="25M, 50M" />
+                                </div>
+                                <div className="col-span-2 md:col-span-1 flex justify-end">
+                                    <button onClick={() => {
+                                        const a = [...(config.competitionAgeGroups || [])];
+                                        a.splice(idx, 1);
+                                        updateConfig('competitionAgeGroups', a);
+                                    }} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={18} /></button>
+                                </div>
                             </div>
                         ))}
+                    </div>
+
+                    {/* STROKES / EVENTS */}
+                    <div className="space-y-4 pt-6 border-t border-slate-100">
+                        <label className="text-[11px] font-bold uppercase text-slate-900">Events / Strokes (comma separated)</label>
+                        <input value={config.competitionStrokes} onChange={e => {
+                            updateConfig('competitionStrokes', e.target.value);
+                            
+                            // Auto-update registration form
+                            const options = e.target.value.split(/[,/&]/).map(s => s.trim()).filter(Boolean);
+                            const form = [...(config.registrationForm || [])];
+                            const strokeField = form.find(f => f.label === "Event/Stroke");
+                            if (strokeField) strokeField.options = options;
+                            updateConfig('registrationForm', form);
+                            
+                        }} className="w-full p-4 border rounded-xl text-sm bg-white text-slate-900" placeholder="FR, BR, BAK, FLY, IM, OPEN" />
                     </div>
 
                     <div className="pt-10 flex justify-between">
@@ -505,36 +617,36 @@ const CompetitionEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, is
                     <div className="space-y-4">
                         <h3 className="text-sm font-bold uppercase">Required Documents</h3>
                         {config.documents?.map((doc, idx) => (
-                            <div key={idx} className="flex gap-4 bg-slate-50 p-4 rounded-xl items-center">
+                            <div key={idx} className="flex gap-4 bg-slate-50 p-4 rounded-xl items-center border border-slate-100">
                                 <input value={doc.type} onChange={e => {
-                                    const d = [...config.documents];
+                                    const d = [...(config.documents || [])];
                                     d[idx].type = e.target.value;
                                     updateConfig('documents', d);
-                                }} className="flex-1 p-2 text-sm border rounded-lg" placeholder="Document Name (e.g. Aadhaar)" />
-                                <label className="flex items-center gap-2 text-xs font-bold">
+                                }} className="flex-1 p-2 text-sm border rounded-lg bg-white text-slate-900" placeholder="Document Name (e.g. Aadhaar)" />
+                                <label className="flex items-center gap-2 text-xs font-bold text-slate-700">
                                     <input type="checkbox" checked={doc.mandatory} onChange={e => {
-                                        const d = [...config.documents];
+                                        const d = [...(config.documents || [])];
                                         d[idx].mandatory = e.target.checked;
                                         updateConfig('documents', d);
-                                    }} /> Mandatory
+                                    }} className="w-4 h-4 rounded text-pink-500" /> Mandatory
                                 </label>
                                 <button onClick={() => {
-                                    const d = [...config.documents];
+                                    const d = [...(config.documents || [])];
                                     d.splice(idx, 1);
                                     updateConfig('documents', d);
                                 }} className="p-2 text-red-500"><Trash2 size={18} /></button>
                             </div>
                         ))}
                         <button onClick={() => {
-                            const d = [...config.documents];
+                            const d = [...(config.documents || [])];
                             d.push({ type: "", mandatory: false });
                             updateConfig('documents', d);
                         }} className="text-pink-500 text-[10px] font-bold uppercase">+ Add Document</button>
                     </div>
 
                     <div className="space-y-2 pt-6">
-                        <label className="text-[11px] font-bold uppercase">Competition Rules & Terms</label>
-                        <textarea value={config.rules} onChange={e => updateConfig('rules', e.target.value)} rows={5} className="w-full p-4 border rounded-xl text-sm" />
+                        <label className="text-[11px] font-bold uppercase text-slate-700">Competition Rules & Terms</label>
+                        <textarea value={config.rules} onChange={e => updateConfig('rules', e.target.value)} rows={5} className="w-full p-4 border rounded-xl text-sm bg-white text-slate-900" />
                     </div>
 
                     <div className="pt-10 flex justify-between">
