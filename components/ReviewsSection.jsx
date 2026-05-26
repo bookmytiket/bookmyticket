@@ -100,7 +100,8 @@ export function WriteReviewModal({ eventId, bookingId, onClose, onSubmit }) {
           booking_id: bookingId || null,
           rating: form.rating,
           title: form.title || null,
-          content: form.content
+          content: form.content,
+          user_id: user.id
         })
       });
       const data = await res.json();

@@ -1,19 +1,14 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { createClient } from '@supabase/supabase-js';
-import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 
 export async function POST(request) {
     try {
-        const supabase = createRouteHandlerClient({ cookies });
-        const { data: { session } } = await supabase.auth.getSession();
+        const body = await request.json();
+        const { event_id, booking_id, rating, title, content, user_id } = body;
 
-        if (!session) {
+        if (!user_id) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
-
-        const body = await request.json();
-        const { event_id, booking_id, rating, title, content } = body;
 
         if (!event_id || !rating || !content) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -26,7 +21,7 @@ export async function POST(request) {
         );
 
         const { error } = await supabaseAdmin.from('reviews').insert({
-            user_id: session.user.id,
+            user_id,
             event_id,
             booking_id: booking_id || null,
             rating,

@@ -569,6 +569,46 @@ export default function EventDetailScreen() {
             </RNView>
           )}
 
+          {/* Competition Specific Details */}
+          {dynamicConfig.competitionAgeGroups?.length > 0 && (
+            <RNView style={styles.section}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Competition Categories</Text>
+              
+              {dynamicConfig.competitionStrokes && (
+                <RNView style={[styles.categoryCardV3, { backgroundColor: colors.card, borderColor: colors.border, marginBottom: 12, padding: 16 }]}>
+                    <Text style={[styles.catV3Label, { color: colors.muted }]}>EVENTS / STROKES</Text>
+                    <Text style={{ color: colors.text, fontSize: 14, fontWeight: '700', marginTop: 4, lineHeight: 22 }}>
+                        {dynamicConfig.competitionStrokes}
+                    </Text>
+                </RNView>
+              )}
+
+              <RNView style={{ gap: 8 }}>
+                {dynamicConfig.competitionAgeGroups.map((ag: any, i: number) => (
+                  <RNView key={i} style={[styles.categoryCardV3, { backgroundColor: colors.card, borderColor: colors.border, padding: 16, marginBottom: 0 }]}>
+                    <RNView style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <RNView>
+                        <Text style={[styles.catV3Label, { color: colors.muted }]}>AGE GROUP</Text>
+                        <Text style={[styles.catV3Name, { color: colors.text }]}>{ag.name}</Text>
+                        <Text style={[styles.catV3Age, { color: colors.tint, marginTop: 2 }]}>
+                          {ag.minAge}-{ag.maxAge} Years
+                        </Text>
+                      </RNView>
+                      {ag.distances ? (
+                        <RNView style={{ alignItems: 'flex-end', flex: 1, paddingLeft: 20 }}>
+                           <Text style={[styles.catV3Label, { color: colors.muted, textAlign: 'right' }]}>DISTANCES</Text>
+                           <Text style={{ color: colors.text, fontSize: 12, fontWeight: '700', marginTop: 2, textAlign: 'right', flexWrap: 'wrap' }}>
+                             {ag.distances}
+                           </Text>
+                        </RNView>
+                      ) : null}
+                    </RNView>
+                  </RNView>
+                ))}
+              </RNView>
+            </RNView>
+          )}
+
           {/* Ticket Categories - Dropdown UI */}
           {(marathonCategories.length > 0 || dynamicConfig.categories?.length > 0) && (
             <RNView style={styles.section}>
@@ -641,7 +681,7 @@ export default function EventDetailScreen() {
                     
                     <RNView style={[styles.catV3Footer, { borderTopColor: colors.border + '50' }]}>
                        <Text style={{ fontSize: 10, fontWeight: '800', color: colors.muted }}>
-                         {(cat.slots_total || cat.total_slots || cat.slots || 0)} SLOTS AVAILABLE
+                         {(cat.slots_total || cat.total_slots || cat.slots || cat.totalSlots || 0)} SLOTS AVAILABLE
                        </Text>
                        <Pressable 
                         onPress={handleBook}
