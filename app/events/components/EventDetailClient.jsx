@@ -634,7 +634,11 @@ export default function EventDetailClient({ id }) {
                                     ) : (isTournament || isCompetition) ? (
                                         <div className="space-y-4">
                                             <button 
-                                                onClick={() => router.push('/events/book?id=' + id)}
+                                                onClick={() => {
+                                                    const bookUrl = `/events/book?id=${id}${selectedCatId ? `&catId=${selectedCatId}` : ''}`;
+                                                    if (!user) router.push(`/signin?redirect=${encodeURIComponent(bookUrl)}`);
+                                                    else router.push(bookUrl);
+                                                }}
                                                 className="w-full py-5 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-[24px] font-black uppercase tracking-widest text-[12px] shadow-2xl shadow-pink-500/40 hover:scale-[1.02] active:scale-95 transition-all"
                                             >
                                                 Register {isCompetition ? 'Now' : 'Team'}
