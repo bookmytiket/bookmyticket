@@ -194,6 +194,7 @@ export default function EventBookClient({ id }) {
 
     const isSeating = useMemo(() => {
         if (!event) return false;
+        if (event.type === 'Competition' || event.type === 'Competition Event' || event.type === 'Sports Event' || event.type === 'Marathon') return false;
         if (event.isFree) return false;
         if (event.event_type === 'general') return false;
         if (event.event_type === 'reserved') return true;
@@ -223,6 +224,30 @@ export default function EventBookClient({ id }) {
 
     const computedPackages = useMemo(() => {
         if (!event) return [];
+        
+        // 1. Check for relational Competition Events first (highest priority for Competitions)
+        if (isMarathon && rawEvent?.competition_events?.length > 0) {
+            return rawEvent.competition_events.map((c) => ({
+                id: c.id,
+                title: c.event_name,
+                price: Number(c.fee) || 0,
+                description: `Entry fee for ${c.event_name}. Distance: ${c.distance || 'N/A'}`,
+                features: ['Competition Entry', c.gender && c.gender !== 'All' ? `${c.gender} Only` : 'All Genders']
+            }));
+        }
+
+        // 2. Check for dynamic_config categories (for Marathon/Competition created before relational sync)
+        if (isMarathon && event.dynamic_config?.categories?.length > 0) {
+            return event.dynamic_config.categories.map((cat, i) => ({
+                id: cat.id || `comp_cat_${i}`,
+                title: cat.name || cat.title || 'Category',
+                price: cat.price || 0,
+                description: cat.description || `Standard entry for ${cat.name || 'this category'}.`,
+                features: cat.features || ['Competition Entry']
+            }));
+        }
+
+        // 3. Normal Seating/General Events
         if (seatingSectionsData && seatingSectionsData.length > 0) {
             return seatingSectionsData.map(section => ({
                 id: section.id,
@@ -245,8 +270,8 @@ export default function EventBookClient({ id }) {
                 };
             });
         }
-        if (event.seatCategories?.length > 0 || event.dynamic_config?.categories?.length > 0 || event.ticketTypes?.length > 0) {
-            return (event.seatCategories || event.dynamic_config?.categories || event.ticketTypes).map((cat, i) => ({
+        if (event.seatCategories?.length > 0 || event.ticketTypes?.length > 0) {
+            return (event.seatCategories || event.ticketTypes).map((cat, i) => ({
                 id: cat.id || `seat_cat_${i}`, // Note: Changed to match EventDetailClient
                 title: cat.name || cat.title || 'Category',
                 price: cat.price || 0,
