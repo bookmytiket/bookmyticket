@@ -91,15 +91,27 @@ export function WriteReviewModal({ eventId, bookingId, onClose, onSubmit }) {
     if (form.rating === 0) { setError("Please select a star rating"); return; }
     if (form.content.length < 20) { setError("Review must be at least 20 characters"); return; }
     setLoading(true); setError("");
-    const { error: err } = await supabase.from("reviews").insert({
-      user_id: user.id, event_id: eventId, booking_id: bookingId || null,
-      rating: form.rating, title: form.title || null, content: form.content,
-      is_verified: !!bookingId,
-    });
-    setLoading(false);
-    if (err) { setError(err.message); return; }
-    setDone(true);
-    onSubmit?.();
+    try {
+      const res = await fetch("/api/reviews/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          event_id: eventId,
+          booking_id: bookingId || null,
+          rating: form.rating,
+          title: form.title || null,
+          content: form.content
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to submit review");
+      setDone(true);
+      onSubmit?.();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
