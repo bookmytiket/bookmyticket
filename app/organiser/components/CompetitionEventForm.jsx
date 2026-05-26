@@ -178,10 +178,10 @@ const CompetitionEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, is
                 dynamic_config: {
                     ...(prev.dynamic_config || {}),
                     competitionType: 'Swimming Competition',
-                    organiser_name: "Real Sports Academy",
+                    organiser_name: "",
                     supportEmail: "",
-                    supportPhone: "9787286909, 9092856286",
-                    subtitle: "Tamilnadu Open State Level",
+                    supportPhone: "",
+                    subtitle: "",
                     categories: [
                         { id: 1, name: "Individual Event", price: 249, totalSlots: 500, description: "Entry fee for individual races" },
                         { id: 2, name: "Relay Event", price: 599, totalSlots: 100, description: "Entry fee for relay races" }
@@ -222,10 +222,10 @@ const CompetitionEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, is
     const config = {
         ...baseConfig,
         competitionType: baseConfig.competitionType || 'Swimming Competition',
-        organiser_name: baseConfig.organiser_name || "Real Sports Academy",
+        organiser_name: baseConfig.organiser_name || "",
         supportEmail: baseConfig.supportEmail || "",
-        supportPhone: baseConfig.supportPhone || "9787286909, 9092856286",
-        subtitle: baseConfig.subtitle || "Tamilnadu Open State Level",
+        supportPhone: baseConfig.supportPhone || "",
+        subtitle: baseConfig.subtitle || "",
         categories: baseConfig.categories || [
             { id: 1, name: "Individual Event", price: 249, totalSlots: 500, description: "Entry fee for individual races" },
             { id: 2, name: "Relay Event", price: 599, totalSlots: 100, description: "Entry fee for relay races" }

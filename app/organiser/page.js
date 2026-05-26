@@ -6098,7 +6098,12 @@ function OrganiserPanel() {
                 </div>
 
                 <div
-                  onClick={() => setActiveTab("post_event")}
+                  onClick={() => {
+                    setEditingEvent(null);
+                    setPostEvent(getInitialPostEvent());
+                    setAddEventStep("select_type");
+                    setActiveTab("post_event");
+                  }}
                   className="relative overflow-hidden bg-gradient-to-br from-pink-500 to-rose-600 p-8 rounded-[2.5rem] text-white cursor-pointer group hover:shadow-2xl hover:shadow-rose-500/30 transition-all duration-500"
                 >
                   <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform duration-700">
