@@ -218,7 +218,7 @@ export default function EventBookClient({ id }) {
         `).eq('seating_layouts.event_id', id)
     , [id]);
 
-    const isMarathon = event?.type === 'Marathon';
+    const isMarathon = event?.type === 'Marathon' || event?.type === 'Competition' || event?.type === 'Competition Event' || event?.type === 'Sports Event';
     const isTournament = event?.type === 'Tournament' || event?.type === 'Tournament Event';
 
     const computedPackages = useMemo(() => {
@@ -781,7 +781,7 @@ export default function EventBookClient({ id }) {
                                     className="bg-white rounded-[40px] p-8 md:p-12 border border-slate-100 shadow-sm space-y-8"
                                 >
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                        {(event.dynamic_config?.form_fields || []).map(field => (
+                                        {(event.dynamic_config?.form_fields || event.dynamic_config?.registrationForm || []).map(field => (
                                             <div key={field.id}>
                                                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 pl-1">
                                                     {field.label} {field.required && <span className="text-pink-500">*</span>}
@@ -803,7 +803,7 @@ export default function EventBookClient({ id }) {
                                                 )}
                                             </div>
                                         ))}
-                                        {(!event.dynamic_config?.form_fields || event.dynamic_config.form_fields.length === 0) && (
+                                        {(!event.dynamic_config?.form_fields && !event.dynamic_config?.registrationForm) && (
                                             <div className="col-span-2 text-center py-12">
                                                 <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">No additional details required</p>
                                             </div>

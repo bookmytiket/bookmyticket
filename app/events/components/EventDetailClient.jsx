@@ -107,13 +107,14 @@ export default function EventDetailClient({ id }) {
     // Fetch Marathon/Tournament Specifics
     const isMarathon = rawEvent?.type === 'Marathon';
     const isTournament = rawEvent?.type === 'Tournament' || rawEvent?.type === 'Tournament Event';
+    const isCompetition = rawEvent?.type === 'Competition' || rawEvent?.type === 'Competition Event' || rawEvent?.type === 'Sports Event';
     
     // Extract tournament details directly from server-fetched payload to bypass RLS issues for anon visitors
-    const tournamentDetails = rawEvent?.tournament_events?.[0] || null;
+    const tournamentDetails = rawEvent?.tournament_events?.[0] || rawEvent?.sports_events?.[0] || null;
 
     const { data: registeredTeams } = useSupabaseQuery('tournament_teams', (q) => 
         q.select('*').eq('tournament_event_id', tournamentDetails?.id || id)
-    , [tournamentDetails?.id, id], { enabled: isTournament, refreshOn: ['tournament_teams'] });
+    , [tournamentDetails?.id, id], { enabled: isTournament || isCompetition, refreshOn: ['tournament_teams'] });
 
     const event = useMemo(() => {
         if (!rawEvent) return null;
@@ -209,6 +210,14 @@ export default function EventDetailClient({ id }) {
                 ageGroup: c.age_group
             }));
         }
+        if (isCompetition && rawEvent?.competition_events?.length > 0) {
+            return rawEvent.competition_events.map((e) => ({
+                id: e.id,
+                name: `${e.event_name} - ${e.distance || ''}`,
+                price: Number(e.fee) || 0,
+                distance: e.distance
+            }));
+        }
         if (isTournament) {
             if (rawEvent?.tournament_categories?.length > 0) {
                 return rawEvent.tournament_categories.map(c => ({
@@ -248,7 +257,7 @@ export default function EventDetailClient({ id }) {
         }
 
         return parsedConfig?.categories || [];
-    }, [isMarathon, marathonCategories, isTournament, tournamentDetails, event, parsedConfig?.categories, seatingSectionsData, rawEvent]);
+    }, [isMarathon, marathonCategories, isTournament, isCompetition, tournamentDetails, event, parsedConfig?.categories, seatingSectionsData, rawEvent]);
 
     const selectedCat = useMemo(() => {
         if (categories.length === 0) return null;
@@ -335,7 +344,7 @@ export default function EventDetailClient({ id }) {
                     {/* Main Content */}
                     <div className="lg:col-span-8 flex flex-col gap-6">
                         <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm p-6 md:p-10">
-                            {isTournament && tournamentDetails && (
+                            {(isTournament || isCompetition) && tournamentDetails && (
                                 <div className="mb-12 space-y-8">
                                     <div className="p-8 bg-slate-900 rounded-[3rem] text-white border border-white/5 relative overflow-hidden group">
                                         <div className="absolute top-0 right-0 w-64 h-64 bg-pink-500/10 blur-[100px] -translate-y-1/2 translate-x-1/2" />
@@ -537,11 +546,11 @@ export default function EventDetailClient({ id }) {
                                         Register Another
                                     </button>
                                     <div className="pt-4 border-t border-slate-50 flex flex-col gap-2">
-                                        <p className="text-[10px] font-bold text-slate-400 uppercase text-center italic">Want to register another {isTournament ? 'team' : 'ticket'}?</p>
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase text-center italic">Want to register another {isTournament || isCompetition ? 'team/participant' : 'ticket'}?</p>
                                         <button 
                                             onClick={() => {
                                                 // Temporarily hide existing booking to allow new registration
-                                                const url = `/events/book?id=${id}${isTournament ? '' : ''}`;
+                                                const url = `/events/book?id=${id}`;
                                                 router.push(url);
                                             }}
                                             className="text-[11px] font-black text-pink-500 uppercase tracking-widest hover:underline text-center"
@@ -559,7 +568,7 @@ export default function EventDetailClient({ id }) {
                                                 ₹{displayPrice}
                                             </span>
                                             <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-                                                /{isTournament ? 'team' : 'person'}
+                                                /{isTournament || isCompetition ? (isCompetition ? 'event' : 'team') : 'person'}
                                             </span>
                                         </div>
                                     </div>
@@ -622,13 +631,13 @@ export default function EventDetailClient({ id }) {
                                             <ShieldCheck size={16} className="text-rose-500" />
                                             <p className="text-[10px] font-bold text-rose-600 uppercase tracking-widest">Closed</p>
                                         </div>
-                                    ) : isTournament ? (
+                                    ) : (isTournament || isCompetition) ? (
                                         <div className="space-y-4">
                                             <button 
                                                 onClick={() => router.push('/events/book?id=' + id)}
                                                 className="w-full py-5 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-[24px] font-black uppercase tracking-widest text-[12px] shadow-2xl shadow-pink-500/40 hover:scale-[1.02] active:scale-95 transition-all"
                                             >
-                                                Register Team
+                                                Register {isCompetition ? 'Now' : 'Team'}
                                             </button>
                                             {event.dynamic_config?.audienceFreeAccess && (
                                                 <button 
