@@ -86,15 +86,16 @@ export default function BookingAnalytics({ events = [], bookings = [], theme = '
             return {
                 id: b.id,
                 date: new Date(b.created_at).toLocaleDateString(),
-                firstName: details.firstName || details.name?.split(' ')[0] || 'N/A',
-                lastName: details.lastName || details.name?.split(' ').slice(1).join(' ') || 'N/A',
-                email: details.email || b.user_email || 'N/A',
-                phone: details.phone || details.contact || details.mobile || 'N/A',
+                firstName: details.firstName || details['Full Name'] || details.name?.split(' ')[0] || 'N/A',
+                lastName: details.lastName || details.name?.split(' ').slice(1).join(' ') || '',
+                email: details.email || details['Email'] || b.user_email || 'N/A',
+                phone: details.phone || details['Mobile'] || details.contact || details.mobile || 'N/A',
                 km: details.km || details.distance || details.category || 'N/A',
-                tshirtSize: details.tshirtSize || details.tshirt || details.size || 'N/A',
-                gender: details.gender || 'N/A',
+                tshirtSize: details.tshirtSize || details['T-Shirt Size'] || details.tshirt || details.size || 'N/A',
+                gender: details.gender || details['Gender'] || 'N/A',
                 status: b.status,
-                amount: Number(b.total_price || b.total_amount || 0)
+                amount: Number(b.total_price || b.total_amount || 0),
+                rawDetails: details
             };
         });
 
@@ -196,20 +197,32 @@ export default function BookingAnalytics({ events = [], bookings = [], theme = '
     };
 
     const handleExportCSV = () => {
-        const headers = ["Order ID", "Date", "First Name", "Last Name", "Email ID", "Contact Number", "KM/Category", "Tshirt Size", "Gender", "Payment Status", "Amount"];
-        const rows = stats.detailedReport.map(r => [
-            r.id,
-            r.date,
-            r.firstName,
-            r.lastName,
-            r.email,
-            `"${r.phone}"`, // Quote phone to prevent Excel truncation
-            r.km,
-            r.tshirtSize,
-            r.gender,
-            r.status,
-            r.amount
-        ]);
+        const allKeys = new Set();
+        stats.detailedReport.forEach(r => {
+            if (r.rawDetails) {
+                Object.keys(r.rawDetails).forEach(k => {
+                    if (!['applied_campaign_id', 'applied_campaign_code', 'meeting_url'].includes(k)) {
+                        allKeys.add(k);
+                    }
+                });
+            }
+        });
+        const dynamicHeaders = Array.from(allKeys);
+
+        const headers = ["Order ID", "Date", "Status", "Amount", ...dynamicHeaders.map(k => k.charAt(0).toUpperCase() + k.slice(1))];
+        const rows = stats.detailedReport.map(r => {
+            const rowData = [
+                r.id,
+                r.date,
+                r.status,
+                r.amount
+            ];
+            dynamicHeaders.forEach(k => {
+                let val = r.rawDetails?.[k] || '';
+                rowData.push(`"${val}"`);
+            });
+            return rowData;
+        });
 
         const csvContent = "data:text/csv;charset=utf-8," 
             + headers.join(",") + "\n"
@@ -237,16 +250,15 @@ export default function BookingAnalytics({ events = [], bookings = [], theme = '
 
         doc.autoTable({
             startY: 45,
-            head: [["ID", "Name", "Email", "Phone", "KM", "Size", "Gender", "Status"]],
+            head: [["ID", "Name", "Email", "Phone", "KM/Cat", "Status", "Amount"]],
             body: stats.detailedReport.map(r => [
                 r.id.slice(-6).toUpperCase(),
                 `${r.firstName} ${r.lastName}`,
                 r.email,
                 r.phone,
                 r.km,
-                r.tshirtSize,
-                r.gender,
-                r.status
+                r.status,
+                r.amount
             ]),
             theme: 'striped',
             headStyles: { fillColor: [59, 130, 246], fontSize: 9 },
@@ -256,6 +268,8 @@ export default function BookingAnalytics({ events = [], bookings = [], theme = '
 
         doc.save(`registrations-${Date.now()}.pdf`);
     };
+
+    const [expandedRow, setExpandedRow] = useState(null);
 
     const t = {
         cardBg: isDark ? 'rgba(30, 41, 59, 0.4)' : '#fff',
@@ -503,44 +517,78 @@ export default function BookingAnalytics({ events = [], bookings = [], theme = '
                                         <th style={{ padding: '16px 24px', fontSize: '12px', fontWeight: 800, color: t.textSub, textTransform: 'uppercase' }}>Details</th>
                                         <th style={{ padding: '16px 24px', fontSize: '12px', fontWeight: 800, color: t.textSub, textTransform: 'uppercase' }}>Category/KM</th>
                                         <th style={{ padding: '16px 24px', fontSize: '12px', fontWeight: 800, color: t.textSub, textTransform: 'uppercase' }}>Status</th>
+                                        <th style={{ padding: '16px 24px', fontSize: '12px', fontWeight: 800, color: t.textSub, textTransform: 'uppercase' }}>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {stats.detailedReport.map((row, i) => (
-                                        <tr key={i} style={{ borderBottom: `1px solid ${t.border}`, transition: '0.2s' }}>
-                                            <td style={{ padding: '20px 24px' }}>
-                                                <div style={{ fontSize: '14px', fontWeight: 800, color: t.textMain }}>{row.firstName} {row.lastName}</div>
-                                                <div style={{ fontSize: '11px', color: t.textSub, marginTop: '2px' }}>Order: {row.id.slice(-8).toUpperCase()}</div>
-                                            </td>
-                                            <td style={{ padding: '20px 24px' }}>
-                                                <div style={{ fontSize: '13px', fontWeight: 600, color: t.textMain }}>{row.email}</div>
-                                                <div style={{ fontSize: '12px', color: t.textSub, marginTop: '2px' }}>{row.phone}</div>
-                                            </td>
-                                            <td style={{ padding: '20px 24px' }}>
-                                                <div style={{ display: 'flex', gap: '8px' }}>
-                                                    <span style={{ fontSize: '11px', fontWeight: 800, color: '#8b5cf6', background: '#8b5cf615', padding: '4px 8px', borderRadius: '6px' }}>Size: {row.tshirtSize}</span>
-                                                    <span style={{ fontSize: '11px', fontWeight: 800, color: '#ec4899', background: '#ec489915', padding: '4px 8px', borderRadius: '6px' }}>{row.gender}</span>
-                                                </div>
-                                            </td>
-                                            <td style={{ padding: '20px 24px' }}>
-                                                <div style={{ fontSize: '14px', fontWeight: 800, color: '#3b82f6' }}>{row.km}</div>
-                                                <div style={{ fontSize: '11px', color: t.textSub, marginTop: '2px' }}>{row.date}</div>
-                                            </td>
-                                            <td style={{ padding: '20px 24px' }}>
-                                                <span style={{ 
-                                                    fontSize: '11px', 
-                                                    fontWeight: 900, 
-                                                    padding: '6px 12px', 
-                                                    borderRadius: '100px',
-                                                    background: row.status === 'Confirmed' ? '#dcfce7' : '#fee2e2',
-                                                    color: row.status === 'Confirmed' ? '#16a34a' : '#ef4444',
-                                                    textTransform: 'uppercase',
-                                                    letterSpacing: '0.5px'
-                                                }}>
-                                                    {row.status}
-                                                </span>
-                                            </td>
-                                        </tr>
+                                        <React.Fragment key={i}>
+                                            <tr style={{ borderBottom: `1px solid ${t.border}`, transition: '0.2s' }}>
+                                                <td style={{ padding: '20px 24px' }}>
+                                                    <div style={{ fontSize: '14px', fontWeight: 800, color: t.textMain }}>{row.firstName} {row.lastName}</div>
+                                                    <div style={{ fontSize: '11px', color: t.textSub, marginTop: '2px' }}>Order: {row.id.slice(-8).toUpperCase()}</div>
+                                                </td>
+                                                <td style={{ padding: '20px 24px' }}>
+                                                    <div style={{ fontSize: '13px', fontWeight: 600, color: t.textMain }}>{row.email}</div>
+                                                    <div style={{ fontSize: '12px', color: t.textSub, marginTop: '2px' }}>{row.phone}</div>
+                                                </td>
+                                                <td style={{ padding: '20px 24px' }}>
+                                                    <div style={{ display: 'flex', gap: '8px' }}>
+                                                        <span style={{ fontSize: '11px', fontWeight: 800, color: '#8b5cf6', background: '#8b5cf615', padding: '4px 8px', borderRadius: '6px' }}>Size: {row.tshirtSize}</span>
+                                                        <span style={{ fontSize: '11px', fontWeight: 800, color: '#ec4899', background: '#ec489915', padding: '4px 8px', borderRadius: '6px' }}>{row.gender}</span>
+                                                    </div>
+                                                </td>
+                                                <td style={{ padding: '20px 24px' }}>
+                                                    <div style={{ fontSize: '14px', fontWeight: 800, color: '#3b82f6' }}>{row.km}</div>
+                                                    <div style={{ fontSize: '11px', color: t.textSub, marginTop: '2px' }}>{row.date}</div>
+                                                </td>
+                                                <td style={{ padding: '20px 24px' }}>
+                                                    <span style={{ 
+                                                        fontSize: '11px', 
+                                                        fontWeight: 900, 
+                                                        padding: '6px 12px', 
+                                                        borderRadius: '100px',
+                                                        background: row.status === 'Confirmed' ? '#dcfce7' : '#fee2e2',
+                                                        color: row.status === 'Confirmed' ? '#16a34a' : '#ef4444',
+                                                        textTransform: 'uppercase',
+                                                        letterSpacing: '0.5px'
+                                                    }}>
+                                                        {row.status}
+                                                    </span>
+                                                </td>
+                                                <td style={{ padding: '20px 24px' }}>
+                                                    <button 
+                                                        onClick={() => setExpandedRow(expandedRow === row.id ? null : row.id)} 
+                                                        style={{
+                                                            padding: '6px 12px', 
+                                                            borderRadius: '8px', 
+                                                            background: isDark ? 'rgba(30, 41, 59, 0.8)' : '#f1f5f9', 
+                                                            border: `1px solid ${t.border}`, 
+                                                            fontSize: '11px', 
+                                                            fontWeight: 800, 
+                                                            cursor: 'pointer', 
+                                                            color: t.textMain
+                                                        }}
+                                                    >
+                                                        {expandedRow === row.id ? 'Hide Details' : 'View Data'}
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                            {expandedRow === row.id && (
+                                                <tr style={{ background: isDark ? 'rgba(30, 41, 59, 0.4)' : '#f8fafc' }}>
+                                                    <td colSpan="6" style={{ padding: '20px 24px', borderBottom: `1px solid ${t.border}` }}>
+                                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '16px' }}>
+                                                            {Object.entries(row.rawDetails || {}).filter(([k]) => !['applied_campaign_id', 'applied_campaign_code', 'meeting_url'].includes(k)).map(([key, value]) => (
+                                                                <div key={key}>
+                                                                    <div style={{ fontSize: '10px', fontWeight: 800, color: t.textSub, textTransform: 'uppercase', marginBottom: '4px' }}>{key}</div>
+                                                                    <div style={{ fontSize: '13px', fontWeight: 600, color: t.textMain }}>{value || 'N/A'}</div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </React.Fragment>
                                     ))}
                                 </tbody>
                             </table>
