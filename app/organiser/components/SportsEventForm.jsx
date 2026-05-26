@@ -127,9 +127,7 @@ const SportsEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEditi
 
     const sportModes = [
         { id: 'Tournament', label: 'Tournament', desc: 'League or Knockout matches', icon: Trophy, color: 'orange' },
-        { id: 'Marathon', label: 'Marathon', desc: 'Running & Endurance races', icon: Footprints, color: 'blue' },
-        { id: 'Coaching', label: 'Academy/Camp', desc: 'Training & Skill workshops', icon: GraduationCap, color: 'emerald' },
-        { id: 'E-Sports', label: 'E-Sports', desc: 'Gaming & Digital tournaments', icon: Monitor, color: 'indigo' }
+        { id: 'Coaching', label: 'Academy/Camp', desc: 'Training & Skill workshops', icon: GraduationCap, color: 'emerald' }
     ];
 
     return (
@@ -168,38 +166,14 @@ const SportsEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEditi
                             <Trophy size={32} strokeWidth={1.5} />
                         </div>
                         <div>
-                            <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter italic leading-none">Sporting Format</h2>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">Select the blueprint for your competition</p>
+                            <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter italic leading-none">Tournament Details</h2>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">Enter the basic details for your {postEvent.sportType} event</p>
                         </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {sportModes.map((mode) => (
-                            <button
-                                key={mode.id}
-                                onClick={() => setPostEvent(p => ({ ...p, sportType: mode.id }))}
-                                className={`flex items-start gap-6 p-8 rounded-[2.5rem] border-2 text-left transition-all duration-500 ${
-                                    postEvent.sportType === mode.id 
-                                    ? 'bg-orange-50 border-orange-200 shadow-2xl shadow-orange-500/10 scale-[1.02]' 
-                                    : 'bg-slate-50/50 border-slate-100 grayscale hover:grayscale-0 hover:border-orange-100'
-                                }`}
-                            >
-                                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 ${
-                                    postEvent.sportType === mode.id ? 'bg-orange-500 text-white' : 'bg-white text-slate-400 shadow-sm'
-                                }`}>
-                                    <mode.icon size={28} strokeWidth={1.5} />
-                                </div>
-                                <div className="space-y-1">
-                                    <span className="block text-[11px] font-black uppercase tracking-widest text-slate-900">{mode.label}</span>
-                                    <span className="block text-[9px] font-bold text-slate-400 uppercase leading-relaxed">{mode.desc}</span>
-                                </div>
-                            </button>
-                        ))}
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-10 pt-6">
                         {renderInput("Event Name*", postEvent.title, (v) => setPostEvent(p => ({ ...p, title: v })), "text", "e.g. Pro Cricket League 2026", true)}
-                        {renderInput("Organised By (Name)", postEvent.organiser_name, (v) => setPostEvent(p => ({ ...p, organiser_name: v })), "text", "e.g. Ticket9 Partner")}
+                        {renderInput("Organised By (Name)", postEvent.organiser_name, (v) => setPostEvent(p => ({ ...p, organiser_name: v })), "text", "e.g. Partner Name")}
                         {renderInput("Sport Name*", postEvent.sportName, (v) => setPostEvent(p => ({ ...p, sportName: v })), "text", "e.g. Cricket, Football")}
                         {renderInput("Age Category", postEvent.ageGroup, (v) => setPostEvent(p => ({ ...p, ageGroup: v })), "text", "e.g. U-19, Open")}
 

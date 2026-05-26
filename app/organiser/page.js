@@ -32,6 +32,7 @@ import { useConfirm } from "@/context/ConfirmContext";
 import { motion, AnimatePresence } from "framer-motion";
 import SportsEventForm from "./components/SportsEventForm";
 import UniversalEventForm from "./components/UniversalEventForm";
+import CompetitionEventForm from "./components/CompetitionEventForm";
 import PhysicalEventForm from "./components/PhysicalEventForm";
 import UnifiedEventForm from "./components/UnifiedEventForm";
 import VirtualEventForm from "./components/VirtualEventForm";
@@ -2959,6 +2960,27 @@ function OrganiserPanel() {
                 await supabase.from("marathon_config").upsert(marathonPayload);
               }
 
+              const isCompetition = ["Competition", "Competition Event", "Marathon", "E-Sports"].includes(postEvent.type);
+              if (isCompetition) {
+                try {
+                  const dc = postEvent.dynamic_config || {};
+                  if (dc.competitionCategories?.length > 0) {
+                    await supabase.from("competition_categories").delete().eq("event_id", editingEvent.id);
+                    await supabase.from("competition_categories").insert(dc.competitionCategories.map(c => ({
+                      event_id: editingEvent.id, category_name: c.name, min_age: c.minAge, max_age: c.maxAge, gender: c.gender
+                    })));
+                  }
+                  if (dc.competitionEvents?.length > 0) {
+                    await supabase.from("competition_events").delete().eq("event_id", editingEvent.id);
+                    await supabase.from("competition_events").insert(dc.competitionEvents.map(e => ({
+                      event_id: editingEvent.id, event_name: e.name, distance: e.distance, fee: e.fee, gender: e.gender
+                    })));
+                  }
+                } catch (e) {
+                  console.error("Competition sync failed:", e);
+                }
+              }
+
               // Sync Categories
               if (postEvent.categories?.length > 0) {
                 await supabase
@@ -3163,6 +3185,25 @@ function OrganiserPanel() {
               });
             } catch (err) {
               console.error("Marathon sync failed:", err);
+            }
+          }
+
+          const isCompetition = ["Competition", "Competition Event", "Marathon", "E-Sports"].includes(postEvent.type);
+          if (isCompetition && newEvent?.id) {
+            try {
+              const dc = postEvent.dynamic_config || {};
+              if (dc.competitionCategories?.length > 0) {
+                await supabase.from("competition_categories").insert(dc.competitionCategories.map(c => ({
+                  event_id: newEvent.id, category_name: c.name, min_age: c.minAge, max_age: c.maxAge, gender: c.gender
+                })));
+              }
+              if (dc.competitionEvents?.length > 0) {
+                await supabase.from("competition_events").insert(dc.competitionEvents.map(e => ({
+                  event_id: newEvent.id, event_name: e.name, distance: e.distance, fee: e.fee, gender: e.gender
+                })));
+              }
+            } catch (err) {
+              console.error("Competition sync failed:", err);
             }
           }
 
@@ -7262,7 +7303,6 @@ function OrganiserPanel() {
               </div>
             );
           }
-
           if (addEventStep === "sports_type") {
             const sportsTypes = [
               {
@@ -7287,11 +7327,11 @@ function OrganiserPanel() {
                 color: "from-purple-500 to-pink-600",
               },
               {
-                id: "E-Sports",
-                label: "E-Sports",
-                sub: "Digital Competition",
-                icon: Monitor,
-                color: "from-indigo-600 to-purple-700",
+                id: "Competition",
+                label: "Competition",
+                sub: "Swimming, Athletics & Races",
+                icon: Goal,
+                color: "from-teal-500 to-emerald-600",
               },
             ];
 
@@ -7314,13 +7354,24 @@ function OrganiserPanel() {
                       key={st.id}
                       onClick={() => {
                         if (st.id === "Marathon") {
-                          setActiveTab("marathon_publish");
-                          setAddEventStep("select_type");
+                          setPostEvent((pe) => ({
+                            ...pe,
+                            type: "Marathon",
+                            sportType: "Marathon",
+                          }));
+                          setAddEventStep("form");
                         } else if (st.id === "Tournament") {
                           setPostEvent((pe) => ({
                             ...pe,
                             type: "Tournament",
                             sportType: "Tournament",
+                          }));
+                          setAddEventStep("form");
+                        } else if (st.id === "Competition") {
+                          setPostEvent((pe) => ({
+                            ...pe,
+                            type: "Competition",
+                            sportType: "Competition",
                           }));
                           setAddEventStep("form");
                         } else {
@@ -7423,6 +7474,40 @@ function OrganiserPanel() {
                   }}
                   onPublish={publishSeatEvent}
                   isEditing={!!editingEvent}
+                />
+              );
+            }
+            if (
+              postEvent.type === "Competition" ||
+              postEvent.type === "Competition Event" ||
+              postEvent.type === "E-Sports"
+            ) {
+              return (
+                <CompetitionEventForm
+                  postEvent={postEvent}
+                  setPostEvent={setPostEvent}
+                  onCancel={() => {
+                    setPostEvent(getInitialPostEvent());
+                    setAddEventStep("select_type");
+                  }}
+                  onPublish={publishSeatEvent}
+                  isEditing={!!editingEvent}
+                />
+              );
+            }
+            if (
+              postEvent.type === "Marathon"
+            ) {
+              return (
+                <MarathonEventForm
+                  marathonId={editingEvent?.id}
+                  onCancel={() => {
+                    setPostEvent(getInitialPostEvent());
+                    setAddEventStep("select_type");
+                  }}
+                  onPublish={() => {
+                    setAddEventStep("success");
+                  }}
                 />
               );
             }

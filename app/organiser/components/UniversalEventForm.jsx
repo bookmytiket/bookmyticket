@@ -228,22 +228,24 @@ const RegistrationFieldItem = ({ field, idx, config, updateConfig }) => (
                         updateConfig('registrationForm', newFields);
                     }}
                 />
-                <select 
-                    className="bg-transparent text-[10px] font-bold text-slate-800 uppercase tracking-widest focus:outline-none"
-                    value={field.type}
-                    onChange={e => {
-                        const newFields = [...config.registrationForm];
-                        newFields[idx].type = e.target.value;
-                        updateConfig('registrationForm', newFields);
-                    }}
-                >
-                    <option value="text">Text Input</option>
-                    <option value="number">Number</option>
-                    <option value="email">Email</option>
-                    <option value="tel">Phone</option>
-                    <option value="date">Date</option>
-                    <option value="select">Dropdown</option>
-                </select>
+                <div className="relative z-50 min-w-[150px]">
+                    <CustomSelect 
+                        value={field.type}
+                        onChange={val => {
+                            const newFields = [...config.registrationForm];
+                            newFields[idx].type = val;
+                            updateConfig('registrationForm', newFields);
+                        }}
+                        options={[
+                            { label: "Text Input", value: "text" },
+                            { label: "Number", value: "number" },
+                            { label: "Email", value: "email" },
+                            { label: "Phone", value: "tel" },
+                            { label: "Date", value: "date" },
+                            { label: "Dropdown", value: "select" }
+                        ]}
+                    />
+                </div>
                 <div className="flex items-center gap-2">
                     <button 
                         onClick={() => {
@@ -582,7 +584,7 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                             options={["Open to All", "Tamil Nadu Only", "Students Only", "Corporate Only", "Invite Only"]}
                             onChange={(v) => updateConfig('basicInfo', { ...config.basicInfo, eligibility: v })}
                         />
-                        {renderInput("Organizer Name", config.organiser_name, (v) => updateConfig('organiser_name', v), "text", "e.g., Ticket9 Partner")}
+                        {renderInput("Organizer Name", config.organiser_name, (v) => updateConfig('organiser_name', v), "text", "e.g., Partner Name")}
                         {renderInput("Organizer Contact", config.basicInfo.organizerContact, (v) => updateConfig('basicInfo', { ...config.basicInfo, organizerContact: v }), "text", "Phone or Email")}
                     </div>
 

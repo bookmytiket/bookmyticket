@@ -73,7 +73,10 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
         support_number: "",
         terms: "",
         organiser_name: "",
-        status: "Draft"
+        status: "Draft",
+        bulk_discount_percent: 0,
+        min_bulk_tickets: 5,
+        ticket_discount_percent: 0
     });
 
     const [faqs, setFaqs] = useState([
@@ -216,7 +219,10 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
                 support_number: source.support_number || "",
                 terms: source.terms || dynCfg.terms || "",
                 organiser_name: dynCfg.organiser_name || "",
-                status: source.status || "Draft"
+                status: source.status || "Draft",
+                bulk_discount_percent: dynCfg.discounts?.bulk_percent || 0,
+                min_bulk_tickets: dynCfg.discounts?.min_bulk_tickets || 5,
+                ticket_discount_percent: dynCfg.discounts?.ticket_percent || 0
             });
 
             // ── Fetch categories (handles both FK column names for backward compatibility) ────────
@@ -402,6 +408,11 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
                     reg_dates: {
                         start: eventData.reg_start_date,
                         end: eventData.reg_end_date
+                    },
+                    discounts: {
+                        bulk_percent: Number(eventData.bulk_discount_percent) || 0,
+                        min_bulk_tickets: Number(eventData.min_bulk_tickets) || 5,
+                        ticket_percent: Number(eventData.ticket_discount_percent) || 0
                     },
                     communication: {
                         whatsapp: eventData.whatsapp_link,
@@ -691,7 +702,7 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
                             <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-widest mb-2 pl-1">Organised By (Name)</label>
                             <input 
                                 className="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl text-sm font-black text-slate-900 placeholder:text-slate-400"
-                                placeholder="e.g. Ticket9 Partner"
+                                placeholder="e.g. Partner Name"
                                 value={eventData.organiser_name}
                                 onChange={e => setEventData(p => ({ ...p, organiser_name: e.target.value }))}
                             />
@@ -864,6 +875,42 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
                             </div>
                         </div>
 
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div>
+                                <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-widest mb-2 pl-1">Ticket Discount (%)</label>
+                                <input 
+                                    type="number"
+                                    className="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl text-sm font-black text-slate-900 placeholder:text-slate-400"
+                                    placeholder="e.g. 10"
+                                    value={eventData.ticket_discount_percent}
+                                    onChange={e => setEventData(p => ({ ...p, ticket_discount_percent: e.target.value }))}
+                                />
+                                <p className="text-[9px] text-slate-400 font-bold uppercase mt-1 pl-1">General flat discount applied to tickets.</p>
+                            </div>
+                            <div>
+                                <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-widest mb-2 pl-1">Bulk Booking Discount (%)</label>
+                                <input 
+                                    type="number"
+                                    className="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl text-sm font-black text-slate-900 placeholder:text-slate-400"
+                                    placeholder="e.g. 15"
+                                    value={eventData.bulk_discount_percent}
+                                    onChange={e => setEventData(p => ({ ...p, bulk_discount_percent: e.target.value }))}
+                                />
+                                <p className="text-[9px] text-slate-400 font-bold uppercase mt-1 pl-1">Discount applied for group bookings.</p>
+                            </div>
+                            <div>
+                                <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-widest mb-2 pl-1">Min Tickets for Bulk</label>
+                                <input 
+                                    type="number"
+                                    className="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl text-sm font-black text-slate-900 placeholder:text-slate-400"
+                                    placeholder="e.g. 5"
+                                    value={eventData.min_bulk_tickets}
+                                    onChange={e => setEventData(p => ({ ...p, min_bulk_tickets: e.target.value }))}
+                                />
+                                <p className="text-[9px] text-slate-400 font-bold uppercase mt-1 pl-1">Minimum count to trigger bulk discount.</p>
+                            </div>
+                        </div>
+
                         <div className="mt-8">
                             <div className="flex items-center justify-between mb-4">
                                 <h3 className="text-sm font-black text-slate-900 uppercase">Benefits & Sponsors</h3>
@@ -924,20 +971,17 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
                                                                     setSponsors(ns);
                                                                 }}
                                                             />
-                                                            <select 
-                                                                className="w-full bg-transparent text-[10px] text-slate-500 font-bold uppercase mt-1 focus:outline-none"
-                                                                value={s.sponsor_type}
-                                                                onChange={e => {
-                                                                    const ns = [...sponsors];
-                                                                    ns[idx].sponsor_type = e.target.value;
-                                                                    setSponsors(ns);
-                                                                }}
-                                                            >
-                                                                <option>Title Sponsor</option>
-                                                                <option>Powered By</option>
-                                                                <option>Associate Partner</option>
-                                                                <option>Partner</option>
-                                                            </select>
+                                                            <div className="mt-2 relative z-50 min-w-[150px]">
+                                                                <CustomSelect 
+                                                                    value={s.sponsor_type}
+                                                                    onChange={val => {
+                                                                        const ns = [...sponsors];
+                                                                        ns[idx].sponsor_type = val;
+                                                                        setSponsors(ns);
+                                                                    }}
+                                                                    options={["Title Sponsor", "Powered By", "Associate Partner", "Partner"]}
+                                                                />
+                                                            </div>
                                                         </div>
                                                     </div>
                                                     <div className="relative">
@@ -1019,18 +1063,20 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
                                             }}
                                         />
                                         <div className="flex items-center gap-4">
-                                            <select 
-                                                className="bg-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase text-slate-600 border border-slate-100"
-                                                value={field.type}
-                                                onChange={e => {
-                                                    const nf = [...customFields]; nf[idx].type = e.target.value; setCustomFields(nf);
-                                                }}
-                                            >
-                                                <option value="text">Text Input</option>
-                                                <option value="email">Email</option>
-                                                <option value="phone">Phone</option>
-                                                <option value="select">Dropdown</option>
-                                            </select>
+                                            <div className="relative z-50 min-w-[150px]">
+                                                <CustomSelect 
+                                                    value={field.type}
+                                                    onChange={val => {
+                                                        const nf = [...customFields]; nf[idx].type = val; setCustomFields(nf);
+                                                    }}
+                                                    options={[
+                                                        { label: "Text Input", value: "text" },
+                                                        { label: "Email", value: "email" },
+                                                        { label: "Phone", value: "phone" },
+                                                        { label: "Dropdown", value: "select" }
+                                                    ]}
+                                                />
+                                            </div>
                                             {field.type === 'select' && (
                                                 <input 
                                                     className="bg-white px-3 py-1.5 rounded-lg text-[10px] font-bold text-slate-600 border border-slate-100 min-w-[150px]"

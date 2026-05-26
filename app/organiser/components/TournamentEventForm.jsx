@@ -185,7 +185,7 @@ const TournamentEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isE
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                         {renderInput("Tournament Name*", postEvent.title, (v) => setPostEvent(p => ({ ...p, title: v })), "text", "e.g. Champions Trophy 2026", true)}
-                        {renderInput("Organised By (Name)", postEvent.organiser_name, (v) => setPostEvent(p => ({ ...p, organiser_name: v })), "text", "e.g. Ticket9 Partner", true)}
+                        {renderInput("Organised By (Name)", postEvent.organiser_name, (v) => setPostEvent(p => ({ ...p, organiser_name: v })), "text", "e.g. Partner Name", true)}
                         
                         <div className="space-y-3">
                             <label className="block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] pl-1">Sport Category*</label>

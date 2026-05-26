@@ -103,7 +103,7 @@ const VirtualEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEdit
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                         {renderInput("Event Name*", postEvent.title, (v) => setPostEvent(p => ({ ...p, title: v })), "text", "Enter digital event name", true)}
                         {renderInput("Subtitle / Tagline", postEvent.subtitle, (v) => setPostEvent(p => ({ ...p, subtitle: v })), "text", "Short catchphrase")}
-                        {renderInput("Organised By (Name)", postEvent.organiser_name, (v) => setPostEvent(p => ({ ...p, organiser_name: v })), "text", "e.g., Ticket9 Partner")}
+                        {renderInput("Organised By (Name)", postEvent.organiser_name, (v) => setPostEvent(p => ({ ...p, organiser_name: v })), "text", "e.g., Partner Name")}
                         {renderInput("Category*", postEvent.category, (v) => setPostEvent(p => ({ ...p, category: v })), "text", "Webinar, Live Stream, etc.")}
                         
                         <div className="md:col-span-2 space-y-3">
