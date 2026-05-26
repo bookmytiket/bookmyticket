@@ -13879,7 +13879,8 @@ function OrganiserPanel() {
 
                 {Object.entries(
                   viewingBookingDetails.customer_details || {},
-                ).map(([key, value]) => {
+                ).filter(([key]) => !['applied_campaign_id', 'applied_campaign_code', 'meeting_url'].includes(key))
+                .map(([key, value]) => {
                   if (!value) return null;
                   const label =
                     key.charAt(0).toUpperCase() +
