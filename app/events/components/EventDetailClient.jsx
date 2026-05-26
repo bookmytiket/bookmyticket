@@ -635,7 +635,8 @@ export default function EventDetailClient({ id }) {
                                         <div className="space-y-4">
                                             <button 
                                                 onClick={() => {
-                                                    const bookUrl = `/events/book?id=${id}${selectedCatId ? `&catId=${selectedCatId}` : ''}`;
+                                                    const actualCatId = selectedCatId || categories?.[0]?.id;
+                                                    const bookUrl = `/events/book?id=${id}${actualCatId ? `&catId=${actualCatId}` : ''}`;
                                                     if (!user) router.push(`/signin?redirect=${encodeURIComponent(bookUrl)}`);
                                                     else router.push(bookUrl);
                                                 }}
