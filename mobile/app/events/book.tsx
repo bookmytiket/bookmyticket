@@ -201,7 +201,17 @@ export default function BookEventScreen() {
   const processEventData = (data: any) => {
     const parsedConfig = safeParse(data.dynamic_config) || {};
     let tiers = [];
-    if (parsedConfig.categories?.length > 0) tiers = parsedConfig.categories;
+    if (data.competition_events?.length > 0) {
+      tiers = data.competition_events.map((e: any) => ({
+        id: e.id,
+        title: e.event_name,
+        price: e.fee,
+        description: `Distance: ${e.distance} | Gender: ${e.gender}`,
+        ageRates: data.competition_categories?.length > 0 ? data.competition_categories.map((c: any) => ({
+           id: c.id, label: c.category_name, minAge: c.min_age, maxAge: c.max_age, price: e.fee
+        })) : []
+      }));
+    } else if (parsedConfig.categories?.length > 0) tiers = parsedConfig.categories;
     else if (data.event_ticket_categories?.length > 0) {
       tiers = data.event_ticket_categories.map((c: any) => ({
         id: c.id, title: c.category_name, price: c.price, description: c.description || 'General Admission Ticket'
@@ -233,13 +243,23 @@ export default function BookEventScreen() {
     }
     
     // Pre-fill form with defaults
-    const form = parsedConfig.registrationForm || parsedConfig.form_fields || [];
+    const form = (data.registration_fields?.length > 0)
+      ? data.registration_fields.sort((a: any, b: any) => a.sort_order - b.sort_order).map((f: any) => ({
+          id: f.id,
+          label: f.label,
+          type: f.field_type === 'phone' ? 'tel' : f.field_type,
+          options: f.options || [],
+          required: f.is_required,
+          isDefault: f.field_key === 'full_name' || f.field_key === 'email_address' || f.field_key === 'phone_number'
+      }))
+      : (parsedConfig.registrationForm || parsedConfig.form_fields || []);
+      
     const initialResponses: any = {};
     let initialName = user?.user_metadata?.full_name || '';
     let initialEmail = user?.email || '';
 
     form.forEach((f: any) => {
-      const label = f.label.toLowerCase();
+      const label = (f.label || '').toLowerCase();
       if (f.isDefault || label.includes('name') || label.includes('email')) {
         if (label.includes('name')) {
           initialResponses[f.id] = initialName;
@@ -282,7 +302,10 @@ export default function BookEventScreen() {
           *,
           organiser:profiles!events_organiser_id_fkey (*),
           event_ticket_categories (*),
-          ticket_categories (*)
+          ticket_categories (*),
+          competition_categories (*),
+          competition_events (*),
+          registration_fields (*)
         `)
         .eq('id', id)
         .single();
@@ -595,6 +618,34 @@ export default function BookEventScreen() {
     if (!finalName || !finalEmail) {
       Alert.alert('Missing Info', 'Please fill in your name and email.');
       return;
+    }
+
+    // Validate Age Category against Date of Birth if competition age groups are defined
+    if (dynamicConfig.competitionAgeGroups && dynamicConfig.competitionAgeGroups.length > 0) {
+      const dobField = (dynamicConfig.registrationForm || []).find((f: any) => f.label.toLowerCase().includes('date of birth') || f.label.toLowerCase() === 'dob');
+      const ageCatField = (dynamicConfig.registrationForm || []).find((f: any) => f.label.toLowerCase().includes('age category'));
+      
+      if (dobField && ageCatField && formResponses[dobField.id] && formResponses[ageCatField.id]) {
+        const dobStr = formResponses[dobField.id];
+        const selectedCat = formResponses[ageCatField.id];
+        
+        const dobYear = new Date(dobStr).getFullYear();
+        if (!isNaN(dobYear)) {
+          const baseYear = parseInt(dynamicConfig.baseYear) || new Date().getFullYear();
+          const age = baseYear - dobYear;
+          
+          const ageGroup = dynamicConfig.competitionAgeGroups.find((g: any) => g.name === selectedCat);
+          if (ageGroup) {
+            const min = parseInt(ageGroup.minAge) || 0;
+            const max = parseInt(ageGroup.maxAge) || 99;
+            
+            if (age < min || age > max) {
+               Alert.alert('Age Verification Failed', `Based on DOB (${dobYear}), age is ${age} (Base Year: ${baseYear}). This does not match the selected category '${selectedCat}' (Allowed: ${min}-${max} years).`);
+               return;
+            }
+          }
+        }
+      }
     }
 
     // Check other required dynamic fields

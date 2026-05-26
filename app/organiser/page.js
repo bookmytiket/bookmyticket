@@ -2554,6 +2554,8 @@ function OrganiserPanel() {
     const effectiveSlots = isMultiple
       ? (postEvent.dateSlots || []).filter((s) => s.date)
       : [{ date: startDate, time: startTime }];
+      
+    const firstSlot = effectiveSlots[0] || { date: startDate, time: startTime };
 
     const isSeating = !isOnline && (postEvent.ticketType === 'reserved' || postEvent.isReservedSeating);
     const categories = (postEvent.categories || []).map(c => ({
@@ -2640,19 +2642,19 @@ function OrganiserPanel() {
       postEvent.type !== "Tournament Event"
     ) {
       if (!postEvent.country) {
-        setPublishError("Please select a Country.");
+        showToast("Please select a Country.", "error");
         return;
       }
       if (!postEvent.state) {
-        setPublishError("Please select a State.");
+        showToast("Please select a State.", "error");
         return;
       }
       if (!postEvent.district) {
-        setPublishError("Please select a District.");
+        showToast("Please select a District.", "error");
         return;
       }
       if (!postEvent.city) {
-        setPublishError("Please select a City.");
+        showToast("Please select a City.", "error");
         return;
       }
     }
@@ -2964,16 +2966,46 @@ function OrganiserPanel() {
               if (isCompetition) {
                 try {
                   const dc = postEvent.dynamic_config || {};
-                  if (dc.competitionCategories?.length > 0) {
+                  
+                  // 1. Sync competition_categories (Age Groups)
+                  const ageGroups = dc.competitionAgeGroups || dc.competitionCategories || [];
+                  if (ageGroups.length > 0) {
                     await supabase.from("competition_categories").delete().eq("event_id", editingEvent.id);
-                    await supabase.from("competition_categories").insert(dc.competitionCategories.map(c => ({
-                      event_id: editingEvent.id, category_name: c.name, min_age: c.minAge, max_age: c.maxAge, gender: c.gender
+                    await supabase.from("competition_categories").insert(ageGroups.map(c => ({
+                      event_id: editingEvent.id, 
+                      category_name: c.name || c.category_name, 
+                      min_age: c.minAge || c.min_age || 0, 
+                      max_age: c.maxAge || c.max_age || 99, 
+                      gender: c.gender || 'All'
                     })));
                   }
-                  if (dc.competitionEvents?.length > 0) {
+
+                  // 2. Sync competition_events (Fee Tiers / Strokes)
+                  const compEvents = dc.competitionEvents || dc.categories || [];
+                  if (compEvents.length > 0) {
                     await supabase.from("competition_events").delete().eq("event_id", editingEvent.id);
-                    await supabase.from("competition_events").insert(dc.competitionEvents.map(e => ({
-                      event_id: editingEvent.id, event_name: e.name, distance: e.distance, fee: e.fee, gender: e.gender
+                    await supabase.from("competition_events").insert(compEvents.map(e => ({
+                      event_id: editingEvent.id, 
+                      event_name: e.name || e.event_name, 
+                      distance: e.distance || (dc.competitionStrokes ? dc.competitionStrokes : ""), 
+                      fee: e.price || e.fee || 0, 
+                      gender: e.gender || 'All'
+                    })));
+                  }
+
+                  // 3. Sync registration_fields
+                  const formFields = dc.registrationForm || dc.form_fields || [];
+                  if (formFields.length > 0) {
+                    await supabase.from("registration_fields").delete().eq("event_id", editingEvent.id);
+                    await supabase.from("registration_fields").insert(formFields.map((f, i) => ({
+                      event_id: editingEvent.id,
+                      field_key: f.label?.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '') || `field_${i}`,
+                      label: f.label || `Field ${i}`,
+                      field_type: f.type || 'text',
+                      options: Array.isArray(f.options) ? f.options.filter(Boolean) : (typeof f.options === 'string' ? f.options.split(',') : null),
+                      is_required: !!f.required,
+                      sort_order: i,
+                      is_active: true
                     })));
                   }
                 } catch (e) {
