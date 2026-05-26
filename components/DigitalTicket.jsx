@@ -187,11 +187,11 @@ export default function DigitalTicket({ booking, event, ticket: initialTicket, s
                 <div className={`absolute -bottom-24 -right-24 w-64 h-64 rounded-full blur-[100px] opacity-40 transition-colors duration-1000 ${details.glow2}`} />
 
                 {/* Left Section: Main Body */}
-                <div className="flex-[2] p-6 md:p-10 flex flex-col justify-between relative z-10 w-full">
+                <div className="flex-[2] p-6 md:p-10 flex flex-col justify-between relative z-10 w-full min-w-0">
                     <div className="space-y-6">
                         {/* Header */}
                         <div className="flex justify-between items-start gap-4">
-                            <div className="flex-1 space-y-1 max-w-[75%]">
+                            <div className="flex-1 space-y-1 min-w-0 pr-2">
                                 <div className="flex items-center gap-2">
                                     {details.icon}
                                     <p className={`text-[10px] md:text-xs font-black uppercase tracking-[0.4em] ${details.accent}`}>{details.label}</p>
@@ -203,16 +203,16 @@ export default function DigitalTicket({ booking, event, ticket: initialTicket, s
                                     {event.title}
                                 </h2>
                             </div>
-                            <div className="flex-shrink-0">
-                                <img src="/logo.png" className="h-10 md:h-12 w-auto brightness-0 invert object-contain opacity-90 drop-shadow-lg" alt="Logo" />
+                            <div className="flex-shrink-0 pt-1">
+                                <img src="/logo.png" className="h-8 md:h-12 w-auto brightness-0 invert object-contain opacity-90 drop-shadow-lg" alt="Logo" />
                             </div>
                         </div>
 
                         {/* Dynamic Metadata Fields */}
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 pt-2">
+                        <div className="grid grid-cols-2 gap-4 md:gap-6 pt-2">
                             {details.fields.map((f, i) => (
-                                <div key={i} className="space-y-0.5">
-                                    <p className="text-[8px] md:text-[9px] font-black text-white/50 uppercase tracking-widest">{f.label}</p>
+                                <div key={i} className="space-y-0.5 min-w-0">
+                                    <p className="text-[8px] md:text-[9px] font-black text-white/50 uppercase tracking-widest truncate">{f.label}</p>
                                     <p className="text-sm md:text-base font-black text-white uppercase tracking-tight leading-tight truncate">{f.value}</p>
                                 </div>
                             ))}
@@ -221,33 +221,33 @@ export default function DigitalTicket({ booking, event, ticket: initialTicket, s
 
                     {/* Footer Details */}
                     <div className="flex flex-col md:flex-row md:items-end justify-between border-t border-white/20 pt-4 md:pt-6 mt-6 md:mt-auto gap-4 md:gap-0">
-                        <div className="flex flex-col gap-4">
+                        <div className="flex flex-col gap-4 min-w-0">
                             
-                            <div className="flex gap-6 md:gap-8">
-                                <div className="space-y-1">
+                            <div className="flex flex-wrap gap-6 md:gap-8">
+                                <div className="space-y-1 min-w-0">
                                     <div className="flex items-center gap-1.5 text-white/60">
                                         <Calendar size={10} />
                                         <p className="text-[8px] font-black uppercase tracking-widest">Date</p>
                                     </div>
-                                    <p className="text-xs font-black text-white">
+                                    <p className="text-xs font-black text-white truncate">
                                         {booking?.customer_details?.showtimeDate 
                                             ? new Date(booking.customer_details.showtimeDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) 
                                             : (event.date || "TBA")}
                                     </p>
                                 </div>
                                 {booking?.customer_details?.showtimeStart && (
-                                    <div className="space-y-1">
+                                    <div className="space-y-1 min-w-0">
                                         <div className="flex items-center gap-1.5 text-white/60">
                                             <Zap size={10} />
                                             <p className="text-[8px] font-black uppercase tracking-widest">Time</p>
                                         </div>
-                                        <p className="text-xs font-black text-white">
+                                        <p className="text-xs font-black text-white truncate">
                                             {new Date(`2000-01-01T${booking.customer_details.showtimeStart}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
                                             {booking.customer_details.showtimeName && ` (${booking.customer_details.showtimeName})`}
                                         </p>
                                     </div>
                                 )}
-                                <div className="space-y-1">
+                                <div className="space-y-1 min-w-0">
                                     <div className="flex items-center gap-1.5 text-white/60">
                                         <MapPin size={10} />
                                         <p className="text-[8px] font-black uppercase tracking-widest">Venue</p>
