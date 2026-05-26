@@ -1011,6 +1011,38 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                         </div>
 
                         <div className="md:col-span-2 py-6 border-y border-slate-50 space-y-6">
+                            <div>
+                                <h3 className="text-sm font-bold uppercase text-slate-900">Bulk Booking Discount</h3>
+                                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Offer automated discounts for group bookings</p>
+                            </div>
+                            <div className="grid grid-cols-2 gap-6 bg-slate-50 p-6 rounded-xl border border-slate-100">
+                                <div>
+                                    <label className="text-[10px] font-bold uppercase text-slate-700">Discount Percentage (%)</label>
+                                    <input 
+                                        type="number" 
+                                        min="0" 
+                                        max="100" 
+                                        value={config.bulkDiscountPercent || ""} 
+                                        onChange={e => updateConfig('bulkDiscountPercent', parseInt(e.target.value) || 0)} 
+                                        className="w-full p-3 text-sm border rounded-lg bg-white text-slate-900" 
+                                        placeholder="e.g. 10 for 10%" 
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-bold uppercase text-slate-700">Minimum Tickets for Discount</label>
+                                    <input 
+                                        type="number" 
+                                        min="2" 
+                                        value={config.bulkDiscountMinTickets || ""} 
+                                        onChange={e => updateConfig('bulkDiscountMinTickets', parseInt(e.target.value) || 0)} 
+                                        className="w-full p-3 text-sm border rounded-lg bg-white text-slate-900" 
+                                        placeholder="e.g. 5" 
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="md:col-span-2 py-6 border-b border-slate-50 space-y-6">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3">
                                     <Timer size={20} className="text-[#ec4899]" />

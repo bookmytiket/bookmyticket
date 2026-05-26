@@ -309,11 +309,25 @@ export default function DynamicEventClient({ event }) {
     };
 
     const fees = useMemo(() => {
-        if (!selectedCategory) return { convenienceFee: 0, gst: 0, total: 0 };
-        const base = (calculatedPrice || 0) * quantity;
-        const afterDiscount = Math.max(0, base - couponDiscount);
-        return getFeeBreakdown(afterDiscount, feeSettings);
-    }, [selectedCategory, calculatedPrice, quantity, couponDiscount, feeSettings]);
+        if (!selectedCategory) return { convenienceFee: 0, gst: 0, total: 0, originalBase: 0, bulkDiscount: 0 };
+        
+        let base = (calculatedPrice || 0) * quantity;
+        
+        // Apply Bulk Booking Discount
+        let bulkDiscount = 0;
+        const bPercent = Number(config.bulkDiscountPercent || 0);
+        const bMin = Number(config.bulkDiscountMinTickets || 0);
+        
+        if (bPercent > 0 && bMin > 0 && quantity >= bMin) {
+            bulkDiscount = (base * bPercent) / 100;
+        }
+
+        const afterBulk = base - bulkDiscount;
+        const afterCoupon = Math.max(0, afterBulk - couponDiscount);
+        const breakdown = getFeeBreakdown(afterCoupon, feeSettings);
+        
+        return { ...breakdown, originalBase: base, bulkDiscount };
+    }, [selectedCategory, calculatedPrice, quantity, couponDiscount, feeSettings, config.bulkDiscountPercent, config.bulkDiscountMinTickets]);
 
     const uniqueFormFields = useMemo(() => {
         const seen = new Set();
@@ -762,8 +776,45 @@ export default function DynamicEventClient({ event }) {
                             </div>
                             
                             {selectedCategory ? (
-                                <div className="space-y-8">
-                                    <div className="flex justify-between items-end">
+                                <div className="space-y-6">
+                                    {/* Quantity Selector */}
+                                    <div className="flex items-center justify-between pb-4 border-b border-slate-50">
+                                        <div>
+                                            <p className="text-[10px] font-black uppercase text-slate-900 tracking-widest mb-1">Total Tickets</p>
+                                            {config.bulkDiscountPercent > 0 && config.bulkDiscountMinTickets > 0 && (
+                                                <p className="text-[8px] font-black text-emerald-500 uppercase tracking-widest">
+                                                    Buy {config.bulkDiscountMinTickets}+ for {config.bulkDiscountPercent}% OFF
+                                                </p>
+                                            )}
+                                        </div>
+                                        <div className="flex items-center gap-3 bg-slate-50 p-1.5 rounded-xl border border-slate-100">
+                                            <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="w-8 h-8 rounded-lg bg-white text-slate-600 flex items-center justify-center font-black hover:text-pink-600 shadow-sm transition-colors">−</button>
+                                            <span className="text-sm font-black w-6 text-center text-slate-900">{quantity}</span>
+                                            <button onClick={() => setQuantity(q => q + 1)} className="w-8 h-8 rounded-lg bg-white text-slate-600 flex items-center justify-center font-black hover:text-pink-600 shadow-sm transition-colors">+</button>
+                                        </div>
+                                    </div>
+
+                                    {/* Price Breakdown */}
+                                    <div className="space-y-3">
+                                        <div className="flex justify-between items-center text-xs">
+                                            <span className="font-bold text-slate-500">Base Price (x{quantity})</span>
+                                            <span className="font-black text-slate-900">₹{fees.originalBase?.toFixed(2) || ((calculatedPrice || 0) * quantity).toFixed(2)}</span>
+                                        </div>
+                                        {fees.bulkDiscount > 0 && (
+                                            <div className="flex justify-between items-center text-xs">
+                                                <span className="font-bold text-emerald-500">Bulk Discount</span>
+                                                <span className="font-black text-emerald-600">-₹{fees.bulkDiscount.toFixed(2)}</span>
+                                            </div>
+                                        )}
+                                        {couponDiscount > 0 && (
+                                            <div className="flex justify-between items-center text-xs">
+                                                <span className="font-bold text-emerald-500">Coupon Discount</span>
+                                                <span className="font-black text-emerald-600">-₹{couponDiscount.toFixed(2)}</span>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="flex justify-between items-end pt-4 border-t border-slate-50">
                                         <div className="space-y-0.5">
                                             <p className="text-[8px] font-black text-[#ec4899] uppercase tracking-widest">Payable Amount</p>
                                             <div className="text-2xl font-black text-slate-900 tracking-tighter">₹{fees.total.toFixed(0)}</div>

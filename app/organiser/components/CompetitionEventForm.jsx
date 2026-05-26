@@ -532,6 +532,39 @@ const CompetitionEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, is
                         ))}
                     </div>
 
+                    {/* BULK DISCOUNT */}
+                    <div className="space-y-4 pt-6 border-t border-slate-100">
+                        <div>
+                            <h3 className="text-sm font-bold uppercase text-slate-900">Bulk Booking Discount</h3>
+                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Offer automated discounts for group bookings</p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-6 bg-slate-50 p-6 rounded-xl border border-slate-100">
+                            <div>
+                                <label className="text-[10px] font-bold uppercase text-slate-700">Discount Percentage (%)</label>
+                                <input 
+                                    type="number" 
+                                    min="0" 
+                                    max="100" 
+                                    value={config.bulkDiscountPercent || ""} 
+                                    onChange={e => updateConfig('bulkDiscountPercent', parseInt(e.target.value) || 0)} 
+                                    className="w-full p-3 text-sm border rounded-lg bg-white text-slate-900" 
+                                    placeholder="e.g. 10 for 10%" 
+                                />
+                            </div>
+                            <div>
+                                <label className="text-[10px] font-bold uppercase text-slate-700">Minimum Tickets for Discount</label>
+                                <input 
+                                    type="number" 
+                                    min="2" 
+                                    value={config.bulkDiscountMinTickets || ""} 
+                                    onChange={e => updateConfig('bulkDiscountMinTickets', parseInt(e.target.value) || 0)} 
+                                    className="w-full p-3 text-sm border rounded-lg bg-white text-slate-900" 
+                                    placeholder="e.g. 5" 
+                                />
+                            </div>
+                        </div>
+                    </div>
+
                     {/* AGE GROUPS */}
                     <div className="space-y-4 pt-6 border-t border-slate-100">
                         <div className="flex justify-between items-center">
