@@ -54,6 +54,39 @@ function getCatColor(name) {
     return COLORS[Math.abs(hash) % COLORS.length];
 }
 
+function CustomDropdown({ options, value, onChange, placeholder }) {
+    const [isOpen, setIsOpen] = useState(false);
+    return (
+        <div className="relative w-full">
+            {isOpen && <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)}></div>}
+            <button 
+                type="button"
+                onClick={() => setIsOpen(!isOpen)}
+                className="relative z-50 w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl text-sm font-black text-slate-900 outline-none focus:border-pink-500 text-left flex justify-between items-center"
+            >
+                <span className={!value ? "text-slate-400" : ""}>{value || placeholder}</span>
+                <ChevronLeft className={`w-4 h-4 text-slate-400 transition-transform ${isOpen ? 'rotate-90' : '-rotate-90'}`} />
+            </button>
+            {isOpen && (
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-100 shadow-2xl rounded-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
+                    <div className="max-h-60 overflow-y-auto p-1">
+                        {options.map(opt => (
+                            <button
+                                key={opt}
+                                type="button"
+                                onClick={() => { onChange(opt); setIsOpen(false); }}
+                                className={`w-full text-left px-4 py-3 rounded-xl text-sm font-bold transition-all ${value === opt ? 'bg-pink-500 text-white' : 'text-slate-600 hover:bg-slate-50'}`}
+                            >
+                                {opt}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
 export default function EventBookClient({ id }) {
     const { user, loading: authLoading } = useAuth();
     const router = useRouter();
@@ -446,7 +479,7 @@ export default function EventBookClient({ id }) {
         { id: 1, title: "Category", icon: Ticket },
         { id: 2, title: "Identity", icon: Users },
         { id: 3, title: "Details", icon: Info },
-        { id: 4, title: "Amenities", icon: Sparkles },
+        { id: 4, title: (event?.type === 'Competition' || event?.type === 'Competition Event' || event?.type === 'Sports Event') && event?.dynamic_config?.rules ? "Rules" : "Amenities", icon: Sparkles },
         { id: 5, title: "Review", icon: CheckCircle }
     ];
 
@@ -806,29 +839,28 @@ export default function EventBookClient({ id }) {
                                     className="bg-white rounded-[40px] p-8 md:p-12 border border-slate-100 shadow-sm space-y-8"
                                 >
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                        {(event.dynamic_config?.form_fields || event.dynamic_config?.registrationForm || []).map(field => (
+                                        {(rawEvent?.registration_fields?.length > 0 ? rawEvent.registration_fields : (event.dynamic_config?.form_fields?.length > 0 ? event.dynamic_config.form_fields : (event.dynamic_config?.registrationForm || []))).map(field => (
                                             <div key={field.id}>
                                                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 pl-1">
-                                                    {field.label} {field.required && <span className="text-pink-500">*</span>}
+                                                    {field.label || field.field_name} {field.required && <span className="text-pink-500">*</span>}
                                                 </label>
-                                                {field.type === 'select' ? (
-                                                    <select 
-                                                        className="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl text-sm font-black text-slate-900 outline-none"
-                                                        onChange={e => setParticipantData({...participantData, [field.label]: e.target.value})}
-                                                    >
-                                                        <option value="">Select Option</option>
-                                                        {(Array.isArray(field.options) ? field.options : (typeof field.options === 'string' ? field.options.split(',').map(s => s.trim()) : ['S', 'M', 'L', 'XL', 'XXL'])).map(o => <option key={o} value={o}>{o}</option>)}
-                                                    </select>
+                                                {field.type === 'select' || field.field_type === 'select' ? (
+                                                    <CustomDropdown 
+                                                        placeholder="Select Option"
+                                                        value={participantData[field.label || field.field_name] || ""}
+                                                        options={(Array.isArray(field.options) ? field.options : (typeof field.options === 'string' ? field.options.split(',').map(s => s.trim()) : ['S', 'M', 'L', 'XL', 'XXL']))}
+                                                        onChange={(val) => setParticipantData({...participantData, [field.label || field.field_name]: val})}
+                                                    />
                                                 ) : (
                                                     <input 
                                                         className="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl text-sm font-black text-slate-900 outline-none focus:border-pink-500"
-                                                        placeholder={`Enter ${field.label}`}
-                                                        onChange={e => setParticipantData({...participantData, [field.label]: e.target.value})}
+                                                        placeholder={`Enter ${field.label || field.field_name}`}
+                                                        onChange={e => setParticipantData({...participantData, [field.label || field.field_name]: e.target.value})}
                                                     />
                                                 )}
                                             </div>
                                         ))}
-                                        {(!event.dynamic_config?.form_fields && !event.dynamic_config?.registrationForm) && (
+                                        {((!rawEvent?.registration_fields || rawEvent.registration_fields.length === 0) && (!event.dynamic_config?.form_fields || event.dynamic_config.form_fields.length === 0) && (!event.dynamic_config?.registrationForm || event.dynamic_config.registrationForm.length === 0)) && (
                                             <div className="col-span-2 text-center py-12">
                                                 <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">No additional details required</p>
                                             </div>
@@ -837,7 +869,7 @@ export default function EventBookClient({ id }) {
                                 </motion.div>
                             )}
 
-                            {/* Marathon Step 4: Amenities */}
+                            {/* Marathon/Competition Step 4: Rules or Amenities */}
                             {isMarathon && bookingStep === 4 && (
                                 <motion.div 
                                     key="step4"
@@ -846,21 +878,38 @@ export default function EventBookClient({ id }) {
                                     exit={{ opacity: 0, y: -20 }}
                                     className="bg-white rounded-[40px] p-8 md:p-12 border border-slate-100 shadow-sm"
                                 >
-                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                                        {(event.dynamic_config?.benefits || [
-                                            { benefit_name: "Finisher Medal", icon_key: "medal" },
-                                            { benefit_name: "Technical T-Shirt", icon_key: "tshirt" },
-                                            { benefit_name: "E-Certificate", icon_key: "certificate" },
-                                            { benefit_name: "Post-Run Breakfast", icon_key: "breakfast" }
-                                        ]).map((ben, idx) => (
-                                            <div key={idx} className="flex flex-col items-center gap-3 p-6 bg-slate-50 rounded-3xl border border-slate-100">
-                                                <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-pink-500 shadow-sm">
-                                                    <Star size={18} />
-                                                </div>
-                                                <span className="text-[10px] font-black uppercase text-slate-900 text-center leading-tight">{ben.benefit_name}</span>
+                                    {(event.type === 'Competition' || event.type === 'Competition Event' || event.type === 'Sports Event') && event.dynamic_config?.rules ? (
+                                        <div className="space-y-6">
+                                            <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Rules & Regulations</h3>
+                                            <div className="prose prose-sm prose-slate max-w-none p-6 bg-slate-50 rounded-3xl border border-slate-100 text-slate-600">
+                                                {event.dynamic_config.rules.split('\n').map((rule, idx) => (
+                                                    <p key={idx} className="mb-2">{rule}</p>
+                                                ))}
                                             </div>
-                                        ))}
-                                    </div>
+                                            <label className="flex items-start gap-4 p-4 bg-emerald-50 rounded-2xl border border-emerald-100 cursor-pointer hover:bg-emerald-100/50 transition-colors">
+                                                <input type="checkbox" required className="mt-1" />
+                                                <span className="text-[11px] font-bold text-emerald-800 uppercase tracking-widest leading-relaxed">
+                                                    I have read and agree to follow all the rules and regulations mentioned above.
+                                                </span>
+                                            </label>
+                                        </div>
+                                    ) : (
+                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                                            {(event.dynamic_config?.benefits || [
+                                                { benefit_name: "Finisher Medal", icon_key: "medal" },
+                                                { benefit_name: "Technical T-Shirt", icon_key: "tshirt" },
+                                                { benefit_name: "E-Certificate", icon_key: "certificate" },
+                                                { benefit_name: "Post-Run Breakfast", icon_key: "breakfast" }
+                                            ]).map((ben, idx) => (
+                                                <div key={idx} className="flex flex-col items-center gap-3 p-6 bg-slate-50 rounded-3xl border border-slate-100">
+                                                    <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-pink-500 shadow-sm">
+                                                        <Star size={18} />
+                                                    </div>
+                                                    <span className="text-[10px] font-black uppercase text-slate-900 text-center leading-tight">{ben.benefit_name}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </motion.div>
                             )}
 
