@@ -10,6 +10,7 @@ export async function GET(request) {
     const city = searchParams.get('city');
     const type = searchParams.get('type');
     const featured = searchParams.get('featured') === 'true';
+    const organiser = searchParams.get('organiser');
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
@@ -45,6 +46,10 @@ export async function GET(request) {
         
         if (featured) {
             eventsQuery = eventsQuery.or('featured.eq.true,is_spotlight.eq.true,is_exclusive.eq.true');
+        }
+        
+        if (organiser) {
+            eventsQuery = eventsQuery.eq('organiser_id', organiser);
         }
 
         const { data: events, error: eventsError } = await eventsQuery.order('created_at', { ascending: false });

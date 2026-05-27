@@ -12,6 +12,7 @@ import ComingSoonEvents from '@/components/ComingSoonEvents';
 import TrendingEvents from '@/components/TrendingEvents';
 import ExclusiveEvents from '@/components/ExclusiveEvents';
 import VirtualEvents from '@/components/VirtualEvents';
+import FeaturedOrganisers from '@/components/FeaturedOrganisers';
 import VenueEventCard from '@/components/VenueEventCard';
 import TournamentCard from '@/components/TournamentCard';
 import SubscriptionBanner from '@/components/SubscriptionBanner';
@@ -169,8 +170,8 @@ function HomeClient() {
 
   const activeCat = searchParams.get("category");
   const searchQuery = searchParams.get("q") || "";
+  const activeOrganiser = searchParams.get("organiser");
   const [heroSlides, setHeroSlides] = useState([]);
-  const [eventPartners, setEventPartners] = useState([]);
 
   const { data: allConfig } = useSupabaseQuery('system_config', (q) => q, []);
 
@@ -249,6 +250,10 @@ function HomeClient() {
         params.append('city', selectedCity);
       }
       
+      if (activeOrganiser) {
+          params.append('organiser', activeOrganiser);
+      }
+      
       // Cache buster for instant updates
       const url = `/api/events/public?${params.toString()}&t=${Date.now()}`;
       const res = await fetch(url);
@@ -261,7 +266,7 @@ function HomeClient() {
     } finally {
       setApiLoading(false);
     }
-  }, [selectedDistrict, selectedCity]);
+  }, [selectedDistrict, selectedCity, activeOrganiser]);
 
   // Initial fetch and city change fetch
   useEffect(() => {
@@ -520,16 +525,25 @@ function HomeClient() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [heroSlidesConfig, activeBannersKey, homeCoupons]);
 
+  const [eventPartners, setEventPartners] = useState([]);
+  const [loadingPartners, setLoadingPartners] = useState(true);
+
   useEffect(() => {
-    const parsed = eventPartnersConfig != null ? parseConfig(eventPartnersConfig) : null;
-    const partners = Array.isArray(parsed) ? parsed : FEATURED_ORGANISERS;
-    setEventPartners(partners);
-  }, [eventPartnersConfig]);
-
-  // Removed focus event listener since Convex useQuery is reactive
-
-
-
+    const fetchOrganisers = async () => {
+      try {
+        const res = await fetch('/api/organisers/public');
+        if (!res.ok) throw new Error('Failed to fetch organisers');
+        const data = await res.json();
+        setEventPartners(data || []);
+      } catch (err) {
+        console.error("Failed to fetch live organisers:", err);
+        setEventPartners([]);
+      } finally {
+        setLoadingPartners(false);
+      }
+    };
+    fetchOrganisers();
+  }, []);
   const [isMounted, setIsMounted] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
@@ -626,12 +640,12 @@ function HomeClient() {
 
 
         {/* Search & Category Filter Results Section */}
-        {(activeCat || searchQuery) ? (
+        {(activeCat || searchQuery || activeOrganiser) ? (
           <section style={{ width: '100%', maxWidth: '1240px', padding: '40px 20px', minHeight: '600px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '40px', borderBottom: '1px solid #eee', paddingBottom: '20px' }}>
               <div>
                 <h2 style={{ fontSize: '36px', fontWeight: 900, margin: '0 0 8px', letterSpacing: '-0.04em', color: '#0f172a', lineHeight: 1.1 }}>
-                  {searchQuery ? `Search Results for "${searchQuery}"` : (
+                  {activeOrganiser ? `Organizer Events 🎟️` : searchQuery ? `Search Results for "${searchQuery}"` : (
                     <>
                       {activeCat} <span style={{
                         background: 'linear-gradient(135deg, #f84464 0%, #c026d3 100%)',
@@ -642,7 +656,7 @@ function HomeClient() {
                   )}
                 </h2>
                 <p style={{ margin: 0, color: '#64748b', fontSize: '15px' }}>
-                  Found {filteredEvents.length} event{filteredEvents.length !== 1 ? 's' : ''} {searchQuery ? '' : `in this category`}
+                  Found {filteredEvents.length} event{filteredEvents.length !== 1 ? 's' : ''} {activeOrganiser ? `by this organizer` : searchQuery ? '' : `in this category`}
                 </p>
               </div>
               <button
@@ -1134,7 +1148,12 @@ function HomeClient() {
                 </div>
             </section>
 
-            {/* 6) Virtual Events */}
+            {/* 6) Featured Organizers Section */}
+            {!activeOrganiser && eventPartners && eventPartners.length > 0 && (
+              <FeaturedOrganisers organisers={eventPartners} />
+            )}
+
+            {/* 7) Virtual Events */}
             <VirtualEvents events={normalizedOrgEvents} />
 
             {/* Top Rated Professional Services */}
