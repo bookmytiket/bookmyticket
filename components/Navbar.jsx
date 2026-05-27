@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Search, MapPin, ChevronDown, User, LogOut, Menu, X, Calendar, Ticket as TicketIcon, Handshake, Globe, Wrench, Video } from "lucide-react";
+import { Search, MapPin, ChevronDown, User, LogOut, Menu, X, Calendar, Ticket as TicketIcon, Handshake, Globe, Wrench, Video, Headset } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 import { Country, State, City } from "country-state-city";
@@ -684,6 +684,71 @@ export default function Navbar({ compact = false }) {
 
           {/* Desktop Actions Area */}
           <div className="nav-desktop-actions hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+            
+            {/* Dynamic Support Icon */}
+            <motion.button
+              whileHover={{ scale: 1.05, boxShadow: '0 4px 15px rgba(248, 68, 164, 0.4)' }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => router.push('/contact')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '44px',
+                height: '44px',
+                borderRadius: '12px',
+                background: scrolled ? 'rgba(255,255,255,0.1)' : 'rgba(255, 255, 255, 0.9)',
+                border: scrolled ? '1px solid rgba(255,255,255,0.2)' : '1.5px solid rgba(248, 68, 164, 0.5)',
+                color: scrolled ? '#fff' : '#f844a4',
+                cursor: 'pointer',
+                backdropFilter: 'blur(8px)',
+                position: 'relative',
+                transition: 'all 0.3s ease',
+                boxShadow: scrolled ? 'none' : '0 4px 12px rgba(248, 68, 164, 0.1)'
+              }}
+              title="24/7 Support"
+            >
+              <motion.div
+                animate={{ 
+                  rotate: [0, -15, 15, -15, 15, 0],
+                  scale: [1, 1.1, 1]
+                }}
+                transition={{ duration: 2, repeat: Infinity, repeatDelay: 4 }}
+              >
+                <Headset size={20} strokeWidth={2.5} />
+              </motion.div>
+              
+              {/* Pulse Ring */}
+              <motion.div
+                animate={{ 
+                  boxShadow: ['0 0 0 0 rgba(248, 68, 164, 0.4)', '0 0 0 12px rgba(248, 68, 164, 0)']
+                }}
+                transition={{ duration: 2.5, repeat: Infinity, ease: "easeOut" }}
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  borderRadius: '12px',
+                  pointerEvents: 'none'
+                }}
+              />
+              
+              {/* Notification Dot */}
+              <motion.div 
+                animate={{ scale: [1, 1.2, 1] }}
+                transition={{ duration: 1.5, repeat: Infinity }}
+                style={{
+                  position: 'absolute',
+                  top: '8px',
+                  right: '8px',
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  background: '#ef4444',
+                  border: scrolled ? '2px solid rgba(255,255,255,0.1)' : '2px solid #fff'
+                }}
+              />
+            </motion.button>
+
             <motion.button
               whileHover={{ scale: 1.05, boxShadow: '0 4px 15px rgba(248, 68, 164, 0.15)' }}
               whileTap={{ scale: 0.95 }}
