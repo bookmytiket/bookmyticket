@@ -11,6 +11,7 @@ import {
 import { useToast } from "@/context/ToastContext";
 import { useConfirm } from "@/context/ConfirmContext";
 import JobPosterModal from "./JobPosterModal";
+import CustomDatePicker from "./CustomDatePicker";
 
 const CustomDropdown = ({ value, options, onChange, placeholder, t }) => {
     const [isOpen, setIsOpen] = useState(false);
@@ -99,15 +100,74 @@ const CareersAdmin = ({ t, theme }) => {
     const { confirm } = useConfirm();
 
     // Data Fetching
-    const { data: jobs = [], loading: jobsLoading, refresh: refetchJobs } = useSupabaseQuery('jobs', (q) => q.order('created_at', { ascending: false }));
+    const [jobs, setJobs] = useState([]);
+    const [jobsLoading, setJobsLoading] = useState(true);
+    const [applicants, setApplicants] = useState([]);
+    const [applicantsLoading, setApplicantsLoading] = useState(true);
+
     const { data: bannerConfigRaw } = useSupabaseQuery('system_config', (q) => q.eq('key', 'careers_banner_settings'), []);
     const bannerConfig = bannerConfigRaw?.[0]?.value || { is_enabled: true };
-    const { data: applicants = [], loading: applicantsLoading, refresh: refetchApplicants } = useSupabaseQuery('job_applications', (q) => q.order('created_at', { ascending: false }));
+    
+    const refetchJobs = async () => {
+        setJobsLoading(true);
+        try {
+            const res = await fetch('/api/admin/jobs?type=jobs');
+            const json = await res.json();
+            if (json.success) setJobs(json.data || []);
+        } catch (e) {
+            console.error(e);
+        }
+        setJobsLoading(false);
+    };
+
+    const refetchApplicants = async () => {
+        setApplicantsLoading(true);
+        try {
+            const res = await fetch('/api/admin/jobs?type=applications');
+            const json = await res.json();
+            if (json.success) setApplicants(json.data || []);
+        } catch (e) {
+            console.error(e);
+        }
+        setApplicantsLoading(false);
+    };
+
+    useEffect(() => {
+        refetchJobs();
+        refetchApplicants();
+    }, []);
 
     // Mutations
-    const [upsertJob] = useSupabaseMutation('jobs', 'upsert');
-    const [deleteJob] = useSupabaseMutation('jobs', 'delete', (q, p) => q.eq('id', p.id));
-    const [updateApplicantStatus] = useSupabaseMutation('job_applications', 'update', (q, p) => q.eq('id', p.id));
+    const upsertJob = async (payload) => {
+        const res = await fetch('/api/admin/jobs', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to save job');
+        return { success: true, data: data.data };
+    };
+
+    const deleteJob = async ({ id }) => {
+        const res = await fetch(`/api/admin/jobs?id=${id}`, {
+            method: 'DELETE'
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to delete job');
+        return { success: true };
+    };
+
+    const updateApplicantStatus = async (payload) => {
+        const res = await fetch('/api/admin/applications', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to update application');
+        return { success: true, data: data.data };
+    };
 
     const [jobForm, setJobForm] = useState({
         title: "",
@@ -162,12 +222,11 @@ const CareersAdmin = ({ t, theme }) => {
     };
 
     const handleDeleteJob = async (id) => {
-        const ok = await confirm({
-            title: "Delete Job Opening?",
-            message: "This will also remove all associated application records. This action cannot be undone.",
-            confirmText: "Delete",
-            type: "danger"
-        });
+        const ok = await confirm(
+            "Delete Job Opening?",
+            "This will also remove all associated application records. This action cannot be undone.",
+            { confirmText: "Delete", type: "danger" }
+        );
         if (ok) {
             try {
                 await deleteJob({ id });
@@ -269,11 +328,11 @@ const CareersAdmin = ({ t, theme }) => {
                     </div>
                     <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                         <label style={{ fontSize: "13px", fontWeight: 700, color: t.textSub }}>Application Deadline</label>
-                        <input 
-                            type="date"
+                        <CustomDatePicker 
                             value={jobForm.deadline}
-                            onChange={e => setJobForm({ ...jobForm, deadline: e.target.value })}
-                            style={{ padding: "12px 16px", borderRadius: "12px", border: `1px solid ${t.border}`, background: t.bg, color: t.textMain, fontSize: "14px" }}
+                            onChange={val => setJobForm({ ...jobForm, deadline: val })}
+                            placeholder="Select Deadline"
+                            t={t}
                         />
                     </div>
                     <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>

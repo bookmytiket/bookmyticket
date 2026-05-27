@@ -54,19 +54,19 @@ export default function PrivacyPage() {
             {/* ConditionalNavbar handles the Navbar display logic */}
             
             {/* Header */}
-            <section className="pt-32 pb-20 px-6 bg-slate-900 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-pink-500/10 rounded-full blur-[100px] -mr-48 -mt-48"></div>
+            <section className="pt-28 pb-12 px-6 bg-gradient-to-r from-[#f84464] to-[#c026d3] relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-white/10 rounded-full blur-[120px] -mr-64 -mt-64"></div>
                 
-                <div className="max-w-[1240px] mx-auto text-center relative z-10">
-                    <Link href="/" className="inline-flex items-center gap-2 text-slate-400 text-sm font-bold uppercase tracking-widest mb-8 hover:text-white transition-colors">
-                        <ArrowLeft className="w-4 h-4" /> Back to Home
+                <div className="max-w-[1240px] mx-auto text-center relative z-10 text-slate-950">
+                    <Link href="/" className="inline-flex items-center gap-2 text-slate-900 text-[10px] font-bold uppercase tracking-widest mb-6 hover:text-black transition-colors">
+                        <ArrowLeft className="w-3.5 h-3.5" /> Back to Home
                     </Link>
-                    <div className="w-20 h-20 bg-pink-500/20 rounded-3xl flex items-center justify-center mx-auto mb-8">
-                        <Shield className="text-pink-500 w-10 h-10" />
+                    <div className="w-16 h-16 bg-black/10 backdrop-blur-md border border-black/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                        <Shield className="text-slate-950 w-8 h-8" />
                     </div>
-                    <h1 className="text-4xl md:text-6xl font-black text-white mb-6 uppercase tracking-tighter">Privacy <span className="text-pink-500">Policy</span></h1>
-                    <p className="text-lg text-slate-400 max-w-[600px] mx-auto font-medium leading-relaxed">
-                        Last Updated: April 29, 2026. <br />
+                    <h1 className="text-4xl md:text-5xl font-black text-slate-950 mb-4 uppercase tracking-tighter">Privacy Policy</h1>
+                    <p className="text-sm md:text-base text-slate-900 max-w-[600px] mx-auto font-medium leading-relaxed">
+                        <span className="font-bold text-slate-950">Last Updated: April 29, 2026.</span> <br />
                         Your privacy is our top priority. Learn how we handle and protect your personal information at BookMyTicket.
                     </p>
                 </div>

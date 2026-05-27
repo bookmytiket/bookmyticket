@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { notFound } from 'next/navigation';
 import EventDetailClient from '../components/EventDetailClient';
 import DynamicEventClient from '../components/DynamicEventClient';
+import FacilityEventClient from '../components/FacilityEventClient';
 
 /**
  * Generate Metadata for SEO based on event details.
@@ -148,7 +149,9 @@ export default async function SlugEventPage({ params }) {
                     }}
                 />
 
-                {isDynamic ? (
+                {event.type === 'Facility' ? (
+                    <FacilityEventClient event={event} />
+                ) : isDynamic ? (
                     <DynamicEventClient event={event} />
                 ) : (
                     <EventDetailClient id={event.id} />

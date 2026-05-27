@@ -31,18 +31,30 @@ export default function CareersPage() {
     };
 
     // Fetch Jobs - Fetching all and filtering in JS for maximum reliability
-    const { data: allJobs = [], loading: jobsLoading, error: jobsError } = useSupabaseQuery('jobs', (q) => 
-        q.order('created_at', { ascending: false }),
-        []
-    );
+    const [allJobs, setAllJobs] = useState([]);
+    const [jobsLoading, setJobsLoading] = useState(true);
+    const [jobsError, setJobsError] = useState(null);
 
-    console.log("Careers Debug:", {
-        allJobsCount: allJobs?.length,
-        rawStatuses: allJobs?.map(j => j.status),
-        jobsError
-    });
+    useEffect(() => {
+        const fetchJobs = async () => {
+            try {
+                const res = await fetch('/api/careers/jobs');
+                const json = await res.json();
+                if (json.success) {
+                    setAllJobs(json.data || []);
+                } else {
+                    setJobsError(new Error(json.error));
+                }
+            } catch (err) {
+                setJobsError(err);
+            } finally {
+                setJobsLoading(false);
+            }
+        };
+        fetchJobs();
+    }, []);
 
-    const jobs = (allJobs || []).filter(j => j.status === 'open');
+    const jobs = allJobs;
 
     useEffect(() => {
         if (jobsError) {
@@ -75,38 +87,44 @@ export default function CareersPage() {
                 <section className={`relative pt-10 pb-8 px-6 overflow-hidden ${
                     bannerConfig.theme === 'pink-purple' ? 'bg-gradient-to-r from-pink-600 to-purple-700' :
                     bannerConfig.theme === 'blue-cyan' ? 'bg-gradient-to-r from-blue-600 to-cyan-600' :
-                    bannerConfig.theme === 'golden' ? 'bg-gradient-to-r from-amber-500 to-orange-600' : 'bg-slate-950'
+                    bannerConfig.theme === 'golden' ? 'bg-gradient-to-r from-amber-500 to-orange-600' : 'bg-gradient-to-r from-[#f84464] to-[#c026d3]'
                 }`}>
                     <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-white/10 rounded-full blur-[120px] -mr-64 -mt-64"></div>
-                    <div className="max-w-[1240px] mx-auto text-center relative z-10 text-white">
-                        <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/10 backdrop-blur-md border border-white/20 rounded-full text-white text-[10px] font-bold uppercase tracking-widest mb-4">
-                            <Sparkles className="w-3.5 h-3.5" /> {bannerConfig.text}
+                    <div className="max-w-[1240px] mx-auto relative z-10 flex flex-col md:flex-row items-center gap-12">
+                        <div className="flex-1 text-center md:text-left text-slate-950 md:pl-10">
+                            <h1 className="text-4xl md:text-6xl lg:text-7xl font-black mb-6 leading-[1.1] tracking-tight animate-in fade-in slide-in-from-bottom-4 duration-700">
+                                {bannerConfig.text && bannerConfig.text.includes('!!!') ? (
+                                    <>
+                                        {bannerConfig.text.split('!!!')[0]} <br className="hidden md:block" /> 
+                                        <span className="opacity-80">Our Team</span>
+                                    </>
+                                ) : (bannerConfig.text || "Join Our Team")}
+                            </h1>
+                            <p className="text-base md:text-lg text-slate-900 max-w-[500px] mx-auto md:mx-0 leading-relaxed mb-8 font-medium">
+                                {bannerConfig.subtext || "We're looking for passionate individuals to join us."}
+                            </p>
+                            <button 
+                                onClick={() => document.getElementById('jobs-list').scrollIntoView({ behavior: 'smooth' })}
+                                className="px-8 py-4 bg-slate-950 text-white rounded-full font-black uppercase tracking-widest text-[11px] hover:scale-105 transition-transform shadow-xl shadow-black/20"
+                            >
+                                {bannerConfig.button_text || "Explore Roles"}
+                            </button>
                         </div>
-                        <h1 className="text-3xl md:text-5xl font-black mb-4 leading-[1.1] tracking-tight animate-in fade-in slide-in-from-bottom-4 duration-700">
-                            {bannerConfig.text && bannerConfig.text.includes('!!!') ? (
-                                <>
-                                    {bannerConfig.text.split('!!!')[0]} <br className="hidden md:block" /> 
-                                    <span className="opacity-80">Our Team</span>
-                                </>
-                            ) : (bannerConfig.text || "Join Our Team")}
-                        </h1>
-                        <p className="text-sm md:text-base text-white/80 max-w-[600px] mx-auto leading-relaxed mb-6 font-medium">
-                            {bannerConfig.subtext || "We're looking for passionate individuals to join us."}
-                        </p>
-                        <button 
-                            onClick={() => document.getElementById('jobs-list').scrollIntoView({ behavior: 'smooth' })}
-                            className="px-6 py-3 bg-white text-slate-900 rounded-full font-black uppercase tracking-widest text-[10px] hover:scale-105 transition-transform shadow-xl shadow-black/10"
-                        >
-                            {bannerConfig.button_text || "Explore Roles"}
-                        </button>
+                        <div className="flex-[1.2] flex justify-center md:justify-end animate-in fade-in zoom-in duration-1000 delay-200">
+                            <img 
+                                src="/we_are_hiring.webp" 
+                                alt="We Are Hiring" 
+                                className="w-full max-w-[450px] object-contain drop-shadow-2xl hover:-translate-y-2 transition-transform duration-500"
+                            />
+                        </div>
                     </div>
                 </section>
             )}
 
             {!bannerConfig.is_enabled && (
-                <section className="pt-32 pb-24 px-6 bg-slate-950 text-white text-center">
+                <section className="pt-32 pb-24 px-6 bg-gradient-to-r from-[#f84464] to-[#c026d3] text-slate-950 text-center">
                     <h1 className="text-4xl md:text-6xl font-black mb-4">Careers</h1>
-                    <p className="text-slate-400">Join our growing family</p>
+                    <p className="text-slate-900">Join our growing family</p>
                 </section>
             )}
 
@@ -133,7 +151,7 @@ export default function CareersPage() {
                                 onClick={() => setFilterDept(dept)}
                                 className={`px-5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
                                     filterDept === dept 
-                                    ? 'bg-slate-900 text-white' 
+                                    ? 'bg-gradient-to-r from-[#f84464] to-[#c026d3] text-white' 
                                     : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
                                 }`}
                             >
@@ -171,10 +189,6 @@ export default function CareersPage() {
                                 ? "Try adjusting your filters or search term." 
                                 : "Check back soon for new opportunities or follow us for updates."}
                         </p>
-                        <div className="text-[10px] text-slate-300 font-mono">
-                            DEBUG: Received {allJobs.length} raw jobs from DB. 
-                            Active Filter: {filterDept} | Search: "{searchTerm}"
-                        </div>
                         {(searchTerm || filterDept !== "All") && (
                             <button 
                                 onClick={() => { setSearchTerm(""); setFilterDept("All"); }}
@@ -238,7 +252,7 @@ function JobCard({ job, onApply }) {
         <div className="group p-8 bg-white rounded-[40px] border border-slate-100 hover:border-pink-500/30 transition-all hover:shadow-2xl hover:shadow-pink-500/5 flex flex-col h-full">
             <div className="flex items-start justify-between mb-6">
                 <div className="flex flex-wrap gap-2">
-                    <span className="px-3 py-1 bg-slate-900 text-white rounded-full text-[9px] font-black uppercase tracking-widest">
+                    <span className="px-3 py-1 bg-gradient-to-r from-[#f84464] to-[#c026d3] text-white rounded-full text-[9px] font-black uppercase tracking-widest">
                         {job.department}
                     </span>
                     <span className="px-3 py-1 bg-pink-50 text-pink-600 rounded-full text-[9px] font-black uppercase tracking-widest border border-pink-100">

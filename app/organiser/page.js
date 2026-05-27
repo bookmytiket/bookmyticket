@@ -38,6 +38,7 @@ import UnifiedEventForm from "./components/UnifiedEventForm";
 import VirtualEventForm from "./components/VirtualEventForm";
 import MarathonEventForm from "./components/MarathonEventForm";
 import TournamentEventForm from "./components/TournamentEventForm";
+import FacilityEventForm from "./components/FacilityEventForm";
 import WalletDashboard from "./components/WalletDashboard";
 import SubscriptionManager from "./components/SubscriptionManager";
 import CouponManagement from "./components/CouponManagement";
@@ -7293,7 +7294,7 @@ function OrganiserPanel() {
                       : "Select the architectural framework for your experience"}
                   </p>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full max-w-6xl">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-10 w-full max-w-6xl mx-auto px-4">
                   <button
                     onClick={() => {
                       setPostEvent((pe) => ({ ...pe, type: "Physical Event" }));
@@ -7405,6 +7406,13 @@ function OrganiserPanel() {
                 icon: Goal,
                 color: "from-teal-500 to-emerald-600",
               },
+              {
+                id: "Racing",
+                label: "Racing",
+                sub: "Racing Event Based",
+                icon: Activity,
+                color: "from-yellow-400 to-amber-600",
+              },
             ];
 
             return (
@@ -7420,7 +7428,7 @@ function OrganiserPanel() {
                     Define the discipline for your sporting event
                   </p>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 w-full max-w-7xl">
+                <div className="flex flex-wrap justify-center gap-8 w-full max-w-7xl [&>*]:w-full [&>*]:sm:w-[calc(50%-1rem)] [&>*]:md:w-[calc(33.33%-1rem)] [&>*]:lg:w-[calc(20%-1.6rem)]">
                   {sportsTypes.map((st) => (
                     <button
                       key={st.id}
@@ -7444,6 +7452,14 @@ function OrganiserPanel() {
                             ...pe,
                             type: "Competition",
                             sportType: "Competition",
+                          }));
+                          setAddEventStep("form");
+                        } else if (st.id === "Racing") {
+                          setPostEvent((pe) => ({
+                            ...pe,
+                            type: "Facility",
+                            category: "Facility",
+                            seatingEnabled: false,
                           }));
                           setAddEventStep("form");
                         } else {
@@ -7490,6 +7506,20 @@ function OrganiserPanel() {
             if (postEvent.type === "Physical Event") {
               return (
                 <UnifiedEventForm
+                  postEvent={postEvent}
+                  setPostEvent={setPostEvent}
+                  onCancel={() => {
+                    setPostEvent(getInitialPostEvent());
+                    setAddEventStep("select_type");
+                  }}
+                  onPublish={publishSeatEvent}
+                  isEditing={!!editingEvent}
+                />
+              );
+            }
+            if (postEvent.type === "Facility") {
+              return (
+                <FacilityEventForm
                   postEvent={postEvent}
                   setPostEvent={setPostEvent}
                   onCancel={() => {

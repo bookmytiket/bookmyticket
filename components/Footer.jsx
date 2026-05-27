@@ -41,24 +41,33 @@ export default function Footer() {
     const { data: allConfig } = useSupabaseQuery('system_config', (q) => q, []);
     const rawCopyright = allConfig?.find(c => c.key === "admin_footer_copyright")?.value;
     const { data: dynamicPagesRaw, error: pagesError } = useSupabaseQuery('pages', (q) => q.eq('show_in_footer', true).order('sort_order'), []);
-    const { data: activeJobs = [] } = useSupabaseQuery('jobs', (q) => q.eq('status', 'open'), []);
     const { data: bannerConfigRaw } = useSupabaseQuery('system_config', (q) => q.eq('key', 'careers_banner_settings'), []);
     
     const { data: contactDataArr = [] } = useSupabaseQuery('contact_settings');
     const contactSettings = contactDataArr?.[0] || null;
 
+    const [activeJobs, setActiveJobs] = React.useState([]);
     const bannerConfig = bannerConfigRaw?.[0]?.value || { is_enabled: true };
     const isPortalEnabled = bannerConfig.is_enabled === true || bannerConfig.is_enabled === 'true';
-    const hasActiveJobs = activeJobs.length > 0 && isPortalEnabled;
+    const hasActiveJobs = activeJobs?.length > 0 && isPortalEnabled;
     const dynamicPages = dynamicPagesRaw || [];
     const [isMobile, setIsMobile] = React.useState(false);
     const [mounted, setMounted] = React.useState(false);
+
 
     React.useEffect(() => {
         setMounted(true);
         const handleResize = () => setIsMobile(window.innerWidth < 768);
         handleResize();
         window.addEventListener("resize", handleResize);
+
+        fetch('/api/careers/jobs')
+            .then(res => res.json())
+            .then(json => {
+                if (json.success) setActiveJobs(json.data || []);
+            })
+            .catch(console.error);
+
         return () => window.removeEventListener("resize", handleResize);
     }, []);
 
@@ -112,7 +121,7 @@ export default function Footer() {
                     {/* Brand & Get the App */}
                     <div>
                         <div style={{ marginBottom: "20px" }}>
-                            <img src={brandingLogo} alt="BookMyTicket" style={{ height: "45px", width: "auto", display: "block", filter: "invert(1) brightness(2)" }} />
+                            <img src={brandingLogo} alt="BookMyTicket" style={{ height: "80px", width: "auto", display: "block", filter: "invert(1) brightness(2)" }} />
                         </div>
                         
                         <h4 style={{ fontSize: "14px", fontWeight: 800, color: "#ffffff", letterSpacing: "0.1em", marginBottom: "16px", textTransform: "uppercase" }}>
@@ -248,33 +257,49 @@ export default function Footer() {
                                         onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,0.5)"}
                                     >
                                         {page.title}
-                                        {page.slug === 'careers' && mounted && hasActiveJobs && (
+                                        {page.slug === 'careers' && mounted && (
                                             <motion.span 
-                                                animate={{ 
-                                                    opacity: [1, 0.5, 1],
-                                                    scale: [1, 1.05, 1],
-                                                    color: ['#f84464', '#c026d3', '#f84464']
-                                                }}
-                                                transition={{ 
+                                                animate={hasActiveJobs ? { 
+                                                    opacity: [1, 0.8, 1],
+                                                    scale: [1, 1.05, 1]
+                                                } : {}}
+                                                transition={hasActiveJobs ? { 
                                                     duration: 3,
                                                     repeat: Infinity,
                                                     ease: "easeInOut"
-                                                }}
+                                                } : {}}
                                                 style={{ 
                                                     marginLeft: "12px", 
-                                                    fontSize: "10px", 
+                                                    padding: "2px 8px",
+                                                    borderRadius: "8px 8px 8px 0px",
+                                                    fontSize: "9px", 
                                                     fontWeight: 900,
+                                                    color: "#ffffff",
                                                     textTransform: "uppercase",
                                                     verticalAlign: "middle",
                                                     letterSpacing: "0.1em",
                                                     whiteSpace: "nowrap",
                                                     display: "inline-block",
-                                                    background: "linear-gradient(135deg, #f84464 0%, #c026d3 100%)",
-                                                    WebkitBackgroundClip: "text",
-                                                    WebkitTextFillColor: "transparent",
+                                                    background: hasActiveJobs ? "linear-gradient(135deg, #f84464 0%, #c026d3 100%)" : "#475569",
+                                                    opacity: hasActiveJobs ? 1 : 0.6,
+                                                    position: "relative"
                                                 }}
                                             >
-                                                {bannerConfig.text?.includes('!!!') ? 'Join Our Team' : 'We Are Hiring'}
+                                                <span style={{
+                                                    position: "absolute",
+                                                    left: "-6px",
+                                                    bottom: "0px",
+                                                    width: "0",
+                                                    height: "0",
+                                                    borderTop: "6px solid transparent",
+                                                    borderRight: `6px solid ${hasActiveJobs ? '#f84464' : '#475569'}`,
+                                                    borderBottom: "0px solid transparent"
+                                                }} />
+                                                <span style={{ position: "relative", zIndex: 1 }}>
+                                                    {hasActiveJobs 
+                                                        ? (bannerConfig.text?.includes('!!!') ? 'Join Our Team' : 'We Are Hiring')
+                                                        : 'Closed'}
+                                                </span>
                                             </motion.span>
                                         )}
                                     </a>
@@ -331,13 +356,12 @@ export default function Footer() {
                 <div style={{ 
                     paddingTop: "20px", 
                     borderTop: "1px solid rgba(255,255,255,0.08)",
-                    display: "flex",
-                    flexDirection: isMobile ? "column" : "row",
+                    display: "grid",
+                    gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr",
                     alignItems: "center",
-                    justifyContent: "space-between",
                     gap: "15px"
                 }}>
-                    <div style={{ display: "flex", gap: "24px" }}>
+                    <div style={{ display: "flex", gap: "24px", justifyContent: isMobile ? "center" : "flex-start" }}>
                         {socialLinks.map((s, i) => {
                             const url = contactSettings?.[s.key] || "#";
                             return (
@@ -358,9 +382,12 @@ export default function Footer() {
                     </div>
 
                     <div style={{ display: "flex", alignItems: "center", gap: "20px", flexWrap: "wrap", justifyContent: "center" }}>
-                        <div style={{ color: "rgba(255,255,255,0.4)", fontSize: "13px" }}>
+                        <div style={{ color: "rgba(255,255,255,0.4)", fontSize: "13px", textAlign: "center" }}>
                             {copyright.copyrightText || DEFAULT_COPYRIGHT.copyrightText}
                         </div>
+                    </div>
+
+                    <div style={{ display: "flex", alignItems: "center", gap: "20px", flexWrap: "wrap", justifyContent: isMobile ? "center" : "flex-end" }}>
                         <a href="/terms" style={{ color: "rgba(255,255,255,0.45)", fontSize: "12px", fontWeight: 600, textDecoration: "none", borderBottom: "1px solid rgba(255,255,255,0.15)", paddingBottom: "1px", transition: "color 0.2s" }}
                             onMouseEnter={e => e.currentTarget.style.color = "#f844a4"}
                             onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,0.45)"}
