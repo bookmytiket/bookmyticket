@@ -57,7 +57,7 @@ const PARTNER_DEALS = [
 ];
 
 export default function SignInPage() {
-    const { user, login, loading: authLoading } = useAuth();
+    const { user, login, loading: authLoading, fetchAndSetUser } = useAuth();
     const router = useRouter();
     const searchParams = useSearchParams();
     const redirectPath = searchParams.get("redirect");
@@ -190,21 +190,26 @@ export default function SignInPage() {
         return destination;
     };
 
+    // Sign In State (moved up to prevent ReferenceError in useEffect)
+    const [loading, setLoading] = useState(false);
+
     // REDIRECT GUARD: If already logged in, go to redirectPath or home
     useEffect(() => {
+        // Prevent auto-redirect if we are actively verifying credentials or handling OTP
+        if (loading || mode !== "signin") return;
+        
         if (!authLoading && user && mounted) {
             const destination = getRedirectDestination(user, redirectPath);
             console.log("SignInPage: Auto-redirecting to:", destination);
             router.replace(destination);
         }
-    }, [user, authLoading, router, redirectPath, mounted]);
+    }, [user, authLoading, router, redirectPath, mounted, mode, loading]);
 
 
     // Sign In
     const [identifier, setIdentifier] = useState("");
     const [password, setPassword] = useState("");
     const [showPass, setShowPass] = useState(false);
-    const [loading, setLoading] = useState(false);
     const [isStaff, setIsStaff] = useState(false);
     const [loginError, setLoginError] = useState("");
     const [userIp, setUserIp] = useState("Unknown IP");
@@ -277,8 +282,8 @@ export default function SignInPage() {
     const [otpError, setOtpError] = useState("");
     const [pendingSignupData, setPendingSignupData] = useState(null);
 
-    const handleLogin = async (e) => {
-        e.preventDefault();
+    const handleLogin = async (e, skipOtp = false) => {
+        if (e && e.preventDefault) e.preventDefault();
         setLoginError("");
         setLoading(true);
 
@@ -292,8 +297,34 @@ export default function SignInPage() {
                 ip: userIp,
                 userAgent: navigator.userAgent,
             });
+            
             if (!result.success) {
                 setLoginError(result.error || "Invalid email or password.");
+                return;
+            } 
+            
+            const role = result.user?.role || 'public';
+            const isAdmin = ['admin', 'super_admin', 'system_admin'].includes(role);
+
+            if (isAdmin && !skipOtp) {
+                // Immediately sign out to prevent session hijacking before OTP verification
+                await supabase.auth.signOut();
+                
+                // Send Email OTP
+                const res = await fetch('/api/auth/otp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'send', email, purpose: 'login' })
+                });
+                const data = await res.json();
+                
+                if (!data.success) {
+                    throw new Error(data.error || "Failed to send OTP.");
+                }
+                
+                setOtpEmail(email);
+                setOtpCode("");
+                setMode("login_otp_verify");
             } else {
                 // Immediate redirect on success to bypass useEffect delays
                 const dest = getRedirectDestination(result.user, redirectPath);
@@ -302,13 +333,78 @@ export default function SignInPage() {
             }
         } catch (err) {
             console.error("Login error:", err);
-            setLoginError("An error occurred during login.");
+            setLoginError(err.message || "An error occurred during login.");
         } finally {
             clearTimeout(safetyTimer);
             setLoading(false);
         }
     };
 
+    const handleLoginSendOTP = async (e) => {
+        e.preventDefault();
+        setLoginError("");
+        if (!identifier) { setLoginError("Please enter your email address."); return; }
+        setLoading(true);
+        try {
+            const res = await fetch('/api/auth/otp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'send', email: identifier.trim().toLowerCase(), purpose: 'login' })
+            });
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error || "Failed to send OTP.");
+            setOtpEmail(identifier.trim().toLowerCase());
+            setOtpCode("");
+            setMode("login_otp_verify");
+        } catch (err) {
+            console.error("Login OTP send error:", err);
+            setLoginError(err.message || "Could not send verification code.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleLoginVerifyOTP = async (e) => {
+        e.preventDefault();
+        setLoginError("");
+        if (otpCode.length !== 6) { setLoginError("Please enter the 6-digit code."); return; }
+        setLoading(true);
+        try {
+            const res = await fetch('/api/auth/otp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'verify', email: otpEmail, code: otpCode, purpose: 'login' })
+            });
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error || "Invalid OTP.");
+
+            if (data.session) {
+                const { error: sessionError } = await supabase.auth.setSession({
+                    access_token: data.session.access_token,
+                    refresh_token: data.session.refresh_token
+                });
+                if (sessionError) throw sessionError;
+                
+                const { data: { session } } = await supabase.auth.getSession();
+                let finalUser = session?.user;
+                if (fetchAndSetUser) {
+                    finalUser = await fetchAndSetUser(finalUser) || finalUser;
+                }
+                const dest = getRedirectDestination(finalUser, redirectPath);
+                
+                setTimeout(() => {
+                    router.replace(dest);
+                }, 150);
+            } else {
+                throw new Error("Session data missing from server response.");
+            }
+        } catch (err) {
+            console.error("Login OTP verify error:", err);
+            setLoginError(err.message || "Invalid or expired verification code.");
+        } finally {
+            setTimeout(() => setLoading(false), 200);
+        }
+    };
 
     const handleSignupSendOTP = async (e) => {
         e.preventDefault();
@@ -876,6 +972,67 @@ export default function SignInPage() {
                             />
                             </Link>
                         </div>
+
+                        {/* ══ LOGIN OTP SEND ══ */}
+                        {mode === "login_otp" && (
+                            <>
+                                <div style={{ textAlign: "center", marginBottom: "16px" }}>
+                                    <h1 style={{ fontSize: "26px", fontWeight: 900, color: "#1e1b4b", margin: "0 0 4px" }}>
+                                        OTP Login
+                                    </h1>
+                                    <p style={{ fontSize: "13px", color: "#64748b", margin: 0, fontWeight: 500 }}>
+                                        Receive a login code via email
+                                    </p>
+                                </div>
+                                <form onSubmit={handleLoginSendOTP}>
+                                    <input
+                                        type="email" required
+                                        placeholder="Enter your email"
+                                        value={identifier}
+                                        onChange={e => setIdentifier(e.target.value)}
+                                        style={inp} onFocus={fr} onBlur={bg}
+                                    />
+                                    {loginError && <div style={{ padding: "12px", background: "#fef2f2", border: "1px solid #fee2e2", borderRadius: "10px", marginBottom: "16px", color: "#b91c1c", fontSize: "13px", fontWeight: 600 }}>⚠ {loginError}</div>}
+                                    <button type="submit" disabled={loading} style={{...submitBtn, opacity: loading ? 0.7 : 1}}>
+                                        {loading ? "Sending OTP..." : "Send OTP"}
+                                    </button>
+                                </form>
+                                <div style={{ textAlign: "center", marginTop: "16px" }}>
+                                    <button onClick={() => { setMode("signin"); setLoginError(""); }} style={linkBtn}>Back to Password Login</button>
+                                </div>
+                            </>
+                        )}
+
+                        {/* ══ LOGIN OTP VERIFY ══ */}
+                        {mode === "login_otp_verify" && (
+                            <>
+                                <div style={{ textAlign: "center", marginBottom: "16px" }}>
+                                    <h1 style={{ fontSize: "24px", fontWeight: 900, color: "#1e1b4b", margin: "0 0 4px" }}>
+                                        Verify OTP
+                                    </h1>
+                                    <p style={{ fontSize: "13px", color: "#64748b", margin: 0, fontWeight: 500 }}>
+                                        Enter the code sent to {otpEmail}
+                                    </p>
+                                </div>
+                                <form onSubmit={handleLoginVerifyOTP}>
+                                    <input
+                                        type="text" required
+                                        placeholder="000000"
+                                        value={otpCode}
+                                        onChange={e => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                        style={{...inp, textAlign: "center", letterSpacing: "8px", fontSize: "24px", fontWeight: "bold", padding: "16px"}} onFocus={fr} onBlur={bg}
+                                        autoFocus
+                                    />
+                                    {loginError && <div style={{ padding: "12px", background: "#fef2f2", border: "1px solid #fee2e2", borderRadius: "10px", marginBottom: "16px", color: "#b91c1c", fontSize: "13px", fontWeight: 600 }}>⚠ {loginError}</div>}
+                                    <button type="submit" disabled={loading || otpCode.length !== 6} style={{...submitBtn, opacity: (loading || otpCode.length !== 6) ? 0.7 : 1}}>
+                                        {loading ? "Verifying..." : "Verify & Login"}
+                                    </button>
+                                </form>
+                                <div style={{ textAlign: "center", marginTop: "16px" }}>
+                                    <button onClick={() => { setMode("login_otp"); setLoginError(""); }} style={linkBtn}>Resend or Change Email</button>
+                                </div>
+                            </>
+                        )}
 
                         {/* ══ SIGN IN ══ */}
                         {mode === "signin" && (
