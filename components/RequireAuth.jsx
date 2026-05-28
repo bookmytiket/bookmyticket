@@ -55,9 +55,9 @@ export default function RequireAuth({ children, allowedRoles }) {
     const isLegacyActive = kycStatus === 'active' || kycStatus === 'kyc verified' || kycStatus === 'approved' || user.is_approved === true || user.isApproved === true;
     const dashboardAccess = user.verification_status?.dashboard_access === true || isLegacyActive;
     
-    if (!isAdmin && user.role === "organiser" && !dashboardAccess && !pathname.startsWith("/onboarding")) {
-      console.log(`[RequireAuth] Organiser dashboard access denied. Redirecting to /onboarding`);
-      router.replace("/onboarding");
+    if (!isAdmin && user.role === "organiser" && !dashboardAccess && pathname !== "/organiser") {
+      console.log(`[RequireAuth] Organiser dashboard access denied. Redirecting to /organiser`);
+      router.replace("/organiser");
       return;
     }
 
