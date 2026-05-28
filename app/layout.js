@@ -13,7 +13,6 @@ import MaintenanceGuard from '@/components/MaintenanceGuard';
 import { ToastProvider } from '@/context/ToastContext';
 import { ConfirmProvider } from '@/context/ConfirmContext';
 import ToastContainer from '@/components/ui/ToastContainer';
-import ChangePasswordModal from '@/components/ChangePasswordModal';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -202,7 +201,6 @@ export default function RootLayout({ children }) {
                   <CustomerAdPopup />
                 </Suspense>
                 <ToastContainer />
-                <ChangePasswordModal />
                 <Suspense fallback={<div className="min-h-screen bg-white" />}>
                   <ConditionalLayoutWrapper>
                     {children}

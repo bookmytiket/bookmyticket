@@ -2,7 +2,7 @@
 
 /**
  * DigiLocker KYC Onboarding Wizard
- * Organizer Panel – First Login Flow
+ * BookMyTicket Light App Theme
  *
  * Steps:
  *   1 – Basic Profile
@@ -14,38 +14,38 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
 import styles from './KYCOnboarding.module.css';
 
-// ─── Step Components ──────────────────────────────────────────────────────────
-import StepBasicProfile from './steps/StepBasicProfile';
-import StepDigiLocker from './steps/StepDigiLocker';
-import StepBusinessInfo from './steps/StepBusinessInfo';
-import StepSettlement from './steps/StepSettlement';
+import StepBasicProfile    from './steps/StepBasicProfile';
+import StepDigiLocker      from './steps/StepDigiLocker';
+import StepBusinessInfo    from './steps/StepBusinessInfo';
+import StepSettlement      from './steps/StepSettlement';
 import StepApprovalPending from './steps/StepApprovalPending';
 
 const STEPS = [
-  { id: 1, label: 'Basic Profile', icon: '👤', description: 'Personal details' },
+  { id: 1, label: 'Basic Profile',           icon: '👤', description: 'Personal details' },
   { id: 2, label: 'DigiLocker Verification', icon: '🔐', description: 'Government ID' },
-  { id: 3, label: 'Business Information', icon: '🏢', description: 'Business details' },
-  { id: 4, label: 'Settlement Setup', icon: '💰', description: 'Bank account' },
-  { id: 5, label: 'Admin Approval', icon: '✅', description: 'Under review' },
+  { id: 3, label: 'Business Information',    icon: '🏢', description: 'Business details' },
+  { id: 4, label: 'Settlement Setup',        icon: '💰', description: 'Bank account' },
+  { id: 5, label: 'Admin Approval',          icon: '✅', description: 'Under review' },
 ];
 
 export default function KYCOnboarding({ session }) {
-  const router = useRouter();
+  const router       = useRouter();
   const searchParams = useSearchParams();
 
   const [currentStep, setCurrentStep] = useState(1);
-  const [kycStatus, setKycStatus] = useState(null);
-  const [kycData, setKycData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [kycStatus,   setKycStatus]   = useState(null);
+  const [kycData,     setKycData]     = useState(null);
+  const [loading,     setLoading]     = useState(true);
+  const [error,       setError]       = useState(null);
 
-  // ── Check for DigiLocker callback params ────────────────────────────────
+  // ── Handle DigiLocker callback params ─────────────────────────────
   useEffect(() => {
-    const kycStep = searchParams.get('kyc_step');
+    const kycStep          = searchParams.get('kyc_step');
     const digilockerVerified = searchParams.get('digilocker_verified');
-    const kycError = searchParams.get('kyc_error');
+    const kycError         = searchParams.get('kyc_error');
 
     if (kycError) {
       setError(decodeURIComponent(kycError));
@@ -57,12 +57,12 @@ export default function KYCOnboarding({ session }) {
     }
   }, [searchParams]);
 
-  // ── Fetch current KYC status ─────────────────────────────────────────────
+  // ── Fetch KYC status ───────────────────────────────────────────────
   const fetchKYCStatus = useCallback(async () => {
-    if (!session?.access_token) return;
+    if (!session?.access_token) { setLoading(false); return; }
     try {
       setLoading(true);
-      const res = await fetch('/api/organizer/kyc/status', {
+      const res  = await fetch('/api/organizer/kyc/status', {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
       const data = await res.json();
@@ -71,7 +71,6 @@ export default function KYCOnboarding({ session }) {
         setKycData(data);
         setKycStatus(data.kyc?.status);
 
-        // Sync step with server state
         if (data.kyc?.dashboard_access) {
           router.replace('/organiser');
           return;
@@ -82,7 +81,6 @@ export default function KYCOnboarding({ session }) {
           setCurrentStep(serverStep);
         }
 
-        // If already submitted, go to step 5
         if (['submitted', 'under_review', 'approved', 'rejected'].includes(data.kyc?.status)) {
           setCurrentStep(5);
         }
@@ -94,49 +92,33 @@ export default function KYCOnboarding({ session }) {
     }
   }, [session?.access_token, router, searchParams]);
 
-  useEffect(() => {
-    fetchKYCStatus();
-  }, [fetchKYCStatus]);
+  useEffect(() => { fetchKYCStatus(); }, [fetchKYCStatus]);
 
-  // ── Realtime KYC status subscription ────────────────────────────────────
+  // ── Realtime subscription ──────────────────────────────────────────
   useEffect(() => {
-    if (!session?.user?.id) return;
-
-    const { supabase } = require('@/lib/supabase');
-    if (!supabase) return;
+    if (!session?.user?.id || !supabase) return;
 
     const channel = supabase
       .channel(`kyc-status-${session.user.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'digilocker_kyc_records',
-          filter: `organizer_id=eq.${session.user.id}`,
-        },
-        (payload) => {
-          const newStatus = payload.new?.kyc_status;
-          if (newStatus) {
-            setKycStatus(newStatus);
-            if (['submitted', 'under_review'].includes(newStatus)) setCurrentStep(5);
-            if (newStatus === 'approved') router.replace('/organiser?kyc_approved=1');
-          }
+      .on('postgres_changes', {
+        event: '*', schema: 'public',
+        table: 'digilocker_kyc_records',
+        filter: `organizer_id=eq.${session.user.id}`,
+      }, (payload) => {
+        const newStatus = payload.new?.kyc_status;
+        if (newStatus) {
+          setKycStatus(newStatus);
+          if (['submitted', 'under_review'].includes(newStatus)) setCurrentStep(5);
+          if (newStatus === 'approved') router.replace('/organiser?kyc_approved=1');
         }
-      )
+      })
       .subscribe();
 
     return () => supabase.removeChannel(channel);
   }, [session?.user?.id, router]);
 
-  const handleNext = (nextStep) => {
-    setCurrentStep(nextStep || currentStep + 1);
-    setError(null);
-  };
-
-  const handleBack = () => {
-    if (currentStep > 1) setCurrentStep(currentStep - 1);
-  };
+  const handleNext = (nextStep) => { setCurrentStep(nextStep || currentStep + 1); setError(null); };
+  const handleBack = () => { if (currentStep > 1) setCurrentStep(currentStep - 1); };
 
   if (loading) {
     return (
@@ -151,7 +133,7 @@ export default function KYCOnboarding({ session }) {
 
   return (
     <div className={styles.container}>
-      {/* ── Header ──────────────────────────────────────────────────────── */}
+      {/* ── Header ── */}
       <div className={styles.header}>
         <div className={styles.headerContent}>
           <div className={styles.logo}>
@@ -166,7 +148,7 @@ export default function KYCOnboarding({ session }) {
       </div>
 
       <div className={styles.wrapper}>
-        {/* ── Sidebar Progress ─────────────────────────────────────────── */}
+        {/* ── Sidebar ── */}
         <aside className={styles.sidebar}>
           <div className={styles.sidebarInner}>
             <h3 className={styles.sidebarTitle}>Verification Steps</h3>
@@ -175,25 +157,19 @@ export default function KYCOnboarding({ session }) {
             </p>
 
             <div className={styles.stepsList}>
-              {STEPS.map((step, idx) => {
+              {STEPS.map((step) => {
                 const isCompleted = step.id < currentStep;
-                const isActive = step.id === currentStep;
-                const isLocked = step.id > currentStep;
-
+                const isActive    = step.id === currentStep;
+                const isLocked    = step.id > currentStep;
                 return (
                   <div
                     key={step.id}
                     className={`${styles.stepItem} ${isActive ? styles.stepActive : ''} ${isCompleted ? styles.stepCompleted : ''} ${isLocked ? styles.stepLocked : ''}`}
                   >
-                    <div className={styles.stepConnector}>
-                      {idx < STEPS.length - 1 && (
-                        <div className={`${styles.connector} ${isCompleted ? styles.connectorDone : ''}`} />
-                      )}
-                    </div>
                     <div className={styles.stepDot}>
                       {isCompleted ? (
                         <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                          <path d="M3 8L6.5 11.5L13 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                          <path d="M3 8L6.5 11.5L13 4.5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
                       ) : (
                         <span className={styles.stepNumber}>{step.id}</span>
@@ -211,17 +187,14 @@ export default function KYCOnboarding({ session }) {
               })}
             </div>
 
-            {/* Progress bar */}
+            {/* Progress */}
             <div className={styles.progressSection}>
               <div className={styles.progressLabel}>
                 <span>Progress</span>
                 <span>{Math.round((completedSteps / STEPS.length) * 100)}%</span>
               </div>
               <div className={styles.progressTrack}>
-                <div
-                  className={styles.progressFill}
-                  style={{ width: `${(completedSteps / STEPS.length) * 100}%` }}
-                />
+                <div className={styles.progressFill} style={{ width: `${(completedSteps / STEPS.length) * 100}%` }} />
               </div>
             </div>
 
@@ -230,13 +203,13 @@ export default function KYCOnboarding({ session }) {
               <div className={styles.digilockerIcon}>🇮🇳</div>
               <div>
                 <p className={styles.digilockerTitle}>Powered by DigiLocker</p>
-                <p className={styles.digilockerDesc}>MeriPehchaan • Government of India</p>
+                <p className={styles.digilockerDesc}>MeriPehchaan · Government of India</p>
               </div>
             </div>
           </div>
         </aside>
 
-        {/* ── Main Content ─────────────────────────────────────────────── */}
+        {/* ── Main Content ── */}
         <main className={styles.main}>
           {error && (
             <div className={styles.errorBanner}>
@@ -247,55 +220,17 @@ export default function KYCOnboarding({ session }) {
           )}
 
           <div className={styles.stepHeader}>
-            <div className={styles.stepBreadcrumb}>
-              Step {currentStep} of {STEPS.length}
-            </div>
+            <div className={styles.stepBreadcrumb}>Step {currentStep} of {STEPS.length}</div>
             <h1 className={styles.stepTitle}>{STEPS[currentStep - 1]?.label}</h1>
             <p className={styles.stepDescription}>{STEPS[currentStep - 1]?.description}</p>
           </div>
 
           <div className={styles.stepContent}>
-            {currentStep === 1 && (
-              <StepBasicProfile
-                session={session}
-                kycData={kycData}
-                onNext={() => handleNext(2)}
-              />
-            )}
-            {currentStep === 2 && (
-              <StepDigiLocker
-                session={session}
-                kycData={kycData}
-                onNext={() => handleNext(3)}
-                onBack={handleBack}
-                error={error}
-                setError={setError}
-              />
-            )}
-            {currentStep === 3 && (
-              <StepBusinessInfo
-                session={session}
-                kycData={kycData}
-                onNext={() => handleNext(4)}
-                onBack={handleBack}
-              />
-            )}
-            {currentStep === 4 && (
-              <StepSettlement
-                session={session}
-                kycData={kycData}
-                onNext={() => handleNext(5)}
-                onBack={handleBack}
-              />
-            )}
-            {currentStep === 5 && (
-              <StepApprovalPending
-                session={session}
-                kycData={kycData}
-                kycStatus={kycStatus}
-                onRefresh={fetchKYCStatus}
-              />
-            )}
+            {currentStep === 1 && <StepBasicProfile    session={session} kycData={kycData} onNext={() => handleNext(2)} onRefresh={fetchKYCStatus} />}
+            {currentStep === 2 && <StepDigiLocker      session={session} kycData={kycData} onNext={() => handleNext(3)} onBack={handleBack} error={error} setError={setError} />}
+            {currentStep === 3 && <StepBusinessInfo    session={session} kycData={kycData} onNext={() => handleNext(4)} onBack={handleBack} onRefresh={fetchKYCStatus} />}
+            {currentStep === 4 && <StepSettlement      session={session} kycData={kycData} onNext={() => handleNext(5)} onBack={handleBack} onRefresh={fetchKYCStatus} />}
+            {currentStep === 5 && <StepApprovalPending session={session} kycData={kycData} kycStatus={kycStatus} onRefresh={fetchKYCStatus} />}
           </div>
         </main>
       </div>

@@ -1,37 +1,40 @@
 'use client';
 
-/**
- * Step 4 – Settlement Setup
- */
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import styles from '../KYCOnboarding.module.css';
 
 export default function StepSettlement({ session, kycData, onNext, onBack }) {
-  const [form, setForm] = useState({
-    account_holder_name: kycData?.identity?.verified_name || '',
+  // Lazy initializer — safe even when kycData is null at mount time
+  const [form, setForm] = useState(() => ({
+    account_holder_name: kycData?.identity?.verified_name ?? '',
     bank_name: '',
     account_number: '',
     confirm_account_number: '',
     ifsc_code: '',
     upi_id: '',
-  });
+  }));
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
 
+  // Prefill name once kycData arrives
+  useEffect(() => {
+    const name = kycData?.identity?.verified_name || kycData?.profile?.full_name || '';
+    if (name && !form.account_holder_name) {
+      setForm(prev => ({ ...prev, account_holder_name: name }));
+    }
+  }, [kycData]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    setForm(prev => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async () => {
-    if (!form.account_holder_name.trim()) return setError('Account holder name is required');
-    if (!form.bank_name.trim()) return setError('Bank name is required');
-    if (!form.account_number.trim()) return setError('Account number is required');
-    if (form.account_number !== form.confirm_account_number) {
-      return setError('Account numbers do not match');
-    }
-    if (!form.ifsc_code.trim()) return setError('IFSC code is required');
+    if (!(form?.account_holder_name ?? '').trim()) return setError('Account holder name is required');
+    if (!(form?.bank_name ?? '').trim()) return setError('Bank name is required');
+    if (!(form?.account_number ?? '').trim()) return setError('Account number is required');
+    if (form?.account_number !== form?.confirm_account_number) return setError('Account numbers do not match');
+    if (!(form?.ifsc_code ?? '').trim()) return setError('IFSC code is required');
 
     try {
       setSubmitting(true);
@@ -45,14 +48,14 @@ export default function StepSettlement({ session, kycData, onNext, onBack }) {
         },
         body: JSON.stringify({
           full_name: kycData?.identity?.verified_name || kycData?.profile?.full_name || '',
-          phone: '',
+          phone: kycData?.profile?.phone || '',
           business_name: kycData?.profile?.business_name || '',
-          business_type: '',
-          pan_number: '',
-          business_address: '',
-          city: '',
-          state: '',
-          pincode: '',
+          business_type: kycData?.profile?.business_type || '',
+          pan_number: kycData?.profile?.pan_number || '',
+          business_address: kycData?.profile?.business_address || '',
+          city: kycData?.profile?.city || '',
+          state: kycData?.profile?.state || '',
+          pincode: kycData?.profile?.pincode || '',
           country: 'India',
           bank: {
             account_holder_name: form.account_holder_name,
@@ -81,37 +84,44 @@ export default function StepSettlement({ session, kycData, onNext, onBack }) {
 
   return (
     <div>
+      {/* Security notice */}
       <div style={{
-        background: 'rgba(30,27,75,0.4)',
-        border: '1px solid rgba(124,58,237,0.2)',
-        borderRadius: '12px',
-        padding: '16px',
+        background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)',
+        border: '1px solid #bbf7d0',
+        borderRadius: '14px',
+        padding: '16px 20px',
         marginBottom: '24px',
         display: 'flex',
-        gap: '12px',
+        gap: '14px',
         alignItems: 'flex-start',
-        fontSize: '13px',
-        color: '#94a3b8',
       }}>
-        <span style={{ fontSize: '20px' }}>🔒</span>
-        <p style={{ margin: 0, lineHeight: 1.5 }}>
-          Your bank account details are encrypted and stored securely.
-          Account numbers are never displayed in full after submission.
-          This account will be used for event revenue settlements.
-        </p>
+        <span style={{ fontSize: '22px' }}>🔒</span>
+        <div>
+          <p style={{ margin: '0 0 4px', fontSize: '13px', fontWeight: 700, color: '#065f46' }}>
+            Your data is encrypted &amp; secure
+          </p>
+          <p style={{ margin: 0, fontSize: '12px', color: '#059669', lineHeight: 1.5 }}>
+            Bank details are AES-256 encrypted. Account numbers are never displayed in full after submission.
+            This account will be used for event revenue settlements.
+          </p>
+        </div>
       </div>
 
       {error && (
         <div style={{
-          background: 'rgba(220,38,38,0.1)',
-          border: '1px solid rgba(220,38,38,0.3)',
-          borderRadius: '10px',
+          background: '#fef2f2',
+          border: '1px solid #fee2e2',
+          borderRadius: '12px',
           padding: '12px 16px',
           marginBottom: '20px',
-          color: '#fca5a5',
+          color: '#b91c1c',
           fontSize: '13px',
+          fontWeight: 600,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
         }}>
-          {error}
+          <span>⚠️</span> {error}
         </div>
       )}
 
@@ -178,7 +188,7 @@ export default function StepSettlement({ session, kycData, onNext, onBack }) {
         </div>
 
         <div className={`${styles.formGroup} ${styles.formGroupFull}`}>
-          <label className={styles.formLabel}>UPI ID (Optional)</label>
+          <label className={styles.formLabel}>UPI ID <span style={{ color: '#94a3b8', fontWeight: 400 }}>(Optional)</span></label>
           <input
             name="upi_id"
             value={form.upi_id}
@@ -191,11 +201,7 @@ export default function StepSettlement({ session, kycData, onNext, onBack }) {
 
       <div className={styles.formActions}>
         <button className={styles.btnSecondary} onClick={onBack}>← Back</button>
-        <button
-          className={styles.btnPrimary}
-          onClick={handleSubmit}
-          disabled={submitting}
-        >
+        <button className={styles.btnPrimary} onClick={handleSubmit} disabled={submitting}>
           {submitting ? 'Saving...' : 'Submit KYC →'}
         </button>
       </div>

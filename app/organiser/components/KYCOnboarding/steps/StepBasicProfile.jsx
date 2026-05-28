@@ -1,40 +1,28 @@
 'use client';
 
-/**
- * Step 1 – Basic Profile
- * Collects name, phone, DOB before DigiLocker
- * (Pre-filled from DigiLocker after verification)
- */
-
 import { useState, useEffect } from 'react';
 import styles from '../KYCOnboarding.module.css';
 
-export default function StepBasicProfile({ session, kycData, onNext }) {
-  const [form, setForm] = useState({
-    full_name: '',
-    phone: '',
-    dob: '',
-  });
+export default function StepBasicProfile({ session, kycData, onNext, onRefresh }) {
+  const [form, setForm] = useState({ full_name: '', phone: '', dob: '' });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
 
-  // Pre-fill from DigiLocker if verified
+  // Pre-fill once kycData is available
   useEffect(() => {
-    if (kycData?.identity?.verified_name) {
-      setForm((prev) => ({
-        ...prev,
-        full_name: kycData.identity.verified_name || '',
-        dob: kycData.identity.verified_dob || '',
-      }));
-    }
-    if (kycData?.profile?.full_name) {
-      setForm((prev) => ({ ...prev, full_name: kycData.profile.full_name }));
-    }
+    const name = kycData?.identity?.verified_name || kycData?.profile?.full_name || '';
+    const dob  = kycData?.identity?.verified_dob  || kycData?.profile?.dob || '';
+    const phone = kycData?.profile?.phone || '';
+    setForm(prev => ({
+      full_name: name || prev.full_name,
+      phone:     phone || prev.phone,
+      dob:       dob  || prev.dob,
+    }));
   }, [kycData]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    setForm(prev => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async () => {
@@ -55,7 +43,6 @@ export default function StepBasicProfile({ session, kycData, onNext }) {
           full_name: form.full_name,
           phone: form.phone,
           dob: form.dob || null,
-          // Placeholder for required fields
           business_name: '',
           business_type: '',
           pan_number: '',
@@ -73,14 +60,7 @@ export default function StepBasicProfile({ session, kycData, onNext }) {
         throw new Error(data.error || 'Failed to save profile');
       }
 
-      // Update kyc_step
-      const supabaseAdmin = await import('@supabase/supabase-js').then(({ createClient }) =>
-        createClient(
-          process.env.NEXT_PUBLIC_SUPABASE_URL,
-          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-        )
-      );
-
+      if (onRefresh) onRefresh();
       onNext();
     } catch (err) {
       setError(err.message);
@@ -95,8 +75,8 @@ export default function StepBasicProfile({ session, kycData, onNext }) {
     <div>
       {digilockerVerified && (
         <div style={{
-          background: 'rgba(5,150,105,0.1)',
-          border: '1px solid rgba(5,150,105,0.3)',
+          background: 'linear-gradient(135deg, #f0fdf4, #dcfce7)',
+          border: '1px solid #bbf7d0',
           borderRadius: '12px',
           padding: '14px 18px',
           marginBottom: '24px',
@@ -104,7 +84,8 @@ export default function StepBasicProfile({ session, kycData, onNext }) {
           alignItems: 'center',
           gap: '10px',
           fontSize: '13px',
-          color: '#34d399',
+          fontWeight: 600,
+          color: '#065f46',
         }}>
           <span>✅</span>
           <span>Fields pre-filled from your DigiLocker verified identity</span>
@@ -113,15 +94,19 @@ export default function StepBasicProfile({ session, kycData, onNext }) {
 
       {error && (
         <div style={{
-          background: 'rgba(220,38,38,0.1)',
-          border: '1px solid rgba(220,38,38,0.3)',
-          borderRadius: '10px',
+          background: '#fef2f2',
+          border: '1px solid #fee2e2',
+          borderRadius: '12px',
           padding: '12px 16px',
           marginBottom: '20px',
-          color: '#fca5a5',
+          color: '#b91c1c',
           fontSize: '13px',
+          fontWeight: 600,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
         }}>
-          {error}
+          <span>⚠️</span> {error}
         </div>
       )}
 
@@ -164,11 +149,7 @@ export default function StepBasicProfile({ session, kycData, onNext }) {
       </div>
 
       <div className={styles.formActions}>
-        <button
-          className={styles.btnPrimary}
-          onClick={handleSubmit}
-          disabled={submitting}
-        >
+        <button className={styles.btnPrimary} onClick={handleSubmit} disabled={submitting}>
           {submitting ? 'Saving...' : 'Save & Continue →'}
         </button>
       </div>

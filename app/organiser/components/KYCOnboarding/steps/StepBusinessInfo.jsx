@@ -18,7 +18,7 @@ const BUSINESS_TYPES = [
   'Other',
 ];
 
-export default function StepBusinessInfo({ session, kycData, onNext, onBack }) {
+export default function StepBusinessInfo({ session, kycData, onNext, onBack, onRefresh }) {
   const [form, setForm] = useState({
     business_name: kycData?.profile?.business_name || '',
     business_type: '',
@@ -60,10 +60,7 @@ export default function StepBusinessInfo({ session, kycData, onNext, onBack }) {
         body: JSON.stringify({
           ...form,
           full_name: kycData?.identity?.verified_name || kycData?.profile?.full_name || '',
-          phone: '',
-          // Required by API
-          bank: { account_holder_name: '', bank_name: '', account_number: '', ifsc_code: '' },
-          documents: {},
+          phone: kycData?.identity?.verified_mobile || kycData?.profile?.phone || '',
           kyc_step: 3,
         }),
       });
@@ -73,6 +70,7 @@ export default function StepBusinessInfo({ session, kycData, onNext, onBack }) {
         throw new Error(data.error || 'Failed to save business info');
       }
 
+      if (onRefresh) onRefresh();
       onNext();
     } catch (err) {
       setError(err.message);

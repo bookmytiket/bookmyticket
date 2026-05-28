@@ -1565,37 +1565,34 @@ function OrganiserPanel() {
         return;
       }
 
-      // 3. Status Evaluation
+      // 3. Status Evaluation — KYC status is the primary gate
       const status = (effectiveOrgData.kyc_status || "").toLowerCase();
-      const isApprovedRecord =
-        effectiveOrgData.is_approved === true ||
-        effectiveOrgData.isApproved === true;
 
       // Check for DigiLocker callback URL params (redirect back from MeriPehchaan)
       const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
       const hasDigiLockerCallback = urlParams?.has('digilocker_verified') || urlParams?.has('kyc_step') || urlParams?.has('kyc_error');
 
-      if (
-        status === "active" ||
-        status === "kyc verified" ||
-        isApprovedRecord
-      ) {
+      // Statuses that mean the organiser has fully passed KYC
+      const KYC_APPROVED_STATUSES = ["active", "kyc verified", "approved"];
+      const isKycApproved = KYC_APPROVED_STATUSES.includes(status);
+
+      // Statuses awaiting admin review (organiser submitted, waiting)
+      const KYC_PENDING_REVIEW_STATUSES = ["submitted", "under review", "under_review"];
+      const isKycPendingReview = KYC_PENDING_REVIEW_STATUSES.includes(status);
+
+      if (isKycApproved) {
+        // Fully verified — grant dashboard access
         setCurrentStage("approved");
-      } else if (
-        status === "submitted" ||
-        status === "under review" ||
-        status === "under_review" ||
-        status === "pending" ||
-        status === "approved"
-      ) {
-        // Check if DigiLocker KYC is the active flow
-        if (hasDigiLockerCallback || status === "under_review" || status === "submitted") {
+      } else if (isKycPendingReview) {
+        // Submitted to admin — show pending screen (or DigiLocker if callback present)
+        if (hasDigiLockerCallback) {
           setCurrentStage("digilocker_kyc");
         } else {
           setCurrentStage("pending");
         }
       } else {
-        // Any other status or new organiser → DigiLocker KYC wizard
+        // All other statuses: 'kyc initiated', 'pending', '', null, 'reupload_requested', etc.
+        // → Route to DigiLocker KYC wizard
         setCurrentStage("digilocker_kyc");
       }
     };

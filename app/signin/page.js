@@ -124,12 +124,7 @@ export default function SignInPage() {
         // Normalize role
         const role = user?.role?.toLowerCase();
 
-        // 1. CRITICAL SECURITY OVERRIDE: Password change mandatory
-        if (user.is_temporary_password || user.force_password_change) {
-            return "/change-password";
-        }
-
-        // 2. Role-based Default Destinations (Primary fallbacks)
+        // Role-based Default Destinations (Primary fallbacks)
         const getRoleDefault = (r) => {
             if (r === 'admin' || r === 'super_admin' || r === 'system_admin') return "/admin";
             if (r === 'staff' || r === 'scanner') return "/pwa-scan";
