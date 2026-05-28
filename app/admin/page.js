@@ -5816,6 +5816,9 @@ function AdminHomePage() {
                                                                 {org.kyc_status === 'Banned' ? <CheckCircle size={16} /> : <Slash size={16} />} 
                                                                 {org.kyc_status === 'Banned' ? 'Unrestrict' : 'Restrict Access'}
                                                             </button>
+                                                            <button onClick={() => { setSelectedUserForPassword(org); setIsPasswordResetModalOpen(true); setOpenActionDropdown(null); }} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-amber-50 text-amber-600 text-xs font-black uppercase tracking-widest transition-colors text-left">
+                                                                <Key size={16} /> Password Settings
+                                                            </button>
                                                             <div className="h-px bg-slate-50 my-1 mx-2" />
                                                             <button onClick={() => { removeOrganizerMutation({ id: org.id }); setOpenActionDropdown(null); }} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-red-500 hover:text-white text-red-500 text-xs font-black uppercase tracking-widest transition-all text-left">
                                                                 <Trash2 size={16} /> Delete Partner
@@ -8603,12 +8606,19 @@ function AdminHomePage() {
                                         <button 
                                             onClick={async () => {
                                                 try {
+                                                    const { data: { session } } = await supabase.auth.getSession();
                                                     const res = await fetch('/api/admin/action', {
                                                         method: 'POST',
-                                                        headers: { 'Content-Type': 'application/json' },
+                                                        headers: { 
+                                                            'Content-Type': 'application/json',
+                                                            'Authorization': `Bearer ${session?.access_token || ""}`
+                                                        },
                                                         body: JSON.stringify({ action: 'send-reset-link', data: { email: selectedUserForPassword.profiles?.email || selectedUserForPassword.email } })
                                                     });
-                                                    if (!res.ok) throw new Error("Failed to send link");
+                                                    if (!res.ok) {
+                                                        const p = await res.json().catch(() => ({}));
+                                                        throw new Error(p.error || "Failed to send link");
+                                                    }
                                                     showToast("Reset link sent successfully!", "success");
                                                 } catch (err) {
                                                     showToast(err.message, "error");
@@ -8634,12 +8644,19 @@ function AdminHomePage() {
                                             disabled={!newManualPassword}
                                             onClick={async () => {
                                                 try {
+                                                    const { data: { session } } = await supabase.auth.getSession();
                                                     const res = await fetch('/api/admin/action', {
                                                         method: 'POST',
-                                                        headers: { 'Content-Type': 'application/json' },
+                                                        headers: { 
+                                                            'Content-Type': 'application/json',
+                                                            'Authorization': `Bearer ${session?.access_token || ""}`
+                                                        },
                                                         body: JSON.stringify({ action: 'reset-password-manual', data: { userId: selectedUserForPassword.id, newPassword: newManualPassword } })
                                                     });
-                                                    if (!res.ok) throw new Error("Failed to reset password");
+                                                    if (!res.ok) {
+                                                        const p = await res.json().catch(() => ({}));
+                                                        throw new Error(p.error || "Failed to reset password");
+                                                    }
                                                     showToast("Password updated successfully!", "success");
                                                     setNewManualPassword("");
                                                     setIsPasswordResetModalOpen(false);

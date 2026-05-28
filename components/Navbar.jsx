@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Search, MapPin, ChevronDown, User, LogOut, Menu, X, Calendar, Ticket as TicketIcon, Handshake, Globe, Wrench, Video, Headset } from "lucide-react";
+import { Search, MapPin, ChevronDown, User, LogOut, Menu, X, Calendar, Ticket as TicketIcon, Handshake, Globe, Wrench, Video, Headset, Smartphone } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 import { Country, State, City } from "country-state-city";
@@ -1156,7 +1156,48 @@ export default function Navbar({ compact = false }) {
             <CouponFlipTicker />
             </div>
 
-            <div className="subnav-actions hide-mobile" style={{ gap: '30px' }}>
+            <div className="subnav-actions hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: '30px' }}>
+              <Link 
+                href="/whats-new" 
+                style={{
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  color: '#475569',
+                  textDecoration: 'none',
+                  transition: 'all 0.3s ease'
+                }}
+                onMouseEnter={e => e.currentTarget.style.color = '#1e293b'}
+                onMouseLeave={e => e.currentTarget.style.color = '#475569'}
+              >
+                What's New
+              </Link>
+              
+              <Link
+                href="/#get-app"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontSize: '14px',
+                  fontWeight: 700,
+                  color: '#475569',
+                  textDecoration: 'none',
+                  transition: 'all 0.3s ease',
+                  padding: '6px 12px',
+                  borderRadius: '8px'
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.background = 'rgba(248, 68, 164, 0.08)';
+                  e.currentTarget.style.color = '#f844a4';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = 'transparent';
+                  e.currentTarget.style.color = '#475569';
+                }}
+              >
+                <Smartphone size={16} strokeWidth={2.5} />
+                Get App
+              </Link>
             </div>
           </div>
         </nav>

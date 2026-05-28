@@ -20,6 +20,16 @@ export default function ChangePasswordPage() {
     useEffect(() => {
         if (!authLoading && !user) {
             router.push("/signin");
+        } else if (user && !user.is_temporary_password && !user.force_password_change) {
+            // Already updated, redirect to dashboard
+            if (user.role === "admin" || user.role === "super_admin") {
+                router.push("/admin");
+            } else if (user.role === "organiser") {
+                const isProfessional = user.type === "professional_service";
+                router.push(isProfessional ? "/vendor/dashboard" : "/organiser");
+            } else {
+                router.push("/profile");
+            }
         }
     }, [user, authLoading, router]);
 
@@ -38,14 +48,7 @@ export default function ChangePasswordPage() {
 
         setLoading(true);
         try {
-            // 1. Update Password in Auth
-            const { error: authError } = await supabase.auth.updateUser({
-                password: password
-            });
-
-            if (authError) throw authError;
-
-            // 2. Clear Force Flag in Profile
+            // 1. Clear Force Flag in Profile FIRST (to avoid AuthContext race condition)
             const { error: profileError } = await supabase
                 .from('profiles')
                 .update({ 
@@ -59,6 +62,13 @@ export default function ChangePasswordPage() {
                 supabase.from('vendors').update({ is_temporary_password: false, force_password_change: false }).eq('id', user.id),
                 supabase.from('organisers').update({ is_temporary_password: false, force_password_change: false }).eq('id', user.id)
             ]);
+
+            // 2. Update Password in Auth (This triggers onAuthStateChange which fetches the now-updated profiles)
+            const { error: authError } = await supabase.auth.updateUser({
+                password: password
+            });
+
+            if (authError) throw authError;
 
             setSuccess(true);
             setTimeout(() => {

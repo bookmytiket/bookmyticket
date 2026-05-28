@@ -18,7 +18,8 @@ export default function ChangePasswordModal() {
     setMounted(true);
   }, []);
 
-  if (!mounted || !user || !user.is_temporary_password) return null;
+  const pathname = typeof window !== 'undefined' ? window.location.pathname : "";
+  if (!mounted || !user || !user.is_temporary_password || pathname === '/change-password') return null;
 
   const handleChange = (e) => {
     setPasswords({ ...passwords, [e.target.name]: e.target.value });
@@ -47,10 +48,19 @@ export default function ChangePasswordModal() {
       // 2. Update Profile to clear flag
       const { error: profileErr } = await supabase
         .from('profiles')
-        .update({ is_temporary_password: false })
+        .update({ 
+            is_temporary_password: false,
+            force_password_change: false 
+        })
         .eq('id', user.id);
       
       if (profileErr) throw profileErr;
+
+      // 3. Clear flags in other roles to ensure AuthContext picks up the change
+      await Promise.allSettled([
+          supabase.from('vendors').update({ is_temporary_password: false, force_password_change: false }).eq('id', user.id),
+          supabase.from('organisers').update({ is_temporary_password: false, force_password_change: false }).eq('id', user.id)
+      ]);
 
       showToast("Password updated successfully! Welcome aboard.", "success");
       

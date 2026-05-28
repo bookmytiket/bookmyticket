@@ -56,7 +56,7 @@ export async function POST(request) {
 
   try {
     const body = await request.json();
-    const { firstName, lastName, email, phone, category, type, role, remarks, businessName, serviceType, city, experience, portfolioLink, coverageArea } = body;
+    const { firstName, lastName, email, phone, category, type, role, displayTitle, remarks, businessName, serviceType, city, experience, portfolioLink, coverageArea } = body;
 
     let partnerReq;
     let insertError;
@@ -73,6 +73,8 @@ export async function POST(request) {
           category: category,
           type: type,
           role: role || 'Individual',
+          organiser_category: role || 'Individual',
+          display_title: displayTitle || businessName,
           remarks: psRemarks,
           kyc_details: {
             businessName,
@@ -99,6 +101,8 @@ export async function POST(request) {
           category: category,
           type: type,
           role: role,
+          organiser_category: role,
+          display_title: displayTitle,
           remarks: remarks,
           status: 'Pending'
         })

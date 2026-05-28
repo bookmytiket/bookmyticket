@@ -257,8 +257,8 @@ export async function POST(request) {
           role: 'organiser',
           full_name: `${partnerReq.first_name} ${partnerReq.last_name}`,
           phone: partnerReq.phone,
-          is_temporary_password: false,
-          force_password_change: false
+          is_temporary_password: true,
+          force_password_change: true
         });
 
       // 5. Update the correct partner table based on type
@@ -478,17 +478,41 @@ export async function POST(request) {
       const { userId, newPassword } = data;
       if (!userId || !newPassword) throw new Error("User ID and New Password are required");
 
-      const { error } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+      const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
         password: newPassword
       });
-      if (error) throw error;
+      if (authError) {
+        console.error("Auth Error resetting password:", authError);
+        throw new Error("Failed to reset password in Auth: " + authError.message);
+      }
       
       // Update profile to mark as temporary/force change
-      await supabaseAdmin.from('profiles').update({ 
+      const { error: profileError } = await supabaseAdmin.from('profiles').update({ 
         is_temporary_password: true,
         force_password_change: true,
         updated_at: new Date().toISOString()
       }).eq('id', userId);
+
+      if (profileError) {
+        console.error("Profile Error resetting password:", profileError);
+        // It might be 42703 (missing column)
+        if (profileError.code === '42703') {
+           const { error: fallbackError } = await supabaseAdmin.from('profiles').update({ 
+             force_password_change: true,
+             updated_at: new Date().toISOString()
+           }).eq('id', userId);
+           if (fallbackError) {
+              console.error("Fallback Profile Error:", fallbackError);
+              throw new Error("Failed to update profile: " + fallbackError.message);
+           }
+        } else {
+           throw new Error("Failed to update profile: " + profileError.message);
+        }
+      }
+
+      // Sync to organisers / vendors just in case
+      await supabaseAdmin.from('organisers').update({ force_password_change: true }).eq('id', userId);
+      await supabaseAdmin.from('vendors').update({ force_password_change: true }).eq('id', userId);
 
       return NextResponse.json({ success: true });
     }

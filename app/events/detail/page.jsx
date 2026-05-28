@@ -12,7 +12,7 @@ export async function generateMetadata({ searchParams }) {
     try {
         const { data: event } = await supabase
             .from('events')
-            .select('*')
+            .select('*, event_media!event_id(*)')
             .eq('id', id)
             .maybeSingle();
 
@@ -48,7 +48,7 @@ export default async function EventDetailPage({ searchParams }) {
     // Fetch event for schema and type checking
     const { data: event } = await supabase
         .from('events')
-        .select('*')
+        .select('*, tournament_events!event_id(*), marathon_config!event_id(*), tournament_categories!event_id(*), sports_events!event_id(*, sports_categories(*), sports_match_types(*)), competition_categories!event_id(*), competition_events!event_id(*), registration_fields!event_id(*), event_media!event_id(*), event_terms!event_id(*), event_amenities!event_id(*), virtual_event_configs!event_id(*)')
         .eq('id', id)
         .maybeSingle();
 

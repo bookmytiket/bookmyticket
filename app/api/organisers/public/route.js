@@ -68,7 +68,7 @@ export async function GET(request) {
         // Optionally, check `organizer_profiles` for business name/logo
         const { data: orgProfiles, error: orgProfilesError } = await supabase
             .from('organizer_profiles')
-            .select('user_id, business_name, profile_photo_url')
+            .select('user_id, business_name, display_title, profile_photo_url')
             .in('user_id', organiserIds);
 
         // Build the final response
@@ -77,7 +77,7 @@ export async function GET(request) {
             
             return {
                 id: profile.id,
-                name: orgProfile?.business_name || profile.full_name || 'Organizer',
+                name: orgProfile?.display_title || orgProfile?.business_name || profile.full_name || 'Organizer',
                 logo: orgProfile?.profile_photo_url || profile.avatar_url || 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800&q=80',
                 eventsCount: eventCounts[profile.id] || 0
             };

@@ -53,7 +53,28 @@ export default function DynamicEventClient({ event }) {
     const config = useMemo(() => {
         if (!event.dynamic_config) return {};
         try {
-            return typeof event.dynamic_config === 'string' ? JSON.parse(event.dynamic_config) : event.dynamic_config;
+            const parsed = typeof event.dynamic_config === 'string' ? JSON.parse(event.dynamic_config) : (event.dynamic_config || {});
+            
+            // Merge relational table data
+            const amenitiesData = Array.isArray(event.event_amenities) ? event.event_amenities[0] : event.event_amenities;
+            const virtualData = Array.isArray(event.virtual_event_configs) ? event.virtual_event_configs[0] : event.virtual_event_configs;
+            const mediaData = Array.isArray(event.event_media) ? event.event_media[0] : event.event_media;
+            const termsData = Array.isArray(event.event_terms) ? event.event_terms[0] : event.event_terms;
+            
+            if (amenitiesData) parsed.amenities = { ...parsed.amenities, ...amenitiesData };
+            if (virtualData) parsed.virtualConfig = { ...parsed.virtualConfig, ...virtualData };
+            
+            // Map registration fields
+            if (Array.isArray(event.registration_fields) && event.registration_fields.length > 0) {
+                parsed.registrationForm = event.registration_fields.map(f => ({
+                    label: f.field_label,
+                    type: f.field_type,
+                    required: f.is_required,
+                    options: f.options
+                }));
+            }
+            
+            return parsed;
         } catch (e) {
             console.error("Failed to parse dynamic_config:", e);
             return {};
@@ -83,8 +104,26 @@ export default function DynamicEventClient({ event }) {
         if ((config?.marathonCategories || config?.marathon_categories)?.length > 0) return config.marathonCategories || config.marathon_categories;
         if (config?.seatingSections?.length > 0) return config.seatingSections.map(s => ({ ...s, category_name: s.name, price: s.basePrice }));
         if (config?.categories?.length > 0) return config.categories;
+        
+        // Fallback to primary event seat_categories
+        if (event?.seat_categories) {
+            try {
+                const parsed = typeof event.seat_categories === 'string' ? JSON.parse(event.seat_categories) : event.seat_categories;
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    return parsed.map((c, i) => ({
+                        id: c.id || `seat_cat_${i}`,
+                        category_name: c.name || c.category_name || "General",
+                        price: Number(c.price) || 0,
+                        slots_total: Number(c.rows) || Number(c.slots_total) || 0
+                    }));
+                }
+            } catch (e) {
+                console.error("Failed to parse seat_categories", e);
+            }
+        }
+        
         return [];
-    }, [marathonCategories, config]);
+    }, [marathonCategories, config, event?.seat_categories]);
 
     const hasDistances = useMemo(() => baseCategories.some(c => c.distance_km !== undefined && c.distance_km !== null), [baseCategories]);
 

@@ -3440,6 +3440,73 @@ function OrganiserPanel() {
             }
           }
 
+          const activeEventId = editingEvent?.id || eventId;
+          if (activeEventId) {
+            try {
+              await supabase.from('event_media').upsert({
+                event_id: activeEventId,
+                banner_url: postEvent.bannerPreview || postEvent.img,
+                poster_url: postEvent.bannerPreview || postEvent.img,
+                gallery_urls: postEvent.galleryPreviews || postEvent.gallery || [],
+                promo_video_url: postEvent.videoTrailerUrl,
+                sponsor_logo: postEvent.sponsors?.[0]?.logo || undefined,
+              }, { onConflict: 'event_id' });
+
+              await supabase.from('event_terms').upsert({
+                event_id: activeEventId,
+                refund_policy: postEvent.termsConditions,
+                entry_rules: postEvent.rulesRegulations || postEvent.termsConditions,
+                restrictions: postEvent.safetyMeasures ? "Safety measures required" : undefined,
+                age_policy: postEvent.ageLimit,
+                id_required: !!postEvent.mandatoryCheckin
+              }, { onConflict: 'event_id' });
+
+              await supabase.from('event_amenities').upsert({
+                event_id: activeEventId,
+                ambulance: !!postEvent.ambulance,
+                cash_prize: !!postEvent.cash_prize,
+                certificate: !!postEvent.certificate,
+                cycle: !!postEvent.cycle,
+                family: !!postEvent.family,
+                checkin: !!postEvent.checkin,
+                first_aid: !!postEvent.first_aid,
+                accommodation: !!postEvent.accommodation,
+                breakfast: !!postEvent.breakfast,
+                medal: !!postEvent.medal,
+                bib: !!postEvent.bib,
+                outdoor: !!postEvent.outdoor,
+                parking_fcfs: !!postEvent.parking_fcfs,
+                refreshments: !!postEvent.refreshments,
+                safety_enabled: !!postEvent.safety_enabled,
+                selfie: !!postEvent.selfie,
+                shield: !!postEvent.shield,
+                suitable_all: !!postEvent.suitable_all,
+                trophy: !!postEvent.trophy,
+                tshirt: !!postEvent.tshirt,
+                wash_room: !!postEvent.wash_room,
+                valet: !!postEvent.valet,
+                wifi: !!postEvent.wifi
+              }, { onConflict: 'event_id' });
+
+              if (postEvent.type === "Virtual Event" || isOnline) {
+                await supabase.from('virtual_event_configs').upsert({
+                  event_id: activeEventId,
+                  chat_enabled: !!postEvent.chatEnabled,
+                  recording_enabled: !!postEvent.recordingEnabled,
+                  qa_enabled: !!postEvent.qaEnabled,
+                  hd_enabled: !!postEvent.hdEnabled,
+                  allow_mic: !!postEvent.allowMic,
+                  allow_video: !!postEvent.allowVideo,
+                  allow_screen: !!postEvent.allowScreen,
+                  meeting_password: postEvent.meetingPassword || "",
+                  visibility: postEvent.visibility || "public"
+                }, { onConflict: 'event_id' });
+              }
+            } catch (syncErr) {
+              console.error("Failed to sync unified tables:", syncErr);
+            }
+          }
+
           // Handled above in specialized records section
           setPostEvent(getInitialPostEvent());
           setAddEventStep("select_type");
@@ -6917,288 +6984,130 @@ function OrganiserPanel() {
                                       >
                                         <button
                                           onClick={() => {
+                                            const sportsEv = Array.isArray(ev.sports_events) ? ev.sports_events[0] : ev.sports_events;
+                                            const tourneyEv = Array.isArray(ev.tournament_events) ? ev.tournament_events[0] : ev.tournament_events;
+                                            const compEv = Array.isArray(ev.competition_events) ? ev.competition_events[0] : ev.competition_events;
+                                            const marathonEv = Array.isArray(ev.marathon_config) ? ev.marathon_config[0] : ev.marathon_config;
+                                            const amenitiesData = Array.isArray(ev.event_amenities) ? ev.event_amenities[0] : ev.event_amenities;
+                                            const virtualData = Array.isArray(ev.virtual_event_configs) ? ev.virtual_event_configs[0] : ev.virtual_event_configs;
+                                            const mediaData = Array.isArray(ev.event_media) ? ev.event_media[0] : ev.event_media;
+                                            const termsData = Array.isArray(ev.event_terms) ? ev.event_terms[0] : ev.event_terms;
+
                                             setEditingEvent(ev);
                                             setPostEvent({
                                               ...getInitialPostEvent(),
                                               ...ev,
                                               zipCode: ev.pincode || ev.zipCode || "",
-                                              // Map snake_case from Convex to camelCase for form state
-                                              ticketType:
-                                                ev.event_type || 'reserved',
-                                              seatingEnabled:
-                                                ev.seating_enabled !== undefined
-                                                  ? ev.seating_enabled
-                                                  : ev.seatingEnabled,
-                                              totalSeats:
-                                                ev.total_seats || ev.totalSeats,
-                                              normalTicketCapacity:
-                                                ev.normal_ticket_capacity ||
-                                                ev.normalTicketCapacity,
-                                              normalTicketPrice:
-                                                ev.normal_ticket_price ||
-                                                ev.normalTicketPrice,
-                                              categories:
-                                                ev.seat_categories ||
-                                                ev.seatCategories ||
-                                                ev.categories ||
-                                                getInitialPostEvent()
-                                                  .categories,
-                                              dateSlots:
-                                                ev.date_slots || ev.dateSlots,
-                                              meetingUrl:
-                                                ev.meeting_url || ev.meetingUrl,
-                                              meetingType:
-                                                ev.meeting_type ||
-                                                ev.meetingType,
-                                              externalMeetingUrl:
-                                                ev.external_meeting_url ||
-                                                ev.externalMeetingUrl,
-
-                                              ...(ev.sports_details ||
-                                                ev.dynamic_config
-                                                  ?.sports_details ||
-                                                {}),
-                                              sportType:
-                                                ev.sports_details?.sport_type ||
-                                                ev.dynamic_config
-                                                  ?.sports_details
-                                                  ?.sport_type ||
-                                                ev.sportType,
-                                              seatingSections:
-                                                ev.dynamic_config?.seatingSections ||
-                                                (ev.blocks?.length > 0 ? (ev.blocks || []).filter(b => b.category !== 'Box' && b.category !== 'box').map(b => {
-                                                    const isGen = !!b.isGeneral;
-                                                    let newSeats = [];
-                                                    if (!isGen && b.rows > 0 && b.cols > 0) {
-                                                        for (let r = 0; r < b.rows; r++) {
-                                                            const rowLabel = String.fromCharCode(65 + r);
-                                                            for (let s = 1; s <= b.cols; s++) {
-                                                                newSeats.push({
-                                                                    id: `seat-${Date.now()}-${b.id}-${rowLabel}${s}`,
-                                                                    rowLabel: rowLabel,
-                                                                    seatNumber: s,
-                                                                    seatLabel: `${rowLabel}${s}`,
-                                                                    seatType: (b.category || 'general').toLowerCase(),
-                                                                    status: 'available',
-                                                                    isAisle: false
-                                                                });
-                                                            }
-                                                        }
-                                                    }
-                                                    return {
-                                                        id: b.id || `sec-${Date.now()}-${Math.random()}`,
-                                                        name: b.name,
-                                                        basePrice: b.basePrice || b.price || 0,
-                                                        seats: newSeats,
-                                                        rows: b.rows || 0,
-                                                        cols: b.cols || 0,
-                                                        isGeneral: isGen,
-                                                        capacity: b.capacity || 0
-                                                    };
-                                                }) : []),
-                                              seatingBoxes:
-                                                ev.dynamic_config?.seatingBoxes ||
-                                                (ev.blocks?.length > 0 ? (ev.blocks || []).filter(b => b.category === 'Box' || b.category === 'box').map(b => ({
-                                                    id: b.id || `box-${Date.now()}-${Math.random()}`,
-                                                    name: b.name,
-                                                    seatCount: b.cols || 6,
-                                                    price: b.basePrice || b.price || 0,
-                                                    type: 'VIP'
-                                                })) : []),
-                                              ageCategory:
-                                                ev.sports_details
-                                                  ?.age_category ||
-                                                ev.dynamic_config
-                                                  ?.sports_details
-                                                  ?.age_category ||
-                                                ev.ageCategory,
-                                              tShirtSize:
-                                                ev.sports_details
-                                                  ?.t_shirt_size ||
-                                                ev.dynamic_config
-                                                  ?.sports_details
-                                                  ?.t_shirt_size ||
-                                                ev.tShirtSize,
-                                              routeMap:
-                                                ev.sports_details?.route_map ||
-                                                ev.dynamic_config
-                                                  ?.sports_details?.route_map ||
-                                                ev.routeMap,
-                                              prizeDetails:
-                                                ev.sports_details
-                                                  ?.prize_details ||
-                                                ev.dynamic_config
-                                                  ?.sports_details
-                                                  ?.prize_details ||
-                                                ev.prizeDetails,
-                                              teamsCount:
-                                                ev.sports_details
-                                                  ?.teams_count ||
-                                                ev.dynamic_config
-                                                  ?.sports_details
-                                                  ?.teams_count ||
-                                                ev.teamsCount,
-                                              matchSchedule:
-                                                ev.sports_details
-                                                  ?.match_schedule ||
-                                                ev.dynamic_config
-                                                  ?.sports_details
-                                                  ?.match_schedule ||
-                                                ev.matchSchedule,
-                                              tournamentType:
-                                                ev.sports_details
-                                                  ?.tournament_type ||
-                                                ev.dynamic_config
-                                                  ?.sports_details
-                                                  ?.tournament_type ||
-                                                ev.tournamentType,
-                                              tournamentFormat:
-                                                ev.sports_details
-                                                  ?.tournament_format ||
-                                                ev.dynamic_config
-                                                  ?.sports_details
-                                                  ?.tournament_format ||
-                                                ev.tournamentFormat,
-                                              registrationFee:
-                                                ev.sports_details
-                                                  ?.registration_fee ||
-                                                ev.dynamic_config
-                                                  ?.sports_details
-                                                  ?.registration_fee ||
-                                                ev.registration_fee ||
-                                                ev.registrationFee,
-                                              minTeamSize:
-                                                ev.sports_details
-                                                  ?.min_team_size ||
-                                                ev.dynamic_config
-                                                  ?.sports_details
-                                                  ?.min_team_size ||
-                                                ev.min_team_size ||
-                                                ev.minTeamSize,
-                                              maxTeamSize:
-                                                ev.sports_details
-                                                  ?.max_team_size ||
-                                                ev.dynamic_config
-                                                  ?.sports_details
-                                                  ?.max_team_size ||
-                                                ev.max_team_size ||
-                                                ev.maxTeamSize,
-                                              sportName:
-                                                ev.sports_details?.sport_name ||
-                                                ev.dynamic_config
-                                                  ?.sports_details
-                                                  ?.sport_name ||
-                                                ev.sports_details?.sport_type ||
-                                                ev.dynamic_config
-                                                  ?.sports_details
-                                                  ?.sport_type ||
-                                                ev.sportName,
-                                              audienceAccess:
-                                                ev.sports_details
-                                                  ?.audience_access ||
-                                                ev.dynamic_config
-                                                  ?.sports_details
-                                                  ?.audience_access ||
-                                                (ev.sports_details
-                                                  ?.audience_free_access ===
-                                                  false ||
-                                                ev.dynamic_config
-                                                  ?.sports_details
-                                                  ?.audience_free_access ===
-                                                  false
-                                                  ? "Paid"
-                                                  : "Free"),
-                                              rulesRegulations:
-                                                ev.sports_details
-                                                  ?.rules_regulations ||
-                                                ev.dynamic_config
-                                                  ?.sports_details
-                                                  ?.rules_regulations ||
-                                                ev.rulesRegulations,
-                                              termsConditions:
-                                                ev.terms_conditions ||
-                                                ev.sports_details
-                                                  ?.terms_conditions ||
-                                                ev.dynamic_config
-                                                  ?.sports_details
-                                                  ?.terms_conditions ||
-                                                ev.termsConditions,
-                                              prizePool:
-                                                ev.sports_details?.prize_pool ||
-                                                ev.dynamic_config
-                                                  ?.sports_details
-                                                  ?.prize_pool ||
-                                                ev.prizePool,
-                                              contactEmail:
-                                                ev.sports_details
-                                                  ?.contact_email ||
-                                                ev.dynamic_config
-                                                  ?.sports_details
-                                                  ?.contact_email ||
-                                                ev.contactEmail,
-                                              contactPhone:
-                                                ev.sports_details
-                                                  ?.contact_phone ||
-                                                ev.dynamic_config
-                                                  ?.sports_details
-                                                  ?.contact_phone ||
-                                                ev.contactPhone,
-                                              trainerDetails:
-                                                ev.sports_details
-                                                  ?.trainer_details ||
-                                                ev.dynamic_config
-                                                  ?.sports_details
-                                                  ?.trainer_details ||
-                                                ev.trainerDetails,
-                                              sessionSlots:
-                                                ev.sports_details
-                                                  ?.session_slots ||
-                                                ev.dynamic_config
-                                                  ?.sports_details
-                                                  ?.session_slots ||
-                                                ev.sessionSlots,
-                                              isFeature:
-                                                ev.featured === true ||
-                                                ev.isFeature === "Yes"
-                                                  ? "Yes"
-                                                  : "No",
-                                              isExclusive:
-                                                ev.exclusive === true ||
-                                                ev.isExclusive === "Yes"
-                                                  ? "Yes"
-                                                  : "No",
-                                              eventStatus:
-                                                ev.status || "published",
-                                              dateType:
-                                                ev.date_slots || ev.dateSlots
-                                                  ? "multiple"
-                                                  : "single",
-                                              startDate:
-                                                ev.event_start_at ? ev.event_start_at.split('T')[0] : (ev.date || ev.startDate),
-                                              startTime:
-                                                ev.event_start_at ? ev.event_start_at.split('T')[1]?.substring(0, 5) : (ev.time || ev.startTime),
-                                              endDate:
-                                                ev.event_end_at ? ev.event_end_at.split('T')[0] : (ev.end_date || ev.endDate),
-                                              endTime:
-                                                ev.event_end_at ? ev.event_end_at.split('T')[1]?.substring(0, 5) : (ev.end_time || ev.endTime),
-                                              expiryDate:
-                                                ev.expiry_date || ev.expiryDate,
-                                              bannerPreview:
-                                                ev.banner_preview ||
-                                                ev.bannerPreview ||
-                                                ev.img,
-                                              image_url:
-                                                ev.banner_preview ||
-                                                ev.bannerPreview ||
-                                                ev.img, // Used by Sports/Universal forms
-                                              videoTrailerUrl: ev.video_trailer_url || ev.videoTrailerUrl || "",
+                                              ticketType: ev.event_type || 'reserved',
+                                              seatingEnabled: ev.seating_enabled !== undefined ? ev.seating_enabled : ev.seatingEnabled,
+                                              totalSeats: ev.total_seats || ev.totalSeats,
+                                              normalTicketCapacity: ev.normal_ticket_capacity || ev.normalTicketCapacity,
+                                              normalTicketPrice: ev.normal_ticket_price || ev.normalTicketPrice || ev.dynamic_config?.price || ev.price || 0,
+                                              price: ev.price || ev.dynamic_config?.price || 0,
+                                              
+                                              categories: ev.seat_categories || ev.seatCategories || ev.categories || ev.dynamic_config?.marathonCategories || ev.dynamic_config?.marathon_categories || getInitialPostEvent().categories,
+                                              sports_categories: sportsEv?.sports_categories || ev.dynamic_config?.sports_categories || [],
+                                              sports_match_types: sportsEv?.sports_match_types || ev.dynamic_config?.match_types || [],
+                                              
+                                              dateSlots: ev.date_slots || ev.dateSlots,
+                                              meetingUrl: ev.meeting_url || ev.meetingUrl,
+                                              meetingType: ev.meeting_type || ev.meetingType,
+                                              externalMeetingUrl: ev.external_meeting_url || ev.externalMeetingUrl,
+                                              
+                                              sportType: sportsEv?.sport_type || tourneyEv?.sport_type || ev.dynamic_config?.sports_details?.sport_type || ev.sportType,
+                                              
+                                              seatingSections: ev.dynamic_config?.seatingSections || (ev.blocks?.length > 0 ? (ev.blocks || []).filter(b => b.category !== 'Box' && b.category !== 'box').map(b => {
+                                                  const isGen = !!b.isGeneral;
+                                                  let newSeats = [];
+                                                  if (!isGen && b.rows > 0 && b.cols > 0) {
+                                                      for (let r = 0; r < b.rows; r++) {
+                                                          const rowLabel = String.fromCharCode(65 + r);
+                                                          for (let s = 1; s <= b.cols; s++) {
+                                                              newSeats.push({
+                                                                  id: `seat-${Date.now()}-${b.id}-${rowLabel}${s}`,
+                                                                  rowLabel: rowLabel,
+                                                                  seatNumber: s,
+                                                                  seatLabel: `${rowLabel}${s}`,
+                                                                  seatType: (b.category || 'general').toLowerCase(),
+                                                                  status: 'available',
+                                                                  isAisle: false
+                                                              });
+                                                          }
+                                                      }
+                                                  }
+                                                  return {
+                                                      id: b.id || `sec-${Date.now()}-${Math.random()}`,
+                                                      name: b.name,
+                                                      basePrice: b.basePrice || b.price || 0,
+                                                      seats: newSeats,
+                                                      rows: b.rows || 0,
+                                                      cols: b.cols || 0,
+                                                      isGeneral: isGen,
+                                                      capacity: b.capacity || 0
+                                                  };
+                                              }) : []),
+                                              seatingBoxes: ev.dynamic_config?.seatingBoxes || (ev.blocks?.length > 0 ? (ev.blocks || []).filter(b => b.category === 'Box' || b.category === 'box').map(b => ({
+                                                  id: b.id || `box-${Date.now()}-${Math.random()}`,
+                                                  name: b.name,
+                                                  seatCount: b.cols || 6,
+                                                  price: b.basePrice || b.price || 0,
+                                                  type: 'VIP'
+                                              })) : []),
+                                              ageCategory: sportsEv?.age_category || ev.dynamic_config?.sports_details?.age_category || ev.ageCategory,
+                                              tShirtSize: sportsEv?.t_shirt_size || ev.dynamic_config?.sports_details?.t_shirt_size || ev.tShirtSize,
+                                              routeMap: sportsEv?.route_map || ev.dynamic_config?.sports_details?.route_map || ev.routeMap,
+                                              prizeDetails: sportsEv?.prize_details || ev.dynamic_config?.sports_details?.prize_details || ev.prizeDetails,
+                                              teamsCount: sportsEv?.teams_count || ev.dynamic_config?.sports_details?.teams_count || ev.teamsCount,
+                                              matchSchedule: sportsEv?.match_schedule || ev.dynamic_config?.sports_details?.match_schedule || ev.matchSchedule,
+                                              
+                                              tournamentType: tourneyEv?.tournament_type || ev.dynamic_config?.sports_details?.tournament_type || ev.tournamentType,
+                                              tournamentFormat: sportsEv?.competition_format || tourneyEv?.tournament_format || ev.dynamic_config?.sports_details?.tournament_format || ev.tournamentFormat,
+                                              registrationFee: tourneyEv?.registration_fee || ev.dynamic_config?.sports_details?.registration_fee || ev.registration_fee || ev.registrationFee,
+                                              minTeamSize: tourneyEv?.min_team_size || ev.dynamic_config?.sports_details?.min_team_size || ev.min_team_size || ev.minTeamSize,
+                                              maxTeamSize: tourneyEv?.max_team_size || ev.dynamic_config?.sports_details?.max_team_size || ev.max_team_size || ev.maxTeamSize,
+                                              sportName: sportsEv?.sport_type || ev.dynamic_config?.sports_details?.sport_name || ev.sportName,
+                                              audienceAccess: tourneyEv?.audience_free_access === false ? "Paid" : "Free",
+                                              rulesRegulations: termsData?.entry_rules || ev.dynamic_config?.sports_details?.rules_regulations || ev.rulesRegulations,
+                                              termsConditions: termsData?.refund_policy || ev.terms_conditions || ev.dynamic_config?.sports_details?.terms_conditions || ev.termsConditions,
+                                              prizePool: tourneyEv?.metadata?.prizePool || ev.dynamic_config?.sports_details?.prize_pool || ev.prizePool,
+                                              contactEmail: tourneyEv?.metadata?.contactEmail || ev.dynamic_config?.sports_details?.contact_email || ev.contactEmail,
+                                              contactPhone: tourneyEv?.metadata?.contactPhone || ev.dynamic_config?.sports_details?.contact_phone || ev.contactPhone,
+                                              trainerDetails: sportsEv?.trainer_details || ev.dynamic_config?.sports_details?.trainer_details || ev.trainerDetails,
+                                              sessionSlots: sportsEv?.session_slots || ev.dynamic_config?.sports_details?.session_slots || ev.sessionSlots,
+                                              
+                                              // Media & Terms Details for Physical & Virtual
+                                              galleryPreviews: mediaData?.gallery_urls || ev.gallery || ev.gallery_images || ev.galleryPreviews || [],
+                                              videoTrailerUrl: mediaData?.promo_video_url || ev.video_trailer_url || ev.videoTrailerUrl || "",
                                               parkingDetails: ev.parking_details || ev.parkingDetails || "",
                                               entryGate: ev.entry_gate || ev.entryGate || "",
                                               emergencyExit: ev.emergency_exit || ev.emergencyExit || "",
-                                              sponsors: ev.sponsor_logos?.map(s => typeof s === 'string' ? { name: '', logo: s } : s) || ev.sponsors || [],
-                                              organiser_name:
-                                                ev.dynamic_config?.organiser_name ||
-                                                ev.organiser_name || "",
+                                              sponsors: mediaData?.sponsor_logo ? [{ name: '', logo: mediaData.sponsor_logo }] : (ev.sponsor_logos?.map(s => typeof s === 'string' ? { name: '', logo: s } : s) || ev.sponsors || []),
+                                              
+                                              ageLimit: termsData?.age_policy || ev.age_limit || ev.age_restriction || ev.ageLimit || "All ages",
+                                              safetyMeasures: termsData?.restrictions ? true : !!ev.safety_measures,
+                                              language: ev.language || "English",
+                                              duration: ev.duration || "2-3 Hours",
+                                              seatingType: ev.seating_type || "FCFS",
+                                              mandatoryCheckin: !!ev.mandatory_checkin,
+                                              
+                                              ...(amenitiesData || ev.dynamic_config?.amenities || {}),
+                                              ...(virtualData || ev.dynamic_config?.virtualConfig || {}),
+                                              
+                                              competitionAgeGroups: ev.competition_categories || ev.dynamic_config?.competitionAgeGroups || ev.dynamic_config?.competitionCategories || [],
+                                              competitionEvents: ev.competition_events || ev.dynamic_config?.competitionEvents || [],
+                                              
+                                              isFeature: ev.featured === true || ev.isFeature === "Yes" ? "Yes" : "No",
+                                              isExclusive: ev.exclusive === true || ev.isExclusive === "Yes" ? "Yes" : "No",
+                                              eventStatus: ev.status || "published",
+                                              dateType: ev.date_slots || ev.dateSlots ? "multiple" : "single",
+                                              startDate: ev.event_start_at ? ev.event_start_at.split('T')[0] : (ev.date || ev.startDate),
+                                              startTime: ev.event_start_at ? ev.event_start_at.split('T')[1]?.substring(0, 5) : (ev.time || ev.startTime),
+                                              endDate: ev.event_end_at ? ev.event_end_at.split('T')[0] : (ev.end_date || ev.endDate),
+                                              endTime: ev.event_end_at ? ev.event_end_at.split('T')[1]?.substring(0, 5) : (ev.end_time || ev.endTime),
+                                              expiryDate: ev.expiry_date || ev.expiryDate,
+                                              bannerPreview: mediaData?.banner_url || ev.banner_preview || ev.bannerPreview || ev.img,
+                                              image_url: mediaData?.banner_url || ev.banner_preview || ev.bannerPreview || ev.img,
+                                              organiser_name: ev.dynamic_config?.organiser_name || ev.organiser_name || "",
                                             });
                                             if (ev.type === "Marathon") {
                                               setEditingMarathonId(ev.id);

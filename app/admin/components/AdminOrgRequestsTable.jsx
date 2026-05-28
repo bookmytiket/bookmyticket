@@ -14,6 +14,7 @@ export default function AdminOrgRequestsTable({ t }) {
     const [showApproveModal, setShowApproveModal] = useState(false);
     const [selectedRequest, setSelectedRequest] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [tempPassword, setTempPassword] = useState("");
 
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [requestToDelete, setRequestToDelete] = useState(null);
@@ -69,7 +70,7 @@ export default function AdminOrgRequestsTable({ t }) {
                     },
                     body: JSON.stringify({
                         action: 'approve-partner',
-                        data: { requestId: id }
+                        data: { requestId: id, password: tempPassword }
                     })
                 });
 
@@ -95,6 +96,7 @@ export default function AdminOrgRequestsTable({ t }) {
             }
 
             setShowApproveModal(false);
+            setTempPassword("");
             fetchRequests();
         } catch (err) {
             showToast("Update failed: " + err.message, 'error');
@@ -276,6 +278,17 @@ export default function AdminOrgRequestsTable({ t }) {
                             <div className="bg-emerald-50 p-4 rounded-2xl flex gap-3 items-center">
                                 <CheckCircle className="text-emerald-500" size={18} />
                                 <p className="text-[11px] font-bold text-emerald-700 leading-tight">This will approve the request, create an auth account, and send an invite email. They will still need to complete KYC.</p>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">Temporary Password (Optional)</label>
+                                <input 
+                                    type="text" 
+                                    value={tempPassword}
+                                    onChange={(e) => setTempPassword(e.target.value)}
+                                    placeholder="Leave blank to auto-generate" 
+                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
+                                />
+                                <p className="text-[10px] text-slate-400 mt-2">If left blank, a random secure password will be generated and emailed to the partner.</p>
                             </div>
                             <button 
                                 onClick={submitApproval}

@@ -269,13 +269,25 @@ export default function EventBookClient({ id }) {
             }));
         }
 
+        // 1.5 Check for relational Marathon Categories
+        if (isMarathon && rawEvent?.marathon_categories?.length > 0) {
+            return rawEvent.marathon_categories.map((c, i) => ({
+                id: c.id || `mara_cat_${i}`,
+                title: c.title || c.category_name || 'Category',
+                price: Number(c.price) || 0,
+                description: `Entry for ${c.title || c.category_name}. Distance: ${c.distance_km || 'N/A'}KM`,
+                features: ['Marathon Entry', c.age_group ? `Age: ${c.age_group}` : 'Open Category']
+            }));
+        }
+
         // 2. Check for dynamic_config categories (for Marathon/Competition created before relational sync)
-        if (isMarathon && event.dynamic_config?.categories?.length > 0) {
-            return event.dynamic_config.categories.map((cat, i) => ({
+        const dynCats = event.dynamic_config?.categories || event.dynamic_config?.marathonCategories;
+        if (isMarathon && dynCats?.length > 0) {
+            return dynCats.map((cat, i) => ({
                 id: cat.id || `comp_cat_${i}`,
-                title: cat.name || cat.title || 'Category',
-                price: cat.price || 0,
-                description: cat.description || `Standard entry for ${cat.name || 'this category'}.`,
+                title: cat.name || cat.title || cat.category_name || 'Category',
+                price: Number(cat.price) || 0,
+                description: cat.description || `Standard entry for ${cat.name || cat.title || cat.category_name || 'this category'}.`,
                 features: cat.features || ['Competition Entry']
             }));
         }

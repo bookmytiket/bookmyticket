@@ -120,6 +120,7 @@ export default function BecomePartnerModal({ isOpen, onClose }) {
         type: "",
         category: "",
         role: "Individual",
+        displayTitle: "",
         remarks: "",
         // Professional Service specifics
         businessName: "",
@@ -347,6 +348,20 @@ export default function BecomePartnerModal({ isOpen, onClose }) {
                             <div>
                                 <label className="partner-label">Contact Number <span style={{color:"#f84464"}}>*</span></label>
                                 <input type="tel" name="phone" value={form.phone} onChange={handleChange} className="partner-input" placeholder="+91 98765 43210" required />
+                            </div>
+                        </div>
+
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "12px" }}>
+                            <GlassDropdown 
+                                label="Org Category"
+                                value={form.role}
+                                options={["Individual", "Pvt Ltd", "Event Organiser"]}
+                                name="role"
+                                onChange={handleChange}
+                            />
+                            <div>
+                                <label className="partner-label">Title (Display Name) <span style={{color:"#f84464"}}>*</span></label>
+                                <input name="displayTitle" value={form.displayTitle} onChange={handleChange} className="partner-input" placeholder="Brand / Company Name" required />
                             </div>
                         </div>
 

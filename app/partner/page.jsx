@@ -22,6 +22,7 @@ export default function PartnerRegistrationPage() {
         email: "",
         phone: "",
         businessName: "",
+        displayTitle: "",
         category: "Event Organiser",
         details: ""
     });
@@ -38,6 +39,8 @@ export default function PartnerRegistrationPage() {
                     email: form.email,
                     phone: form.phone,
                     business_name: form.businessName,
+                    display_title: form.displayTitle,
+                    organiser_category: form.category,
                     category: form.category,
                     type: form.category === "Professional Service" ? "professional_service" : "event_organiser",
                     details: form.details,
@@ -168,30 +171,46 @@ export default function PartnerRegistrationPage() {
                                 </div>
 
                                 <div className="space-y-3">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Business Name</label>
-                                    <div className="relative">
-                                        <Building2 size={20} className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300" />
-                                        <input 
-                                            required
-                                            className="w-full bg-slate-50 border border-slate-100 rounded-2xl pl-16 pr-6 py-5 focus:bg-white focus:border-[#f84464] focus:ring-4 focus:ring-[#f84464]/5 outline-none transition-all font-bold text-slate-900"
-                                            placeholder="Company or Organisation"
-                                            value={form.businessName}
-                                            onChange={(e) => setForm({...form, businessName: e.target.value})}
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="space-y-3">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Partner Type</label>
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Organiser Category</label>
                                     <select 
                                         className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-5 focus:bg-white focus:border-[#f84464] focus:ring-4 focus:ring-[#f84464]/5 outline-none transition-all font-bold text-slate-900 appearance-none cursor-pointer"
                                         value={form.category}
                                         onChange={(e) => setForm({...form, category: e.target.value})}
                                     >
+                                        <option value="Individual">Individual</option>
+                                        <option value="Pvt Ltd">Pvt Ltd</option>
                                         <option value="Event Organiser">Event Organiser</option>
-                                        <option value="Professional Service">Professional Service (Artist/Vendor)</option>
-                                        <option value="Venue Partner">Venue Partner (Turf/Pool/Theater)</option>
+                                        <option value="Venue Partner">Venue Partner</option>
+                                        <option value="Professional Service">Professional Service</option>
                                     </select>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Title (Display Name)</label>
+                                    <div className="relative">
+                                        <Building2 size={20} className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300" />
+                                        <input 
+                                            required
+                                            className="w-full bg-slate-50 border border-slate-100 rounded-2xl pl-16 pr-6 py-5 focus:bg-white focus:border-[#f84464] focus:ring-4 focus:ring-[#f84464]/5 outline-none transition-all font-bold text-slate-900"
+                                            placeholder={form.category === "Individual" ? "E.g., John Doe Events" : "Company / Brand Name"}
+                                            value={form.displayTitle}
+                                            onChange={(e) => setForm({...form, displayTitle: e.target.value})}
+                                        />
+                                    </div>
+                                    <p className="text-[10px] text-slate-400 ml-1 mt-1 font-medium">This is the title that will be displayed on the Home Page and Featured Organizers list.</p>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Business/Legal Name (Optional)</label>
+                                    <div className="relative">
+                                        <Building2 size={20} className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300" />
+                                        <input 
+                                            className="w-full bg-slate-50 border border-slate-100 rounded-2xl pl-16 pr-6 py-5 focus:bg-white focus:border-[#f84464] focus:ring-4 focus:ring-[#f84464]/5 outline-none transition-all font-bold text-slate-900"
+                                            placeholder="Legal Company Name (if applicable)"
+                                            value={form.businessName}
+                                            onChange={(e) => setForm({...form, businessName: e.target.value})}
+                                        />
+                                    </div>
                                 </div>
 
                                 <div className="space-y-3">

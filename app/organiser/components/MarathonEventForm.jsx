@@ -163,18 +163,20 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
         setLoading(true);
         try {
             // Fetch from both tables to ensure full data coverage
-            const [cRes, mRes, eRes] = await Promise.all([
+            const [cRes, mRes, eRes, meRes] = await Promise.all([
                 supabase.from('marathon_categories').select('*').eq('marathon_id', marathonId).order('distance_km', { ascending: true }),
                 supabase.from('marathon_config').select('*').eq('id', marathonId).maybeSingle(),
-                supabase.from('events').select('*').eq('id', marathonId).maybeSingle()
+                supabase.from('events').select('*').eq('id', marathonId).maybeSingle(),
+                supabase.from('marathon_events').select('*').eq('id', marathonId).maybeSingle()
             ]);
 
             let catData = cRes.data || [];
             const mEvent = mRes.data;
             const eventsRow = eRes.data;
+            const meEvent = meRes.data;
 
-            const source = mEvent || eventsRow;
-            if (!source) {
+            const source = { ...(eventsRow || {}), ...(meEvent || {}), ...(mEvent || {}) };
+            if (!eventsRow && !mEvent && !meEvent) {
                 console.error("[MarathonForm] No data found for ID:", marathonId);
                 setLoading(false);
                 return;
@@ -213,10 +215,10 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
                 district: source.district || "",
                 zipCode: source.zipCode || source.zip_code || source.pincode || "",
                 map_location: source.map_location || (source.latitude ? { lat: source.latitude, lng: source.longitude, address: source.address || "" } : { lat: 11.0168, lng: 76.9558, address: "" }),
-                route_map_image: source.route_map_image || "",
+                route_map_image: source.route_map_image || source.route_map_url || "",
                 starting_point: source.starting_point || dynCfg.starting_point || "",
-                whatsapp_link: source.whatsapp_link || "",
-                support_number: source.support_number || "",
+                whatsapp_link: source.whatsapp_link || dynCfg.communication?.whatsapp || "",
+                support_number: source.support_number || dynCfg.communication?.support || "",
                 terms: source.terms_conditions || source.terms || dynCfg.terms || "",
                 organiser_name: dynCfg.organiser_name || "",
                 status: source.status || "Draft",
@@ -226,16 +228,7 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
             });
 
             // ── Fetch categories (handles both FK column names for backward compatibility) ────────
-            if (catData.length === 0) {
-                const { data: catsFallback } = await supabase
-                    .from('marathon_categories')
-                    .select('*')
-                    .eq('event_id', marathonId)
-                    .order('distance_km', { ascending: true });
-                if (catsFallback && catsFallback.length > 0) {
-                    catData.push(...catsFallback);
-                }
-            }
+            // Fallback removed because event_id column does not exist in marathon_categories.
 
             // ── Final categories merging & fallback ──────────────────────────────
             let finalCategories = [];
@@ -243,12 +236,12 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
                 console.log("[MarathonForm] Using categories from marathon_categories table");
                 finalCategories = catData.map((c, i) => ({
                     id: c.id || i,
-                    category_name: c.category_name || "Category",
+                    category_name: c.category_name || c.title || c.name || "Category",
                     distance_km: Number(c.distance_km) || 0,
                     age_group: c.age_group || "Open",
                     gender_category: c.gender_category || "All",
                     price: Number(c.price) || 0,
-                    slots_total: Number(c.slots_total) || 100,
+                    slots_total: Number(c.slots_total) || Number(c.total_slots) || Number(c.slots) || 100,
                 }));
             } else if (dynCfg.marathon_categories && dynCfg.marathon_categories.length > 0) {
                 console.log("[MarathonForm] Using categories from dynamic_config.marathon_categories");
@@ -361,6 +354,7 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
                 city: eventData.city,
                 state: eventData.state,
                 country: eventData.country,
+                district: eventData.district || null,
                 pincode: eventData.zipCode,
                 status: newStatus === 'Published' ? 'published' : 'draft',
                 publish_status: newStatus === 'Published' ? 'published' : 'draft',
@@ -450,7 +444,8 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
 
             if (marathonId) {
                 // Update shadow record in events table
-                await supabase.from('events').update(eventPayload).eq('id', marathonId);
+                const { error: updateError } = await supabase.from('events').update(eventPayload).eq('id', marathonId);
+                if (updateError) throw updateError;
             } else {
                 // Create shadow record in events table
                 const { data, error } = await supabase.from('events').insert(eventPayload).select().single();
@@ -458,8 +453,8 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
                 marathon_id = data.id;
             }
             
-            // 2. Upsert into 'marathon_config' (creates or updates in one operation)
-            const marathonPayload = {
+            // 1.5 Upsert into 'marathon_events' (satisfies FK constraints for categories/sponsors)
+            const marathonEventsPayload = {
                 id: marathon_id,
                 organiser_id: user.id,
                 title: eventData.title,
@@ -489,18 +484,34 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
                 updated_at: new Date().toISOString()
             };
 
+            const { error: meError } = await supabase
+                .from('marathon_events')
+                .upsert(marathonEventsPayload, { onConflict: 'id' });
+            
+            if (meError) {
+                console.warn("[MarathonForm] marathon_events upsert error:", meError.message);
+                throw meError;
+            }
+
+            // 2. Upsert into 'marathon_config' (creates or updates in one operation)
+            const marathonPayload = {
+                id: marathon_id,
+                event_id: marathon_id,
+                route_map_url: eventData.route_map_image || null,
+                updated_at: new Date().toISOString()
+            };
+
             const { error: mError } = await supabase
                 .from('marathon_config')
                 .upsert(marathonPayload, { onConflict: 'id' });
             if (mError) {
                 console.warn("[MarathonForm] marathon_config upsert error:", mError.message);
-                // Don't throw — events table update is the primary record
+                throw mError;
             }
 
             // 3. Sync Categories — relational table (legacy/compatibility)
             try {
                 await supabase.from('marathon_categories').delete().eq('marathon_id', marathon_id);
-                await supabase.from('marathon_categories').delete().eq('event_id', marathon_id);
                 
                 if (categories.length > 0) {
                     // Try to insert core fields only. 
