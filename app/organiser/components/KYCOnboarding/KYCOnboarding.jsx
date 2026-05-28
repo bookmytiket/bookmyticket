@@ -148,8 +148,11 @@ export default function KYCOnboarding({ session }) {
       <div className={styles.header}>
         <div className={styles.headerContent}>
           <div className={styles.logo}>
-            <div className={styles.logoIcon}>🎫</div>
-            <span>BookMyTicket</span>
+            <img 
+              src="/logo.png" 
+              alt="BookMyTicket" 
+              style={{ height: '36px', width: 'auto', objectFit: 'contain' }} 
+            />
           </div>
           <div className={styles.headerActions}>
             <div className={styles.headerBadge}>
