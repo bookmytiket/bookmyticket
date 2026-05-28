@@ -5378,8 +5378,8 @@ function OrganiserPanel() {
 
       <div style={{ fontSize: "12px", color: t.textSub, marginTop: "8px" }}>
         If you need to make any changes or have queries, please contact us on{" "}
-        <a href="mailto:admin@bookmyticket.io" style={{ color: "#3b82f6" }}>
-          admin@bookmyticket.io
+        <a href="mailto:hello@bookmyticket.net" style={{ color: "#3b82f6" }}>
+          hello@bookmyticket.net
         </a>
       </div>
     </div>
@@ -14643,37 +14643,39 @@ function OrganiserPanel() {
       style={{
         display: "flex",
         height: "100vh",
-        background:
-          "linear-gradient(135deg, #06b6d4 0%, #2563eb 40%, #1e1b4b 100%)",
-        fontFamily: "'Figtree', sans-serif",
+        background: "#f8fafc",
+        fontFamily: "'Inter', sans-serif",
         WebkitFontSmoothing: "antialiased",
         overflow: "hidden",
-        color: "#ffffff",
+        color: "#0f172a",
       }}
     >
       {styles}
-      <aside className="sidebar">
+      <aside className="sidebar" style={{ 
+        background: "linear-gradient(180deg, #f84464 0%, #a855f7 100%)", 
+        color: "#fff",
+        borderRight: "none" 
+      }}>
         <div className="sidebar-logo">
           <img
             src="/logo.png"
             alt="BookMyTicket Logo"
-            style={{ height: "45px", width: "auto", display: "block" }}
+            style={{ height: "45px", width: "auto", display: "block", filter: "brightness(0) invert(1)" }}
           />
         </div>
 
-        <nav style={{ flex: 1, paddingBottom: "24px", opacity: 0.5 }}>
-          <div className="sidebar-category">Home</div>
-          <div className="sidebar-item">
+        <nav style={{ flex: 1, paddingBottom: "24px" }}>
+          <div className="sidebar-category" style={{ color: "rgba(255,255,255,0.7)" }}>Home</div>
+          <div className="sidebar-item" style={{ color: "rgba(255,255,255,0.7)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
               <LayoutDashboard size={18} /> Dashboard (Locked)
             </div>
           </div>
 
-
-          <div className="sidebar-category">
+          <div className="sidebar-category" style={{ color: "rgba(255,255,255,0.7)" }}>
             {isProfessionalService ? "Portfolio" : "Events"}
           </div>
-          <div className="sidebar-item">
+          <div className="sidebar-item" style={{ color: "rgba(255,255,255,0.7)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
               <Grid size={18} />{" "}
               {isProfessionalService ? "Service Setup" : "Management"} (Locked)
@@ -14690,15 +14692,17 @@ function OrganiserPanel() {
             }}
             className="sidebar-item"
             style={{
-              color: "#ef4444",
-              borderTop: `1px solid ${t.border}`,
-              paddingTop: "12px",
+              color: "#fff",
+              background: "rgba(255,255,255,0.1)",
+              borderRadius: "8px",
+              padding: "12px",
+              border: "1px solid rgba(255,255,255,0.2)",
               marginBottom: 0,
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
               <LogOut size={18} />
-              <span>Logout</span>
+              <span>Sign Out</span>
             </div>
           </button>
         </div>
@@ -14707,9 +14711,9 @@ function OrganiserPanel() {
           <div
             style={{
               padding: "16px",
-              backgroundColor: theme === "light" ? "#f1f5f9" : "#1e293b",
+              backgroundColor: "rgba(0,0,0,0.2)",
               borderRadius: "12px",
-              border: `1px solid ${t.border}`,
+              border: "1px solid rgba(255,255,255,0.1)",
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
@@ -14722,7 +14726,7 @@ function OrganiserPanel() {
                 }}
               ></div>
               <span
-                style={{ fontSize: "11px", fontWeight: 700, color: t.textMain }}
+                style={{ fontSize: "11px", fontWeight: 700, color: "#fff" }}
               >
                 Safety Mode
               </span>
@@ -14730,7 +14734,7 @@ function OrganiserPanel() {
             <p
               style={{
                 fontSize: "10px",
-                color: t.textSub,
+                color: "rgba(255,255,255,0.7)",
                 marginTop: "4px",
                 margin: 0,
               }}
