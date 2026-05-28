@@ -46,6 +46,7 @@ import PayoutRequestPanel from "@/components/PayoutRequestPanel";
 import GoogleInlineMap from "./components/GoogleInlineMap";
 import { reverseGeocode, geocode } from "@/lib/googleMaps";
 import TransactionHistory from "./components/TransactionHistory";
+import KYCOnboarding from "./components/KYCOnboarding/KYCOnboarding";
 
 class OrganiserErrorBoundary extends Component {
   state = { error: null };
@@ -819,6 +820,7 @@ function OrganiserPanel() {
 
   // Stages: mfa, kyc_docs, kyc_form, pending, approved
   const [currentStage, setCurrentStage] = useState("loading");
+  const [supabaseSession, setSupabaseSession] = useState(null);
   const [activeTab, setActiveTab] = useState("dashboard");
   const [eventSubTab, setEventSubTab] = useState("active");
   const [viewingBookingDetails, setViewingBookingDetails] = useState(null);
@@ -830,6 +832,17 @@ function OrganiserPanel() {
     setProfileDropdownOpen(false);
     logout();
   };
+
+  useEffect(() => {
+    // Sync Supabase session for KYC components
+    supabase?.auth?.getSession().then(({ data: { session } }) => {
+      setSupabaseSession(session);
+    });
+    const { data: { subscription } } = supabase?.auth?.onAuthStateChange?.((_, session) => {
+      setSupabaseSession(session);
+    }) || { data: { subscription: { unsubscribe: () => {} } } };
+    return () => subscription?.unsubscribe?.();
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -1558,6 +1571,10 @@ function OrganiserPanel() {
         effectiveOrgData.is_approved === true ||
         effectiveOrgData.isApproved === true;
 
+      // Check for DigiLocker callback URL params (redirect back from MeriPehchaan)
+      const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+      const hasDigiLockerCallback = urlParams?.has('digilocker_verified') || urlParams?.has('kyc_step') || urlParams?.has('kyc_error');
+
       if (
         status === "active" ||
         status === "kyc verified" ||
@@ -1567,13 +1584,19 @@ function OrganiserPanel() {
       } else if (
         status === "submitted" ||
         status === "under review" ||
+        status === "under_review" ||
         status === "pending" ||
         status === "approved"
       ) {
-        setCurrentStage("pending");
+        // Check if DigiLocker KYC is the active flow
+        if (hasDigiLockerCallback || status === "under_review" || status === "submitted") {
+          setCurrentStage("digilocker_kyc");
+        } else {
+          setCurrentStage("pending");
+        }
       } else {
-        // Any other status (e.g. "rejected", "incomplete") or missing status goes to onboarding
-        setCurrentStage("kyc_start");
+        // Any other status or new organiser → DigiLocker KYC wizard
+        setCurrentStage("digilocker_kyc");
       }
     };
 
@@ -15879,6 +15902,12 @@ function OrganiserPanel() {
   switch (currentStage) {
     case "loading":
       return renderLoadingView();
+    case "digilocker_kyc":
+      return (
+        <KYCOnboarding
+          session={supabaseSession || { user, access_token: null }}
+        />
+      );
     case "kyc_start":
       return (
         <>

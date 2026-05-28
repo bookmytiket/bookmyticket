@@ -11,6 +11,7 @@ import MobileBannersAdmin from "@/app/admin/components/MobileBannersAdmin";
 import AdminServiceRequestsTable from "@/app/admin/components/AdminServiceRequestsTable";
 import AdminOrgRequestsTable from "@/app/admin/components/AdminOrgRequestsTable";
 import AdminKycReview from "@/app/admin/components/AdminKycReview";
+import AdminDigiLockerKYC from "@/app/admin/components/AdminDigiLockerKYC";
 import EmailCommSystem from "@/app/admin/components/EmailCommSystem";
 import SeoAnalyticsAdmin from "@/app/admin/components/SeoAnalyticsAdmin";
 import CareersAdmin from "@/app/admin/components/CareersAdmin";
@@ -1831,6 +1832,14 @@ function AdminHomePage() {
     }, []);
 
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [adminSession, setAdminSession] = useState(null);
+
+    useEffect(() => {
+        supabase.auth.getSession().then(({ data: { session } }) => setAdminSession(session));
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => setAdminSession(session));
+        return () => subscription.unsubscribe();
+    }, []);
+
     const [showSsoModal, setShowSsoModal] = useState(false);
     const [ssoEditingType, setSsoEditingType] = useState(""); // "google" | "facebook"
     const [ssoForm, setSsoForm] = useState({ clientId: "", clientSecret: "" });
@@ -3313,6 +3322,15 @@ function AdminHomePage() {
                             label="KYC Verification" 
                             icon={ShieldCheck} 
                             active={activeTab === "kyc"} 
+                            setActiveTab={setActiveTab}
+                            router={router}
+                            setIsSidebarOpen={setIsSidebarOpen}
+                        />
+                        <NavLink 
+                            id="digilocker_kyc_review" 
+                            label="DigiLocker KYC" 
+                            icon={ShieldCheck} 
+                            active={activeTab === "digilocker_kyc_review"} 
                             setActiveTab={setActiveTab}
                             router={router}
                             setIsSidebarOpen={setIsSidebarOpen}
@@ -5678,9 +5696,15 @@ function AdminHomePage() {
                         <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
                             <div className="mb-8">
                                 <h2 className="text-3xl font-black text-slate-900 tracking-tighter uppercase italic leading-none mb-2">Organizer Verification Center</h2>
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Identity Verification & Compliance Audit</p>
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Identity Verification &amp; Compliance Audit</p>
                             </div>
                              <AdminKycReview t={t} />
+                        </div>
+                    )}
+
+                    {activeTab === "digilocker_kyc_review" && (
+                        <div style={{ padding: "24px" }}>
+                            <AdminDigiLockerKYC adminSession={adminSession} />
                         </div>
                     )}
 
@@ -8025,7 +8049,7 @@ function AdminHomePage() {
                         </div>
                     )}
 
-                    {(["dashboard", "banner_ads", "revenue", "payout_requests", "fee_settings", "exclusive_settings", "email_broadcast", "careers", "subscribers", "subscriptions", "turf_partners", "turf_active", "turf_banned", "branding", "categories", "subnav", "events_settings", "event_partners", "pages", "sections", "all_org", "active_org", "banned_org", "email_unverified", "mobile_unverified", "kyc_unverified", "kyc_pending", "kyc_verified", "with_balance", "org_requests", "partner_requests", "service_active", "service_banned", "send_notif", "payment_settings", "ticket_settings", "comm_hub", "email_settings", "email_templates", "disclaimer_settings", "sso_settings", "api_settings", "meta_management", "all_events", "tournaments", "marathons", "customers", "bookings", "all_turfs", "turf_active", "turf_banned", "turf_bookings", "pool_bookings", "gst", "coupons", "promotions", "financials", "support_tickets", "branding_partners", "hero", "video", "video_banner", "mobile_banners", "site_branding", "memories", "copyright", "meeting_settings", "admin_management", "ad_popups", "meetings", "checkout_footer", "careers_management", "careers_banner", "contact_inquiries", "contact_settings", "scanner_monitor", "fraud_dashboard", "flash_deals", "audit_logs", "settlement_verification", "email_logs"].includes(activeTab)) ? null : (
+                    {(["dashboard", "banner_ads", "revenue", "payout_requests", "fee_settings", "exclusive_settings", "email_broadcast", "careers", "subscribers", "subscriptions", "turf_partners", "turf_active", "turf_banned", "branding", "categories", "subnav", "events_settings", "event_partners", "pages", "sections", "all_org", "active_org", "banned_org", "email_unverified", "mobile_unverified", "kyc_unverified", "kyc_pending", "kyc_verified", "with_balance", "org_requests", "partner_requests", "service_active", "service_banned", "send_notif", "payment_settings", "ticket_settings", "comm_hub", "email_settings", "email_templates", "disclaimer_settings", "sso_settings", "api_settings", "meta_management", "all_events", "tournaments", "marathons", "customers", "bookings", "all_turfs", "turf_active", "turf_banned", "turf_bookings", "pool_bookings", "gst", "coupons", "promotions", "financials", "support_tickets", "branding_partners", "hero", "video", "video_banner", "mobile_banners", "site_branding", "memories", "copyright", "meeting_settings", "admin_management", "ad_popups", "meetings", "checkout_footer", "careers_management", "careers_banner", "contact_inquiries", "contact_settings", "scanner_monitor", "fraud_dashboard", "flash_deals", "audit_logs", "settlement_verification", "email_logs", "kyc", "digilocker_kyc_review"].includes(activeTab)) ? null : (
                         <div style={{ backgroundColor: t.cardBg, padding: "60px 24px", textAlign: "center", borderRadius: "10px", border: `1px solid ${t.border}` }}>
                             <h2 style={{ fontSize: "20px", fontWeight: 800, color: t.textMain }}>{activeTab.replace(/_/g, ' ').toUpperCase()}</h2>
                             <p style={{ color: t.textSub, marginTop: "8px", maxWidth: "350px", margin: "8px auto", fontSize: "14px" }}>This management module is currently being configured. You will be able to manage these settings shortly.</p>
