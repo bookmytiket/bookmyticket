@@ -13,8 +13,9 @@ export default function StepDigiLocker({ session, kycData, onNext, onBack, error
   const [initiating, setInitiating] = useState(false);
   const [verificationId, setVerificationId] = useState(null);
 
-  const isAlreadyVerified = kycData?.kyc?.digilocker_verified;
   const isReuploadRequested = kycData?.kyc?.status === 'reupload_requested';
+  // When reupload is requested, force re-verification even if previously verified
+  const isAlreadyVerified = kycData?.kyc?.digilocker_verified && !isReuploadRequested;
 
   const handleInitiateDigiLocker = async () => {
     if (!session?.access_token) return;

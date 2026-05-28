@@ -4,7 +4,7 @@
  * Step 3 – Business Information
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import styles from '../KYCOnboarding.module.css';
 
 const BUSINESS_TYPES = [
@@ -20,22 +20,41 @@ const BUSINESS_TYPES = [
 
 export default function StepBusinessInfo({ session, kycData, onNext, onBack, onRefresh }) {
   const [form, setForm] = useState({
-    business_name: kycData?.profile?.business_name || '',
+    business_name: '',
     business_type: '',
-    pan_number: kycData?.identity?.pan_verified ? '(Verified via DigiLocker)' : '',
+    pan_number: '',
     gst_number: '',
     company_registration_number: '',
     website: '',
-    business_address: kycData?.identity?.verified_address
-      ? `${kycData.identity.verified_address.house} ${kycData.identity.verified_address.street}`.trim()
-      : '',
-    city: kycData?.identity?.verified_address?.city || '',
-    state: kycData?.identity?.verified_address?.state || '',
-    pincode: kycData?.identity?.verified_address?.pincode || '',
+    business_address: '',
+    city: '',
+    state: '',
+    pincode: '',
     country: 'India',
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
+
+  // Populate form from saved profile data when kycData loads
+  useEffect(() => {
+    if (!kycData) return;
+    const p = kycData.profile || {};
+    const addr = kycData.identity?.verified_address || {};
+    setForm(prev => ({
+      ...prev,
+      business_name: p.business_name || prev.business_name || '',
+      business_type: p.business_type || prev.business_type || '',
+      pan_number: p.pan_number || (kycData.identity?.pan_verified ? '(Verified via DigiLocker)' : '') || prev.pan_number || '',
+      gst_number: p.gst_number || prev.gst_number || '',
+      company_registration_number: p.company_registration_number || prev.company_registration_number || '',
+      website: p.website || prev.website || '',
+      business_address: p.business_address || (addr.house ? `${addr.house} ${addr.street}`.trim() : '') || prev.business_address || '',
+      city: p.city || addr.city || prev.city || '',
+      state: p.state || addr.state || prev.state || '',
+      pincode: p.pincode || addr.pincode || prev.pincode || '',
+      country: p.country || prev.country || 'India',
+    }));
+  }, [kycData]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;

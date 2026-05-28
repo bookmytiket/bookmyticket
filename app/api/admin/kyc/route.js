@@ -144,8 +144,10 @@ export async function POST(request) {
 
     await supabaseAdmin
       .from('organizer_verification_status')
-      .update(statusUpdate)
-      .eq('organizer_id', organizer_id);
+      .upsert({
+        organizer_id,
+        ...statusUpdate,
+      }, { onConflict: 'organizer_id' });
 
     // ── Update legacy organisers table ─────────────────────────────────────
     const legacyStatus = {
@@ -157,7 +159,7 @@ export async function POST(request) {
 
     await supabaseAdmin
       .from('organisers')
-      .update({ kyc_status: legacyStatus, dashboard_access: dashboardAccess })
+      .update({ kyc_status: legacyStatus })
       .eq('id', organizer_id);
 
     // ── Admin KYC Audit Log ────────────────────────────────────────────────

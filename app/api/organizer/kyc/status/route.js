@@ -53,7 +53,7 @@ export async function GET(request) {
     // ── Fetch profile ──────────────────────────────────────────────────────
     const { data: profile } = await supabaseAdmin
       .from('organizer_profiles')
-      .select('full_name, kyc_step, kyc_onboarding_complete, digilocker_verified, digilocker_verified_at, business_name')
+      .select('full_name, kyc_step, kyc_onboarding_complete, digilocker_verified, digilocker_verified_at, business_name, business_type, pan_number, gst_number, company_registration_number, website, business_address, city, state, pincode, country, phone')
       .eq('id', user.id)
       .single();
 
@@ -126,6 +126,17 @@ export async function GET(request) {
       profile: {
         full_name: profile?.full_name,
         business_name: profile?.business_name,
+        business_type: profile?.business_type,
+        pan_number: profile?.pan_number,
+        gst_number: profile?.gst_number,
+        company_registration_number: profile?.company_registration_number,
+        website: profile?.website,
+        business_address: profile?.business_address,
+        city: profile?.city,
+        state: profile?.state,
+        pincode: profile?.pincode,
+        country: profile?.country,
+        phone: profile?.phone,
       },
       rejection_reason: verificationStatus?.rejection_reason || null,
       allowed_features: allowedFeatures,
