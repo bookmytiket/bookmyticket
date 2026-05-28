@@ -45,6 +45,7 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
     const { showToast } = useToast();
     const [currentStep, setCurrentStep] = useState(1);
     const [loading, setLoading] = useState(false);
+    const [localMarathonId, setLocalMarathonId] = useState(marathonId || null);
 
     // Form State
     const [eventData, setEventData] = useState({
@@ -99,10 +100,10 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
 
     // Load existing data if marathonId provided
     useEffect(() => {
-        if (marathonId) {
+        if (localMarathonId) {
             fetchMarathonDetails();
         }
-    }, [marathonId]);
+    }, [localMarathonId]);
 
     const [dbDistricts, setDbDistricts] = useState([]);
     const [dbCities, setDbCities] = useState([]);
@@ -164,10 +165,10 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
         try {
             // Fetch from both tables to ensure full data coverage
             const [cRes, mRes, eRes, meRes] = await Promise.all([
-                supabase.from('marathon_categories').select('*').eq('marathon_id', marathonId).order('distance_km', { ascending: true }),
-                supabase.from('marathon_config').select('*').eq('id', marathonId).maybeSingle(),
-                supabase.from('events').select('*').eq('id', marathonId).maybeSingle(),
-                supabase.from('marathon_events').select('*').eq('id', marathonId).maybeSingle()
+                supabase.from('marathon_categories').select('*').eq('marathon_id', localMarathonId).order('distance_km', { ascending: true }),
+                supabase.from('marathon_config').select('*').eq('id', localMarathonId).maybeSingle(),
+                supabase.from('events').select('*').eq('id', localMarathonId).maybeSingle(),
+                supabase.from('marathon_events').select('*').eq('id', localMarathonId).maybeSingle()
             ]);
 
             let catData = cRes.data || [];
@@ -177,7 +178,7 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
 
             const source = { ...(eventsRow || {}), ...(meEvent || {}), ...(mEvent || {}) };
             if (!eventsRow && !mEvent && !meEvent) {
-                console.error("[MarathonForm] No data found for ID:", marathonId);
+                console.error("[MarathonForm] No data found for ID:", localMarathonId);
                 setLoading(false);
                 return;
             }
@@ -277,7 +278,7 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
             const { data: spons } = await supabase
                 .from('marathon_sponsors')
                 .select('*')
-                .eq('marathon_id', marathonId);
+                .eq('marathon_id', localMarathonId);
             
             const dynSponsors = source.sponsor_logos || dynCfg.sponsors || dynCfg.sponsor_logos || [];
             if (spons && spons.length > 0) {
@@ -289,7 +290,7 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
             const { data: bens } = await supabase
                 .from('marathon_benefits')
                 .select('*')
-                .eq('marathon_id', marathonId);
+                .eq('marathon_id', localMarathonId);
             if (bens && bens.length > 0) setBenefits(bens);
 
             // ── Custom form fields from dynamic_config ────────────────────────────
@@ -331,26 +332,28 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
         }
     };
 
-    const saveMarathon = async (newStatus = 'Draft') => {
-        setLoading(true);
+    const saveMarathon = async (newStatus = 'Draft', isAutoSave = false) => {
+        if (!isAutoSave) setLoading(true);
         try {
             // 0. Validation
-            if (!eventData.title) throw new Error("Event Title is required");
-            if (!eventData.event_date) throw new Error("Event Date is required");
-            if (!eventData.event_time) throw new Error("Event Time is required");
-            if (!eventData.venue) throw new Error("Venue Name is required");
-            if (!eventData.banner_image) throw new Error("Event Poster/Banner is required");
-            if (categories.length === 0) throw new Error("At least one Run Category is required");
+            if (!isAutoSave) {
+                if (!eventData.title) throw new Error("Event Title is required");
+                if (!eventData.event_date) throw new Error("Event Date is required");
+                if (!eventData.event_time) throw new Error("Event Time is required");
+                if (!eventData.venue) throw new Error("Venue Name is required");
+                if (!eventData.banner_image) throw new Error("Event Poster/Banner is required");
+                if (categories.length === 0) throw new Error("At least one Run Category is required");
+            }
 
             // 1. Sync with primary 'events' table first to maintain global visibility
             const eventPayload = {
-                title: eventData.title,
-                event_name: eventData.title,
+                title: eventData.title || "Untitled Marathon",
+                event_name: eventData.title || "Untitled Marathon",
                 subtitle: eventData.subtitle,
                 img: eventData.banner_image,
-                date: eventData.event_date,
-                time: eventData.event_time,
-                venue: eventData.venue,
+                date: eventData.event_date || null,
+                time: eventData.event_time || null,
+                venue: eventData.venue || null,
                 city: eventData.city,
                 state: eventData.state,
                 country: eventData.country,
@@ -440,11 +443,11 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
                 }
             };
 
-            let marathon_id = marathonId;
+            let marathon_id = localMarathonId;
 
-            if (marathonId) {
+            if (localMarathonId) {
                 // Update shadow record in events table
-                const { error: updateError } = await supabase.from('events').update(eventPayload).eq('id', marathonId);
+                const { error: updateError } = await supabase.from('events').update(eventPayload).eq('id', localMarathonId);
                 if (updateError) throw updateError;
             } else {
                 // Create shadow record in events table
@@ -457,7 +460,7 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
             const marathonEventsPayload = {
                 id: marathon_id,
                 organiser_id: user.id,
-                title: eventData.title,
+                title: eventData.title || "Untitled Marathon",
                 subtitle: eventData.subtitle,
                 awareness_text: eventData.awareness_text,
                 description: eventData.description,
@@ -466,7 +469,7 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
                 event_time: eventData.event_time || null,
                 event_end_date: eventData.event_end_date || null,
                 event_end_time: eventData.event_end_time || null,
-                venue: eventData.venue,
+                venue: eventData.venue || null,
                 city: eventData.city,
                 state: eventData.state,
                 country: eventData.country,
@@ -581,14 +584,28 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
                 // Safe to ignore if table doesn't exist yet
             }
 
-            showToast(`Marathon ${newStatus === 'Published' ? 'Published' : 'Saved'}!`, "success");
-            if (onPublish) onPublish();
+            if (!isAutoSave) {
+                showToast(`Marathon ${newStatus === 'Published' ? 'Published' : 'Saved'}!`, "success");
+                if (onPublish) onPublish();
+            } else {
+                if (!localMarathonId && marathon_id) {
+                    setLocalMarathonId(marathon_id);
+                }
+            }
         } catch (err) {
             console.error("Save error:", err);
-            showToast(err.message || "Failed to save marathon", "error");
+            if (!isAutoSave) {
+                showToast(err.message || "Failed to save marathon", "error");
+            }
         } finally {
-            setLoading(false);
+            if (!isAutoSave) setLoading(false);
         }
+    };
+
+    const handleNext = async (step) => {
+        // Auto-save silently before moving to next step
+        await saveMarathon('Draft', true);
+        setCurrentStep(step);
     };
 
     const steps = [
@@ -805,7 +822,7 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
 
                     <div className="flex justify-end gap-4">
                         <button onClick={onCancel} className="px-8 py-4 text-slate-500 font-bold uppercase tracking-widest text-xs">Cancel</button>
-                        <button onClick={() => setCurrentStep(2)} className="px-10 py-4 bg-slate-900 text-white rounded-2xl font-bold uppercase tracking-widest text-xs shadow-xl flex items-center gap-2">Next <ChevronRight size={16} /></button>
+                        <button onClick={() => handleNext(2)} className="px-10 py-4 bg-slate-900 text-white rounded-2xl font-bold uppercase tracking-widest text-xs shadow-xl flex items-center gap-2">Next <ChevronRight size={16} /></button>
                     </div>
                 </div>
             )}
@@ -874,7 +891,7 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
 
                     <div className="flex justify-between mt-8">
                         <button onClick={() => setCurrentStep(1)} className="px-10 py-4 text-slate-800 font-bold uppercase tracking-widest text-xs flex items-center gap-2"><ChevronLeft size={16} /> Back</button>
-                        <button onClick={() => setCurrentStep(3)} className="px-10 py-4 bg-slate-900 text-white rounded-2xl font-bold uppercase tracking-widest text-xs shadow-xl flex items-center gap-2">Next <ChevronRight size={16} /></button>
+                        <button onClick={() => handleNext(3)} className="px-10 py-4 bg-slate-900 text-white rounded-2xl font-bold uppercase tracking-widest text-xs shadow-xl flex items-center gap-2">Next <ChevronRight size={16} /></button>
                     </div>
                 </div>
             )}
@@ -1057,7 +1074,7 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
 
                     <div className="flex justify-between mt-8">
                         <button onClick={() => setCurrentStep(2)} className="px-10 py-4 text-slate-800 font-bold uppercase tracking-widest text-xs flex items-center gap-2"><ChevronLeft size={16} /> Back</button>
-                        <button onClick={() => setCurrentStep(4)} className="px-10 py-4 bg-slate-900 text-white rounded-2xl font-bold uppercase tracking-widest text-xs shadow-xl flex items-center gap-2">Next <ChevronRight size={16} /></button>
+                        <button onClick={() => handleNext(4)} className="px-10 py-4 bg-slate-900 text-white rounded-2xl font-bold uppercase tracking-widest text-xs shadow-xl flex items-center gap-2">Next <ChevronRight size={16} /></button>
                     </div>
                 </div>
             )}
@@ -1152,7 +1169,7 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
 
                     <div className="flex justify-between mt-8">
                         <button onClick={() => setCurrentStep(3)} className="px-10 py-4 text-slate-800 font-bold uppercase tracking-widest text-xs flex items-center gap-2"><ChevronLeft size={16} /> Back</button>
-                        <button onClick={() => setCurrentStep(5)} className="px-10 py-4 bg-slate-900 text-white rounded-2xl font-bold uppercase tracking-widest text-xs shadow-xl flex items-center gap-2">Next <ChevronRight size={16} /></button>
+                        <button onClick={() => handleNext(5)} className="px-10 py-4 bg-slate-900 text-white rounded-2xl font-bold uppercase tracking-widest text-xs shadow-xl flex items-center gap-2">Next <ChevronRight size={16} /></button>
                     </div>
                 </div>
             )}
@@ -1220,7 +1237,7 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
 
                     <div className="flex justify-between mt-8">
                         <button onClick={() => setCurrentStep(4)} className="px-10 py-4 text-slate-800 font-bold uppercase tracking-widest text-xs flex items-center gap-2"><ChevronLeft size={16} /> Back</button>
-                        <button onClick={() => setCurrentStep(6)} className="px-10 py-4 bg-slate-900 text-white rounded-2xl font-bold uppercase tracking-widest text-xs shadow-xl flex items-center gap-2">Next <ChevronRight size={16} /></button>
+                        <button onClick={() => handleNext(6)} className="px-10 py-4 bg-slate-900 text-white rounded-2xl font-bold uppercase tracking-widest text-xs shadow-xl flex items-center gap-2">Next <ChevronRight size={16} /></button>
                     </div>
                 </div>
             )}
