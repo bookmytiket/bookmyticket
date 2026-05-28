@@ -445,21 +445,8 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
 
             let marathon_id = localMarathonId;
 
-            if (localMarathonId) {
-                // Update shadow record in events table
-                const { error: updateError } = await supabase.from('events').update(eventPayload).eq('id', localMarathonId);
-                if (updateError) throw updateError;
-            } else {
-                // Create shadow record in events table
-                const { data, error } = await supabase.from('events').insert(eventPayload).select().single();
-                if (error) throw error;
-                marathon_id = data.id;
-            }
-            
-            // 1.5 Upsert into 'marathon_events' (satisfies FK constraints for categories/sponsors)
+            // Construct marathon_events payload
             const marathonEventsPayload = {
-                id: marathon_id,
-                organiser_id: user.id,
                 title: eventData.title || "Untitled Marathon",
                 subtitle: eventData.subtitle,
                 awareness_text: eventData.awareness_text,
@@ -487,102 +474,42 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
                 updated_at: new Date().toISOString()
             };
 
-            const { error: meError } = await supabase
-                .from('marathon_events')
-                .upsert(marathonEventsPayload, { onConflict: 'id' });
-            
-            if (meError) {
-                console.warn("[MarathonForm] marathon_events upsert error:", meError.message);
-                throw meError;
-            }
-
-            // 2. Upsert into 'marathon_config' (creates or updates in one operation)
+            // Construct marathon_config payload
             const marathonPayload = {
-                id: marathon_id,
-                event_id: marathon_id,
                 route_map_url: eventData.route_map_image || null,
                 updated_at: new Date().toISOString()
             };
 
-            const { error: mError } = await supabase
-                .from('marathon_config')
-                .upsert(marathonPayload, { onConflict: 'id' });
-            if (mError) {
-                console.warn("[MarathonForm] marathon_config upsert error:", mError.message);
-                throw mError;
+            // Fetch session token for secure bearer auth
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+
+            const response = await fetch('/api/organiser/marathon', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    localMarathonId,
+                    eventPayload,
+                    marathonEventsPayload,
+                    marathonPayload,
+                    categories,
+                    sponsors,
+                    benefits,
+                    customFields,
+                    newStatus
+                })
+            });
+
+            if (!response.ok) {
+                const errData = await response.json();
+                throw new Error(errData.error || "Failed to save marathon");
             }
 
-            // 3. Sync Categories — relational table (legacy/compatibility)
-            try {
-                await supabase.from('marathon_categories').delete().eq('marathon_id', marathon_id);
-                
-                if (categories.length > 0) {
-                    // Try to insert core fields only. 
-                    // Note: Full data is already safe in dynamic_config JSON.
-                    const { error: catInsertError } = await supabase.from('marathon_categories').insert(
-                        categories.map(c => ({ 
-                            title: c.category_name,
-                            distance_km: Number(c.distance_km) || 0,
-                            price: Number(c.price) || 0,
-                            total_slots: Number(c.slots_total) || 0,
-                            marathon_id: marathon_id
-                        }))
-                    );
-                    if (catInsertError) console.warn("[MarathonForm] Categories table sync failed (likely schema mismatch), but JSON config is safe:", catInsertError.message);
-                    else console.log("[MarathonForm] Successfully synced", categories.length, "categories to table");
-                }
-            } catch (catErr) {
-                console.warn("[MarathonForm] Categories sync error:", catErr.message);
-            }
-
-
-            // 4. Sync Sponsors
-            await supabase.from('marathon_sponsors').delete().eq('marathon_id', marathon_id);
-            if (sponsors.length > 0) {
-                await supabase.from('marathon_sponsors').insert(
-                    sponsors.map(s => ({ 
-                        sponsor_name: s.sponsor_name,
-                        logo_url: s.logo_url,
-                        sponsor_type: s.sponsor_type,
-                        marathon_id 
-                    }))
-                );
-            }
-
-            // 5. Sync Benefits
-            await supabase.from('marathon_benefits').delete().eq('marathon_id', marathon_id);
-            if (benefits.length > 0) {
-                await supabase.from('marathon_benefits').insert(
-                    benefits.map(b => ({ 
-                        benefit_name: b.benefit_name,
-                        icon_key: b.icon_key,
-                        marathon_id 
-                    }))
-                );
-            }
-
-            // 6. Sync Registration Fields
-            try {
-                // Delete existing active fields to replace them
-                await supabase.from('registration_fields').delete().eq('event_id', marathon_id);
-                if (customFields.length > 0) {
-                    await supabase.from('registration_fields').insert(
-                        customFields.map((f, i) => ({
-                            event_id: marathon_id,
-                            field_key: f.label.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, ''),
-                            label: f.label,
-                            field_type: f.type || 'text',
-                            options: Array.isArray(f.options) ? f.options.filter(Boolean) : (f.options ? f.options.split(',').map(s => s.trim()) : null),
-                            is_required: !!f.required,
-                            sort_order: i,
-                            is_active: true
-                        }))
-                    );
-                }
-            } catch (regErr) {
-                console.warn("[MarathonForm] Registration fields sync error:", regErr.message);
-                // Safe to ignore if table doesn't exist yet
-            }
+            const { marathon_id: saved_id } = await response.json();
+            marathon_id = saved_id;
 
             if (!isAutoSave) {
                 showToast(`Marathon ${newStatus === 'Published' ? 'Published' : 'Saved'}!`, "success");
