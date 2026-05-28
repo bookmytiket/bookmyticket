@@ -153,7 +153,7 @@ export async function GET(request) {
 
     if (kycError) {
       console.error('[DigiLocker Callback] KYC record upsert failed:', kycError);
-      return NextResponse.redirect(`${BASE_URL}/organiser?kyc_error=storage_failed`);
+      return NextResponse.redirect(`${BASE_URL}/organiser?kyc_error=storage_failed:_${encodeURIComponent(kycError.message)}`);
     }
 
     // ── 9. Store issued documents ──────────────────────────────────────────
