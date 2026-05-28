@@ -73,7 +73,7 @@ export async function GET(request) {
     // ── Compute next step ──────────────────────────────────────────────────
     const currentStep = profile?.kyc_step || 1;
     const digilockerVerified = profile?.digilocker_verified || false;
-    const kycStatus = kycRecord?.kyc_status || verificationStatus?.kyc_status || 'pending';
+    const kycStatus = verificationStatus?.kyc_status || 'pending';
     const dashboardAccess = verificationStatus?.dashboard_access || false;
 
     const nextStep = computeNextStep({

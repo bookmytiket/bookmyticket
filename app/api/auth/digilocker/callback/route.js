@@ -201,7 +201,7 @@ export async function GET(request) {
       .upsert({
         organizer_id: organizerId,
         digilocker_kyc_id: kycRecord.id,
-        kyc_status: kycStatus,
+        kyc_status: 'in_progress', // Ensure they finish steps 3 and 4
         admin_risk_score: validation.riskScore,
         dashboard_access: false,
         submitted_at: new Date().toISOString(),
