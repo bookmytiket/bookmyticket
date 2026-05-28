@@ -222,7 +222,6 @@ export async function GET(request) {
         age_verified, aadhaar_verified, pan_verified,
         is_duplicate, risk_score, fraud_flags,
         submitted_at, approved_at, rejected_at, updated_at,
-        organizer_profiles!inner(full_name, business_name, business_type, kyc_step),
         digilocker_issued_documents(document_type, document_name, verification_status)
       `, { count: 'exact' })
       .eq('kyc_status', status)
