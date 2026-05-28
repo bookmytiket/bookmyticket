@@ -22,10 +22,16 @@ export default function AdminKYCReview({ adminSession }) {
   const [actionLoading, setActionLoading] = useState(false);
   const [toast, setToast] = useState(null);
 
+  const [error, setError] = useState(null);
+
   const fetchRecords = useCallback(async (status = activeFilter, page = 1) => {
-    if (!adminSession?.access_token) return;
+    if (!adminSession?.access_token) {
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
+      setError(null);
       const res = await fetch(
         `/api/admin/kyc?status=${status}&page=${page}&limit=20`,
         { headers: { Authorization: `Bearer ${adminSession.access_token}` } }
@@ -34,9 +40,14 @@ export default function AdminKYCReview({ adminSession }) {
       if (data.success) {
         setRecords(data.records || []);
         setPagination(data.pagination);
+      } else {
+        setError(data.error || 'Failed to load KYC submissions');
+        setRecords([]);
       }
     } catch (err) {
       console.error('Admin KYC fetch error:', err);
+      setError('Network error. Please try again.');
+      setRecords([]);
     } finally {
       setLoading(false);
     }
@@ -130,6 +141,14 @@ export default function AdminKYCReview({ adminSession }) {
         <div className={styles.loading}>
           <div className={styles.spinner} />
           <span>Loading KYC submissions...</span>
+        </div>
+      ) : error ? (
+        <div className={styles.empty}>
+          <span className={styles.emptyIcon}>⚠️</span>
+          <p style={{ color: '#ef4444', fontWeight: 600 }}>{error}</p>
+          <button className={styles.refreshBtn} onClick={() => fetchRecords()} style={{ marginTop: '12px' }}>
+            Retry
+          </button>
         </div>
       ) : records.length === 0 ? (
         <div className={styles.empty}>
