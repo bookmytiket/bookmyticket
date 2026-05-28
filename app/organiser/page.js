@@ -5376,7 +5376,7 @@ function OrganiserPanel() {
         </div>
       </div>
 
-      <div style={{ fontSize: "12px", color: t.textSub, marginTop: "8px" }}>
+      <div style={{ fontSize: "12px", color: t.textSub, marginTop: "8px", paddingLeft: "8px" }}>
         If you need to make any changes or have queries, please contact us on{" "}
         <a href="mailto:hello@bookmyticket.net" style={{ color: "#3b82f6" }}>
           hello@bookmyticket.net
@@ -14651,35 +14651,65 @@ function OrganiserPanel() {
       }}
     >
       {styles}
+      <style>{`
+        .restricted-item {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 14px 20px;
+          margin: 4px 15px;
+          font-size: 14px;
+          font-weight: 600;
+          color: #64748b;
+          transition: all 0.3s ease;
+          border-radius: 12px;
+          cursor: not-allowed;
+        }
+        .restricted-item:hover {
+          background: linear-gradient(90deg, rgba(248, 68, 100, 0.1), rgba(168, 85, 247, 0.1));
+          color: #a855f7;
+          transform: translateX(6px);
+        }
+        .restricted-btn {
+          color: #ef4444 !important;
+        }
+        .restricted-btn:hover {
+          background-color: #fef2f2 !important;
+          color: #dc2626 !important;
+        }
+        .restricted-logo {
+          padding: 24px 30px;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          border-bottom: 1px solid #f1f5f9;
+        }
+      `}</style>
       <aside className="sidebar" style={{ 
-        background: "linear-gradient(180deg, #f84464 0%, #a855f7 100%)", 
-        color: "#fff",
-        borderRight: "none" 
+        background: "#ffffff", 
+        color: "#0f172a",
+        borderRight: "1px solid #e2e8f0" 
       }}>
-        <div className="sidebar-logo">
+        <div className="restricted-logo">
           <img
             src="/logo.png"
             alt="BookMyTicket Logo"
-            style={{ height: "45px", width: "auto", display: "block", filter: "brightness(0) invert(1)" }}
+            style={{ height: "54px", width: "auto", display: "block", filter: "brightness(0)" }}
           />
         </div>
 
         <nav style={{ flex: 1, paddingBottom: "24px" }}>
-          <div className="sidebar-category" style={{ color: "rgba(255,255,255,0.7)" }}>Home</div>
-          <div className="sidebar-item" style={{ color: "rgba(255,255,255,0.7)" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-              <LayoutDashboard size={18} /> Dashboard (Locked)
-            </div>
+          <div className="sidebar-category" style={{ color: "#94a3b8" }}>Home</div>
+          <div className="restricted-item">
+            <LayoutDashboard size={18} /> Dashboard (Locked)
           </div>
 
-          <div className="sidebar-category" style={{ color: "rgba(255,255,255,0.7)" }}>
+          <div className="sidebar-category" style={{ color: "#94a3b8" }}>
             {isProfessionalService ? "Portfolio" : "Events"}
           </div>
-          <div className="sidebar-item" style={{ color: "rgba(255,255,255,0.7)" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-              <Grid size={18} />{" "}
-              {isProfessionalService ? "Service Setup" : "Management"} (Locked)
-            </div>
+          <div className="restricted-item">
+            <Grid size={18} />{" "}
+            {isProfessionalService ? "Service Setup" : "Management"} (Locked)
           </div>
         </nav>
 
@@ -14690,20 +14720,17 @@ function OrganiserPanel() {
               router.push("/signin");
               setTimeout(() => logout(), 100);
             }}
-            className="sidebar-item"
+            className="restricted-item restricted-btn"
             style={{
-              color: "#fff",
-              background: "rgba(255,255,255,0.1)",
-              borderRadius: "8px",
-              padding: "12px",
-              border: "1px solid rgba(255,255,255,0.2)",
+              border: "1px solid #e2e8f0",
               marginBottom: 0,
+              cursor: "pointer",
+              width: "calc(100% - 30px)",
+              background: "#ffffff",
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-              <LogOut size={18} />
-              <span>Sign Out</span>
-            </div>
+            <LogOut size={18} />
+            <span>Sign Out</span>
           </button>
         </div>
 
@@ -14711,9 +14738,9 @@ function OrganiserPanel() {
           <div
             style={{
               padding: "16px",
-              backgroundColor: "rgba(0,0,0,0.2)",
+              backgroundColor: "#fff7ed",
               borderRadius: "12px",
-              border: "1px solid rgba(255,255,255,0.1)",
+              border: "1px solid #fed7aa",
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
@@ -14726,7 +14753,7 @@ function OrganiserPanel() {
                 }}
               ></div>
               <span
-                style={{ fontSize: "11px", fontWeight: 700, color: "#fff" }}
+                style={{ fontSize: "11px", fontWeight: 700, color: "#9a3412" }}
               >
                 Safety Mode
               </span>
@@ -14734,7 +14761,7 @@ function OrganiserPanel() {
             <p
               style={{
                 fontSize: "10px",
-                color: "rgba(255,255,255,0.7)",
+                color: "#c2410c",
                 marginTop: "4px",
                 margin: 0,
               }}
