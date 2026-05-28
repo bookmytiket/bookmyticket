@@ -23,13 +23,9 @@ export function AuthProvider({ children }) {
                 try {
                     const parsed = JSON.parse(cachedUser);
                     setUser(parsed);
-                    // Check device session if staff
-                    if (parsed.role === 'staff') {
-                        checkStaffSession(parsed.id);
-                    }
-                    setLoading(false);
+                    // Do not set loading to false yet to prevent RequireAuth from acting on stale data
                 } catch (e) {
-                    console.error("Error parsing cached user:", e);
+                    console.error("Failed to parse cached user:", e);
                 }
             }
 
@@ -231,7 +227,7 @@ export function AuthProvider({ children }) {
 
             const profile         = profileResult?.data || null;
             const adminRecord     = adminResult?.data || null;
-            const organiserRecord = organiserResult?.data || null;
+            let organiserRecord = organiserResult?.data || null;
             const vendorRecord    = vendorResult?.data || null;
             const providerRecord  = providerResult?.data || null;
             const brandRecord     = brandResult?.data || null;
@@ -240,6 +236,21 @@ export function AuthProvider({ children }) {
             let role = (profile?.role || supabaseUser.user_metadata?.role || 'user').toLowerCase().replace(/\s+/g, '_');
             if (role === 'organizer') role = 'organiser';
             if (role === 'user') role = 'public';
+
+            // Fallback for RLS blocked organisers
+            if (role === 'organiser' && !organiserRecord) {
+                try {
+                    const res = await fetch(`/api/auth/profile?id=${supabaseUser.id}`);
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data.organiserRecord) {
+                            organiserRecord = data.organiserRecord;
+                        }
+                    }
+                } catch (e) {
+                    console.error("Failed to fetch bypass profile:", e);
+                }
+            }
 
             let specializedData = {};
 
