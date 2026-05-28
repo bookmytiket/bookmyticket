@@ -218,7 +218,7 @@ export async function GET(request) {
       .from('digilocker_kyc_records')
       .select(`
         organizer_id, kyc_status, verified_name, verified_email, verified_mobile,
-        verified_address, profile_photo_url,
+        verified_dob, verified_gender, verified_address, profile_photo_url,
         age_verified, aadhaar_verified, pan_verified,
         is_duplicate, risk_score, fraud_flags,
         submitted_at, approved_at, rejected_at, updated_at,
