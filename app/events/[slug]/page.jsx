@@ -104,7 +104,7 @@ export default async function SlugEventPage({ params }) {
         }
 
         console.log('[SlugEventPage] SUCCESS: Found event:', event.id, '-', event.title);
-        const isDynamic = event.type === 'Dynamic' || event.event_type === 'marathon' || event.title?.toLowerCase().includes('marathon');
+        const isDynamic = event.type === 'Dynamic' || event.type?.toLowerCase() === 'marathon' || event.event_type?.toLowerCase() === 'marathon' || event.title?.toLowerCase().includes('marathon');
 
         return (
             <>

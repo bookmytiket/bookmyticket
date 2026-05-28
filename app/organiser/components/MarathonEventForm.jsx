@@ -359,8 +359,8 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
                 country: eventData.country,
                 district: eventData.district || null,
                 pincode: eventData.zipCode,
-                status: newStatus === 'Published' ? 'published' : 'draft',
-                publish_status: newStatus === 'Published' ? 'published' : 'draft',
+                status: newStatus === 'Published' || eventData.status?.toLowerCase() === 'published' ? 'published' : 'draft',
+                publish_status: newStatus === 'Published' || eventData.status?.toLowerCase() === 'published' ? 'published' : 'draft',
                 visibility_status: 'public',
                 approval_status: 'approved',
                 listing_status: 'active',
@@ -470,7 +470,7 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
                 whatsapp_link: eventData.whatsapp_link,
                 support_number: eventData.support_number,
                 terms: eventData.terms,
-                status: newStatus,
+                status: newStatus === 'Published' || eventData.status?.toLowerCase() === 'published' ? 'published' : 'draft',
                 updated_at: new Date().toISOString()
             };
 
@@ -510,6 +510,11 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
 
             const { marathon_id: saved_id } = await response.json();
             marathon_id = saved_id;
+
+            setEventData(prev => ({
+                ...prev,
+                status: newStatus === 'Published' || prev.status?.toLowerCase() === 'published' ? 'published' : 'draft'
+            }));
 
             if (!isAutoSave) {
                 showToast(`Marathon ${newStatus === 'Published' ? 'Published' : 'Saved'}!`, "success");

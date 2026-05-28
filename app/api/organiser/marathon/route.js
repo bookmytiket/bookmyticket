@@ -47,6 +47,14 @@ export async function POST(request) {
 
     // 5. Insert/Update into 'events' table
     if (localMarathonId) {
+      if (newStatus === 'Draft' || newStatus === undefined) {
+        const { data: existingEvent } = await adminClient.from('events').select('status, publish_status').eq('id', localMarathonId).single();
+        if (existingEvent?.status?.toLowerCase() === 'published' || existingEvent?.publish_status?.toLowerCase() === 'published') {
+          eventPayload.status = 'published';
+          eventPayload.publish_status = 'published';
+          if (marathonEventsPayload) marathonEventsPayload.status = 'published';
+        }
+      }
       const { error: updateError } = await adminClient
         .from('events')
         .update(eventPayload)
