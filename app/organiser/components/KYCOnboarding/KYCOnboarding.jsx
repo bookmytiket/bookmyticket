@@ -120,6 +120,17 @@ export default function KYCOnboarding({ session }) {
   const handleNext = (nextStep) => { setCurrentStep(nextStep || currentStep + 1); setError(null); };
   const handleBack = () => { if (currentStep > 1) setCurrentStep(currentStep - 1); };
 
+  const handleSignOut = async () => {
+    try {
+      setLoading(true);
+      await supabase.auth.signOut();
+      router.replace('/organiser/login');
+    } catch (err) {
+      console.error('Sign out failed:', err);
+      setLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className={styles.loadingContainer}>
@@ -140,9 +151,14 @@ export default function KYCOnboarding({ session }) {
             <div className={styles.logoIcon}>🎫</div>
             <span>BookMyTicket</span>
           </div>
-          <div className={styles.headerBadge}>
-            <span className={styles.badgeDot} />
-            Organizer KYC Verification
+          <div className={styles.headerActions}>
+            <div className={styles.headerBadge}>
+              <span className={styles.badgeDot} />
+              Organizer KYC Verification
+            </div>
+            <button onClick={handleSignOut} className={styles.signOutBtn}>
+              Sign Out
+            </button>
           </div>
         </div>
       </div>
