@@ -2318,8 +2318,7 @@ function OrganiserPanel() {
             country: addr.country || prev.country,
           }));
 
-          if (shouldUpdateZip)
-            showToast(`Address Resolved: ${fetchedZip}`, "success");
+
         } catch (err) {
           console.error("Reverse geocoding error:", err);
         }
