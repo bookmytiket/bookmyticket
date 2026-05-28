@@ -217,7 +217,7 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
                 starting_point: source.starting_point || dynCfg.starting_point || "",
                 whatsapp_link: source.whatsapp_link || "",
                 support_number: source.support_number || "",
-                terms: source.terms || dynCfg.terms || "",
+                terms: source.terms_conditions || source.terms || dynCfg.terms || "",
                 organiser_name: dynCfg.organiser_name || "",
                 status: source.status || "Draft",
                 bulk_discount_percent: dynCfg.discounts?.bulk_percent || 0,
@@ -285,7 +285,13 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
                 .from('marathon_sponsors')
                 .select('*')
                 .eq('marathon_id', marathonId);
-            if (spons && spons.length > 0) setSponsors(spons);
+            
+            const dynSponsors = source.sponsor_logos || dynCfg.sponsors || dynCfg.sponsor_logos || [];
+            if (spons && spons.length > 0) {
+                setSponsors(spons);
+            } else if (dynSponsors.length > 0) {
+                setSponsors(dynSponsors.map(s => typeof s === 'string' ? { name: '', logo: s } : s));
+            }
 
             const { data: bens } = await supabase
                 .from('marathon_benefits')
@@ -346,6 +352,8 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
             // 1. Sync with primary 'events' table first to maintain global visibility
             const eventPayload = {
                 title: eventData.title,
+                event_name: eventData.title,
+                subtitle: eventData.subtitle,
                 img: eventData.banner_image,
                 date: eventData.event_date,
                 time: eventData.event_time,
@@ -355,12 +363,29 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
                 country: eventData.country,
                 pincode: eventData.zipCode,
                 status: newStatus === 'Published' ? 'published' : 'draft',
+                publish_status: newStatus === 'Published' ? 'published' : 'draft',
+                visibility_status: 'public',
+                approval_status: 'approved',
+                listing_status: 'active',
+                entity_type: 'event',
                 type: 'Marathon',
+                event_type: 'Marathon',
                 organiser_id: user.id,
                 latitude: Number(eventData.map_location.lat),
                 longitude: Number(eventData.map_location.lng),
                 address: eventData.map_location.address,
                 description: eventData.description,
+                terms_conditions: eventData.terms,
+                sponsor_logos: sponsors.map(s => s.logo),
+                event_start_at: (() => {
+                    const dt = new Date(`${eventData.event_date}T${eventData.event_time || '00:00'}`);
+                    return !isNaN(dt.getTime()) ? dt.toISOString() : null;
+                })(),
+                event_end_at: (() => {
+                    if(!eventData.event_end_date) return null;
+                    const dt = new Date(`${eventData.event_end_date}T${eventData.event_end_time || '23:59'}`);
+                    return !isNaN(dt.getTime()) ? dt.toISOString() : null;
+                })(),
                 end_date: eventData.event_end_date || null,
                 end_time: eventData.event_end_time || null,
                 expiry_date: eventData.expiry_date || null,

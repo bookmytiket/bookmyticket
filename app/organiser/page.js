@@ -971,9 +971,10 @@ function OrganiserPanel() {
       setEventsData(payload.events || []);
 
       // ── FETCH DASHBOARD SUMMARY ──
-      const statsRes = await fetch("/api/organiser/dashboard/summary", {
+      const statsRes = await fetch(`/api/organiser/dashboard/summary?t=${Date.now()}`, {
         headers: { Authorization: `Bearer ${jwt}` },
         signal: controller.signal,
+        cache: 'no-store'
       });
       if (statsRes.ok) {
         const statsData = await statsRes.json();
@@ -2663,6 +2664,7 @@ function OrganiserPanel() {
     const payload = {
       organiser_id: user?.id,
       title: (postEvent.title || "Untitled Event").trim(),
+      event_name: (postEvent.title || "Untitled Event").trim(),
       category: postEvent.category || undefined,
       type: postEvent.type || "Physical Event",
       event_type: postEvent.type || "Physical Event",
@@ -2826,6 +2828,17 @@ function OrganiserPanel() {
       entry_gate: postEvent.entryGate || undefined,
       emergency_exit: postEvent.emergencyExit || undefined,
       video_trailer_url: postEvent.videoTrailerUrl || undefined,
+      terms_conditions: postEvent.termsConditions || undefined,
+      seating_capacity: Number(postEvent.normalTicketCapacity) || totalSeats || undefined,
+      event_start_at: !isNaN(eventDateTime.getTime()) ? eventDateTime.toISOString() : null,
+      event_end_at: (() => {
+        const configBasic = postEvent.dynamic_config?.basicInfo || {};
+        const endD = postEvent.endDate || postEvent.end_date || configBasic.endDate || firstSlot.date || today;
+        const endT = postEvent.endTime || postEvent.end_time || configBasic.endTime || "23:59";
+        const dt = new Date(`${endD}T${endT}`);
+        return !isNaN(dt.getTime()) ? dt.toISOString() : null;
+      })(),
+      sponsor_logos: postEvent.sponsors ? postEvent.sponsors.map(s => s.logo) : undefined,
       dynamic_config: {
         ...(postEvent.dynamic_config || {}),
         basicInfo: {
@@ -2924,10 +2937,18 @@ function OrganiserPanel() {
 
     if (editingEvent) {
       const { organiser_id, ...updatePayload } = payload;
-      supabase.rpc("update_event_transaction", { p_event_id: editingEvent.id, p_update_payload: updatePayload })
+      // Use standard update instead of RPC to avoid Postgres array literal cast errors (e.g. malformed array literal)
+      supabase.from("events").update(updatePayload).eq("id", editingEvent.id)
         .then(async ({ error }) => {
             if (error) throw error;
             try {
+              // Create audit log manually
+              supabase.from("event_updates_audit").insert({
+                event_id: editingEvent.id,
+                updated_by: user?.id,
+                changed_fields: Object.keys(updatePayload)
+              }).then(() => {});
+
               const isTournament = ["Tournament Event", "Tournament", "Sports Tournament"].includes(postEvent.type);
               const isMarathon = ["Marathon", "Marathon Event"].includes(postEvent.type);
 
@@ -7095,6 +7116,7 @@ function OrganiserPanel() {
                                                   ?.rules_regulations ||
                                                 ev.rulesRegulations,
                                               termsConditions:
+                                                ev.terms_conditions ||
                                                 ev.sports_details
                                                   ?.terms_conditions ||
                                                 ev.dynamic_config
@@ -7152,13 +7174,13 @@ function OrganiserPanel() {
                                                   ? "multiple"
                                                   : "single",
                                               startDate:
-                                                ev.date || ev.startDate,
+                                                ev.event_start_at ? ev.event_start_at.split('T')[0] : (ev.date || ev.startDate),
                                               startTime:
-                                                ev.time || ev.startTime,
+                                                ev.event_start_at ? ev.event_start_at.split('T')[1]?.substring(0, 5) : (ev.time || ev.startTime),
                                               endDate:
-                                                ev.end_date || ev.endDate,
+                                                ev.event_end_at ? ev.event_end_at.split('T')[0] : (ev.end_date || ev.endDate),
                                               endTime:
-                                                ev.end_time || ev.endTime,
+                                                ev.event_end_at ? ev.event_end_at.split('T')[1]?.substring(0, 5) : (ev.end_time || ev.endTime),
                                               expiryDate:
                                                 ev.expiry_date || ev.expiryDate,
                                               bannerPreview:
@@ -7169,6 +7191,11 @@ function OrganiserPanel() {
                                                 ev.banner_preview ||
                                                 ev.bannerPreview ||
                                                 ev.img, // Used by Sports/Universal forms
+                                              videoTrailerUrl: ev.video_trailer_url || ev.videoTrailerUrl || "",
+                                              parkingDetails: ev.parking_details || ev.parkingDetails || "",
+                                              entryGate: ev.entry_gate || ev.entryGate || "",
+                                              emergencyExit: ev.emergency_exit || ev.emergencyExit || "",
+                                              sponsors: ev.sponsor_logos?.map(s => typeof s === 'string' ? { name: '', logo: s } : s) || ev.sponsors || [],
                                               organiser_name:
                                                 ev.dynamic_config?.organiser_name ||
                                                 ev.organiser_name || "",
@@ -12973,6 +13000,7 @@ function OrganiserPanel() {
                           featured: true,
                           trending: true,
                           status: "Active",
+                          publish_status: "draft",
                           virtual: newEvent.type === "Online",
                         });
                         setShowCreateEvent(false);

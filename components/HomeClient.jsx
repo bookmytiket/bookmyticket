@@ -256,7 +256,7 @@ function HomeClient() {
       
       // Cache buster for instant updates
       const url = `/api/events/public?${params.toString()}&t=${Date.now()}`;
-      const res = await fetch(url);
+      const res = await fetch(url, { cache: 'no-store' });
       if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
       const data = await res.json();
       setApiEvents(data || []);

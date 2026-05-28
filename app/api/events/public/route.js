@@ -1,6 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 
+export const dynamic = 'force-dynamic';
+
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY; // Use service role for strict data fetching if needed, or anon key if RLS allows
 
@@ -35,7 +37,7 @@ export async function GET(request) {
 
         // Apply District Filter (Highest Priority)
         if (district && district !== 'All' && district !== 'India') {
-            eventsQuery = eventsQuery.ilike('district', `%${district}%`);
+            eventsQuery = eventsQuery.or(`district.ilike.%${district}%,city.ilike.%${district}%`);
         } else if (city && city !== 'All Cities' && city !== 'India') {
             eventsQuery = eventsQuery.ilike('city', `%${city}%`);
         }
