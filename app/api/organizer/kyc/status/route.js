@@ -12,6 +12,8 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request) {
   const supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -73,7 +75,7 @@ export async function GET(request) {
     // ── Compute next step ──────────────────────────────────────────────────
     const currentStep = profile?.kyc_step || 1;
     const digilockerVerified = profile?.digilocker_verified || false;
-    const kycStatus = verificationStatus?.kyc_status || 'pending';
+    const kycStatus = verificationStatus?.kyc_status || kycRecord?.kyc_status || 'pending';
     const dashboardAccess = verificationStatus?.dashboard_access || false;
 
     const nextStep = computeNextStep({
@@ -164,6 +166,15 @@ function computeNextStep({ currentStep, digilockerVerified, kycStatus, dashboard
       label: 'Settlement Setup',
       action: 'complete_bank_setup',
       description: 'Add your bank account for payouts',
+    };
+  }
+
+  if (kycStatus === 'reupload_requested') {
+    return {
+      step: 2,
+      label: 'Re-verify with DigiLocker',
+      action: 'initiate_digilocker',
+      description: 'Admin has requested a re-verification. Please complete DigiLocker again.',
     };
   }
 

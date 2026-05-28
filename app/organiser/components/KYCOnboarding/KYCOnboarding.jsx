@@ -84,6 +84,11 @@ export default function KYCOnboarding({ session }) {
         if (['submitted', 'under_review', 'approved', 'rejected'].includes(data.kyc?.status)) {
           setCurrentStep(5);
         }
+
+        // Reupload requested → send back to DigiLocker step
+        if (data.kyc?.status === 'reupload_requested') {
+          setCurrentStep(2);
+        }
       }
     } catch (err) {
       console.error('KYC status fetch error:', err);

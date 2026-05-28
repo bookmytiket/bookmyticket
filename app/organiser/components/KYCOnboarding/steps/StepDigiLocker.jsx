@@ -14,6 +14,7 @@ export default function StepDigiLocker({ session, kycData, onNext, onBack, error
   const [verificationId, setVerificationId] = useState(null);
 
   const isAlreadyVerified = kycData?.kyc?.digilocker_verified;
+  const isReuploadRequested = kycData?.kyc?.status === 'reupload_requested';
 
   const handleInitiateDigiLocker = async () => {
     if (!session?.access_token) return;
@@ -119,6 +120,32 @@ export default function StepDigiLocker({ session, kycData, onNext, onBack, error
 
   return (
     <div className={digiStyles.container}>
+
+      {/* Reupload Warning Banner */}
+      {isReuploadRequested && (
+        <div style={{
+          background: '#fffbeb',
+          border: '1.5px solid #f59e0b',
+          borderRadius: '12px',
+          padding: '16px 20px',
+          marginBottom: '24px',
+          display: 'flex',
+          gap: '12px',
+          alignItems: 'flex-start',
+        }}>
+          <span style={{ fontSize: '22px' }}>⚠️</span>
+          <div>
+            <p style={{ margin: '0 0 4px', fontWeight: 700, color: '#92400e', fontSize: '15px' }}>
+              Re-verification Required
+            </p>
+            <p style={{ margin: 0, color: '#78350f', fontSize: '13px', lineHeight: '1.5' }}>
+              The admin has reviewed your KYC submission and requested a re-verification.
+              Please complete DigiLocker again to link your Aadhaar and PAN documents.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Info Cards */}
       <div className={digiStyles.infoGrid}>
         <div className={digiStyles.infoCard}>
