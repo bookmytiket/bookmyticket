@@ -294,7 +294,7 @@ const PhysicalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEdi
                             }}
                         />
 
-                        {postEvent.countryCode === "IN" ? (
+                        {(postEvent.countryCode === "IN" || postEvent.country === "India") ? (
                             <>
                                 <CustomSelect 
                                     label="District"

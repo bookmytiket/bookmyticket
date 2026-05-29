@@ -311,7 +311,7 @@ export default function UnifiedEventForm({ postEvent, setPostEvent, onCancel, on
                                         setPostEvent(p => ({ ...p, state: v, stateCode: stateObj?.isoCode || "", district: "", city: "" }));
                                     }}
                                 />
-                                {postEvent.countryCode === "IN" && (
+                                {(postEvent.countryCode === "IN" || postEvent.country === "India") && (
                                     <>
                                         <CustomSelect 
                                             label="District"
@@ -481,15 +481,50 @@ export default function UnifiedEventForm({ postEvent, setPostEvent, onCancel, on
                             <Zap size={48} strokeWidth={1.5} />
                         </div>
                         <div>
-                            <h2 className="text-4xl font-black text-slate-900 uppercase tracking-tighter italic leading-none">Event Ready for {isEditing ? "Update" : "Publish"}</h2>
-                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.3em] mt-4">All configurations have been verified</p>
+                            <h2 className="text-4xl font-black text-slate-900 uppercase tracking-tighter italic leading-none">
+                                {postEvent.status === 'approved' ? "Event Approved" : (postEvent.status === 'pending_review' ? "Pending Review" : "Event Configuration")}
+                            </h2>
+                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.3em] mt-4">
+                                {postEvent.status === 'approved' ? "Ready to publish to the public" : "Save as draft or submit for admin review"}
+                            </p>
                         </div>
-                        <button 
-                            onClick={onPublish}
-                            className="mt-8 px-20 py-8 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-[4rem] text-sm font-black uppercase tracking-[0.4em] shadow-2xl shadow-blue-500/40 hover:scale-105 transition-all"
-                        >
-                            {isEditing ? "Update Configuration" : "Publish Event"}
-                        </button>
+                        
+                        <div className="flex flex-col md:flex-row items-center justify-center gap-4 mt-8">
+                            {(!postEvent.status || postEvent.status === 'draft' || postEvent.status === 'changes_requested' || postEvent.status === 'rejected') && (
+                                <>
+                                    <button 
+                                        onClick={() => { setPostEvent(p => ({ ...p, eventStatus: 'draft' })); setTimeout(onPublish, 100); }}
+                                        className="px-12 py-6 bg-slate-100 text-slate-600 border border-slate-200 rounded-[4rem] text-sm font-black uppercase tracking-[0.2em] shadow-sm hover:bg-slate-200 transition-all"
+                                    >
+                                        Save Draft
+                                    </button>
+                                    <button 
+                                        onClick={() => { setPostEvent(p => ({ ...p, eventStatus: 'pending_review' })); setTimeout(onPublish, 100); }}
+                                        className="px-12 py-6 bg-gradient-to-r from-orange-500 to-rose-500 text-white rounded-[4rem] text-sm font-black uppercase tracking-[0.2em] shadow-xl shadow-orange-500/30 hover:scale-105 transition-all"
+                                    >
+                                        Submit for Review
+                                    </button>
+                                </>
+                            )}
+
+                            {postEvent.status === 'pending_review' && (
+                                <button 
+                                    disabled
+                                    className="px-12 py-6 bg-amber-100 text-amber-700 border border-amber-200 rounded-[4rem] text-sm font-black uppercase tracking-[0.2em] shadow-sm cursor-not-allowed"
+                                >
+                                    Under Admin Review
+                                </button>
+                            )}
+
+                            {postEvent.status === 'approved' && (
+                                <button 
+                                    onClick={() => { setPostEvent(p => ({ ...p, eventStatus: 'published' })); setTimeout(onPublish, 100); }}
+                                    className="px-12 py-6 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-[4rem] text-sm font-black uppercase tracking-[0.2em] shadow-xl shadow-emerald-500/30 hover:scale-105 transition-all"
+                                >
+                                    Publish Event
+                                </button>
+                            )}
+                        </div>
                         <div>
                             <button onClick={prevStep} className="text-slate-400 hover:text-slate-900 text-[10px] font-black uppercase tracking-[0.2em] transition-colors">Return to Edit</button>
                         </div>

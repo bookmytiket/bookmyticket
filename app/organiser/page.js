@@ -2706,6 +2706,7 @@ function OrganiserPanel() {
       price: finalPrice,
       location: postEvent.location || undefined,
       venue: isOnline ? "Online / Virtual" : postEvent.venue || undefined,
+      venue_name: isOnline ? "Online / Virtual" : postEvent.venue || undefined,
       address: isOnline ? postEvent.meetingUrl : postEvent.address || undefined,
       country: !isOnline ? postEvent.country : undefined,
       state: !isOnline ? postEvent.state : undefined,
@@ -2741,44 +2742,30 @@ function OrganiserPanel() {
       listing_status: "active",
       status: (() => {
         const now = new Date();
-        now.setHours(0, 0, 0, 0); // Compare against start of today
-
-        // Prioritize End Date, then Expiry Date, then Start Date
-        const configBasic = postEvent.dynamic_config?.basicInfo || {};
-        const configExpiry = configBasic.expiryDate || postEvent.expiryDate;
-        let dateStr =
-          postEvent.endDate ||
-          configBasic.endDate ||
-          configExpiry ||
-          firstSlot.date ||
-          today;
-
-        // Handle DD/MM/YYYY or DD-MM-YYYY format for robustness
-        if (
-          typeof dateStr === "string" &&
-          (dateStr.includes("/") || dateStr.includes("-"))
-        ) {
-          const separator = dateStr.includes("/") ? "/" : "-";
-          const parts = dateStr.split(separator);
-          if (parts[0].length <= 2) {
-            const [d, m, y] = parts;
-            dateStr = `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
-          }
-        }
-
-        const timeStr =
-          postEvent.endTime || configBasic.endTime || firstSlot.time || "23:59";
-        const eventDateTime = new Date(`${dateStr}T${timeStr}`);
+        now.setHours(0, 0, 0, 0);
 
         if (postEvent.eventStatus === "draft") return "draft";
-        // Only expire if the date is strictly in the past (before today)
+        if (postEvent.eventStatus === "pending_review") return "pending_review";
+        if (postEvent.eventStatus === "approved") return "approved";
+        if (postEvent.eventStatus === "rejected") return "rejected";
+        if (postEvent.eventStatus === "changes_requested") return "changes_requested";
+        
+        const configBasic = postEvent.dynamic_config?.basicInfo || {};
+        const configExpiry = configBasic.expiryDate || postEvent.expiryDate;
+        let dateStr = postEvent.endDate || configBasic.endDate || configExpiry || today;
+        const timeStr = postEvent.endTime || configBasic.endTime || "23:59";
+        const eventDateTime = new Date(`${dateStr}T${timeStr}`);
+
+        // Only expire if the date is strictly in the past
         if (!isNaN(eventDateTime.getTime())) {
           const checkDate = new Date(eventDateTime);
           checkDate.setHours(0, 0, 0, 0);
           if (checkDate < now) return "expired";
         }
-        return "published";
+
+        return postEvent.eventStatus === "published" ? "published" : "draft";
       })(),
+      publish_status: postEvent.eventStatus === "published" ? "published" : "unpublished",
       meeting_type: postEvent.meetingType || "internal",
       external_meeting_url: postEvent.externalMeetingUrl || undefined,
       description: postEvent.description || undefined,
