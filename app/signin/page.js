@@ -341,14 +341,39 @@ export default function SignInPage() {
         if (!identifier) { setLoginError("Please enter your email address."); return; }
         setLoading(true);
         try {
-            const res = await fetch('/api/auth/otp', {
+            const email = identifier.trim().toLowerCase();
+
+            // Auto-register if user doesn't exist (unified flow)
+            const checkRes = await fetch('/api/auth/otp', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'send', email: identifier.trim().toLowerCase(), purpose: 'login' })
+                body: JSON.stringify({ action: 'send', email, purpose: 'login' })
             });
-            const data = await res.json();
-            if (!data.success) throw new Error(data.error || "Failed to send OTP.");
-            setOtpEmail(identifier.trim().toLowerCase());
+            const checkData = await checkRes.json();
+
+            // If user not found, auto-create then send OTP
+            if (!checkData.success && (checkData.error?.includes('not found') || checkData.error?.includes('no user') || checkData.error?.includes('does not exist'))) {
+                const signupRes = await fetch('/api/auth/signup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password: Math.random().toString(36).slice(-12), full_name: email.split('@')[0], role: 'user' })
+                });
+                const signupData = await signupRes.json();
+                if (!signupData.success) throw new Error(signupData.error || "Could not create account.");
+
+                // Retry OTP send after registration
+                const retryRes = await fetch('/api/auth/otp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'send', email, purpose: 'login' })
+                });
+                const retryData = await retryRes.json();
+                if (!retryData.success) throw new Error(retryData.error || "Failed to send OTP.");
+            } else if (!checkData.success) {
+                throw new Error(checkData.error || "Failed to send OTP.");
+            }
+
+            setOtpEmail(email);
             setOtpCode("");
             setMode("login_otp_verify");
         } catch (err) {
@@ -358,6 +383,7 @@ export default function SignInPage() {
             setLoading(false);
         }
     };
+
 
     const handleLoginVerifyOTP = async (e) => {
         e.preventDefault();
@@ -400,6 +426,72 @@ export default function SignInPage() {
             setTimeout(() => setLoading(false), 200);
         }
     };
+
+    const handlePhoneLoginSendOTP = async (e) => {
+        e.preventDefault();
+        setLoginError("");
+        if (!signupPhone) { setLoginError("Please enter your phone number."); return; }
+        setLoading(true);
+        try {
+            const res = await fetch('/api/auth/otp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'send', phone: signupPhone, purpose: 'login' })
+            });
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error || "Failed to send SMS OTP.");
+            setOtpCode("");
+            setMode("phone_otp_verify");
+        } catch (err) {
+            console.error("Phone OTP send error:", err);
+            setLoginError(err.message || "Could not send verification code.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handlePhoneLoginVerifyOTP = async (e) => {
+        e.preventDefault();
+        setLoginError("");
+        if (otpCode.length !== 6) { setLoginError("Please enter the 6-digit code."); return; }
+        setLoading(true);
+        try {
+            const res = await fetch('/api/auth/otp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'verify', phone: signupPhone, code: otpCode, purpose: 'login' })
+            });
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error || "Invalid OTP.");
+
+            if (data.session) {
+                const { error: sessionError } = await supabase.auth.setSession({
+                    access_token: data.session.access_token,
+                    refresh_token: data.session.refresh_token
+                });
+                if (sessionError) throw sessionError;
+                
+                const { data: { session } } = await supabase.auth.getSession();
+                let finalUser = session?.user;
+                if (fetchAndSetUser) {
+                    finalUser = await fetchAndSetUser(finalUser) || finalUser;
+                }
+                const dest = getRedirectDestination(finalUser, redirectPath);
+                
+                setTimeout(() => {
+                    router.replace(dest);
+                }, 150);
+            } else {
+                throw new Error("Session data missing from server response.");
+            }
+        } catch (err) {
+            console.error("Phone OTP verify error:", err);
+            setLoginError(err.message || "Invalid or expired verification code.");
+        } finally {
+            setTimeout(() => setLoading(false), 200);
+        }
+    };
+
 
     const handleSignupSendOTP = async (e) => {
         e.preventDefault();
@@ -955,16 +1047,17 @@ export default function SignInPage() {
                     )}
                     
                     {/* Internal Screen Content */}
-                    <div className="no-scrollbar" style={{ flex: 1, overflowY: "auto", padding: "4px 16px 16px", position: "relative" }}>
+                    <div className="no-scrollbar" style={{ flex: 1, overflowY: "hidden", padding: "4px 20px 12px", position: "relative", display: "flex", flexDirection: "column", justifyContent: "center" }}>
                         
                         {/* Header Logo */}
-                        <div style={{ display: "flex", justifyContent: "center", marginBottom: "8px", marginTop: "4px" }}>
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: "20px" }}>
+                            <p style={{ fontSize: "13px", color: "#64748b", fontWeight: 600, margin: "0 0 6px", letterSpacing: "0.02em" }}>Welcome to</p>
                             <Link href="/">
-                            <img
-                                src="/logo.png"
-                                alt="BookMyTicket"
-                                style={{ height: '44px', width: 'auto', objectFit: 'contain', display: 'block' }}
-                            />
+                                <img
+                                    src="/logo.png"
+                                    alt="BookMyTicket"
+                                    style={{ height: '70px', width: 'auto', objectFit: 'contain', display: 'block' }}
+                                />
                             </Link>
                         </div>
 
@@ -1032,40 +1125,18 @@ export default function SignInPage() {
                         {/* ══ SIGN IN ══ */}
                         {mode === "signin" && (
                             <>
-                                <div style={{ textAlign: "center", marginBottom: "8px" }}>
-                                    <h1 style={{ fontSize: "26px", fontWeight: 900, color: "#1e1b4b", margin: "0 0 4px" }}>
-                                        Welcome
-                                    </h1>
-                                    <p style={{ fontSize: "13px", color: "#64748b", margin: 0, fontWeight: 500 }}>
-                                        Sign in to your account
-                                    </p>
-                                </div>
-
-                                <form onSubmit={handleLogin}>
+                                <form onSubmit={handleLoginSendOTP} style={{ marginTop: "0" }}>
                                     <input
-                                        type="text" required
-                                        placeholder="Username / Email"
+                                        type="email" required
+                                        placeholder="Email"
                                         value={identifier}
                                         onChange={e => setIdentifier(e.target.value)}
-                                        style={inp} onFocus={fr} onBlur={bg}
+                                        style={{...inp, padding: "12px 16px", borderRadius: "10px", marginBottom: "12px", borderColor: "#cbd5e1", fontSize: "15px", color: "#334155"}} 
+                                        onFocus={fr} onBlur={bg}
                                     />
 
-                                    <div style={{ position: "relative", marginBottom: "16px" }}>
-                                        <input
-                                            type={showPass ? "text" : "password"} required
-                                            placeholder="Password"
-                                            value={password}
-                                            onChange={e => setPassword(e.target.value)}
-                                            style={{ ...inp, paddingRight: "50px", marginBottom: 0 }} onFocus={fr} onBlur={bg}
-                                        />
-                                        <button type="button" onClick={() => setShowPass(p => !p)}
-                                            style={{ position: "absolute", right: "16px", top: "14px", background: "none", border: "none", cursor: "pointer", color: "#94a3b8", padding: 0 }}>
-                                            {showPass ? <Eye size={18} /> : <EyeOff size={18} />}
-                                        </button>
-                                    </div>
-
                                     {loginError && (
-                                        <div style={{ padding: "12px", background: "#fef2f2", border: "1px solid #fee2e2", borderRadius: "10px", marginBottom: "16px", color: "#b91c1c", fontSize: "13px", fontWeight: 600 }}>
+                                        <div style={{ padding: "10px", background: "#fef2f2", border: "1px solid #fee2e2", borderRadius: "8px", marginBottom: "10px", color: "#b91c1c", fontSize: "12px", fontWeight: 600 }}>
                                             ⚠ {loginError}
                                         </div>
                                     )}
@@ -1075,82 +1146,211 @@ export default function SignInPage() {
                                         disabled={loading}
                                         style={{
                                             ...submitBtn,
-                                            marginBottom: "8px",
-                                            opacity: loading ? 0.85 : 1,
-                                            cursor: loading ? "not-allowed" : "pointer",
-                                            display: "flex",
-                                            alignItems: "center",
-                                            justifyContent: "center",
-                                            gap: "8px",
+                                            marginTop: "0",
+                                            marginBottom: "12px",
+                                            padding: "12px",
+                                            opacity: loading ? 0.8 : 1
                                         }}
                                     >
-                                        {loading ? (
-                                            <>
-                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-                                                    style={{ animation: "spin 0.8s linear infinite" }}>
-                                                    <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.35)" strokeWidth="3"/>
-                                                    <path d="M12 2a10 10 0 0 1 10 10" stroke="#fff" strokeWidth="3" strokeLinecap="round"/>
-                                                </svg>
-                                                Signing in…
-                                            </>
-                                        ) : "Log in"}
+                                        {loading ? "Sending OTP..." : "Get OTP"}
                                     </button>
-                                    
-                                    {loading && (
-                                        <div style={{ textAlign: "center", animation: "fadeIn 2s" }}>
-                                            <button 
-                                                type="button" 
-                                                onClick={() => window.location.reload()} 
-                                                style={{ background: "none", border: "none", fontSize: "11px", color: "#64748b", textDecoration: "underline", cursor: "pointer" }}
-                                            >
-                                                Taking too long? Click here to reload
-                                            </button>
+                                </form>
+
+                                <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "12px", color: "#475569", fontSize: "13px" }}>
+                                    <div style={{ flex: 1, height: "1px", background: "#cbd5e1" }} /> 
+                                    or 
+                                    <div style={{ flex: 1, height: "1px", background: "#cbd5e1" }} />
+                                </div>
+
+                                <button
+                                    type="button"
+                                    onClick={() => setMode("phone_signin")}
+                                    style={{
+                                        width: "100%", 
+                                        padding: "12px", 
+                                        borderRadius: "14px", 
+                                        border: "1.5px solid #e2e8f0", 
+                                        background: "#fff", 
+                                        color: "#1e1b4b", 
+                                        fontWeight: 800, 
+                                        fontSize: "14px", 
+                                        cursor: "pointer", 
+                                        marginBottom: "12px",
+                                        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                                        boxShadow: "0 2px 4px rgba(0,0,0,0.02)"
+                                    }}
+                                    onMouseEnter={(e) => { e.target.style.borderColor = "#a855f7"; e.target.style.color = "#a855f7"; }}
+                                    onMouseLeave={(e) => { e.target.style.borderColor = "#e2e8f0"; e.target.style.color = "#1e1b4b"; }}
+                                >
+                                    Continue with Phone Number
+                                </button>
+
+                                <div style={{ textAlign: "center", marginBottom: "12px" }}>
+                                    <button 
+                                        type="button" 
+                                        onClick={() => { setMode("email_password"); setLoginError(""); }} 
+                                        style={{ background: "none", border: "none", fontSize: "13px", color: "#f84464", fontWeight: 700, cursor: "pointer" }}
+                                        onMouseEnter={e => e.target.style.opacity = 0.8}
+                                        onMouseLeave={e => e.target.style.opacity = 1}
+                                    >
+                                        Login with Password instead
+                                    </button>
+                                </div>
+
+                                <p style={{ fontSize: "11px", color: "#64748b", textAlign: "center", margin: "0 0 12px" }}>
+                                    By continuing, you agree to our <span style={{ color: "#000", textDecoration: "underline", cursor: "pointer", fontWeight: 600 }}>Terms</span> & <span style={{ color: "#000", textDecoration: "underline", cursor: "pointer", fontWeight: 600 }}>Privacy Policy</span>.
+                                </p>
+                            </>
+                        )}
+
+                        {/* ══ LOGIN EMAIL PASSWORD ══ */}
+                        {mode === "email_password" && (
+                            <>
+                                <div style={{ textAlign: "center", marginBottom: "24px", marginTop: "16px" }}>
+                                    <h1 style={{ fontSize: "26px", fontWeight: 900, color: "#1e1b4b", margin: "0 0 4px" }}>
+                                        Welcome Back
+                                    </h1>
+                                    <p style={{ fontSize: "13px", color: "#64748b", margin: 0, fontWeight: 500 }}>
+                                        Sign in with your email and password
+                                    </p>
+                                </div>
+
+                                <form onSubmit={(e) => handleLogin(e, true)}>
+                                    <input
+                                        type="email" required
+                                        placeholder="Email"
+                                        value={identifier}
+                                        onChange={e => setIdentifier(e.target.value)}
+                                        style={{...inp, padding: "14px", borderRadius: "8px", marginBottom: "16px", borderColor: "#cbd5e1"}} onFocus={fr} onBlur={bg}
+                                    />
+
+                                    <div style={{ position: "relative", marginBottom: "16px" }}>
+                                        <input
+                                            type={showPass ? "text" : "password"} required
+                                            placeholder="Password"
+                                            value={password}
+                                            onChange={e => setPassword(e.target.value)}
+                                            style={{ ...inp, padding: "14px", paddingRight: "50px", borderRadius: "8px", marginBottom: 0, borderColor: "#cbd5e1" }} onFocus={fr} onBlur={bg}
+                                        />
+                                        <button type="button" onClick={() => setShowPass(p => !p)}
+                                            style={{ position: "absolute", right: "16px", top: "16px", background: "none", border: "none", cursor: "pointer", color: "#94a3b8", padding: 0 }}>
+                                            {showPass ? <Eye size={18} /> : <EyeOff size={18} />}
+                                        </button>
+                                    </div>
+
+                                    {loginError && (
+                                        <div style={{ padding: "12px", background: "#fef2f2", border: "1px solid #fee2e2", borderRadius: "8px", marginBottom: "16px", color: "#b91c1c", fontSize: "13px", fontWeight: 600 }}>
+                                            ⚠ {loginError}
                                         </div>
                                     )}
 
-                                    <style dangerouslySetInnerHTML={{ __html: `
-                                        @keyframes spin { to { transform: rotate(360deg); } }
-                                        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-                                    ` }} />
-                                    <div style={{ textAlign: "center", marginBottom: "12px" }}>
-                                        <button type="button" onClick={() => setMode("forgot")} style={{ background: "none", border: "none", fontSize: "13px", color: "#3b82f6", fontWeight: 700, textDecoration: "underline", cursor: "pointer" }}>Forgot password?</button>
+                                    <button
+                                        type="submit"
+                                        disabled={loading}
+                                        style={{
+                                            ...submitBtn,
+                                            marginTop: "0",
+                                            marginBottom: "24px",
+                                            opacity: loading ? 0.85 : 1
+                                        }}
+                                    >
+                                        {loading ? "Signing in..." : "Log in"}
+                                    </button>
+
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                        <button type="button" onClick={() => { setMode("signin"); setLoginError(""); }} style={{ background: "none", border: "none", fontSize: "14px", color: "#64748b", fontWeight: 700, cursor: "pointer" }}>
+                                            ← Back to Options
+                                        </button>
+                                        <button type="button" onClick={() => setMode("forgot")} style={{ background: "none", border: "none", fontSize: "14px", color: "#a855f7", fontWeight: 700, cursor: "pointer" }}>
+                                            Forgot password?
+                                        </button>
                                     </div>
                                 </form>
+                            </>
+                        )}
+                        
+                        {/* ══ PHONE SIGNIN ══ */}
+                        {mode === "phone_signin" && (
+                            <>
+                                <div style={{ textAlign: "center", marginBottom: "24px", marginTop: "16px" }}>
+                                    <h1 style={{ fontSize: "24px", fontWeight: 900, color: "#1e1b4b", margin: "0 0 4px" }}>
+                                        Continue with Phone
+                                    </h1>
+                                </div>
+                                
+                                <form onSubmit={handlePhoneLoginSendOTP}>
+                                    <input
+                                        type="tel" required
+                                        placeholder="Phone Number"
+                                        value={signupPhone}
+                                        onChange={e => setSignupPhone(e.target.value)}
+                                        style={{...inp, padding: "16px", borderRadius: "8px", marginBottom: "24px", borderColor: "#cbd5e1", fontSize: "16px", color: "#334155"}} 
+                                        onFocus={fr} onBlur={bg}
+                                    />
 
-                                {(ssoConfigs?.google || ssoConfigs?.facebook) && (
-                                    <div style={{ marginTop: "8px" }}>
-                                        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px", color: "#94a3b8", fontSize: "11px", fontWeight: 700 }}>
-                                            <div style={{ flex: 1, height: "1px", background: "#e2e8f0" }} /> OR <div style={{ flex: 1, height: "1px", background: "#e2e8f0" }} />
+                                    {loginError && (
+                                        <div style={{ padding: "12px", background: "#fef2f2", border: "1px solid #fee2e2", borderRadius: "8px", marginBottom: "16px", color: "#b91c1c", fontSize: "13px", fontWeight: 600 }}>
+                                            ⚠ {loginError}
                                         </div>
-                                        <div style={{ display: "flex", gap: "12px" }}>
-                                            {ssoConfigs.google && (
-                                                <button 
-                                                    onClick={() => handleSSOLogin("google")}
-                                                    style={socialBtn}
-                                                >
-                                                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="G" style={{ width: "20px" }} />
-                                                </button>
-                                            )}
-                                            {ssoConfigs.facebook && (
-                                                <button 
-                                                    onClick={() => handleSSOLogin("facebook")}
-                                                    style={socialBtn}
-                                                >
-                                                    <img src="https://upload.wikimedia.org/wikipedia/commons/0/05/Facebook_Logo_%282019%29.png" alt="F" style={{ width: "20px" }} />
-                                                </button>
-                                            )}
-                                        </div>
+                                    )}
 
-                                        <div style={{ marginTop: "12px", textAlign: "center" }}>
-                                            <div style={{ marginBottom: "6px", fontSize: "12px", color: "#64748b", fontWeight: 600 }}>
-                                                <span style={{ textDecoration: "underline", cursor: "pointer" }}>Terms</span> & <span style={{ textDecoration: "underline", cursor: "pointer" }}>Privacy</span>
-                                            </div>
-                                            <p style={{ fontSize: "13px", color: "#1e293b", fontWeight: 600, margin: 0 }}>
-                                                New here? <span onClick={() => setMode("signup")} style={{ color: "#f84464", cursor: "pointer", fontWeight: 800 }}>Create account</span>
-                                            </p>
-                                        </div>
-                                    </div>
-                                )}
+                                    <button
+                                        type="submit"
+                                        disabled={loading}
+                                        style={{
+                                            ...submitBtn,
+                                            marginTop: "0",
+                                            marginBottom: "24px",
+                                            opacity: loading ? 0.8 : 1
+                                        }}
+                                    >
+                                        {loading ? "Sending..." : "Get OTP"}
+                                    </button>
+                                </form>
+                                <div style={{ textAlign: "center", marginBottom: "20px" }}>
+                                    <button type="button" onClick={() => { setMode("signin"); setLoginError(""); }} style={{ background: "none", border: "none", fontSize: "14px", color: "#64748b", fontWeight: 700, cursor: "pointer" }}>
+                                        ← Back to Email
+                                    </button>
+                                </div>
+                            </>
+                        )}
+
+                        {/* ══ PHONE OTP VERIFY ══ */}
+                        {mode === "phone_otp_verify" && (
+                            <>
+                                <div style={{ textAlign: "center", marginBottom: "20px", marginTop: "16px" }}>
+                                    <h1 style={{ fontSize: "24px", fontWeight: 900, color: "#1e1b4b", margin: "0 0 4px" }}>
+                                        Verify OTP
+                                    </h1>
+                                    <p style={{ fontSize: "13px", color: "#64748b", margin: 0, fontWeight: 500 }}>
+                                        Enter the code sent to {signupPhone}
+                                    </p>
+                                </div>
+                                <form onSubmit={handlePhoneLoginVerifyOTP}>
+                                    <input
+                                        type="text" required
+                                        placeholder="000000"
+                                        maxLength={6}
+                                        value={otpCode}
+                                        onChange={e => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                                        style={{...inp, textAlign: "center", letterSpacing: "8px", fontSize: "24px", fontWeight: "bold", padding: "16px", borderColor: "#cbd5e1"}} 
+                                        onFocus={fr} onBlur={bg}
+                                        autoFocus
+                                    />
+                                    {loginError && <div style={{ padding: "12px", background: "#fef2f2", border: "1px solid #fee2e2", borderRadius: "8px", marginBottom: "16px", color: "#b91c1c", fontSize: "13px", fontWeight: 600 }}>⚠ {loginError}</div>}
+                                    <button type="submit" disabled={loading || otpCode.length !== 6} style={{
+                                        ...submitBtn,
+                                        marginTop: "0",
+                                        opacity: (loading || otpCode.length !== 6) ? 0.7 : 1
+                                    }}>
+                                        {loading ? "Verifying..." : "Verify & Login"}
+                                    </button>
+                                </form>
+                                <div style={{ textAlign: "center", marginTop: "24px" }}>
+                                    <button onClick={() => { setMode("phone_signin"); setLoginError(""); }} style={{ background: "none", border: "none", fontSize: "14px", color: "#a855f7", fontWeight: 700, cursor: "pointer" }}>
+                                        Back to phone number
+                                    </button>
+                                </div>
                             </>
                         )}
 
