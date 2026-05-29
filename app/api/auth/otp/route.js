@@ -23,6 +23,18 @@ export async function POST(request) {
       const { data: smtpSettings } = await supabaseAdmin.from('email_settings').select('from_email, from_name').maybeSingle();
       const fromEmail = smtpSettings?.from_email || 'hello@bookmyticket.net';
 
+      if (purpose === 'login' || purpose === 'signin') {
+        const { data: profile } = await supabaseAdmin.from('profiles').select('id').eq('email', email).maybeSingle();
+        if (!profile) {
+           return NextResponse.json({ success: false, error: 'User not found. Please sign up.' }, { status: 404 });
+        }
+      } else if (purpose === 'signup') {
+        const { data: profile } = await supabaseAdmin.from('profiles').select('id').eq('email', email).maybeSingle();
+        if (profile) {
+           return NextResponse.json({ success: false, error: 'User already exists. Please log in.' }, { status: 409 });
+        }
+      }
+
       // 2. Generate OTP
       const newCode = Math.floor(100000 + Math.random() * 900000).toString();
       const expirySecs = otpConfig?.expirySeconds || 600;

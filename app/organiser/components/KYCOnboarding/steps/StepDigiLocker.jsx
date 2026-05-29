@@ -8,10 +8,16 @@
 import { useState } from 'react';
 import styles from '../KYCOnboarding.module.css';
 import digiStyles from './StepDigiLocker.module.css';
+import { supabase } from '@/lib/supabase';
 
 export default function StepDigiLocker({ session, kycData, onNext, onBack, error, setError }) {
   const [initiating, setInitiating] = useState(false);
   const [verificationId, setVerificationId] = useState(null);
+  
+  const [useManualUpload, setUseManualUpload] = useState(false);
+  const [aadhaarFile, setAadhaarFile] = useState(null);
+  const [panFile, setPanFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
 
   const isReuploadRequested = kycData?.kyc?.status === 'reupload_requested';
   // When reupload is requested, force re-verification even if previously verified
@@ -48,6 +54,62 @@ export default function StepDigiLocker({ session, kycData, onNext, onBack, error
       setError(err.message);
     } finally {
       setInitiating(false);
+    }
+  };
+
+  const handleManualUpload = async () => {
+    if (!aadhaarFile || !panFile) {
+      setError('Please select both Aadhaar and PAN documents');
+      return;
+    }
+
+    try {
+      setUploading(true);
+      setError(null);
+
+      // 1. Upload Aadhaar
+      const aadhaarPath = `${session.user.id}/aadhaar-${Date.now()}-${aadhaarFile.name}`;
+      const { error: aadhaarUploadError } = await supabase.storage
+        .from('organizer-kyc-documents')
+        .upload(aadhaarPath, aadhaarFile);
+      if (aadhaarUploadError) throw new Error('Failed to upload Aadhaar: ' + aadhaarUploadError.message);
+
+      // 2. Upload PAN
+      const panPath = `${session.user.id}/pan-${Date.now()}-${panFile.name}`;
+      const { error: panUploadError } = await supabase.storage
+        .from('organizer-kyc-documents')
+        .upload(panPath, panFile);
+      if (panUploadError) throw new Error('Failed to upload PAN: ' + panUploadError.message);
+
+      // 3. Get Public URLs
+      const aadhaarUrl = supabase.storage.from('organizer-kyc-documents').getPublicUrl(aadhaarPath).data.publicUrl;
+      const panUrl = supabase.storage.from('organizer-kyc-documents').getPublicUrl(panPath).data.publicUrl;
+
+      // 4. Submit to Onboarding API
+      const res = await fetch('/api/organiser/onboarding', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          kyc_step: 2,
+          documents: {
+            identity: aadhaarUrl,
+            business: panUrl, // Or a dedicated pan field if backend supports it
+          }
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to save documents');
+
+      onNext();
+    } catch (err) {
+      console.error('[ManualUpload] Error:', err);
+      setError(err.message);
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -212,25 +274,73 @@ export default function StepDigiLocker({ session, kycData, onNext, onBack, error
         </p>
       </div>
 
-      <div className={styles.formActions}>
-        <button className={styles.btnSecondary} onClick={onBack}>← Back</button>
-        <button
-          className={`${styles.btnPrimary} ${digiStyles.digilockerBtn}`}
-          onClick={handleInitiateDigiLocker}
-          disabled={initiating}
-        >
-          {initiating ? (
-            <>
-              <span className={digiStyles.btnSpinner} />
-              Initiating...
-            </>
-          ) : (
-            <>
-              🔐 Verify with DigiLocker
-            </>
-          )}
-        </button>
-      </div>
+      {isReuploadRequested && !useManualUpload && (
+        <div style={{ textAlign: 'center', margin: '20px 0' }}>
+          <button 
+            type="button" 
+            onClick={() => setUseManualUpload(true)}
+            style={{ background: 'none', border: 'none', color: '#3b82f6', textDecoration: 'underline', cursor: 'pointer', fontWeight: 600 }}
+          >
+            Or upload documents manually instead
+          </button>
+        </div>
+      )}
+
+      {useManualUpload && (
+        <div style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '12px', padding: '20px', marginTop: '20px' }}>
+          <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#0f172a', marginBottom: '16px' }}>Manual Document Upload</h3>
+          <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '16px' }}>Since re-verification was requested, you can manually upload your documents if DigiLocker is failing.</p>
+          
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: '#334155', marginBottom: '8px' }}>Aadhaar Card *</label>
+            <input type="file" onChange={(e) => setAadhaarFile(e.target.files[0])} style={{ width: '100%', padding: '8px', border: '1px dashed #cbd5e1', borderRadius: '8px', background: '#fff' }} />
+          </div>
+          
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: '#334155', marginBottom: '8px' }}>PAN Card *</label>
+            <input type="file" onChange={(e) => setPanFile(e.target.files[0])} style={{ width: '100%', padding: '8px', border: '1px dashed #cbd5e1', borderRadius: '8px', background: '#fff' }} />
+          </div>
+
+          <button 
+            className={styles.btnPrimary} 
+            style={{ width: '100%' }}
+            onClick={handleManualUpload}
+            disabled={uploading}
+          >
+            {uploading ? 'Uploading...' : 'Submit Documents'}
+          </button>
+
+          <button 
+            type="button" 
+            onClick={() => setUseManualUpload(false)}
+            style={{ width: '100%', marginTop: '12px', background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '13px' }}
+          >
+            Cancel Manual Upload
+          </button>
+        </div>
+      )}
+
+      {!useManualUpload && (
+        <div className={styles.formActions}>
+          <button className={styles.btnSecondary} onClick={onBack}>← Back</button>
+          <button
+            className={`${styles.btnPrimary} ${digiStyles.digilockerBtn}`}
+            onClick={handleInitiateDigiLocker}
+            disabled={initiating}
+          >
+            {initiating ? (
+              <>
+                <span className={digiStyles.btnSpinner} />
+                Initiating...
+              </>
+            ) : (
+              <>
+                🔐 Verify with DigiLocker
+              </>
+            )}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

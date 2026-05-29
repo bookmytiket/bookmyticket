@@ -507,7 +507,15 @@ export default function SignInPage() {
                 body: JSON.stringify({ action: 'send', email, purpose: 'signup' })
             });
             const data = await res.json();
-            if (!data.success) throw new Error(data.error || "Failed to send OTP.");
+            if (!data.success) {
+                if (data.error?.includes('already exists') || data.error?.includes('already registered')) {
+                    setMode('signin');
+                    setIdentifier(signupEmail);
+                    setLoginError("You already have an account. Please continue with your email.");
+                    return;
+                }
+                throw new Error(data.error || "Failed to send OTP.");
+            }
             
             setSignupStep(2);
             setSignupOtpCode("");

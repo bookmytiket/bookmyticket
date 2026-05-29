@@ -40,6 +40,12 @@ export async function POST(request) {
         rejection_reason: remarks,
       }, { onConflict: 'organizer_id' });
 
+    // Sync legacy tables for backwards compatibility so Organiser Panel routes correctly
+    await supabaseAdmin
+      .from('organisers')
+      .update({ kyc_status: 'reupload_requested' })
+      .eq('id', organizer_id);
+
     await supabaseAdmin.from('kyc_review_logs').insert({
       organizer_id,
       reviewed_by: user.id,

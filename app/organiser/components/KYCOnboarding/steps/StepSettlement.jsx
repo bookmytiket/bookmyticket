@@ -15,6 +15,9 @@ export default function StepSettlement({ session, kycData, onNext, onBack }) {
   }));
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
+  const [ifscDetails, setIfscDetails] = useState(null);
+  const [ifscLoading, setIfscLoading] = useState(false);
+  const [ifscError, setIfscError] = useState(null);
 
   // Prefill name once kycData arrives
   useEffect(() => {
@@ -23,6 +26,40 @@ export default function StepSettlement({ session, kycData, onNext, onBack }) {
       setForm(prev => ({ ...prev, account_holder_name: name }));
     }
   }, [kycData]);
+
+  // Handle IFSC search
+  useEffect(() => {
+    const fetchIfsc = async () => {
+      const code = form.ifsc_code.trim().toUpperCase();
+      if (code.length === 11) {
+        setIfscLoading(true);
+        setIfscError(null);
+        try {
+          const res = await fetch(`/api/v1/ifsc/${code}`);
+          const result = await res.json();
+          if (result.success) {
+            setIfscDetails(result.data);
+            setForm(prev => ({ ...prev, bank_name: result.data.bank }));
+          } else {
+            setIfscError('Invalid IFSC code');
+            setIfscDetails(null);
+          }
+        } catch (err) {
+          setIfscError('Failed to verify IFSC');
+          setIfscDetails(null);
+        } finally {
+          setIfscLoading(false);
+        }
+      } else {
+        setIfscDetails(null);
+        setIfscError(null);
+      }
+    };
+    
+    // Add debounce to avoid rapid calls
+    const timeoutId = setTimeout(fetchIfsc, 300);
+    return () => clearTimeout(timeoutId);
+  }, [form.ifsc_code]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -156,9 +193,29 @@ export default function StepSettlement({ session, kycData, onNext, onBack }) {
             onChange={handleChange}
             className={styles.formInput}
             placeholder="SBIN0001234"
-            style={{ textTransform: 'uppercase' }}
+            style={{ textTransform: 'uppercase', borderColor: ifscError ? '#ef4444' : '' }}
             maxLength={11}
           />
+          {ifscLoading && <p style={{ fontSize: '12px', color: '#64748b', marginTop: '6px' }}>Verifying IFSC...</p>}
+          {ifscError && <p style={{ fontSize: '12px', color: '#ef4444', marginTop: '6px' }}>⚠ {ifscError}</p>}
+          
+          {ifscDetails && (
+            <div style={{
+              marginTop: '10px',
+              padding: '12px',
+              background: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              borderRadius: '8px',
+              fontSize: '12px',
+              color: '#334155',
+              lineHeight: '1.5'
+            }}>
+              <p style={{ margin: '0 0 4px', fontWeight: 700, color: '#0f172a' }}>✅ {ifscDetails.bank}</p>
+              <p style={{ margin: '0 0 2px' }}><strong>Branch:</strong> {ifscDetails.branch}</p>
+              <p style={{ margin: '0 0 2px' }}><strong>Location:</strong> {ifscDetails.city}, {ifscDetails.state}</p>
+              <p style={{ margin: '0 0 2px' }}><strong>Address:</strong> {ifscDetails.address}</p>
+            </div>
+          )}
         </div>
 
         <div className={styles.formGroup}>

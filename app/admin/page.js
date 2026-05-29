@@ -3317,15 +3317,7 @@ function AdminHomePage() {
                             router={router}
                             setIsSidebarOpen={setIsSidebarOpen}
                         />
-                        <NavLink 
-                            id="kyc" 
-                            label="KYC Verification" 
-                            icon={ShieldCheck} 
-                            active={activeTab === "kyc"} 
-                            setActiveTab={setActiveTab}
-                            router={router}
-                            setIsSidebarOpen={setIsSidebarOpen}
-                        />
+
                         <NavLink 
                             id="digilocker_kyc_review" 
                             label="DigiLocker KYC" 
@@ -3348,7 +3340,6 @@ function AdminHomePage() {
                                         {[
                                             { id: 'all_org', label: 'All Partners' },
                                             { id: 'active_org', label: 'Active Only' },
-                                            { id: 'kyc_pending', label: 'KYC Pending' },
                                             { id: 'banned_org', label: 'Banned' }
                                         ].map(sub => (
                                             <div key={sub.id} className={`px-4 py-2 rounded-lg text-[13px] font-bold cursor-pointer transition-colors ${activeTab === sub.id ? 'text-pink-500 bg-pink-50' : 'text-slate-500 hover:text-pink-400'}`} onClick={() => { setActiveTab(sub.id); }}>

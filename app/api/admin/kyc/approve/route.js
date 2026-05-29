@@ -56,6 +56,21 @@ export async function POST(request) {
         verified_at: new Date().toISOString(),
       }, { onConflict: 'organizer_id' });
 
+    // Sync legacy tables for backwards compatibility
+    const { data: orgData } = await supabaseAdmin.from('organisers').select('email').eq('id', organizer_id).maybeSingle();
+    
+    await supabaseAdmin
+      .from('organisers')
+      .update({ kyc_status: 'Approved', status: 'Active' })
+      .eq('id', organizer_id);
+
+    if (orgData?.email) {
+      await supabaseAdmin
+        .from('partner_requests')
+        .update({ status: 'Approved' })
+        .eq('email', orgData.email);
+    }
+
     // Audit log
     await supabaseAdmin.from('kyc_review_logs').insert({
       organizer_id,
