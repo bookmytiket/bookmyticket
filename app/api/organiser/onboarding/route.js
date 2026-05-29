@@ -66,8 +66,16 @@ export async function POST(request) {
         // ── Step 3: KYC Documents — only when provided ────────────────────────
         if (body.documents && Object.keys(body.documents).length > 0) {
             const docs = [];
-            if (body.documents.identity) docs.push({ organizer_id: user.id, document_type: 'identity', document_name: 'Identity Proof',  document_url: body.documents.identity });
-            if (body.documents.business) docs.push({ organizer_id: user.id, document_type: 'business', document_name: 'Business Proof',  document_url: body.documents.business });
+            let panLabel = 'Business Proof';
+            let aadhaarLabel = 'Identity Proof';
+
+            if (body.manual_kyc_numbers) {
+                if (body.manual_kyc_numbers.pan_number) panLabel += ` (PAN: ${body.manual_kyc_numbers.pan_number.toUpperCase()})`;
+                if (body.manual_kyc_numbers.aadhaar_number) aadhaarLabel += ` (Aadhaar: ${body.manual_kyc_numbers.aadhaar_number})`;
+            }
+
+            if (body.documents.identity) docs.push({ organizer_id: user.id, document_type: 'identity', document_name: aadhaarLabel, document_url: body.documents.identity });
+            if (body.documents.business) docs.push({ organizer_id: user.id, document_type: 'business', document_name: panLabel,  document_url: body.documents.business });
             if (body.documents.address)  docs.push({ organizer_id: user.id, document_type: 'address',  document_name: 'Address Proof',   document_url: body.documents.address  });
 
             if (docs.length > 0) {
@@ -77,8 +85,17 @@ export async function POST(request) {
             }
         }
 
-        // ── Step 4 final submit: update KYC status to 'submitted' ─────────────
-        if (kycStep >= 4 && body.bank?.account_holder_name) {
+        // ── Fetch current status to check for reupload ────────────────────────
+        const { data: currentStatus } = await supabaseAdmin
+            .from('organizer_verification_status')
+            .select('kyc_status')
+            .eq('organizer_id', user.id)
+            .maybeSingle();
+
+        const isReupload = currentStatus?.kyc_status === 'reupload_requested';
+
+        // ── Step 4 final submit OR Reupload final submit: update KYC status to 'submitted' ──
+        if ((kycStep >= 4 && body.bank?.account_holder_name) || (isReupload && kycStep === 2)) {
             const { error: statusError } = await supabaseAdmin.from('organizer_verification_status').upsert({
                 organizer_id: user.id,
                 kyc_status: 'submitted',
@@ -87,6 +104,12 @@ export async function POST(request) {
                 updated_at: new Date().toISOString(),
             }, { onConflict: 'organizer_id' });
             if (statusError) throw statusError;
+
+            // Sync digilocker_kyc_records for Admin Panel
+            await supabaseAdmin.from('digilocker_kyc_records').update({
+                kyc_status: 'submitted',
+                updated_at: new Date().toISOString()
+            }).eq('organizer_id', user.id);
 
             // Sync legacy tables for Admin Panel backwards compatibility
             await supabaseAdmin.from('organisers').update({ kyc_status: 'Submitted' }).eq('id', user.id);

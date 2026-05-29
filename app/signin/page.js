@@ -421,7 +421,10 @@ export default function SignInPage() {
             }
         } catch (err) {
             console.error("Login OTP verify error:", err);
-            setLoginError(err.message || "Invalid or expired verification code.");
+            const msg = err.message === "Failed to fetch" 
+                ? "Network error. Please check your connection and try again."
+                : (err.message || "Invalid or expired verification code.");
+            setLoginError(msg);
         } finally {
             setTimeout(() => setLoading(false), 200);
         }
@@ -1407,7 +1410,7 @@ export default function SignInPage() {
                                                     style={{ ...inp, letterSpacing: "6px", fontSize: "22px", textAlign: "center", fontWeight: 700 }}
                                                     onFocus={fr} onBlur={bg}
                                                 />
-                                                {signupError && <p style={{ fontSize: "13px", color: "#ef4444", marginBottom: "12px", marginTop: "-10px" }}>⚠ {signupError}</p>}
+                                                {signupError && <p style={{ fontSize: "13px", color: "#ef4444", marginBottom: "12px", marginTop: "-10px" }}>⚠ {signupError === "Failed to fetch" ? "Network error. Please check your connection." : signupError}</p>}
                                                 <button type="submit" disabled={signupOtpVerifying} style={submitBtn}>
                                                     {signupOtpVerifying ? "Verifying..." : "Verify OTP →"}
                                                 </button>

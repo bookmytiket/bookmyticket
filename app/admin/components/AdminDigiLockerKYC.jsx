@@ -61,13 +61,14 @@ export default function AdminKYCReview({ adminSession }) {
     if (!selectedRecord) return;
     try {
       setActionLoading(true);
-      const res = await fetch(`/api/admin/kyc/${action}`, {
+      const res = await fetch(`/api/admin/kyc`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${adminSession?.access_token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          action: action,
           organizer_id: selectedRecord.organizer_id,
           remarks: actionForm.remarks || null,
           risk_score_override: actionForm.risk_score_override
@@ -213,10 +214,13 @@ export default function AdminKYCReview({ adminSession }) {
                     <td>
                       <div className={styles.docsCell}>
                         {record.digilocker_issued_documents?.slice(0, 3).map((doc, i) => (
-                          <span key={i} className={styles.docChip}>{doc.document_type}</span>
+                          <span key={`dl-${i}`} className={styles.docChip}>{doc.document_type}</span>
                         ))}
-                        {(record.digilocker_issued_documents?.length || 0) > 3 && (
-                          <span className={styles.docChip}>+{record.digilocker_issued_documents.length - 3}</span>
+                        {record.organizer_kyc_documents?.slice(0, 3).map((doc, i) => (
+                          <span key={`man-${i}`} className={`${styles.docChip} ${styles.manualChip}`} style={{ background: '#fef08a', color: '#854d0e', borderColor: '#fde047' }}>Manual {doc.document_type}</span>
+                        ))}
+                        {((record.digilocker_issued_documents?.length || 0) + (record.organizer_kyc_documents?.length || 0)) > 4 && (
+                          <span className={styles.docChip}>+{((record.digilocker_issued_documents?.length || 0) + (record.organizer_kyc_documents?.length || 0)) - 3}</span>
                         )}
                       </div>
                     </td>
@@ -306,6 +310,11 @@ export default function AdminKYCReview({ adminSession }) {
               <div className={styles.detailRow}>
                 <span>Gender</span><span>{selectedRecord.verified_gender || '—'}</span>
               </div>
+              {selectedRecord.pan_number && (
+                <div className={styles.detailRow}>
+                  <span>PAN Number</span><span style={{ textTransform: 'uppercase', fontWeight: 'bold' }}>{selectedRecord.pan_number}</span>
+                </div>
+              )}
             </div>
 
             {selectedRecord.verified_address && (
@@ -333,6 +342,42 @@ export default function AdminKYCReview({ adminSession }) {
                 {selectedRecord.fraud_flags.map((flag) => (
                   <div key={flag} className={styles.flagItem}>{flag}</div>
                 ))}
+              </div>
+            )}
+
+            {selectedRecord.organizer_kyc_documents?.length > 0 && (
+              <div className={styles.detailSection} style={{ gridColumn: '1 / -1' }}>
+                <h4>Manually Uploaded Documents</h4>
+                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '12px' }}>
+                  {selectedRecord.organizer_kyc_documents.map((doc, i) => (
+                    <a 
+                      key={i} 
+                      href={doc.document_url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '12px 16px',
+                        background: '#f8fafc',
+                        border: '1px solid #cbd5e1',
+                        borderRadius: '8px',
+                        textDecoration: 'none',
+                        color: '#0f172a',
+                        fontWeight: '600',
+                        fontSize: '14px',
+                        transition: 'all 0.2s',
+                        boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#94a3b8'; e.currentTarget.style.background = '#f1f5f9'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.background = '#f8fafc'; }}
+                    >
+                      <span style={{ fontSize: '20px' }}>📄</span>
+                      {doc.document_name}
+                    </a>
+                  ))}
+                </div>
               </div>
             )}
           </div>

@@ -36,17 +36,18 @@ async function validateAdmin(request) {
   return user;
 }
 
-// ─── POST /api/admin/kyc/approve ──────────────────────────────────────────────
+// ─── POST /api/admin/kyc ──────────────────────────────────────────────
 export async function POST(request) {
   const admin = await validateAdmin(request);
   if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const url = new URL(request.url);
-  const action = url.pathname.split('/').pop(); // approve | reject | reupload | suspend
-
   try {
     const body = await request.json();
-    const { organizer_id, remarks, risk_score_override } = body;
+    const { action, organizer_id, remarks, risk_score_override } = body;
+
+    if (!action || !['approve', 'reject', 'reupload', 'suspend'].includes(action)) {
+      return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+    }
 
     if (!organizer_id) {
       return NextResponse.json({ error: 'organizer_id is required' }, { status: 400 });
@@ -151,15 +152,17 @@ export async function POST(request) {
 
     // ── Update legacy organisers table ─────────────────────────────────────
     const legacyStatus = {
-      approved: 'Approved',
-      rejected: 'Rejected',
-      reupload_requested: 'Reupload Required',
-      suspended: 'Suspended',
+      approve: 'Active',
+      reject: 'Rejected',
+      reupload: 'Reupload Required',
+      suspend: 'Suspended',
     }[action] || newStatus;
+
+    const legacyUpdate = { kyc_status: legacyStatus };
 
     await supabaseAdmin
       .from('organisers')
-      .update({ kyc_status: legacyStatus })
+      .update(legacyUpdate)
       .eq('id', organizer_id);
 
     // ── Admin KYC Audit Log ────────────────────────────────────────────────
@@ -230,9 +233,59 @@ export async function GET(request) {
       .order('submitted_at', { ascending: false })
       .range(offset, offset + limit - 1);
 
+    const formattedRecords = records || [];
+
+    // Fetch manually uploaded documents separately (no FK relation to digilocker_kyc_records)
+    if (formattedRecords.length > 0) {
+      const orgIds = formattedRecords.map(r => r.organizer_id);
+      const { data: manualDocs } = await supabaseAdmin
+        .from('organizer_kyc_documents')
+        .select('organizer_id, document_type, document_name, document_url')
+        .in('organizer_id', orgIds);
+
+      if (manualDocs && manualDocs.length > 0) {
+        // Generate signed URLs since the bucket is private
+        for (const doc of manualDocs) {
+          try {
+            if (doc.document_url && doc.document_url.includes('/public/organizer-kyc-documents/')) {
+              const path = doc.document_url.split('/public/organizer-kyc-documents/')[1];
+              const { data: signedData } = await supabaseAdmin.storage
+                .from('organizer-kyc-documents')
+                .createSignedUrl(path, 60 * 60); // 1 hour validity
+              
+              if (signedData?.signedUrl) {
+                doc.document_url = signedData.signedUrl;
+              }
+            }
+          } catch (e) {
+            console.error('Failed to sign document URL', e);
+          }
+        }
+
+        formattedRecords.forEach(record => {
+          record.organizer_kyc_documents = manualDocs.filter(d => d.organizer_id === record.organizer_id);
+        });
+      }
+
+      // Fetch profiles to get pan_number and other useful data
+      const { data: profiles } = await supabaseAdmin
+        .from('organizer_profiles')
+        .select('id, pan_number')
+        .in('id', orgIds);
+
+      if (profiles && profiles.length > 0) {
+        formattedRecords.forEach(record => {
+          const profile = profiles.find(p => p.id === record.organizer_id);
+          if (profile) {
+            record.pan_number = profile.pan_number;
+          }
+        });
+      }
+    }
+
     return NextResponse.json({
       success: true,
-      records: records || [],
+      records: formattedRecords,
       pagination: {
         page,
         limit,

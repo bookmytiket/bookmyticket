@@ -1420,17 +1420,19 @@ function OrganiserPanel() {
     setKycFormData((prev) => ({ ...prev, ifscCode: ifsc.toUpperCase() }));
     if (ifsc.length === 11) {
       try {
-        const response = await fetch(
-          `https://ifsc.razorpay.com/${ifsc.toUpperCase()}`,
-        );
+        const response = await fetch(`/api/v1/ifsc/${ifsc.toUpperCase()}`);
         if (response.ok) {
-          const data = await response.json();
-          setKycFormData((prev) => ({
-            ...prev,
-            bankName: data.BANK,
-            branchName: data.BRANCH,
-            branchAddress: data.ADDRESS,
-          }));
+          const result = await response.json();
+          if (result.success && result.data) {
+            setKycFormData((prev) => ({
+              ...prev,
+              bankName: result.data.bank,
+              branchName: result.data.branch,
+              branchAddress: result.data.address,
+            }));
+          } else {
+            throw new Error("Invalid IFSC");
+          }
         } else {
           setKycFormData((prev) => ({
             ...prev,
@@ -4772,6 +4774,22 @@ function OrganiserPanel() {
                     />
                   </div>
                 </div>
+                {kycFormData.branchName && (
+                  <div style={{
+                    marginTop: '16px',
+                    padding: '16px',
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '12px',
+                    fontSize: '13px',
+                    color: '#334155',
+                    lineHeight: '1.6'
+                  }}>
+                    <p style={{ margin: '0 0 6px', fontWeight: 800, color: '#0f172a', fontSize: '14px' }}>✅ {kycFormData.bankName}</p>
+                    <p style={{ margin: '0 0 4px' }}><strong>Branch:</strong> {kycFormData.branchName}</p>
+                    <p style={{ margin: '0 0 4px' }}><strong>Address:</strong> {kycFormData.branchAddress}</p>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -13682,6 +13700,22 @@ function OrganiserPanel() {
                     }}
                   />
                 </div>
+                {kycFormData.branchName && (
+                  <div style={{
+                    marginTop: '16px',
+                    padding: '16px',
+                    background: t.bg === '#1e293b' ? '#334155' : '#f8fafc',
+                    border: `1px solid ${t.border}`,
+                    borderRadius: '12px',
+                    fontSize: '13px',
+                    color: t.textSub,
+                    lineHeight: '1.6'
+                  }}>
+                    <p style={{ margin: '0 0 6px', fontWeight: 800, color: t.textMain, fontSize: '14px' }}>✅ {kycFormData.bankName}</p>
+                    <p style={{ margin: '0 0 4px' }}><strong>Branch:</strong> {kycFormData.branchName}</p>
+                    <p style={{ margin: '0 0 4px' }}><strong>Address:</strong> {kycFormData.branchAddress}</p>
+                  </div>
+                )}
               </div>
 
               <div style={{ display: "flex", gap: "12px", marginTop: "32px" }}>

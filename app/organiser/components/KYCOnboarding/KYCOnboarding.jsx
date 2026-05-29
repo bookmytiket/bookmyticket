@@ -117,6 +117,18 @@ export default function KYCOnboarding({ session }) {
           if (newStatus === 'approved') router.replace('/organiser?kyc_approved=1');
         }
       })
+      .on('postgres_changes', {
+        event: '*', schema: 'public',
+        table: 'organizer_verification_status',
+        filter: `organizer_id=eq.${session.user.id}`,
+      }, (payload) => {
+        const newStatus = payload.new?.kyc_status;
+        if (newStatus) {
+          setKycStatus(newStatus);
+          if (['submitted', 'under_review'].includes(newStatus)) setCurrentStep(5);
+          if (newStatus === 'approved') router.replace('/organiser?kyc_approved=1');
+        }
+      })
       .subscribe();
 
     return () => supabase.removeChannel(channel);

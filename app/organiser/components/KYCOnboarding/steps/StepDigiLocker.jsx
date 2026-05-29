@@ -17,6 +17,8 @@ export default function StepDigiLocker({ session, kycData, onNext, onBack, error
   const [useManualUpload, setUseManualUpload] = useState(false);
   const [aadhaarFile, setAadhaarFile] = useState(null);
   const [panFile, setPanFile] = useState(null);
+  const [aadhaarNumber, setAadhaarNumber] = useState('');
+  const [panNumber, setPanNumber] = useState('');
   const [uploading, setUploading] = useState(false);
 
   const isReuploadRequested = kycData?.kyc?.status === 'reupload_requested';
@@ -59,7 +61,11 @@ export default function StepDigiLocker({ session, kycData, onNext, onBack, error
 
   const handleManualUpload = async () => {
     if (!aadhaarFile || !panFile) {
-      setError('Please select both Aadhaar and PAN documents');
+      setError('Please select both Aadhaar and PAN documents.');
+      return;
+    }
+    if (!aadhaarNumber.trim() || !panNumber.trim()) {
+      setError('Please enter both Aadhaar and PAN numbers.');
       return;
     }
 
@@ -97,6 +103,10 @@ export default function StepDigiLocker({ session, kycData, onNext, onBack, error
           documents: {
             identity: aadhaarUrl,
             business: panUrl, // Or a dedicated pan field if backend supports it
+          },
+          manual_kyc_numbers: {
+            aadhaar_number: aadhaarNumber,
+            pan_number: panNumber
           }
         }),
       });
@@ -292,12 +302,28 @@ export default function StepDigiLocker({ session, kycData, onNext, onBack, error
           <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '16px' }}>Since re-verification was requested, you can manually upload your documents if DigiLocker is failing.</p>
           
           <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: '#334155', marginBottom: '8px' }}>Aadhaar Card *</label>
+            <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: '#334155', marginBottom: '8px' }}>Aadhaar Number *</label>
+            <input 
+              type="text" 
+              placeholder="12-digit Aadhaar Number"
+              value={aadhaarNumber}
+              onChange={(e) => setAadhaarNumber(e.target.value)}
+              style={{ width: '100%', padding: '10px', border: '1px solid #cbd5e1', borderRadius: '8px', background: '#fff', marginBottom: '8px', fontSize: '14px' }} 
+            />
+            <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: '#334155', marginBottom: '8px' }}>Aadhaar Card Document *</label>
             <input type="file" onChange={(e) => setAadhaarFile(e.target.files[0])} style={{ width: '100%', padding: '8px', border: '1px dashed #cbd5e1', borderRadius: '8px', background: '#fff' }} />
           </div>
           
           <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: '#334155', marginBottom: '8px' }}>PAN Card *</label>
+            <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: '#334155', marginBottom: '8px' }}>PAN Number *</label>
+            <input 
+              type="text" 
+              placeholder="10-character PAN Number"
+              value={panNumber}
+              onChange={(e) => setPanNumber(e.target.value)}
+              style={{ width: '100%', padding: '10px', border: '1px solid #cbd5e1', borderRadius: '8px', background: '#fff', marginBottom: '8px', fontSize: '14px', textTransform: 'uppercase' }} 
+            />
+            <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: '#334155', marginBottom: '8px' }}>PAN Card Document *</label>
             <input type="file" onChange={(e) => setPanFile(e.target.files[0])} style={{ width: '100%', padding: '8px', border: '1px dashed #cbd5e1', borderRadius: '8px', background: '#fff' }} />
           </div>
 
