@@ -637,8 +637,16 @@ export default function EventDetailClient({ id }) {
                                                 onClick={() => {
                                                     const actualCatId = selectedCatId || categories?.[0]?.id;
                                                     const bookUrl = `/events/book?id=${id}${actualCatId ? `&catId=${actualCatId}` : ''}`;
-                                                    if (!user) router.push(`/signin?redirect=${encodeURIComponent(bookUrl)}`);
-                                                    else router.push(bookUrl);
+                                                    if (!user) {
+                                                        try {
+                                                            sessionStorage.setItem('bmt_booking_return', bookUrl);
+                                                            sessionStorage.setItem('bmt_booking_event_id', id);
+                                                            sessionStorage.setItem('bmt_booking_action', 'booking');
+                                                        } catch (_) {}
+                                                        router.push(`/signin?redirect=${encodeURIComponent(bookUrl)}`);
+                                                    } else {
+                                                        router.push(bookUrl);
+                                                    }
                                                 }}
                                                 className="w-full py-5 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-[24px] font-black uppercase tracking-widest text-[12px] shadow-2xl shadow-pink-500/40 hover:scale-[1.02] active:scale-95 transition-all"
                                             >
@@ -657,8 +665,18 @@ export default function EventDetailClient({ id }) {
                                         <button 
                                             onClick={() => {
                                                 const bookUrl = `/events/book?id=${id}${selectedCatId ? `&catId=${selectedCatId}` : ''}`;
-                                                if (!user) router.push(`/signin?redirect=${encodeURIComponent(bookUrl)}`);
-                                                else router.push(bookUrl);
+                                                if (!user) {
+                                                    // Save booking session so it can be restored after login
+                                                    try {
+                                                        sessionStorage.setItem('bmt_booking_return', bookUrl);
+                                                        sessionStorage.setItem('bmt_booking_event_id', id);
+                                                        sessionStorage.setItem('bmt_booking_action', 'booking');
+                                                        if (selectedCatId) sessionStorage.setItem('bmt_booking_cat_id', selectedCatId);
+                                                    } catch (_) {}
+                                                    router.push(`/signin?redirect=${encodeURIComponent(bookUrl)}`);
+                                                } else {
+                                                    router.push(bookUrl);
+                                                }
                                             }}
                                             className="relative overflow-hidden w-full py-4 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-[24px] font-bold uppercase tracking-widest text-[12px] shadow-2xl shadow-pink-500/40 hover:scale-[1.02] active:scale-95 transition-all"
                                         >

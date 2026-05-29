@@ -171,15 +171,15 @@ export default function SignInPage() {
         }
 
         // 5. Special UI/UX Overrides
-        // Normal users coming from event-related pages might be better off on their profile
-        if ((role === 'public' || role === 'user') && destination.includes('/events')) {
-            return "/profile";
+        // BOOKING REDIRECT: Always honor /events/book redirects — user was mid-booking
+        if (destination.includes('/events/book') || destination.includes('/events/in') || destination.includes('/events/detail')) {
+            return destination;
         }
 
         // If an organiser is logging in but was previously on a generic page (like home or profile),
         // we should probably steer them to their dashboard anyway for better UX.
         if (role === 'organiser' && (destination === '/' || destination === '/profile')) {
-            return "/organiser";
+            return '/organiser';
         }
 
         return destination;

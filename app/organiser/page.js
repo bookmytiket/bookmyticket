@@ -1724,6 +1724,26 @@ function OrganiserPanel() {
     }
   };
 
+  const handleSubmitForReview = async (event) => {
+    if (!event?.id) return;
+    try {
+      const res = await fetch('/api/events/submit-review', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ event_id: event.id, organiser_id: user?.id })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(`"${event.title}" submitted for admin review!`, 'success');
+        refreshEvents();
+      } else {
+        showToast('Failed to submit: ' + (data.error || 'Unknown error'), 'error');
+      }
+    } catch (err) {
+      showToast('Network error. Please try again.', 'error');
+    }
+  };
+
   const internalMeetingPortalEnabled = useMemo(() => {
     const cfg = systemConfigs.find(
       (c) => c.key === "internal_meeting_portal_enabled",
@@ -1782,19 +1802,16 @@ function OrganiserPanel() {
 
         // Determine effective UI status for grouping
         let uiStatus = "active";
-        if (lStatus === "archived") {
-          uiStatus = "archived";
-        } else if (lStatus === "cancelled") {
-          uiStatus = "cancelled";
-        } else if (lStatus === "completed") {
-          uiStatus = "completed";
-        } else if (pStatus === "draft") {
-          uiStatus = "draft";
-        } else if (endAt && endAt < now) {
-          uiStatus = "expired";
-        } else {
-          uiStatus = "active";
-        }
+        if (e.status === "draft") uiStatus = "draft";
+        else if (e.status === "pending_review") uiStatus = "pending_review";
+        else if (e.status === "approved") uiStatus = "approved";
+        else if (e.status === "rejected") uiStatus = "rejected";
+        else if (e.status === "changes_requested") uiStatus = "pending_review";
+        else if (lStatus === "archived") uiStatus = "archived";
+        else if (lStatus === "cancelled") uiStatus = "cancelled";
+        else if (lStatus === "completed") uiStatus = "completed";
+        else if (endAt && endAt < now) uiStatus = "expired";
+        else uiStatus = "active";
 
         return { ...e, uiStatus, status: uiStatus, startAt, endAt };
       });
@@ -2558,7 +2575,8 @@ function OrganiserPanel() {
     }));
   };
 
-  const publishSeatEvent = () => {
+  const publishSeatEvent = (overrideStatus = null) => {
+    const currentStatus = overrideStatus || postEvent.eventStatus;
     const isOnline = postEvent.type === "Online";
     const isMultiple = (postEvent.dateType || "single") === "multiple";
     const today = new Date().toISOString().split("T")[0];
@@ -2736,19 +2754,21 @@ function OrganiserPanel() {
       featured: postEvent.isFeature === "Yes" ? true : false,
       exclusive: postEvent.isExclusive === "Yes" ? true : false,
       entity_type: "event",
-      publish_status: "published",
-      visibility_status: "public",
-      approval_status: "approved",
-      listing_status: "active",
+      publish_status: currentStatus === "published" ? "published" : "unpublished",
+      visibility_status: currentStatus === "published" ? "public" : "private",
+      approval_status: (currentStatus === "approved" || currentStatus === "published") ? "approved" : (currentStatus === "pending_review" ? "pending" : "unapproved"),
+      listing_status: currentStatus === "published" ? "active" : "inactive",
+      is_public: currentStatus === "published",
+      is_bookable: currentStatus === "published",
       status: (() => {
         const now = new Date();
         now.setHours(0, 0, 0, 0);
 
-        if (postEvent.eventStatus === "draft") return "draft";
-        if (postEvent.eventStatus === "pending_review") return "pending_review";
-        if (postEvent.eventStatus === "approved") return "approved";
-        if (postEvent.eventStatus === "rejected") return "rejected";
-        if (postEvent.eventStatus === "changes_requested") return "changes_requested";
+        if (currentStatus === "draft") return "draft";
+        if (currentStatus === "pending_review") return "pending_review";
+        if (currentStatus === "approved") return "approved";
+        if (currentStatus === "rejected") return "rejected";
+        if (currentStatus === "changes_requested") return "changes_requested";
         
         const configBasic = postEvent.dynamic_config?.basicInfo || {};
         const configExpiry = configBasic.expiryDate || postEvent.expiryDate;
@@ -2763,9 +2783,8 @@ function OrganiserPanel() {
           if (checkDate < now) return "expired";
         }
 
-        return postEvent.eventStatus === "published" ? "published" : "draft";
+        return currentStatus === "published" ? "published" : "draft";
       })(),
-      publish_status: postEvent.eventStatus === "published" ? "published" : "unpublished",
       meeting_type: postEvent.meetingType || "internal",
       external_meeting_url: postEvent.externalMeetingUrl || undefined,
       description: postEvent.description || undefined,
@@ -2838,7 +2857,14 @@ function OrganiserPanel() {
       video_trailer_url: postEvent.videoTrailerUrl || undefined,
       terms_conditions: postEvent.termsConditions || undefined,
       seating_capacity: Number(postEvent.normalTicketCapacity) || totalSeats || undefined,
-      event_start_at: !isNaN(eventDateTime.getTime()) ? eventDateTime.toISOString() : null,
+      event_start_at: (() => {
+        const configBasic = postEvent.dynamic_config?.basicInfo || {};
+        const configExpiry = configBasic.expiryDate || postEvent.expiryDate;
+        let dateStr = postEvent.endDate || configBasic.endDate || configExpiry || today;
+        const timeStr = postEvent.endTime || configBasic.endTime || "23:59";
+        const dt = new Date(`${dateStr}T${timeStr}`);
+        return !isNaN(dt.getTime()) ? dt.toISOString() : null;
+      })(),
       event_end_at: (() => {
         const configBasic = postEvent.dynamic_config?.basicInfo || {};
         const endD = postEvent.endDate || postEvent.end_date || configBasic.endDate || firstSlot.date || today;
@@ -2972,7 +2998,7 @@ function OrganiserPanel() {
                   min_team_size: Number(postEvent.minTeamSize) || 1,
                   max_team_size: Number(postEvent.maxTeamSize) || 20,
                   audience_free_access: !!postEvent.audienceFreeAccess,
-                  status: postEvent.eventStatus === "draft" ? "draft" : "published",
+                  status: currentStatus === "draft" ? "draft" : "published",
                   metadata: {
                     prizePool: postEvent.prizePool || "TBA",
                     contactEmail: postEvent.contactEmail,
@@ -2987,7 +3013,7 @@ function OrganiserPanel() {
                   id: editingEvent.id,
                   organiser_id: user?.id,
                   title: (postEvent.title || "").trim(),
-                  status: postEvent.eventStatus === "draft" ? "draft" : "published",
+                  status: currentStatus === "draft" ? "draft" : "published",
                 };
                 await supabase.from("marathon_config").upsert(marathonPayload);
               }
@@ -6601,11 +6627,12 @@ function OrganiserPanel() {
                   {[
                     { id: "all", label: "All", color: "#3b82f6" },
                     { id: "active", label: "Active", color: "#10b981" },
-                    { id: "completed", label: "Completed", color: "#14b8a6" },
-                    { id: "draft", label: "Drafts", color: "#f59e0b" },
-                    { id: "expired", label: "Expired", color: "#64748b" },
-                    { id: "cancelled", label: "Cancelled", color: "#ef4444" },
-                    { id: "archived", label: "Archived", color: "#475569" }
+                    { id: "pending_review", label: "Pending Review", color: "#f59e0b" },
+                    { id: "approved", label: "Approved", color: "#3b82f6" },
+                    { id: "draft", label: "Drafts", color: "#64748b" },
+                    { id: "rejected", label: "Rejected", color: "#ef4444" },
+                    { id: "archived", label: "Archived", color: "#475569" },
+                    { id: "expired", label: "Expired", color: "#94a3b8" }
                   ].map((tab) => {
                     const isActive = eventSubTab === tab.id;
                     const count = tab.id === "all" ? events.length : events.filter(e => e.uiStatus === tab.id).length;
@@ -7177,6 +7204,66 @@ function OrganiserPanel() {
                                               <Grid size={14} /> Map
                                             </button>
                                           )}
+                                        {/* Submit for Review — shown for draft events */}
+                                        {(ev.status === 'draft' || ev.uiStatus === 'draft') && (
+                                          <button
+                                            title="Submit for Admin Review"
+                                            onClick={() => handleSubmitForReview(ev)}
+                                            style={{
+                                              border: "none",
+                                              background: "linear-gradient(135deg,#f59e0b,#d97706)",
+                                              color: "#fff",
+                                              padding: "8px 14px",
+                                              borderRadius: "8px",
+                                              fontSize: "11px",
+                                              fontWeight: 800,
+                                              cursor: "pointer",
+                                              display: "flex",
+                                              alignItems: "center",
+                                              gap: "6px",
+                                              whiteSpace: "nowrap",
+                                              letterSpacing: "0.03em",
+                                            }}
+                                          >
+                                            Submit for Review
+                                          </button>
+                                        )}
+                                        {/* Publish — shown for approved events */}
+                                        {(ev.status === 'approved' || ev.uiStatus === 'approved') && (
+                                          <button
+                                            title="Publish Event"
+                                            onClick={async () => {
+                                              const res = await fetch('/api/events/publish', {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({ event_id: ev.id, organiser_id: user?.id })
+                                              });
+                                              const data = await res.json();
+                                              if (data.success) {
+                                                showToast(`"${ev.title}" is now Live! 🎉`, 'success');
+                                                refreshEvents();
+                                              } else {
+                                                showToast('Publish failed: ' + (data.error || 'Unknown error'), 'error');
+                                              }
+                                            }}
+                                            style={{
+                                              border: "none",
+                                              background: "linear-gradient(135deg,#10b981,#059669)",
+                                              color: "#fff",
+                                              padding: "8px 14px",
+                                              borderRadius: "8px",
+                                              fontSize: "11px",
+                                              fontWeight: 800,
+                                              cursor: "pointer",
+                                              display: "flex",
+                                              alignItems: "center",
+                                              gap: "6px",
+                                              whiteSpace: "nowrap",
+                                            }}
+                                          >
+                                            Publish Event
+                                          </button>
+                                        )}
                                         {ev.uiStatus !== 'expired' && ev.uiStatus !== 'archived' && (
                                           <button
                                             title="Promote Event"

@@ -1,47 +1,69 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
-import { NextResponse } from 'next/response';
+import { createClient } from '@supabase/supabase-js';
+import { NextResponse } from 'next/server';
+import { sendTemplatedEmail } from '@/lib/emailService';
 
 export async function POST(req) {
   try {
-    const supabase = createRouteHandlerClient({ cookies });
-    const { data: { session } } = await supabase.auth.getSession();
-
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Verify Admin Role
-    const { data: userProfile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', session.user.id)
-      .single();
-
-    if (userProfile?.role !== 'admin' && session.user.user_metadata?.role !== 'admin') {
-       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
-    }
-
     const { event_id, reason } = await req.json();
-
     if (!event_id) {
       return NextResponse.json({ error: 'Event ID required' }, { status: 400 });
     }
 
-    // Update Event Status
-    const { error: updateError } = await supabase
+    const adminSupabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    );
+
+    const { error: updateError } = await adminSupabase
       .from('events')
       .update({ status: 'rejected' })
       .eq('id', event_id);
 
     if (updateError) throw updateError;
 
-    // Update Review Status
-    await supabase.from('event_reviews').update({
-      review_status: 'rejected',
-      review_notes: reason,
-      reviewed_by: session.user.id
-    }).eq('event_id', event_id);
+    try {
+      await adminSupabase.from('event_reviews')
+        .update({ review_status: 'rejected', review_notes: reason })
+        .eq('event_id', event_id);
+    } catch (_) {}
+
+    const { data: event } = await adminSupabase
+      .from('events')
+      .select('title, organiser_id, profiles:organiser_id(full_name, email)')
+      .eq('id', event_id)
+      .single();
+
+    const siteUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://bookmyticket.net';
+    const organiserName = event?.profiles?.full_name || 'Organiser';
+    const organiserEmail = event?.profiles?.email;
+    const eventTitle = event?.title || 'Your Event';
+
+    if (organiserEmail) {
+      try {
+        await sendTemplatedEmail({
+          templateIdentifier: 'event_rejected_organiser',
+          to: organiserEmail,
+          variables: {
+            organiser_name: organiserName,
+            event_title: eventTitle,
+            rejection_reason: reason || 'No specific reason provided. Please contact support.',
+            organiser_url: `${siteUrl}/organiser`,
+            site_url: siteUrl
+          }
+        });
+      } catch (_) {}
+    }
+
+    if (event?.organiser_id) {
+      try {
+        await adminSupabase.from('notifications').insert({
+          user_id: event.organiser_id,
+          title: 'Event Not Approved',
+          message: `"${eventTitle}" was not approved. ${reason ? 'Reason: ' + reason : 'Please check your email for details.'}`,
+          is_read: false
+        });
+      } catch (_) {}
+    }
 
     return NextResponse.json({ success: true, status: 'rejected' });
   } catch (error) {

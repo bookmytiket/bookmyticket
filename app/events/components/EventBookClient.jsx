@@ -227,16 +227,32 @@ export default function EventBookClient({ id }) {
 
     const isSeating = useMemo(() => {
         if (!event) return false;
+        // Competition/Marathon types never use seat maps
         if (event.type === 'Competition' || event.type === 'Competition Event' || event.type === 'Sports Event' || event.type === 'Marathon') return false;
+        // Free events never need seat selection
         if (event.isFree) return false;
-        if (event.event_type === 'general') return false;
-        if (event.event_type === 'reserved') return true;
 
+        // ticket_mode / ticket_type field takes priority (set by organiser)
+        const ticketMode = event.ticket_mode || event.ticket_type || '';
+        if (ticketMode === 'general' || ticketMode === 'GENERAL') return false;
+        if (ticketMode === 'seated' || ticketMode === 'SEATED') {
+            return event.blocks?.length > 0; // Only if blocks actually configured
+        }
+
+        // event_type field (general vs reserved) — must also have real blocks
+        if (event.event_type === 'general') return false;
+        if (event.event_type === 'reserved') {
+            // Only show seat picker if blocks are actually configured
+            return Array.isArray(event.blocks) && event.blocks.length > 0;
+        }
+
+        // Fallback: check if blocks or seat categories exist
         return (
-            (event.seatingEnabled !== false && Array.isArray(event.seatCategories) && event.seatCategories.length > 0 && Number(event.cols) > 0) ||
+            (event.seatingEnabled !== false && Array.isArray(event.seatCategories) && event.seatCategories.length > 0 && Number(event.cols) > 0 && event.blocks?.length > 0) ||
             (event.dynamic_config?.seating_type === 'visual' && event.blocks?.length > 0)
         );
     }, [event]);
+
 
     // Real-time Seat Locking
     const { lockedSeats, myLocks, lockSeat, releaseSeat } = useSeatLocking(id, user?.id, selectedShowtime?.id);
@@ -608,7 +624,6 @@ export default function EventBookClient({ id }) {
             }
         } catch (err) {
             console.error("Error creating booking session:", err);
-            alert("Booking session initialization failed: " + err.message);
             setIsCreatingSession(false);
         }
     };

@@ -169,7 +169,7 @@ export default function UnifiedEventForm({ postEvent, setPostEvent, onCancel, on
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <button 
-                                onClick={() => setPostEvent(p => ({ ...p, ticketMode: 'free', isReservedSeating: false }))}
+                                onClick={() => setPostEvent(p => ({ ...p, ticketMode: 'free' }))}
                                 className={`p-8 rounded-[2rem] border-2 text-left transition-all ${postEvent.ticketMode === 'free' ? 'border-emerald-500 bg-emerald-50 scale-[1.02]' : 'border-slate-100 hover:border-emerald-200 grayscale hover:grayscale-0'}`}
                             >
                                 <div className="text-emerald-500 mb-4"><CheckCircle2 size={32} /></div>
@@ -177,7 +177,7 @@ export default function UnifiedEventForm({ postEvent, setPostEvent, onCancel, on
                                 <p className="text-[10px] font-bold text-slate-500 uppercase leading-relaxed">No payment gateway required. Direct RSVP / registration.</p>
                             </button>
                             <button 
-                                onClick={() => setPostEvent(p => ({ ...p, ticketMode: 'paid', isReservedSeating: true }))}
+                                onClick={() => setPostEvent(p => ({ ...p, ticketMode: 'paid' }))}
                                 className={`p-8 rounded-[2rem] border-2 text-left transition-all ${postEvent.ticketMode === 'paid' ? 'border-blue-500 bg-blue-50 scale-[1.02]' : 'border-slate-100 hover:border-blue-200 grayscale hover:grayscale-0'}`}
                             >
                                 <div className="text-blue-500 mb-4"><IndianRupee size={32} /></div>
@@ -201,36 +201,20 @@ export default function UnifiedEventForm({ postEvent, setPostEvent, onCancel, on
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <button 
-                                onClick={() => {
-                                    if (postEvent.ticketMode !== 'paid') setPostEvent(p => ({ ...p, isReservedSeating: false }));
-                                }}
-                                disabled={postEvent.ticketMode === 'paid'}
-                                className={`p-8 rounded-[2rem] border-2 text-left transition-all ${postEvent.ticketMode === 'paid' ? 'opacity-40 cursor-not-allowed bg-slate-50 border-slate-100' : (!postEvent.isReservedSeating ? 'border-purple-500 bg-purple-50 scale-[1.02]' : 'border-slate-100 hover:border-purple-200 grayscale hover:grayscale-0')}`}
+                                onClick={() => setPostEvent(p => ({ ...p, isReservedSeating: false }))}
+                                className={`p-8 rounded-[2rem] border-2 text-left transition-all ${!postEvent.isReservedSeating ? 'border-purple-500 bg-purple-50 scale-[1.02]' : 'border-slate-100 hover:border-purple-200 grayscale hover:grayscale-0'}`}
                             >
                                 <div className="text-purple-500 mb-4"><Users size={32} /></div>
                                 <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter mb-2">GENERAL ADMISSION</h3>
                                 <p className="text-[10px] font-bold text-slate-500 uppercase leading-relaxed">No seat map required. Ticket quantity based booking with capacity limits.</p>
-                                {postEvent.ticketMode === 'paid' && (
-                                    <p className="text-[10px] font-black text-red-500 uppercase tracking-widest mt-4 flex items-center gap-2">
-                                        * Not available for paid events
-                                    </p>
-                                )}
                             </button>
                             <button 
-                                onClick={() => {
-                                    if (postEvent.ticketMode !== 'free') setPostEvent(p => ({ ...p, isReservedSeating: true }));
-                                }}
-                                disabled={postEvent.ticketMode === 'free'}
-                                className={`p-8 rounded-[2rem] border-2 text-left transition-all ${postEvent.ticketMode === 'free' ? 'opacity-40 cursor-not-allowed bg-slate-50 border-slate-100' : (postEvent.isReservedSeating ? 'border-orange-500 bg-orange-50 scale-[1.02]' : 'border-slate-100 hover:border-orange-200 grayscale hover:grayscale-0')}`}
+                                onClick={() => setPostEvent(p => ({ ...p, isReservedSeating: true }))}
+                                className={`p-8 rounded-[2rem] border-2 text-left transition-all ${postEvent.isReservedSeating ? 'border-orange-500 bg-orange-50 scale-[1.02]' : 'border-slate-100 hover:border-orange-200 grayscale hover:grayscale-0'}`}
                             >
                                 <div className="text-orange-500 mb-4"><Ticket size={32} /></div>
                                 <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter mb-2">RESERVED SEATING</h3>
                                 <p className="text-[10px] font-bold text-slate-500 uppercase leading-relaxed">Seat map required. Dynamic seat selection, locking, and section pricing.</p>
-                                {postEvent.ticketMode === 'free' && (
-                                    <p className="text-[10px] font-black text-red-500 uppercase tracking-widest mt-4 flex items-center gap-2">
-                                        * Not available for free events
-                                    </p>
-                                )}
                             </button>
                         </div>
                         <div className="flex justify-between pt-10">
@@ -493,13 +477,13 @@ export default function UnifiedEventForm({ postEvent, setPostEvent, onCancel, on
                             {(!postEvent.status || postEvent.status === 'draft' || postEvent.status === 'changes_requested' || postEvent.status === 'rejected') && (
                                 <>
                                     <button 
-                                        onClick={() => { setPostEvent(p => ({ ...p, eventStatus: 'draft' })); setTimeout(onPublish, 100); }}
+                                        onClick={() => { setPostEvent(p => ({ ...p, eventStatus: 'draft' })); onPublish('draft'); }}
                                         className="px-12 py-6 bg-slate-100 text-slate-600 border border-slate-200 rounded-[4rem] text-sm font-black uppercase tracking-[0.2em] shadow-sm hover:bg-slate-200 transition-all"
                                     >
                                         Save Draft
                                     </button>
                                     <button 
-                                        onClick={() => { setPostEvent(p => ({ ...p, eventStatus: 'pending_review' })); setTimeout(onPublish, 100); }}
+                                        onClick={() => { setPostEvent(p => ({ ...p, eventStatus: 'pending_review' })); onPublish('pending_review'); }}
                                         className="px-12 py-6 bg-gradient-to-r from-orange-500 to-rose-500 text-white rounded-[4rem] text-sm font-black uppercase tracking-[0.2em] shadow-xl shadow-orange-500/30 hover:scale-105 transition-all"
                                     >
                                         Submit for Review
@@ -518,7 +502,7 @@ export default function UnifiedEventForm({ postEvent, setPostEvent, onCancel, on
 
                             {postEvent.status === 'approved' && (
                                 <button 
-                                    onClick={() => { setPostEvent(p => ({ ...p, eventStatus: 'published' })); setTimeout(onPublish, 100); }}
+                                    onClick={() => { setPostEvent(p => ({ ...p, eventStatus: 'published' })); onPublish('published'); }}
                                     className="px-12 py-6 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-[4rem] text-sm font-black uppercase tracking-[0.2em] shadow-xl shadow-emerald-500/30 hover:scale-105 transition-all"
                                 >
                                     Publish Event

@@ -1,18 +1,19 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
-import { NextResponse } from 'next/response';
+import { createClient } from '@supabase/supabase-js';
+import { NextResponse } from 'next/server';
 
 export async function POST(req) {
   try {
-    const supabase = createRouteHandlerClient({ cookies });
-    const { data: { session } } = await supabase.auth.getSession();
-
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    );
 
     const body = await req.json();
-    const { event_id, payload, draft_data } = body;
+    const { event_id, payload, draft_data, organiser_id } = body;
+
+    if (!organiser_id) {
+      return NextResponse.json({ error: 'Organiser ID required' }, { status: 400 });
+    }
 
     // 1. Upsert event into events table with status 'draft'
     let eventId = event_id;
@@ -20,7 +21,7 @@ export async function POST(req) {
       ...payload,
       status: 'draft',
       publish_status: 'unpublished',
-      organiser_id: session.user.id
+      organiser_id
     };
 
     if (eventId) {
@@ -28,7 +29,7 @@ export async function POST(req) {
         .from('events')
         .update(eventPayload)
         .eq('id', eventId)
-        .eq('organiser_id', session.user.id);
+        .eq('organiser_id', organiser_id);
       
       if (updateError) throw updateError;
     } else {
