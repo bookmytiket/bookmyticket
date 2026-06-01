@@ -103,7 +103,7 @@ main {
 .bms-banner-stage {
   position: relative;
   width: 100%;
-  aspect-ratio: 1200 / 400;
+  aspect-ratio: 3 / 1;
   max-height: 400px;
   border-radius: 0;
   overflow: hidden;
@@ -113,9 +113,8 @@ main {
 
 @media (max-width: 768px) {
   .bms-banner-stage {
-    height: 120px;
-    max-height: 120px;
-    aspect-ratio: unset;
+    aspect-ratio: 2.4 / 1;   /* slightly taller on mobile: 390px → ~163px */
+    max-height: none;
   }
 }
 

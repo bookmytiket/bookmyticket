@@ -585,7 +585,7 @@ function HomeClient() {
 
   return (
     <>
-      <main style={{ minHeight: '100vh', backgroundColor: '#FAF9F6', color: '#111827', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: isMobile ? '160px' : 'var(--header-h)' }}>
+      <main style={{ minHeight: '100vh', backgroundColor: '#FAF9F6', color: '#111827', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: isMobile ? '130px' : 'var(--header-h)' }}>
         
         {/* Community Trust: Public Reviews Banner */}
         {/* Moved PublicReviewsBanner below for better flow */}
@@ -728,9 +728,9 @@ function HomeClient() {
           </section>
         ) : (
           <div style={{ width: '100%' }}>
-            <div style={{ width: '100%', maxWidth: '1240px', margin: '0 auto', padding: '20px 20px 40px 20px' }}>
-              <div style={{ borderRadius: '16px', overflow: 'hidden', boxShadow: '0 10px 30px rgba(0,0,0,0.08)' }}>
-                <HeroBanner slides={heroSlides} />
+            <div style={{ width: '100%', maxWidth: '1240px', margin: '0 auto', padding: isMobile ? '0 0 20px 0' : '20px 20px 40px 20px' }}>
+              <div style={{ borderRadius: isMobile ? '0' : '16px', overflow: 'hidden', boxShadow: isMobile ? 'none' : '0 10px 30px rgba(0,0,0,0.08)' }}>
+                <HeroBanner slides={heroSlides} showPromo={heroSlides.length === 0} />
               </div>
             </div>
             
