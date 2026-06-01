@@ -69,13 +69,15 @@ export default function HeroBanner({ slides: propSlides, showDetails = true, sho
         }));
 
         const baseSlides = Array.isArray(propSlides) && propSlides.length > 0
-            ? propSlides.map(s => ({
-                image: s.img || s.image || s.image_url || '',
-                alt: s.alt || s.title || "Slide",
-                url: s.url || s.link || '',
-                redirect_type: s.redirect_type,
-                redirect_id: s.redirect_id,
-            }))
+            ? propSlides
+                .map(s => ({
+                    image: s.img || s.image || s.image_url || '',
+                    alt: s.alt || s.title || "Slide",
+                    url: s.url || s.link || '',
+                    redirect_type: s.redirect_type,
+                    redirect_id: s.redirect_id,
+                }))
+                .filter(s => s.image)   // skip slides with no image URL
             : DEFAULT_BANNER_SLIDES;
 
         const final = [...adSlides, ...baseSlides];
@@ -179,6 +181,7 @@ export default function HeroBanner({ slides: propSlides, showDetails = true, sho
                                 <img
                                     src={slide.image}
                                     alt={slide.alt || "Banner"}
+                                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
                                     style={{
                                         width: "100%",
                                         height: "100%",
