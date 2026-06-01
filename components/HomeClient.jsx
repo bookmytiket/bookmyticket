@@ -472,6 +472,16 @@ function HomeClient() {
   const activeBanners = useMemo(() => activeBannersRaw || EMPTY_ARRAY, [activeBannersRaw]);
   const { data: homeCouponsRaw } = useSupabaseQuery('branding_coupons', (q) => q.eq('status', 'Active'), []);
   const homeCoupons = useMemo(() => homeCouponsRaw || EMPTY_ARRAY, [homeCouponsRaw]);
+
+  // Primary source: home_slides table (managed via Admin → Hero Banner)
+  const { data: homeSlidesDbRaw } = useSupabaseQuery(
+    'home_slides',
+    (q) => q.eq('is_active', true).order('sort_order', { ascending: true }),
+    [],
+    { realtime: false }
+  );
+  const homeSlidesDb = useMemo(() => homeSlidesDbRaw || EMPTY_ARRAY, [homeSlidesDbRaw]);
+
   const allCoupons = useMemo(() => {
     // Merge Convex coupons with Static Partner deals
     return [...homeCoupons, ...BRAND_COUPONS.map(c => ({
@@ -484,11 +494,26 @@ function HomeClient() {
 
   // Stable key from activeBanners to prevent infinite re-renders
   const activeBannersKey = activeBanners.map(b => b.id).join(',');
+  const homeSlidesDbKey = homeSlidesDb.map(s => s.id).join(',');
 
   useEffect(() => {
-    const parsed = heroSlidesConfig != null ? parseConfig(heroSlidesConfig) : null;
-    let slides = Array.isArray(parsed) ? parsed : (Array.isArray(HERO_BANNER_SLIDES) ? HERO_BANNER_SLIDES : []);
-    
+    // 1. Use home_slides DB rows if any exist (admin-managed)
+    let slides;
+    if (homeSlidesDb.length > 0) {
+      slides = homeSlidesDb.map(s => ({
+        id: s.id,
+        img: s.image_url || '',
+        title: s.title || '',
+        sub: s.subtitle || '',
+        url: s.link || '',
+        alt: s.title || 'Banner'
+      }));
+    } else {
+      // 2. Fallback: system_config JSON or static demo slides
+      const parsed = heroSlidesConfig != null ? parseConfig(heroSlidesConfig) : null;
+      slides = Array.isArray(parsed) ? parsed : (Array.isArray(HERO_BANNER_SLIDES) ? HERO_BANNER_SLIDES : []);
+    }
+
     let mappedSlides = [];
 
     // Prepend active brand Premium Banners
@@ -523,7 +548,7 @@ function HomeClient() {
 
     setHeroSlides(slides);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [heroSlidesConfig, activeBannersKey, homeCoupons]);
+  }, [heroSlidesConfig, activeBannersKey, homeCoupons, homeSlidesDbKey]);
 
   const [eventPartners, setEventPartners] = useState([]);
   const [loadingPartners, setLoadingPartners] = useState(true);

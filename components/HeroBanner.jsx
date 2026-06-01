@@ -2,7 +2,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useSupabaseQuery } from "@/hooks/useSupabase";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { resolveBannerRedirect } from "@/lib/bannerHelper";
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -83,7 +82,15 @@ export default function HeroBanner({ slides: propSlides, showDetails = true, sho
         }));
 
         const baseSlides = Array.isArray(propSlides) && propSlides.length > 0
-            ? propSlides.map(s => ({ image: s.img || s.image, alt: s.alt || s.title || "Slide", url: s.url }))
+            ? propSlides.map(s => ({
+                image: s.img || s.image || s.image_url || '',
+                alt: s.alt || s.title || "Slide",
+                url: s.url || s.link || '',
+                redirect_type: s.redirect_type,
+                redirect_id: s.redirect_id,
+                title: s.title || '',
+                subtitle: s.sub || s.subtitle || ''
+              }))
             : DEFAULT_BANNER_SLIDES;
 
         const final = [...adSlides, ...baseSlides];
@@ -178,7 +185,7 @@ export default function HeroBanner({ slides: propSlides, showDetails = true, sho
                         }}
                         style={{ position: 'absolute', width: '100%', height: '100%', top: 0, left: 0, transformStyle: 'preserve-3d' }}
                     >
-                    {slide.custom ? (
+                    {!slide ? null : slide.custom ? (
                         <PromoSlide isMobile={isMobile} />
                     ) : (
                         <div
@@ -199,41 +206,18 @@ export default function HeroBanner({ slides: propSlides, showDetails = true, sho
                             }}
                             style={{ width: "100%", height: "100%", cursor: (slide.url || (slide.redirect_type && slide.redirect_id)) ? "pointer" : "default", position: "relative" }}
                         >
-                            <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.4) 40%, transparent 100%)", zIndex: 1, pointerEvents: "none" }} />
-                            <Image 
-                                src={slide.image} 
-                                alt={slide.alt} 
-                                fill
-                                priority={current === 0}
-                                quality={75}
-                                style={{ objectFit: "cover" }}
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                                src={slide.image}
+                                alt={slide.alt || "Banner"}
+                                style={{
+                                    width: "100%",
+                                    height: "100%",
+                                    objectFit: "cover",
+                                    display: "block"
+                                }}
                             />
-                            {showDetails && (
-                                <div style={{ position: "absolute", bottom: "10%", left: "5%", right: "5%", zIndex: 2, pointerEvents: "none" }}>
-                                    <h2 style={{ fontSize: isMobile ? "28px" : "clamp(24px, 4vw, 48px)", fontWeight: 800, marginBottom: "8px", lineHeight: 1.1, textShadow: "0 2px 10px rgba(0,0,0,0.6)" }}>
-                                        {slide.title || "Live Events & Experiences"}
-                                    </h2>
-                                    <p style={{ fontSize: isMobile ? "15px" : "clamp(14px, 2vw, 20px)", color: "rgba(255,255,255,0.95)", fontWeight: 600, marginBottom: "20px", textShadow: "0 1px 4px rgba(0,0,0,0.5)" }}>
-                                        {slide.subtitle || slide.alt || "Book tickets for concerts, sports & more"}
-                                    </p>
-                                    <div style={{
-                                        display: "inline-flex",
-                                        alignItems: "center",
-                                        padding: "12px 32px",
-                                        borderRadius: "50px",
-                                        background: "linear-gradient(90deg, #f84464, #c026d3)",
-                                        color: "#fff",
-                                        fontSize: "14px",
-                                        fontWeight: 800,
-                                        textTransform: "uppercase",
-                                        letterSpacing: "1px",
-                                        boxShadow: "0 8px 24px rgba(248,68,100,0.4)",
-                                        pointerEvents: "auto"
-                                    }}>
-                                        Book Now
-                                    </div>
-                                </div>
-                            )}
+
                         </div>
                     )}
                     </motion.div>

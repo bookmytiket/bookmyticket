@@ -2609,11 +2609,20 @@ function AdminHomePage() {
     ], [homeSectionsArr]);
     
     const [slides, setSlides] = useState([]);
+    // Normalize DB rows (image_url, subtitle, link, sort_order) → local state (img, sub, url, order)
+    const normalizeSlide = (s, i) => ({
+        id: s.id,
+        img: s.image_url || s.img || "",
+        title: s.title || "",
+        sub: s.subtitle || s.sub || "",
+        url: s.link || s.url || "",
+        order: s.sort_order ?? s.order ?? i
+    });
     useEffect(() => {
         if (homeSlidesArr.length > 0) {
-            setSlides(homeSlidesArr);
+            setSlides(homeSlidesArr.map(normalizeSlide));
         } else if (slides.length === 0) {
-            setSlides(HERO_BANNER_SLIDES.map((s, i) => ({ id: s.id ?? i + 1, img: s.img || "", title: s.title || "", sub: s.sub || "", alt: s.title || `Slide ${i + 1}`, url: s.link || "" })));
+            setSlides(HERO_BANNER_SLIDES.map((s, i) => normalizeSlide({ ...s, image_url: s.img, subtitle: s.sub, link: s.link, sort_order: i }, i)));
         }
     }, [homeSlidesArr]);
 
@@ -3140,46 +3149,159 @@ function AdminHomePage() {
 
     const t = colors[theme] || colors.dark;
 
+    // Map local state → DB column names before writing
+    const toDbSlide = (slide, index) => ({
+        image_url: slide.img || "",
+        title: slide.title || "",
+        subtitle: slide.sub || "",
+        link: slide.url || "",
+        sort_order: slide.order ?? index,
+        is_active: true
+    });
+
     const addSlide = async () => {
         try {
-            await addBannerSlide({
-                img: "https://images.unsplash.com/photo-1540039155733-d71efd44f808?q=80&w=1200&h=480&fit=crop",
+            const { data } = await addBannerSlide({
+                image_url: "https://images.unsplash.com/photo-1540039155733-d71efd44f808?q=80&w=1200&h=480&fit=crop",
                 title: "New Slide",
-                sub: "Subtitle here",
-                alt: "New Slide",
-                url: "",
-                order: slides.length
+                subtitle: "Subtitle here",
+                link: "",
+                sort_order: slides.length,
+                is_active: true
             });
+            if (data?.[0]) {
+                setSlides(prev => [...prev, { id: data[0].id, img: data[0].image_url, title: data[0].title, sub: data[0].subtitle, url: data[0].link, order: data[0].sort_order }]);
+            }
             showToast("Slide added", "success");
         } catch (err) {
-            showToast("Error adding slide", "error");
+            showToast("Error adding slide: " + (err?.message || err), "error");
         }
     };
 
+    // UUID v4 regex — static fallback slides have integer IDs and must not hit Supabase
+    const isUUID = (id) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(id));
+
     const removeSlide = async (id) => {
+        // Static fallback slides (integer IDs) don't exist in DB — just remove from UI
+        if (!isUUID(id)) {
+            setSlides(prev => prev.filter(s => s.id !== id));
+            showToast("Slide removed", "success");
+            return;
+        }
         try {
             await removeBannerSlide({ id });
+            setSlides(prev => prev.filter(s => s.id !== id));
             showToast("Slide removed", "success");
         } catch (err) {
-            showToast("Error removing slide", "error");
+            showToast("Error removing slide: " + (err?.message || err), "error");
         }
     };
 
     const handleSaveSlide = async (slide) => {
         try {
-            if (slide.id) {
-                await updateBannerSlide(slide);
+            if (slide.id && isUUID(slide.id)) {
+                await updateBannerSlide({ id: slide.id, ...toDbSlide(slide) });
                 showToast("Slide updated", "success");
+            } else if (slide.id && !isUUID(slide.id)) {
+                // Static slide — persist it to DB as a new record
+                const { data } = await addBannerSlide({ ...toDbSlide(slide) });
+                if (data?.[0]) {
+                    setSlides(prev => prev.map(s => s.id === slide.id
+                        ? { ...s, id: data[0].id }
+                        : s
+                    ));
+                }
+                showToast("Slide saved to database", "success");
             } else {
                 showToast("Slide not persisted yet.", "warning");
             }
         } catch (err) {
-            showToast("Error updating slide", "error");
+            showToast("Error updating slide: " + (err?.message || err), "error");
         }
     };
 
     const updateSlideLocal = (id, field, value) => {
         setSlides(slides.map(s => s.id === id ? { ...s, [field]: value } : s));
+    };
+
+    const [slideUploading, setSlideUploading] = useState({});
+    const [slideDragOver, setSlideDragOver] = useState({});
+    const [slideImgBroken, setSlideImgBroken] = useState({});
+
+    // Resize + compress an image file to fit within bannerMaxW×bannerMaxH using Canvas API
+    // Crop-to-fill: resize image to exactly BANNER_W × BANNER_H (like CSS object-fit: cover)
+    // This guarantees every uploaded slide fills the banner with no letterboxing.
+    const BANNER_W = 1200;
+    const BANNER_H = 400;
+
+    const compressImage = (file, quality = 0.88) =>
+        new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onerror = reject;
+            reader.onload = (ev) => {
+                const img = new window.Image();
+                img.onerror = reject;
+                img.onload = () => {
+                    const { width: sw, height: sh } = img;
+
+                    // Scale so the image COVERS the target box (same as CSS cover)
+                    const scale = Math.max(BANNER_W / sw, BANNER_H / sh);
+                    const scaledW = sw * scale;
+                    const scaledH = sh * scale;
+
+                    // Centre-crop offsets
+                    const ox = (scaledW - BANNER_W) / 2;
+                    const oy = (scaledH - BANNER_H) / 2;
+
+                    const canvas = document.createElement('canvas');
+                    canvas.width  = BANNER_W;
+                    canvas.height = BANNER_H;
+                    const ctx = canvas.getContext('2d');
+
+                    // Fill white background (for PNGs with transparency)
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(0, 0, BANNER_W, BANNER_H);
+
+                    // Draw scaled + cropped image
+                    ctx.drawImage(img, -ox, -oy, scaledW, scaledH);
+
+                    canvas.toBlob(
+                        (blob) => blob ? resolve(blob) : reject(new Error('Canvas conversion failed')),
+                        'image/jpeg',
+                        quality
+                    );
+                };
+                img.src = ev.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+
+    const uploadSlideImage = async (slideId, file) => {
+        if (!file) return;
+        if (!file.type.startsWith('image/')) { showToast('Please select a valid image file.', 'error'); return; }
+
+        setSlideUploading(prev => ({ ...prev, [slideId]: true }));
+        try {
+            // Compress & resize to ≤ 1500×480 JPEG before uploading
+            const compressed = await compressImage(file);
+            const fileName = `hero-slides/slide-${slideId}-${Date.now()}.jpg`;
+            const { error: upErr } = await supabase.storage
+                .from('branding')
+                .upload(fileName, compressed, { contentType: 'image/jpeg', cacheControl: '3600', upsert: true });
+            if (upErr) throw upErr;
+
+            const { data: { publicUrl } } = supabase.storage
+                .from('branding')
+                .getPublicUrl(fileName);
+
+            updateSlideLocal(slideId, 'img', publicUrl);
+            setSlideImgBroken(p => { const n = { ...p }; delete n[slideId]; return n; });
+            showToast('Image uploaded!', 'success');
+        } catch (err) {
+            showToast('Upload failed: ' + err.message, 'error');
+        } finally {
+            setSlideUploading(prev => ({ ...prev, [slideId]: false }));
+        }
     };
 
     const toggleTheme = () => setTheme(theme === 'light' ? 'dark' : 'light');
@@ -3263,6 +3385,10 @@ function AdminHomePage() {
                 ::-webkit-scrollbar-track { background: transparent; }
                 ::-webkit-scrollbar-thumb { background: ${t.border}; border-radius: 10px; }
                 ::-webkit-scrollbar-thumb:hover { background: ${t.textSub}; }
+
+                @keyframes spin {
+                    to { transform: rotate(360deg); }
+                }
             `}</style>
 
             {/* Sidebar Overlay (mobile) */}
@@ -3362,6 +3488,9 @@ function AdminHomePage() {
                                 <NavLink id="coupons" label="Advanced Coupons" icon={Tag} active={activeTab === "coupons"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
                                 <NavLink id="promotions" label="Promotional Hub" icon={Sparkles} active={activeTab === "promotions"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
                                 <NavLink id="banner_ads" label="Marketing Banners" icon={Megaphone} active={activeTab === "banner_ads"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
+                                <NavLink id="hero" label="Hero Banner" icon={ImageIcon} active={activeTab === "hero"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
+                                <NavLink id="video_banner" label="Video Banner" icon={Video} active={activeTab === "video_banner"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
+                                <NavLink id="mobile_banners" label="Mobile Banners" icon={Smartphone} active={activeTab === "mobile_banners"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
                                 <NavLink id="email_broadcast" label="Newsletter Hub" icon={Mail} active={activeTab === "email_broadcast"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
                                 <NavLink id="subscribers" label="Subscriber Base" icon={Users} active={activeTab === "subscribers"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
                                 <NavLink id="send_notif" label="Push Notifications" icon={Send} active={activeTab === "send_notif"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
@@ -4939,66 +5068,131 @@ function AdminHomePage() {
 
                     {activeTab === "hero" && (
                         <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
                                 <h3 style={{ fontSize: "18px", fontWeight: 700 }}>Hero Banner Management</h3>
                                 <button onClick={addSlide} className="tab-btn" style={{ padding: "8px 16px", background: ACCENT_GRADIENT, backgroundColor: ACCENT_PINK, color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", fontWeight: 800, boxShadow: "0 10px 24px rgba(236,72,153,0.12)" }}>
                                     <Plus size={18} /> Add New Slide
                                 </button>
                             </div>
-                            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "20px" }}>
+
+                            {/* Image Spec Callout */}
+                            <div style={{ display: "flex", alignItems: "flex-start", gap: "12px", padding: "14px 18px", marginBottom: "24px", borderRadius: "12px", backgroundColor: theme === 'light' ? "#f0f9ff" : "#0c1a2e", border: "1px solid", borderColor: theme === 'light' ? "#bae6fd" : "#1e3a5f" }}>
+                                <div style={{ width: "36px", height: "36px", borderRadius: "10px", backgroundColor: "#3b82f6", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                                    <ImageIcon size={18} color="#fff" />
+                                </div>
+                                <div>
+                                    <p style={{ margin: "0 0 4px", fontSize: "13px", fontWeight: 800, color: theme === 'light' ? "#0369a1" : "#38bdf8" }}>Recommended Image Size</p>
+                                    <p style={{ margin: 0, fontSize: "12px", fontWeight: 600, color: t.textSub, lineHeight: 1.6 }}>
+                                        <strong style={{ color: t.textMain }}>1200 × 400 px</strong> &nbsp;·&nbsp; Aspect ratio <strong style={{ color: t.textMain }}>3 : 1</strong> &nbsp;·&nbsp; Auto cropped &amp; compressed on upload<br />
+                                        Format: <strong style={{ color: t.textMain }}>JPG / PNG / WebP</strong> &nbsp;·&nbsp; Any file size accepted &nbsp;·&nbsp; Landscape / wide images recommended
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: "24px" }}>
                                 {slides.map((slide) => (
-                                    <div key={slide.id} style={{ border: `1px solid ${t.border}`, borderRadius: "10px", overflow: "hidden", backgroundColor: t.bg, display: "flex", flexDirection: "column" }}>
-                                        <div style={{ position: "relative", height: "150px" }}>
-                                            <img src={slide.img || "/banner-hero-events.png"} alt={slide.alt || "Slide"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                                            <button onClick={() => removeSlide(slide.id, slide._id)} style={{ position: "absolute", top: "8px", right: "8px", backgroundColor: "#ef4444", color: "#fff", border: "none", borderRadius: "50%", width: "24px", height: "24px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><X size={14} /></button>
+                                    <div key={slide.id} style={{ border: `1px solid ${t.border}`, borderRadius: "16px", overflow: "hidden", backgroundColor: t.cardBg, display: "flex", flexDirection: "column", boxShadow: "0 4px 20px rgba(0,0,0,0.06)" }}>
+
+                                        {/* ── Image Preview / Upload Zone ── */}
+                                        <div
+                                            style={{ position: "relative", height: "220px", backgroundColor: slideDragOver[slide.id] ? "#1e3a5f" : "#0f172a", cursor: "pointer", transition: "background 0.2s", border: slideDragOver[slide.id] ? "2px dashed #3b82f6" : "2px solid transparent" }}
+                                            onDragOver={(e) => { e.preventDefault(); setSlideDragOver(p => ({ ...p, [slide.id]: true })); }}
+                                            onDragLeave={() => setSlideDragOver(p => ({ ...p, [slide.id]: false }))}
+                                            onDrop={(e) => { e.preventDefault(); setSlideDragOver(p => ({ ...p, [slide.id]: false })); const f = e.dataTransfer.files[0]; if (f) uploadSlideImage(slide.id, f); }}
+                                            onClick={() => document.getElementById(`slide-upload-${slide.id}`)?.click()}
+                                        >
+                                            <input
+                                                id={`slide-upload-${slide.id}`}
+                                                type="file"
+                                                accept="image/jpeg,image/png,image/webp,image/gif"
+                                                style={{ display: "none" }}
+                                                onChange={(e) => { const f = e.target.files[0]; if (f) uploadSlideImage(slide.id, f); }}
+                                            />
+
+                                            {(slide.img && !slideImgBroken[slide.id]) ? (
+                                                <>
+                                                    <img
+                                                        src={slide.img}
+                                                        alt={slide.title || "Slide"}
+                                                        style={{ width: "100%", height: "100%", objectFit: "cover", transition: "opacity 0.3s" }}
+                                                        onError={() => setSlideImgBroken(p => ({ ...p, [slide.id]: true }))}
+                                                    />
+                                                    <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 50%)", pointerEvents: "none" }} />
+                                                    {/* Hover re-upload hint */}
+                                                    <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0)", display: "flex", alignItems: "center", justifyContent: "center", transition: "background 0.2s", pointerEvents: "none" }}
+                                                        className="slide-img-hover">
+                                                    </div>
+                                                    <div style={{ position: "absolute", bottom: "10px", left: "12px", display: "flex", alignItems: "center", gap: "6px", background: "rgba(0,0,0,0.55)", backdropFilter: "blur(6px)", borderRadius: "8px", padding: "5px 10px", pointerEvents: "none" }}>
+                                                        <Upload size={12} color="#fff" />
+                                                        <span style={{ fontSize: "11px", fontWeight: 700, color: "#fff" }}>Click or drag to replace</span>
+                                                    </div>
+                                                </>
+                                            ) : (
+                                                <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "10px", border: "2px dashed rgba(255,255,255,0.15)", margin: "16px", borderRadius: "10px" }}>
+                                                    <div style={{ width: "52px", height: "52px", borderRadius: "14px", backgroundColor: "rgba(59,130,246,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                                        <Upload size={24} color="#60a5fa" />
+                                                    </div>
+                                                    <div style={{ textAlign: "center" }}>
+                                                        <p style={{ margin: 0, fontSize: "13px", fontWeight: 800, color: "#e2e8f0" }}>Click to upload image</p>
+                                                        <p style={{ margin: "3px 0 0", fontSize: "11px", color: "rgba(255,255,255,0.4)" }}>or drag &amp; drop here</p>
+                                                        <p style={{ margin: "6px 0 0", fontSize: "10px", color: "rgba(255,255,255,0.3)", fontWeight: 600 }}>JPG · PNG · WebP · max 5 MB</p>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Uploading spinner overlay */}
+                                            {slideUploading[slide.id] && (
+                                                <div style={{ position: "absolute", inset: 0, backgroundColor: "rgba(0,0,0,0.7)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "12px", zIndex: 10 }}>
+                                                    <div style={{ width: "36px", height: "36px", border: "3px solid rgba(255,255,255,0.2)", borderTop: "3px solid #3b82f6", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+                                                    <span style={{ fontSize: "12px", fontWeight: 700, color: "#fff" }}>Uploading…</span>
+                                                </div>
+                                            )}
+
+                                            {/* Delete button */}
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); removeSlide(slide.id); }}
+                                                style={{ position: "absolute", top: "10px", right: "10px", backgroundColor: "#ef4444", color: "#fff", border: "none", borderRadius: "50%", width: "30px", height: "30px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.4)", zIndex: 5 }}
+                                            ><X size={14} /></button>
                                         </div>
-                                        <div style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "12px", flex: 1 }}>
+
+                                        {/* ── Form Fields ── */}
+                                        <div style={{ padding: "18px", display: "flex", flexDirection: "column", gap: "12px", flex: 1 }}>
                                             <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                                                <label style={{ fontSize: "11px", fontWeight: 700, color: t.textSub, textTransform: "uppercase" }}>Image URL</label>
-                                                <input
-                                                    type="text"
-                                                    placeholder="Slide Image URL"
-                                                    value={slide.img || ""}
-                                                    onChange={(e) => updateSlideLocal(slide.id, 'img', e.target.value)}
-                                                    style={{ width: "100%", padding: "8px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "13px" }}
-                                                />
-                                            </div>
-                                            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                                                <label style={{ fontSize: "11px", fontWeight: 700, color: t.textSub, textTransform: "uppercase" }}>Title</label>
+                                                <label style={{ fontSize: "10px", fontWeight: 800, color: t.textSub, textTransform: "uppercase", letterSpacing: "0.08em" }}>Title</label>
                                                 <input
                                                     type="text"
                                                     placeholder="e.g. Live Concerts"
                                                     value={slide.title || ""}
                                                     onChange={(e) => updateSlideLocal(slide.id, 'title', e.target.value)}
-                                                    style={{ width: "100%", padding: "8px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "13px" }}
+                                                    style={{ width: "100%", padding: "9px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "13px", fontWeight: 600, outline: "none", boxSizing: "border-box" }}
                                                 />
                                             </div>
                                             <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                                                <label style={{ fontSize: "11px", fontWeight: 700, color: t.textSub, textTransform: "uppercase" }}>Subtitle</label>
+                                                <label style={{ fontSize: "10px", fontWeight: 800, color: t.textSub, textTransform: "uppercase", letterSpacing: "0.08em" }}>Subtitle</label>
                                                 <input
                                                     type="text"
                                                     placeholder="e.g. Book your favourite artists"
                                                     value={slide.sub || ""}
                                                     onChange={(e) => updateSlideLocal(slide.id, 'sub', e.target.value)}
-                                                    style={{ width: "100%", padding: "8px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "13px" }}
+                                                    style={{ width: "100%", padding: "9px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "13px", fontWeight: 600, outline: "none", boxSizing: "border-box" }}
                                                 />
                                             </div>
                                             <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                                                <label style={{ fontSize: "11px", fontWeight: 700, color: t.textSub, textTransform: "uppercase" }}>Target URL</label>
+                                                <label style={{ fontSize: "10px", fontWeight: 800, color: t.textSub, textTransform: "uppercase", letterSpacing: "0.08em" }}>Target URL <span style={{ fontWeight: 400, textTransform: "none", opacity: 0.6 }}>(optional)</span></label>
                                                 <input
                                                     type="text"
-                                                    placeholder="/events or full URL"
+                                                    placeholder="/events or https://..."
                                                     value={slide.url || ""}
                                                     onChange={(e) => updateSlideLocal(slide.id, 'url', e.target.value)}
-                                                    style={{ width: "100%", padding: "8px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "13px" }}
+                                                    style={{ width: "100%", padding: "9px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "13px", fontWeight: 600, outline: "none", boxSizing: "border-box" }}
                                                 />
                                             </div>
-                                            
-                                            <button 
+                                            <button
                                                 onClick={() => handleSaveSlide(slide)}
-                                                style={{ marginTop: "8px", padding: "10px", backgroundColor: "#3b82f6", color: "#fff", border: "none", borderRadius: "8px", fontWeight: 700, cursor: "pointer", fontSize: "13px", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}
+                                                disabled={slideUploading[slide.id]}
+                                                style={{ marginTop: "4px", padding: "11px", background: ACCENT_GRADIENT, color: "#fff", border: "none", borderRadius: "10px", fontWeight: 800, cursor: slideUploading[slide.id] ? "not-allowed" : "pointer", fontSize: "13px", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", opacity: slideUploading[slide.id] ? 0.6 : 1, letterSpacing: "0.03em" }}
                                             >
-                                                <Save size={16} /> Save Slide
+                                                <Save size={15} /> Save Slide
                                             </button>
                                         </div>
                                     </div>

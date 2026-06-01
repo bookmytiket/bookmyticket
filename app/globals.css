@@ -103,11 +103,20 @@ main {
 .bms-banner-stage {
   position: relative;
   width: 100%;
-  aspect-ratio: 4500 / 1200;
-  max-height: 480px; /* Increased height for full-width impact */
+  aspect-ratio: 1200 / 400;
+  max-height: 400px;
   border-radius: 0;
   overflow: hidden;
   user-select: none;
+  background: #f8fafc;
+}
+
+@media (max-width: 768px) {
+  .bms-banner-stage {
+    height: 120px;
+    max-height: 120px;
+    aspect-ratio: unset;
+  }
 }
 
 /* Override for Signin Page Left Panel */
