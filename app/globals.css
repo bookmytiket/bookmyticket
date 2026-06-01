@@ -113,7 +113,7 @@ main {
 
 @media (max-width: 768px) {
   .bms-banner-stage {
-    aspect-ratio: 2.4 / 1;   /* slightly taller on mobile: 390px → ~163px */
+    aspect-ratio: 3 / 1;   /* matches 1200×400 upload size exactly — no letterbox */
     max-height: none;
   }
 }

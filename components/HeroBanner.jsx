@@ -219,7 +219,7 @@ export default function HeroBanner({ slides: propSlides, showDetails = true, sho
                                     style={{
                                         width: "100%",
                                         height: "100%",
-                                        objectFit: isMobile ? "contain" : "cover",
+                                        objectFit: "cover",
                                         objectPosition: "center center",
                                         display: "block"
                                     }}
