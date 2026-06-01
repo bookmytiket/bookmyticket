@@ -728,8 +728,8 @@ function HomeClient() {
           </section>
         ) : (
           <div style={{ width: '100%' }}>
-            <div style={{ width: '100%', maxWidth: '1240px', margin: '0 auto', padding: isMobile ? '0' : '20px 20px 40px 20px' }}>
-              <div style={{ borderRadius: isMobile ? '0' : '16px', overflow: 'hidden', boxShadow: isMobile ? 'none' : '0 10px 30px rgba(0,0,0,0.08)' }}>
+            <div style={{ width: '100%' }}>
+              <div style={{ overflow: 'hidden' }}>
                 <HeroBanner slides={heroSlides} showPromo={heroSlides.length === 0} />
               </div>
             </div>

@@ -100,23 +100,16 @@ main {
   overflow: hidden;
 }
 
+/* ── Hero Banner ── */
 .bms-banner-stage {
   position: relative;
   width: 100%;
-  aspect-ratio: 3 / 1;
-  max-height: 400px;
-  border-radius: 0;
+  aspect-ratio: 3 / 1;        /* stable 3:1 ratio — matches 1200×400 banner */
   overflow: hidden;
   user-select: none;
-  background: #f8fafc;
+  background: #fff;
 }
 
-@media (max-width: 768px) {
-  .bms-banner-stage {
-    aspect-ratio: 3 / 1;   /* matches 1200×400 upload size exactly — no letterbox */
-    max-height: none;
-  }
-}
 
 /* Override for Signin Page Left Panel */
 .signin-left-banner .bms-banner-wrap {
