@@ -7,7 +7,7 @@ import {
   Users, QrCode, Layout, ShieldCheck, Download, Search, 
   Filter, CheckCircle2, AlertCircle, TrendingUp, DollarSign 
 } from 'lucide-react';
-import MarathonPosterGenerator from '../../components/MarathonPosterGenerator';
+import MarathonPosterGenerator from '../../../components/MarathonPosterGenerator';
 
 export default function MarathonDashboard() {
   const { id } = useParams();
