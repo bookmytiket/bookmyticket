@@ -340,7 +340,7 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
                 if (!eventData.title) throw new Error("Event Title is required");
                 if (!eventData.event_date) throw new Error("Event Date is required");
                 if (!eventData.event_time) throw new Error("Event Time is required");
-                if (!eventData.venue) throw new Error("Venue Name is required");
+                if (!eventData.venue && !eventData.map_location?.address) throw new Error("Venue Name is required");
                 if (!eventData.banner_image) throw new Error("Event Poster/Banner is required");
                 if (categories.length === 0) throw new Error("At least one Run Category is required");
             }
@@ -359,8 +359,8 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
                 country: eventData.country,
                 district: eventData.district || null,
                 pincode: eventData.zipCode,
-                status: newStatus === 'Published' || eventData.status?.toLowerCase() === 'published' ? 'published' : 'draft',
-                publish_status: newStatus === 'Published' || eventData.status?.toLowerCase() === 'published' ? 'published' : 'draft',
+                status: newStatus === 'Published' || eventData.status?.toLowerCase() === 'published' ? 'published' : newStatus === 'PendingReview' ? 'pending_review' : 'draft',
+                publish_status: newStatus === 'Published' || eventData.status?.toLowerCase() === 'published' ? 'published' : newStatus === 'PendingReview' ? 'pending_review' : 'draft',
                 visibility_status: 'public',
                 approval_status: 'approved',
                 listing_status: 'active',
@@ -452,6 +452,7 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
                 awareness_text: eventData.awareness_text,
                 description: eventData.description,
                 banner_image: eventData.banner_image,
+                logo_url: eventData.logo_url || null,
                 event_date: eventData.event_date || null,
                 event_time: eventData.event_time || null,
                 event_end_date: eventData.event_end_date || null,
@@ -466,11 +467,11 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
                 starting_point: eventData.starting_point,
                 reg_start_date: eventData.reg_start_date || null,
                 reg_end_date: eventData.reg_end_date || null,
-                expiry_date: eventData.expiry_date || null,
+                organiser_name: eventData.organiser_name || null,
                 whatsapp_link: eventData.whatsapp_link,
                 support_number: eventData.support_number,
                 terms: eventData.terms,
-                status: newStatus === 'Published' || eventData.status?.toLowerCase() === 'published' ? 'published' : 'draft',
+                status: newStatus === 'Published' || eventData.status?.toLowerCase() === 'published' ? 'published' : newStatus === 'PendingReview' ? 'pending_review' : 'draft',
                 updated_at: new Date().toISOString()
             };
 
@@ -513,11 +514,11 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
 
             setEventData(prev => ({
                 ...prev,
-                status: newStatus === 'Published' || prev.status?.toLowerCase() === 'published' ? 'published' : 'draft'
+                status: newStatus === 'Published' || prev.status?.toLowerCase() === 'published' ? 'published' : newStatus === 'PendingReview' ? 'pending_review' : 'draft'
             }));
 
             if (!isAutoSave) {
-                showToast(`Marathon ${newStatus === 'Published' ? 'Published' : 'Saved'}!`, "success");
+                showToast(`Marathon ${newStatus === 'Published' ? 'Published' : newStatus === 'PendingReview' ? 'Submitted for Review' : 'Saved'}!`, "success");
                 if (onPublish) onPublish();
             } else {
                 if (!localMarathonId && marathon_id) {
@@ -616,42 +617,84 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
                             )}
                         </div>
 
-                        {/* Route Map Upload */}
-                        <div className="flex items-center gap-4 mt-6">
-                            <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-500">
-                                <MapPin size={20} />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                            {/* Route Map Upload */}
+                            <div>
+                                <div className="flex items-center gap-4 mb-4">
+                                    <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-500">
+                                        <MapPin size={20} />
+                                    </div>
+                                    <h2 className="text-xl font-black text-slate-900 uppercase">Route Map Image</h2>
+                                </div>
+                                <div className="relative group h-48 rounded-[2rem] border-2 border-dashed border-slate-200 bg-slate-50 overflow-hidden hover:border-blue-300 transition-all flex items-center justify-center">
+                                    {eventData.route_map_image ? (
+                                        <>
+                                            <img src={eventData.route_map_image} className="absolute inset-0 w-full h-full object-cover" />
+                                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                <button 
+                                                    onClick={() => setEventData(p => ({ ...p, route_map_image: "" }))} 
+                                                    className="bg-white p-3 rounded-full text-red-500 shadow-xl transform scale-75 group-hover:scale-100 transition-transform"
+                                                >
+                                                    <X size={20} />
+                                                </button>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <label className="cursor-pointer flex flex-col items-center gap-3 w-full h-full justify-center">
+                                            <CloudUpload size={24} className="text-slate-400" />
+                                            <div className="text-center">
+                                                <p className="text-xs font-bold text-slate-900 uppercase tracking-widest">Upload Route Map</p>
+                                            </div>
+                                            <input type="file" className="hidden" accept="image/*" onChange={async (e) => {
+                                                const f = e.target.files?.[0];
+                                                if(f) {
+                                                    const url = await handleImageUpload(f, 'route_maps');
+                                                    if(url) setEventData(p => ({ ...p, route_map_image: url }));
+                                                }
+                                            }} />
+                                        </label>
+                                    )}
+                                </div>
                             </div>
-                            <h2 className="text-xl font-black text-slate-900 uppercase">Route Map Image</h2>
-                        </div>
-
-                        <div className="relative group h-48 rounded-[2rem] border-2 border-dashed border-slate-200 bg-slate-50 overflow-hidden hover:border-blue-300 transition-all flex items-center justify-center mt-4">
-                            {eventData.route_map_image ? (
-                                <>
-                                    <img src={eventData.route_map_image} className="absolute inset-0 w-full h-full object-cover" />
-                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                        <button 
-                                            onClick={() => setEventData(p => ({ ...p, route_map_image: "" }))} 
-                                            className="bg-white p-3 rounded-full text-red-500 shadow-xl transform scale-75 group-hover:scale-100 transition-transform"
-                                        >
-                                            <X size={20} />
-                                        </button>
+                            
+                            {/* Event Logo Upload */}
+                            <div>
+                                <div className="flex items-center gap-4 mb-4">
+                                    <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-500">
+                                        <Star size={20} />
                                     </div>
-                                </>
-                            ) : (
-                                <label className="cursor-pointer flex flex-col items-center gap-3">
-                                    <CloudUpload size={24} className="text-slate-400" />
-                                    <div className="text-center">
-                                        <p className="text-xs font-bold text-slate-900 uppercase tracking-widest">Upload Route Map</p>
-                                    </div>
-                                    <input type="file" className="hidden" accept="image/*" onChange={async (e) => {
-                                        const f = e.target.files?.[0];
-                                        if(f) {
-                                            const url = await handleImageUpload(f, 'route_maps');
-                                            if(url) setEventData(p => ({ ...p, route_map_image: url }));
-                                        }
-                                    }} />
-                                </label>
-                            )}
+                                    <h2 className="text-xl font-black text-slate-900 uppercase">Sponsor / Event Logo</h2>
+                                </div>
+                                <div className="relative group h-48 rounded-[2rem] border-2 border-dashed border-slate-200 bg-slate-50 overflow-hidden hover:border-indigo-300 transition-all flex items-center justify-center">
+                                    {eventData.logo_url ? (
+                                        <>
+                                            <img src={eventData.logo_url} className="absolute inset-0 w-full h-full object-contain p-4" />
+                                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                <button 
+                                                    onClick={() => setEventData(p => ({ ...p, logo_url: "" }))} 
+                                                    className="bg-white p-3 rounded-full text-red-500 shadow-xl transform scale-75 group-hover:scale-100 transition-transform"
+                                                >
+                                                    <X size={20} />
+                                                </button>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <label className="cursor-pointer flex flex-col items-center gap-3 w-full h-full justify-center">
+                                            <CloudUpload size={24} className="text-slate-400" />
+                                            <div className="text-center">
+                                                <p className="text-xs font-bold text-slate-900 uppercase tracking-widest">Upload Logo</p>
+                                            </div>
+                                            <input type="file" className="hidden" accept="image/*" onChange={async (e) => {
+                                                const f = e.target.files?.[0];
+                                                if(f) {
+                                                    const url = await handleImageUpload(f, 'posters');
+                                                    if(url) setEventData(p => ({ ...p, logo_url: url }));
+                                                }
+                                            }} />
+                                        </label>
+                                    )}
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -793,15 +836,46 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
                                         }} />
                                     </div>
                                     <div>
-                                        <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest block mb-2">Distance (KM)</label>
-                                        <input type="number" step="0.1" className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl font-black text-sm text-slate-900" value={cat.distance_km} onChange={e => {
-                                            const nc = [...categories]; nc[idx].distance_km = e.target.value; setCategories(nc);
-                                        }} />
+                                        <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest block mb-2">Distance</label>
+                                        <div className="flex gap-2">
+                                            <input type="number" step="0.1" className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl font-black text-sm text-slate-900" value={cat.distance_km} onChange={e => {
+                                                const nc = [...categories]; nc[idx].distance_km = e.target.value; setCategories(nc);
+                                            }} />
+                                            <div className="w-28 mt-[-12px]">
+                                                <CustomSelect 
+                                                    value={cat.distance_unit || "KM"} 
+                                                    options={["KM", "M"]} 
+                                                    onChange={val => {
+                                                        const nc = [...categories]; nc[idx].distance_unit = val; setCategories(nc);
+                                                    }} 
+                                                    searchable={false}
+                                                />
+                                            </div>
+                                        </div>
                                     </div>
                                     <div>
                                         <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest block mb-2">Age Group</label>
                                         <input className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl font-black text-sm text-slate-900" value={cat.age_group} onChange={e => {
                                             const nc = [...categories]; nc[idx].age_group = e.target.value; setCategories(nc);
+                                        }} />
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest block mb-2">Gender</label>
+                                        <div className="mt-[-12px]">
+                                            <CustomSelect 
+                                                value={cat.gender_category || "All"} 
+                                                options={["All", "Men", "Women"]} 
+                                                onChange={val => {
+                                                    const nc = [...categories]; nc[idx].gender_category = val; setCategories(nc);
+                                                }} 
+                                                searchable={false}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest block mb-2">Prize Amount (₹)</label>
+                                        <input type="number" className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl font-black text-sm text-slate-900" value={cat.prize_amount || ""} onChange={e => {
+                                            const nc = [...categories]; nc[idx].prize_amount = e.target.value; setCategories(nc);
                                         }} />
                                     </div>
                                     <div>
@@ -811,7 +885,7 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
                                         }} />
                                     </div>
                                     <div>
-                                        <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest block mb-2">Total Slots</label>
+                                        <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest block mb-2">Participant Capacity</label>
                                         <input type="number" className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl font-black text-sm text-slate-900" value={cat.slots_total} onChange={e => {
                                             const nc = [...categories]; nc[idx].slots_total = e.target.value; setCategories(nc);
                                         }} />
@@ -899,12 +973,42 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
                         <div className="mt-8">
                             <div className="flex items-center justify-between mb-4">
                                 <h3 className="text-sm font-black text-slate-900 uppercase">Benefits & Sponsors</h3>
-                                <button 
-                                    onClick={() => setSponsors([...sponsors, { sponsor_name: "", logo_url: "", sponsor_type: "Partner" }])}
-                                    className="text-[10px] font-black uppercase text-pink-500 hover:underline"
-                                >
-                                    + Add Sponsor
-                                </button>
+                                <div className="flex items-center gap-4">
+                                    <label className="cursor-pointer text-[10px] font-black uppercase text-indigo-500 hover:underline flex items-center gap-1">
+                                        <CloudUpload size={14} /> Batch Upload Logos
+                                        <input type="file" multiple className="hidden" accept="image/*" onChange={async (e) => {
+                                            const files = Array.from(e.target.files || []);
+                                            if (!files.length) return;
+                                            
+                                            showToast(`Uploading ${files.length} sponsor logos...`, "info");
+                                            const newSponsors = [...sponsors];
+                                            
+                                            for (const f of files) {
+                                                const url = await handleImageUpload(f, 'sponsors');
+                                                if (url) {
+                                                    // Extract name from filename (remove extension and replace special chars)
+                                                    let name = f.name.split('.').slice(0, -1).join('.');
+                                                    name = name.replace(/[-_]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                                                    
+                                                    newSponsors.push({ 
+                                                        sponsor_name: name, 
+                                                        logo_url: url, 
+                                                        sponsor_type: "Partner" 
+                                                    });
+                                                }
+                                            }
+                                            
+                                            setSponsors(newSponsors);
+                                            showToast("Sponsors uploaded successfully", "success");
+                                        }} />
+                                    </label>
+                                    <button 
+                                        onClick={() => setSponsors([...sponsors, { sponsor_name: "", logo_url: "", sponsor_type: "Partner" }])}
+                                        className="text-[10px] font-black uppercase text-pink-500 hover:underline"
+                                    >
+                                        + Add Sponsor
+                                    </button>
+                                </div>
                             </div>
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                                 {BENEFIT_ICONS.map(b => {
@@ -942,12 +1046,26 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
                                                 </button>
                                                 <div className="space-y-3">
                                                     <div className="flex items-center gap-3">
-                                                        <div className="w-12 h-12 rounded-xl bg-white border border-slate-100 flex items-center justify-center overflow-hidden">
-                                                            {s.logo_url ? <img src={s.logo_url} className="w-full h-full object-contain" /> : <Star size={20} className="text-slate-200" />}
-                                                        </div>
+                                                        <label className="w-16 h-16 rounded-xl bg-white border border-slate-200 flex items-center justify-center overflow-hidden cursor-pointer hover:border-pink-400 transition-colors relative group/logo">
+                                                            {s.logo_url ? <img src={s.logo_url} className="w-full h-full object-contain p-2" /> : <CloudUpload size={20} className="text-slate-300" />}
+                                                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/logo:opacity-100 flex items-center justify-center transition-opacity">
+                                                                <CloudUpload size={16} className="text-white" />
+                                                            </div>
+                                                            <input type="file" className="hidden" accept="image/*" onChange={async (e) => {
+                                                                const f = e.target.files?.[0];
+                                                                if(f) {
+                                                                    const url = await handleImageUpload(f, 'sponsors');
+                                                                    if(url) {
+                                                                        const ns = [...sponsors];
+                                                                        ns[idx].logo_url = url;
+                                                                        setSponsors(ns);
+                                                                    }
+                                                                }
+                                                            }} />
+                                                        </label>
                                                         <div className="flex-1">
                                                             <input 
-                                                                className="w-full bg-transparent border-b border-slate-200 text-xs font-bold text-slate-900 focus:outline-none focus:border-pink-500 pb-1"
+                                                                className="w-full bg-transparent border-b border-slate-200 text-sm font-black text-slate-900 focus:outline-none focus:border-pink-500 pb-1"
                                                                 placeholder="Sponsor Name"
                                                                 value={s.sponsor_name}
                                                                 onChange={e => {
@@ -968,32 +1086,6 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
                                                                 />
                                                             </div>
                                                         </div>
-                                                    </div>
-                                                    <div className="relative">
-                                                        <input 
-                                                            className="w-full bg-white border border-slate-100 p-2 rounded-xl text-[10px] font-medium text-slate-600 truncate pr-8"
-                                                            placeholder="Paste Logo URL"
-                                                            value={s.logo_url}
-                                                            onChange={e => {
-                                                                const ns = [...sponsors];
-                                                                ns[idx].logo_url = e.target.value;
-                                                                setSponsors(ns);
-                                                            }}
-                                                        />
-                                                        <label className="absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer text-slate-400 hover:text-pink-500">
-                                                            <CloudUpload size={14} />
-                                                            <input type="file" className="hidden" accept="image/*" onChange={async (e) => {
-                                                                const f = e.target.files?.[0];
-                                                                if(f) {
-                                                                    const url = await handleImageUpload(f, 'sponsors');
-                                                                    if(url) {
-                                                                        const ns = [...sponsors];
-                                                                        ns[idx].logo_url = url;
-                                                                        setSponsors(ns);
-                                                                    }
-                                                                }
-                                                            }} />
-                                                        </label>
                                                     </div>
                                                 </div>
                                             </div>
@@ -1329,9 +1421,9 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
                         <button onClick={() => setCurrentStep(5)} className="px-10 py-4 text-slate-800 font-bold uppercase tracking-widest text-xs flex items-center gap-2"><ChevronLeft size={16} /> Back</button>
                         <div className="flex gap-4">
                             <button onClick={() => saveMarathon('Draft')} disabled={loading} className="px-8 py-4 bg-white border border-slate-200 text-slate-900 rounded-2xl font-bold uppercase tracking-widest text-xs hover:bg-slate-50 transition-all">Save Draft</button>
-                            <button onClick={() => saveMarathon('Published')} disabled={loading} className="px-12 py-4 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-2xl flex items-center gap-2">
+                            <button onClick={() => saveMarathon('PendingReview')} disabled={loading} className="px-12 py-4 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-2xl flex items-center gap-2">
                                 {loading ? <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" /> : <Save size={16} />}
-                                {marathonId ? "Update Event" : "Go Live & Publish"}
+                                {marathonId ? "Update Event" : "Submit to Review"}
                             </button>
                         </div>
                     </div>
