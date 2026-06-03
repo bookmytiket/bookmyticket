@@ -30,9 +30,7 @@ import PromoteModal from "@/components/PromoteModal";
 import { useToast } from "@/context/ToastContext";
 import { useConfirm } from "@/context/ConfirmContext";
 import { motion, AnimatePresence } from "framer-motion";
-import SportsEventForm from "./components/SportsEventForm";
 import UniversalEventForm from "./components/UniversalEventForm";
-import CompetitionEventForm from "./components/CompetitionEventForm";
 import PhysicalEventForm from "./components/PhysicalEventForm";
 import UnifiedEventForm from "./components/UnifiedEventForm";
 import VirtualEventForm from "./components/VirtualEventForm";
@@ -2766,6 +2764,7 @@ function OrganiserPanel() {
 
         if (currentStatus === "draft") return "draft";
         if (currentStatus === "pending_review") return "pending_review";
+        if (currentStatus === "pending_approval") return "pending_approval";
         if (currentStatus === "approved") return "approved";
         if (currentStatus === "rejected") return "rejected";
         if (currentStatus === "changes_requested") return "changes_requested";
@@ -3237,34 +3236,75 @@ function OrganiserPanel() {
 
           if (isTournament && newEvent?.id) {
             try {
-              await supabase.from("tournament_events").insert({
+              const tourneyPayload = {
                 id: newEvent.id,
-                organiser_id: user?.id,
-                event_name: (postEvent.title || "").trim(),
+                organizer_id: user?.id,
                 sport_type: postEvent.sportType || postEvent.category || "General",
+                tournament_name: (postEvent.title || "").trim(),
+                slug: ((postEvent.title || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-") + "-" + Date.now()),
+                banner_url: postEvent.bannerPreview || null,
+                poster_url: postEvent.posterPreview || null,
+                organizer_name: postEvent.organiser_name || "",
+                organizer_logo_url: postEvent.organizerLogo || null,
+                venue: postEvent.venue || "",
+                venue_address: postEvent.address || "",
+                google_map_url: postEvent.googleMapUrl || "",
+                country: postEvent.country || "India",
+                state: postEvent.state || "",
+                district: postEvent.district || "",
+                city: postEvent.city || "",
+                zip_code: postEvent.zipCode || "",
+                latitude: postEvent.latitude || null,
+                longitude: postEvent.longitude || null,
+                description: postEvent.description || "",
+                terms_conditions: postEvent.termsConditions || "",
                 tournament_format: postEvent.tournamentFormat || "Knockout",
-                registration_fee: Number(postEvent.registrationFee) || 0,
-                registration_end_at: postEvent.registrationEndDate || null,
-                min_team_size: Number(postEvent.minTeamSize) || 1,
-                max_team_size: Number(postEvent.maxTeamSize) || 20,
-                audience_free_access: !!postEvent.audienceFreeAccess,
-                status: "published",
-                metadata: {
-                  prizePool: postEvent.prizePool || "TBA",
-                  contactEmail: postEvent.contactEmail,
-                  contactPhone: postEvent.contactPhone,
-                },
-              });
+                participation_type: postEvent.participationType || "Individual",
+                registration_type: postEvent.registrationType || "Paid",
+                registration_open_date: postEvent.registrationStartDate || null,
+                registration_close_date: postEvent.registrationEndDate || null,
+                event_date: postEvent.startDate || null,
+                reporting_time: postEvent.reportingTime || "",
+                start_time: postEvent.startTime || "",
+                winner_prize: postEvent.winnerPrize || "",
+                runner_up_prize: postEvent.runnerUpPrize || "",
+                semi_final_prize: postEvent.semiFinalPrize || "",
+                has_trophy: !!postEvent.hasTrophy,
+                has_medal: !!postEvent.hasMedal,
+                has_certificate: !!postEvent.hasCertificate,
+                has_participation_kit: !!postEvent.hasParticipationKit,
+                req_aadhaar: !!postEvent.reqAadhaar,
+                req_school_id: !!postEvent.reqSchoolId,
+                req_passport: !!postEvent.reqPassport,
+                req_age_proof: !!postEvent.reqAgeProof,
+                req_medical_certificate: !!postEvent.reqMedicalCert,
+                status: currentStatus === "draft" ? "draft" : currentStatus
+              };
+              await supabase.from("tournaments").insert(tourneyPayload);
 
               if (postEvent.categories?.length > 0) {
                 const cats = postEvent.categories.map((c) => ({
-                  event_id: newEvent.id,
-                  category_name: c.name,
-                  category_fee: Number(c.fee) || 0,
-                  max_teams: Number(c.maxTeams) || 16,
-                  active: true,
+                  tournament_id: newEvent.id,
+                  category_title: c.title || "",
+                  age_group: c.ageGroup || "",
+                  gender: c.gender || "Any",
+                  registration_fee: Number(c.fee) || 0,
+                  capacity: Number(c.capacity) || 64,
+                  prize_amount: c.prize || "",
+                  category_description: c.description || ""
                 }));
                 await supabase.from("tournament_categories").insert(cats);
+              }
+
+              if (postEvent.sponsors?.length > 0) {
+                const spons = postEvent.sponsors.map((s, i) => ({
+                  tournament_id: newEvent.id,
+                  sponsor_type: s.type,
+                  sponsor_name: s.name,
+                  logo_url: s.logo || null,
+                  display_order: i
+                }));
+                await supabase.from("tournament_sponsors").insert(spons);
               }
             } catch (err) {
               console.error("Tournament sync failed:", err);
@@ -7593,46 +7633,11 @@ function OrganiserPanel() {
               );
             }
             if (
-              postEvent.type === "Sports Event" ||
-              postEvent.type === "Sports"
-            ) {
-              return (
-                <SportsEventForm
-                  postEvent={postEvent}
-                  setPostEvent={setPostEvent}
-                  onCancel={() => {
-                    setPostEvent(getInitialPostEvent());
-                    setAddEventStep("select_type");
-                  }}
-                  onPublish={publishSeatEvent}
-                  isEditing={!!editingEvent}
-                />
-              );
-            }
-            if (
               postEvent.type === "Tournament" ||
               postEvent.type === "Tournament Event"
             ) {
               return (
                 <TournamentEventForm
-                  postEvent={postEvent}
-                  setPostEvent={setPostEvent}
-                  onCancel={() => {
-                    setPostEvent(getInitialPostEvent());
-                    setAddEventStep("select_type");
-                  }}
-                  onPublish={publishSeatEvent}
-                  isEditing={!!editingEvent}
-                />
-              );
-            }
-            if (
-              postEvent.type === "Competition" ||
-              postEvent.type === "Competition Event" ||
-              postEvent.type === "E-Sports"
-            ) {
-              return (
-                <CompetitionEventForm
                   postEvent={postEvent}
                   setPostEvent={setPostEvent}
                   onCancel={() => {
