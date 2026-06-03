@@ -251,7 +251,7 @@ export default function Footer() {
                         <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: "14px" }}>
                             {quickLinks.map(page => (
                                 <li key={page.title}>
-                                    <a href={["about-us", "contact-us", "terms-and-conditions", "privacy-policy", "refund-policy", "organizer-information"].includes(page.slug) ? `/${page.slug}` : `/p/${page.slug}`} style={{
+                                    <a href={["about-us", "contact-us", "terms-and-conditions", "privacy-policy", "refund-policy", "organizer-information", "careers"].includes(page.slug) ? `/${page.slug}` : `/p/${page.slug}`} style={{
                                         fontSize: "14px", color: "rgba(255,255,255,0.5)",
                                         textDecoration: "none", transition: "all 0.2s",
                                         fontWeight: 500,
