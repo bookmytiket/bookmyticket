@@ -3492,6 +3492,7 @@ function AdminHomePage() {
                                 <NavLink id="hero" label="Hero Banner" icon={ImageIcon} active={activeTab === "hero"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
                                 <NavLink id="video_banner" label="Video Banner" icon={Video} active={activeTab === "video_banner"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
                                 <NavLink id="mobile_banners" label="Mobile Banners" icon={Smartphone} active={activeTab === "mobile_banners"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
+                                <NavLink id="memories" label="Recent Memories" icon={ImageIcon} active={activeTab === "memories"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
                                 <NavLink id="email_broadcast" label="Newsletter Hub" icon={Mail} active={activeTab === "email_broadcast"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
                                 <NavLink id="subscribers" label="Subscriber Base" icon={Users} active={activeTab === "subscribers"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
                                 <NavLink id="send_notif" label="Push Notifications" icon={Send} active={activeTab === "send_notif"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />

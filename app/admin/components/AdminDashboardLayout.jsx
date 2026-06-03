@@ -164,6 +164,7 @@ export default function AdminDashboardLayout({ children, activeTab: initialActiv
                                 { label: "Exclusive Events", id: "exclusive_settings" },
                                 { label: "Featured Events", id: "events_settings" },
                                 { label: "Event Partners", id: "event_partners" },
+                                { label: "Recent Memories", id: "memories" },
                                 { label: "Maintenance Mode", id: "maintenance" }
                             ].map(sub => (
                                 <SidebarSubItem key={sub.id} id={sub.id} label={sub.label} active={activeTab === sub.id} />

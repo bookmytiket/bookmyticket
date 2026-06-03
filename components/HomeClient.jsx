@@ -31,6 +31,7 @@ import BrandCouponsSection from '@/components/BrandCouponsSection';
 import ServiceCategories from '@/components/ServiceCategories';
 import PublicReviewsBanner from '@/components/PublicReviewsBanner';
 import TopRatedServices from '@/components/TopRatedServices';
+import RecentMemories from '@/components/RecentMemories';
 import { resolveBannerRedirect } from '@/lib/bannerHelper';
 import { getEventPath } from '@/app/utils/seo';
 
@@ -1183,6 +1184,11 @@ function HomeClient() {
 
             {/* Top Rated Professional Services */}
             <TopRatedServices professionals={serviceProviders} />
+
+            {/* 8) Recent Memories */}
+            <div style={{ width: '100%' }}>
+              <RecentMemories />
+            </div>
 
             {/* Branding & Others removed */}
 
