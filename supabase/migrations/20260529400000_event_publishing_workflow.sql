@@ -44,17 +44,33 @@ CREATE TABLE IF NOT EXISTS public.event_status_history (
 
 -- RLS Policies
 ALTER TABLE public.event_drafts ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Organizers can read their drafts" ON public.event_drafts;
+DROP POLICY IF EXISTS "Organizers can read their drafts" ON public.event_drafts;
 CREATE POLICY "Organizers can read their drafts" ON public.event_drafts FOR SELECT USING (EXISTS (SELECT 1 FROM public.events WHERE events.id = event_drafts.event_id AND events.organiser_id = auth.uid()));
+DROP POLICY IF EXISTS "Organizers can insert drafts" ON public.event_drafts;
+DROP POLICY IF EXISTS "Organizers can insert drafts" ON public.event_drafts;
 CREATE POLICY "Organizers can insert drafts" ON public.event_drafts FOR INSERT WITH CHECK (EXISTS (SELECT 1 FROM public.events WHERE events.id = event_drafts.event_id AND events.organiser_id = auth.uid()));
+DROP POLICY IF EXISTS "Organizers can update their drafts" ON public.event_drafts;
+DROP POLICY IF EXISTS "Organizers can update their drafts" ON public.event_drafts;
 CREATE POLICY "Organizers can update their drafts" ON public.event_drafts FOR UPDATE USING (EXISTS (SELECT 1 FROM public.events WHERE events.id = event_drafts.event_id AND events.organiser_id = auth.uid()));
+DROP POLICY IF EXISTS "Admin full access drafts" ON public.event_drafts;
+DROP POLICY IF EXISTS "Admin full access drafts" ON public.event_drafts;
 CREATE POLICY "Admin full access drafts" ON public.event_drafts FOR ALL USING (auth.jwt() ->> 'role' = 'admin');
 
 ALTER TABLE public.event_reviews ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Organizers can read reviews for their events" ON public.event_reviews;
+DROP POLICY IF EXISTS "Organizers can read reviews for their events" ON public.event_reviews;
 CREATE POLICY "Organizers can read reviews for their events" ON public.event_reviews FOR SELECT USING (EXISTS (SELECT 1 FROM public.events WHERE events.id = event_reviews.event_id AND events.organiser_id = auth.uid()));
+DROP POLICY IF EXISTS "Admin full access reviews" ON public.event_reviews;
+DROP POLICY IF EXISTS "Admin full access reviews" ON public.event_reviews;
 CREATE POLICY "Admin full access reviews" ON public.event_reviews FOR ALL USING (auth.jwt() ->> 'role' = 'admin');
 
 ALTER TABLE public.event_status_history ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Organizers can read status history for their events" ON public.event_status_history;
+DROP POLICY IF EXISTS "Organizers can read status history for their events" ON public.event_status_history;
 CREATE POLICY "Organizers can read status history for their events" ON public.event_status_history FOR SELECT USING (EXISTS (SELECT 1 FROM public.events WHERE events.id = event_status_history.event_id AND events.organiser_id = auth.uid()));
+DROP POLICY IF EXISTS "Admin full access status history" ON public.event_status_history;
+DROP POLICY IF EXISTS "Admin full access status history" ON public.event_status_history;
 CREATE POLICY "Admin full access status history" ON public.event_status_history FOR ALL USING (auth.jwt() ->> 'role' = 'admin');
 
 -- Triggers for History tracking (Optional but recommended)

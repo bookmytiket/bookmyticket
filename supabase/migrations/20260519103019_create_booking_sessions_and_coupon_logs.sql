@@ -62,25 +62,30 @@ ALTER TABLE public.payment_transactions ENABLE ROW LEVEL SECURITY;
 
 -- Policies for booking_sessions
 DROP POLICY IF EXISTS "Users can manage own booking_sessions" ON public.booking_sessions;
+DROP POLICY IF EXISTS "Users can manage own booking_sessions" ON public.booking_sessions;
 CREATE POLICY "Users can manage own booking_sessions" ON public.booking_sessions
     FOR ALL USING (auth.uid() = user_id OR auth.role() = 'service_role');
 
 -- Policies for coupon_usage_logs
 DROP POLICY IF EXISTS "Users can view own coupon_usage_logs" ON public.coupon_usage_logs;
+DROP POLICY IF EXISTS "Users can view own coupon_usage_logs" ON public.coupon_usage_logs;
 CREATE POLICY "Users can view own coupon_usage_logs" ON public.coupon_usage_logs
     FOR SELECT USING (auth.uid() = user_id OR auth.role() = 'service_role');
 
+DROP POLICY IF EXISTS "Users can insert own coupon_usage_logs" ON public.coupon_usage_logs;
 DROP POLICY IF EXISTS "Users can insert own coupon_usage_logs" ON public.coupon_usage_logs;
 CREATE POLICY "Users can insert own coupon_usage_logs" ON public.coupon_usage_logs
     FOR INSERT WITH CHECK (auth.uid() = user_id OR auth.role() = 'service_role');
 
 -- Policies for payment_transactions
 DROP POLICY IF EXISTS "Users can view own payment_transactions" ON public.payment_transactions;
+DROP POLICY IF EXISTS "Users can view own payment_transactions" ON public.payment_transactions;
 CREATE POLICY "Users can view own payment_transactions" ON public.payment_transactions
     FOR SELECT USING (
         booking_id IN (SELECT id FROM public.bookings WHERE user_id = auth.uid()) OR auth.role() = 'service_role'
     );
 
+DROP POLICY IF EXISTS "Service role full access payment_transactions" ON public.payment_transactions;
 DROP POLICY IF EXISTS "Service role full access payment_transactions" ON public.payment_transactions;
 CREATE POLICY "Service role full access payment_transactions" ON public.payment_transactions
     FOR ALL USING (auth.role() = 'service_role');

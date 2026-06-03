@@ -52,8 +52,11 @@ ALTER TABLE public.contact_inquiries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.contact_settings ENABLE ROW LEVEL SECURITY;
 
 -- Policies for public inserts
+DROP POLICY IF EXISTS "Enable insert access for all users" ON public.contact_otps;
 CREATE POLICY "Enable insert access for all users" ON public.contact_otps FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "Enable insert access for all users" ON public.contact_inquiries;
 CREATE POLICY "Enable insert access for all users" ON public.contact_inquiries FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "Enable read access for all users" ON public.contact_settings;
 CREATE POLICY "Enable read access for all users" ON public.contact_settings FOR SELECT USING (true);
 
 -- Provide initial default configuration for contact_settings if it's empty

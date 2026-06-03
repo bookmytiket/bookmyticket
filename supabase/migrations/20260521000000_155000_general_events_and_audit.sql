@@ -49,14 +49,19 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.general_inventory;
 
 -- RLS Policies
 ALTER TABLE public.event_updates_audit ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Organizers can read their audits" ON public.event_updates_audit;
 CREATE POLICY "Organizers can read their audits" ON public.event_updates_audit FOR SELECT USING (EXISTS (SELECT 1 FROM public.events WHERE events.id = event_updates_audit.event_id AND events.organiser_id = auth.uid()));
 
 ALTER TABLE public.event_ticket_categories ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public can read ticket categories" ON public.event_ticket_categories;
 CREATE POLICY "Public can read ticket categories" ON public.event_ticket_categories FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Organizers manage ticket categories" ON public.event_ticket_categories;
 CREATE POLICY "Organizers manage ticket categories" ON public.event_ticket_categories FOR ALL USING (EXISTS (SELECT 1 FROM public.events WHERE events.id = event_ticket_categories.event_id AND events.organiser_id = auth.uid()));
 
 ALTER TABLE public.general_inventory ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public can read general inventory" ON public.general_inventory;
 CREATE POLICY "Public can read general inventory" ON public.general_inventory FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Organizers manage general inventory" ON public.general_inventory;
 CREATE POLICY "Organizers manage general inventory" ON public.general_inventory FOR ALL USING (EXISTS (SELECT 1 FROM public.events WHERE events.id = general_inventory.event_id AND events.organiser_id = auth.uid()));
 
 -- Transactional RPC to Update Event Safely

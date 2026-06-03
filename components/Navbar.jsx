@@ -689,7 +689,7 @@ export default function Navbar({ compact = false }) {
             <motion.button
               whileHover={{ scale: 1.05, boxShadow: '0 4px 15px rgba(248, 68, 164, 0.4)' }}
               whileTap={{ scale: 0.95 }}
-              onClick={() => router.push('/contact')}
+              onClick={() => router.push('/contact-us')}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -1049,12 +1049,6 @@ export default function Navbar({ compact = false }) {
           marginTop: scrolled ? '0' : '0',
           paddingTop: scrolled ? '4px' : '4px'
         }}>
-          {/* Mobile Coupon Ticker - Top Priority */}
-          {isHome && (
-            <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'center', width: '100%' }}>
-               <CouponFlipTicker isMobileMode={true} isScrolled={scrolled} />
-            </div>
-          )}
 
           <div style={{
             display: 'flex',
@@ -1103,104 +1097,7 @@ export default function Navbar({ compact = false }) {
           </div>
         </div>
 
-        {/* Sub-navbar with Animation - Premium Dynamic UI */}
-        <nav className="header-subnav" style={{ display: (compact || scrolled) ? "none" : "block", 
-          background: 'transparent',
-          backdropFilter: 'none',
-          borderBottom: '1px solid rgba(255,255,255,0.05)'
-        }}>
-          <div className="subnav-container" style={{ padding: '8px 0' }}>
-            <div className="subnav-links" style={{ gap: '40px' }}>
-              {SUBNAV_LINKS.map((link) => (
-                <motion.div
-                  key={link.label}
-                  whileHover={{ scale: 1.1, y: -2 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="subnav-item"
-                >
-                  <Link
-                    href={link.href}
-                    className={`subnav-link ${(pathname === link.href || (pathname === '/' && link.label === 'Events')) ? "active" : ""}`}
-                    style={{
-                      fontSize: '14px',
-                      fontWeight: 700,
-                      letterSpacing: '0.05em',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      color: scrolled ? '#fff' : '#475569'
-                    }}
-                  >
-                    <span className="subnav-icon-wrap" style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'center',
-                      width: '28px',
-                      height: '28px',
-                      borderRadius: '8px',
-                      background: (pathname === link.href || (pathname === '/' && link.label === 'Events')) ? 'var(--accent-gradient)' : 'rgba(0,0,0,0.03)',
-                      color: (pathname === link.href || (pathname === '/' && link.label === 'Events')) ? '#fff' : 'inherit',
-                      transition: 'all 0.3s'
-                    }}>
-                      {link.label === "Events" && <Calendar size={14} />}
-                      {link.label === "Services" && <Wrench size={14} />}
-                    </span>
-                    {link.label}
-                  </Link>
-                </motion.div>
-              ))}
-            </div>
 
-            {/* Dynamic Coupon Flip Ticker restored */}
-            <div className="hide-mobile" style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
-            <CouponFlipTicker />
-            </div>
-
-            <div className="subnav-actions hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: '30px' }}>
-              <Link 
-                href="/whats-new" 
-                style={{
-                  fontSize: '14px',
-                  fontWeight: 600,
-                  color: '#475569',
-                  textDecoration: 'none',
-                  transition: 'all 0.3s ease'
-                }}
-                onMouseEnter={e => e.currentTarget.style.color = '#1e293b'}
-                onMouseLeave={e => e.currentTarget.style.color = '#475569'}
-              >
-                What's New
-              </Link>
-              
-              <Link
-                href="/#get-app"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  fontSize: '14px',
-                  fontWeight: 700,
-                  color: '#475569',
-                  textDecoration: 'none',
-                  transition: 'all 0.3s ease',
-                  padding: '6px 12px',
-                  borderRadius: '8px'
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.background = 'rgba(248, 68, 164, 0.08)';
-                  e.currentTarget.style.color = '#f844a4';
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.background = 'transparent';
-                  e.currentTarget.style.color = '#475569';
-                }}
-              >
-                <Smartphone size={16} strokeWidth={2.5} />
-                Get App
-              </Link>
-            </div>
-          </div>
-        </nav>
       </header>
 
       {/* Mobile Menu Overlay */}

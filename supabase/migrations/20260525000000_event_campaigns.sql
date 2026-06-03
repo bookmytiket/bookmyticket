@@ -1,6 +1,6 @@
 -- Event Campaigns Table
 CREATE TABLE IF NOT EXISTS event_campaigns (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     event_id UUID REFERENCES events(id) ON DELETE CASCADE,
     campaign_name TEXT NOT NULL,
     campaign_type TEXT NOT NULL, -- 'email', 'whatsapp', 'push', 'in_app', 'all'
@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS event_campaigns (
 
 -- Notification Subscribers Table
 CREATE TABLE IF NOT EXISTS notification_subscribers (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
     email TEXT,
     phone TEXT,
@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS notification_subscribers (
 
 -- User Interest Profiles Table
 CREATE TABLE IF NOT EXISTS user_interest_profiles (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
     favorite_categories TEXT[] DEFAULT '{}',
     preferred_cities TEXT[] DEFAULT '{}',
@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS user_interest_profiles (
 
 -- Notification Queue Table (might already exist, so using IF NOT EXISTS)
 CREATE TABLE IF NOT EXISTS notification_queue (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     campaign_id UUID REFERENCES event_campaigns(id) ON DELETE SET NULL,
     user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
     channel TEXT NOT NULL, -- 'email', 'whatsapp', 'push', 'in_app'
@@ -57,7 +57,7 @@ CREATE TABLE IF NOT EXISTS notification_queue (
 
 -- Notification Delivery Logs Table
 CREATE TABLE IF NOT EXISTS notification_delivery_logs (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     campaign_id UUID REFERENCES event_campaigns(id) ON DELETE SET NULL,
     user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
     channel TEXT NOT NULL,
@@ -71,7 +71,7 @@ CREATE TABLE IF NOT EXISTS notification_delivery_logs (
 
 -- WhatsApp Templates Table
 CREATE TABLE IF NOT EXISTS whatsapp_templates (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     template_name TEXT NOT NULL UNIQUE,
     template_content TEXT NOT NULL,
     template_status TEXT DEFAULT 'pending_approval', -- 'approved', 'pending_approval', 'rejected'
@@ -81,7 +81,7 @@ CREATE TABLE IF NOT EXISTS whatsapp_templates (
 
 -- Push Notifications Table
 CREATE TABLE IF NOT EXISTS push_notifications (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
     title TEXT NOT NULL,
     message TEXT NOT NULL,
@@ -93,7 +93,7 @@ CREATE TABLE IF NOT EXISTS push_notifications (
 
 -- In-App Notifications Table
 CREATE TABLE IF NOT EXISTS in_app_notifications (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
     title TEXT NOT NULL,
     message TEXT NOT NULL,

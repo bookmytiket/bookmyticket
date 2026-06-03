@@ -92,18 +92,27 @@ ALTER TABLE public.notification_queue ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notification_preferences ENABLE ROW LEVEL SECURITY;
 
 -- Policies
+DROP POLICY IF EXISTS "Public read branding" ON public.email_branding_settings;
 CREATE POLICY "Public read branding" ON public.email_branding_settings FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Admin full access branding" ON public.email_branding_settings;
 CREATE POLICY "Admin full access branding" ON public.email_branding_settings FOR ALL USING (auth.jwt() ->> 'role' = 'admin');
 
+DROP POLICY IF EXISTS "Admin full access templates" ON public.email_templates;
 CREATE POLICY "Admin full access templates" ON public.email_templates FOR ALL USING (auth.jwt() ->> 'role' = 'admin');
+DROP POLICY IF EXISTS "Public read active templates" ON public.email_templates;
 CREATE POLICY "Public read active templates" ON public.email_templates FOR SELECT USING (is_active = true);
 
+DROP POLICY IF EXISTS "Admin full access email_logs" ON public.email_logs;
 CREATE POLICY "Admin full access email_logs" ON public.email_logs FOR ALL USING (auth.jwt() ->> 'role' = 'admin');
+DROP POLICY IF EXISTS "Users read own logs" ON public.email_logs;
 CREATE POLICY "Users read own logs" ON public.email_logs FOR SELECT USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Admin full access queue" ON public.notification_queue;
 CREATE POLICY "Admin full access queue" ON public.notification_queue FOR ALL USING (auth.jwt() ->> 'role' = 'admin');
+DROP POLICY IF EXISTS "Service role full queue" ON public.notification_queue;
 CREATE POLICY "Service role full queue" ON public.notification_queue FOR ALL USING (true);
 
+DROP POLICY IF EXISTS "Users manage own preferences" ON public.notification_preferences;
 CREATE POLICY "Users manage own preferences" ON public.notification_preferences FOR ALL USING (auth.uid() = user_id);
 
 -- 6. Trigger for Welcome Email on Signup

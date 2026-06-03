@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS public.id_verification_logs (
 );
 
 ALTER TABLE public.id_verification_logs ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Enable all access for staff to id_verification_logs" ON public.id_verification_logs;
 CREATE POLICY "Enable all access for staff to id_verification_logs" ON public.id_verification_logs FOR ALL USING (true);
 
 -- 4. Create event_verification_settings table
@@ -34,7 +35,9 @@ CREATE TABLE IF NOT EXISTS public.event_verification_settings (
 );
 
 ALTER TABLE public.event_verification_settings ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Enable read access for all" ON public.event_verification_settings;
 CREATE POLICY "Enable read access for all" ON public.event_verification_settings FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Enable write access for organisers" ON public.event_verification_settings;
 CREATE POLICY "Enable write access for organisers" ON public.event_verification_settings FOR ALL USING (
     EXISTS (
         SELECT 1 FROM public.events 

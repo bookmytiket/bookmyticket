@@ -49,15 +49,21 @@ ALTER TABLE public.admin_security_settings ENABLE ROW LEVEL SECURITY;
 
 -- 5. RLS Policies
 -- Active Sessions: Staff can read/update their own sessions
+DROP POLICY IF EXISTS "Staff can view their own sessions" ON public.staff_active_sessions;
 CREATE POLICY "Staff can view their own sessions" ON public.staff_active_sessions FOR SELECT USING (auth.uid() = staff_user_id);
+DROP POLICY IF EXISTS "Staff can update their own sessions" ON public.staff_active_sessions;
 CREATE POLICY "Staff can update their own sessions" ON public.staff_active_sessions FOR UPDATE USING (auth.uid() = staff_user_id);
+DROP POLICY IF EXISTS "Staff can insert their own sessions" ON public.staff_active_sessions;
 CREATE POLICY "Staff can insert their own sessions" ON public.staff_active_sessions FOR INSERT WITH CHECK (auth.uid() = staff_user_id);
 
 -- Login History: Staff can insert and view their own history
+DROP POLICY IF EXISTS "Staff can view their own login history" ON public.staff_login_history;
 CREATE POLICY "Staff can view their own login history" ON public.staff_login_history FOR SELECT USING (auth.uid() = staff_user_id);
+DROP POLICY IF EXISTS "Staff can insert their own login history" ON public.staff_login_history;
 CREATE POLICY "Staff can insert their own login history" ON public.staff_login_history FOR INSERT WITH CHECK (auth.uid() = staff_user_id);
 
 -- Admin Security Settings: Anyone can read settings (needed for login check)
+DROP POLICY IF EXISTS "Anyone can read admin security settings" ON public.admin_security_settings;
 CREATE POLICY "Anyone can read admin security settings" ON public.admin_security_settings FOR SELECT USING (true);
 
 -- Enable real-time for staff_active_sessions

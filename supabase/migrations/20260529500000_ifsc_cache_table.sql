@@ -13,5 +13,7 @@ CREATE TABLE IF NOT EXISTS public.ifsc_codes (
 
 -- RLS
 ALTER TABLE public.ifsc_codes ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public read access for ifsc" ON public.ifsc_codes;
 CREATE POLICY "Public read access for ifsc" ON public.ifsc_codes FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Service role full access ifsc" ON public.ifsc_codes;
 CREATE POLICY "Service role full access ifsc" ON public.ifsc_codes FOR ALL USING (true);

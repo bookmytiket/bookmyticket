@@ -33,6 +33,7 @@ ALTER TABLE public.background_jobs ENABLE ROW LEVEL SECURITY;
 
 -- 6. Create RLS Policies for background_jobs
 DROP POLICY IF EXISTS "Service role full access background_jobs" ON public.background_jobs;
+DROP POLICY IF EXISTS "Service role full access background_jobs" ON public.background_jobs;
 CREATE POLICY "Service role full access background_jobs" ON public.background_jobs
     FOR ALL USING (auth.role() = 'service_role');
 

@@ -50,8 +50,9 @@ export default function NotificationsDrawer() {
     if (!user?.id) return;
     fetchNotifications();
 
+    const channelName = `notifications:${user.id}-${Date.now()}`;
     const channel = supabase
-      .channel(`notifications:${user.id}`)
+      .channel(channelName)
       .on("postgres_changes", {
         event: "INSERT",
         schema: "public",

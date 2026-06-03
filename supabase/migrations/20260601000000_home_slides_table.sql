@@ -2,7 +2,7 @@
 -- Table stores hero banner carousel slides for the home page.
 
 CREATE TABLE IF NOT EXISTS public.home_slides (
-    id          UUID         PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id          UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
     image_url   TEXT         NOT NULL DEFAULT '',
     title       TEXT,
     subtitle    TEXT,

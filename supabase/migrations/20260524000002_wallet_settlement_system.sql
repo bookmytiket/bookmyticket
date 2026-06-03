@@ -118,14 +118,19 @@ ALTER TABLE public.organizer_revenue_ledger ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.settlement_reconciliation_logs ENABLE ROW LEVEL SECURITY;
 
 -- Allow reading own wallet
+DROP POLICY IF EXISTS "Users can view own wallet" ON public.wallets;
 CREATE POLICY "Users can view own wallet" ON public.wallets FOR SELECT USING (auth.uid() = organiser_id);
 -- Allow reading own wallet transactions
+DROP POLICY IF EXISTS "Users can view own transactions" ON public.wallet_transactions;
 CREATE POLICY "Users can view own transactions" ON public.wallet_transactions FOR SELECT USING (auth.uid() = organiser_id);
 -- Allow reading own payout requests
+DROP POLICY IF EXISTS "Users can view own payouts" ON public.payout_requests;
 CREATE POLICY "Users can view own payouts" ON public.payout_requests FOR SELECT USING (auth.uid() = requester_id);
 -- Allow creating own payout requests
+DROP POLICY IF EXISTS "Users can request payouts" ON public.payout_requests;
 CREATE POLICY "Users can request payouts" ON public.payout_requests FOR INSERT WITH CHECK (auth.uid() = requester_id);
 -- Allow reading own organizer revenue ledger
+DROP POLICY IF EXISTS "Users can view own revenue ledger" ON public.organizer_revenue_ledger;
 CREATE POLICY "Users can view own revenue ledger" ON public.organizer_revenue_ledger FOR SELECT USING (auth.uid() = organizer_id);
 
 -- Wait, Admin access needs to be full access for all these tables. We can create an RPC to execute logic, but since it's an admin dashboard we can bypass RLS via Service Role API.

@@ -5,11 +5,12 @@ import { useSupabaseQuery } from "@/hooks/useSupabase";
 import { motion } from "framer-motion";
 
 const QUICK_LINKS = [
-    { title: "About Us", slug: "about" },
-    { title: "Our Blogs", slug: "blogs" },
-    { title: "Event Listing", slug: "events" },
-    { title: "Careers", slug: "careers" },
-    { title: "Contact Us", slug: "contact" }
+    { title: "About Us", slug: "about-us" },
+    { title: "Contact Us", slug: "contact-us" },
+    { title: "Organizer Information", slug: "organizer-information" },
+    { title: "Terms & Conditions", slug: "terms-and-conditions" },
+    { title: "Privacy Policy", slug: "privacy-policy" },
+    { title: "Refund Policy", slug: "refund-policy" }
 ];
 const GALLERY_IMGS = [];
 
@@ -97,7 +98,10 @@ export default function Footer() {
         }
     })();
 
-    const allLinks = dynamicPages.length > 0 ? dynamicPages : QUICK_LINKS;
+    const allLinks = [...(dynamicPages.length > 0 ? dynamicPages : QUICK_LINKS)];
+    if (!allLinks.find(l => l.slug === 'careers')) {
+        allLinks.push({ title: "Careers", slug: "careers" });
+    }
     const quickLinks = allLinks.filter((v, i, a) => a.findIndex(t => (t.title === v.title)) === i);
 
     const socialLinks = [
@@ -247,7 +251,7 @@ export default function Footer() {
                         <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: "14px" }}>
                             {quickLinks.map(page => (
                                 <li key={page.title}>
-                                    <a href={page.slug === "events" ? "/events" : (["about", "contact", "privacy", "terms", "careers"].includes(page.slug) ? `/${page.slug}` : (page.slug === "#" ? "#" : `/p/${page.slug}`))} style={{
+                                    <a href={["about-us", "contact-us", "terms-and-conditions", "privacy-policy", "refund-policy", "organizer-information"].includes(page.slug) ? `/${page.slug}` : `/p/${page.slug}`} style={{
                                         fontSize: "14px", color: "rgba(255,255,255,0.5)",
                                         textDecoration: "none", transition: "all 0.2s",
                                         fontWeight: 500,
@@ -388,11 +392,11 @@ export default function Footer() {
                     </div>
 
                     <div style={{ display: "flex", alignItems: "center", gap: "20px", flexWrap: "wrap", justifyContent: isMobile ? "center" : "flex-end" }}>
-                        <a href="/terms" style={{ color: "rgba(255,255,255,0.45)", fontSize: "12px", fontWeight: 600, textDecoration: "none", borderBottom: "1px solid rgba(255,255,255,0.15)", paddingBottom: "1px", transition: "color 0.2s" }}
+                        <a href="/terms-and-conditions" style={{ color: "rgba(255,255,255,0.45)", fontSize: "12px", fontWeight: 600, textDecoration: "none", borderBottom: "1px solid rgba(255,255,255,0.15)", paddingBottom: "1px", transition: "color 0.2s" }}
                             onMouseEnter={e => e.currentTarget.style.color = "#f844a4"}
                             onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,0.45)"}
                         >Terms &amp; Conditions</a>
-                        <a href="/privacy" style={{ color: "rgba(255,255,255,0.45)", fontSize: "12px", fontWeight: 600, textDecoration: "none", borderBottom: "1px solid rgba(255,255,255,0.15)", paddingBottom: "1px", transition: "color 0.2s" }}
+                        <a href="/privacy-policy" style={{ color: "rgba(255,255,255,0.45)", fontSize: "12px", fontWeight: 600, textDecoration: "none", borderBottom: "1px solid rgba(255,255,255,0.15)", paddingBottom: "1px", transition: "color 0.2s" }}
                             onMouseEnter={e => e.currentTarget.style.color = "#f844a4"}
                             onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,0.45)"}
                         >Privacy Policy</a>

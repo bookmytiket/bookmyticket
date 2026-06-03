@@ -44,16 +44,23 @@ CREATE TABLE IF NOT EXISTS public.free_registrations (
 
 -- RLS Policies
 ALTER TABLE public.event_media ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public can view event media" ON public.event_media;
 CREATE POLICY "Public can view event media" ON public.event_media FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Organizers manage event media" ON public.event_media;
 CREATE POLICY "Organizers manage event media" ON public.event_media FOR ALL USING (EXISTS (SELECT 1 FROM public.events WHERE events.id = event_media.event_id AND events.organiser_id = auth.uid()));
 
 ALTER TABLE public.event_terms ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public can view event terms" ON public.event_terms;
 CREATE POLICY "Public can view event terms" ON public.event_terms FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Organizers manage event terms" ON public.event_terms;
 CREATE POLICY "Organizers manage event terms" ON public.event_terms FOR ALL USING (EXISTS (SELECT 1 FROM public.events WHERE events.id = event_terms.event_id AND events.organiser_id = auth.uid()));
 
 ALTER TABLE public.free_registrations ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users can view own registrations" ON public.free_registrations;
 CREATE POLICY "Users can view own registrations" ON public.free_registrations FOR SELECT USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can create registrations" ON public.free_registrations;
 CREATE POLICY "Users can create registrations" ON public.free_registrations FOR INSERT WITH CHECK (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Organizers view event registrations" ON public.free_registrations;
 CREATE POLICY "Organizers view event registrations" ON public.free_registrations FOR SELECT USING (EXISTS (SELECT 1 FROM public.events WHERE events.id = free_registrations.event_id AND events.organiser_id = auth.uid()));
 
 ALTER PUBLICATION supabase_realtime ADD TABLE public.free_registrations;

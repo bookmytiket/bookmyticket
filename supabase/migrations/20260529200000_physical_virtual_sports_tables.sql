@@ -43,13 +43,17 @@ CREATE TABLE IF NOT EXISTS public.virtual_event_configs (
 );
 
 ALTER TABLE public.event_amenities ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public can view event amenities" ON public.event_amenities;
 CREATE POLICY "Public can view event amenities" ON public.event_amenities FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Organizers manage event amenities" ON public.event_amenities;
 CREATE POLICY "Organizers manage event amenities" ON public.event_amenities FOR ALL USING (
     EXISTS (SELECT 1 FROM public.events WHERE events.id = event_amenities.event_id AND events.organiser_id = auth.uid())
 );
 
 ALTER TABLE public.virtual_event_configs ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public can view virtual event configs" ON public.virtual_event_configs;
 CREATE POLICY "Public can view virtual event configs" ON public.virtual_event_configs FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Organizers manage virtual event configs" ON public.virtual_event_configs;
 CREATE POLICY "Organizers manage virtual event configs" ON public.virtual_event_configs FOR ALL USING (
     EXISTS (SELECT 1 FROM public.events WHERE events.id = virtual_event_configs.event_id AND events.organiser_id = auth.uid())
 );

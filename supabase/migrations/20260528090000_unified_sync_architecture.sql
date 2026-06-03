@@ -260,25 +260,32 @@ ALTER TABLE public.booking_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tickets ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Users manage own devices" ON public.devices;
+DROP POLICY IF EXISTS "Users manage own devices" ON public.devices;
 CREATE POLICY "Users manage own devices" ON public.devices FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Clients read enabled feature flags" ON public.feature_flags;
 DROP POLICY IF EXISTS "Clients read enabled feature flags" ON public.feature_flags;
 CREATE POLICY "Clients read enabled feature flags" ON public.feature_flags FOR SELECT USING (true);
 
 DROP POLICY IF EXISTS "Users create own sync failures" ON public.sync_failures;
+DROP POLICY IF EXISTS "Users create own sync failures" ON public.sync_failures;
 CREATE POLICY "Users create own sync failures" ON public.sync_failures FOR INSERT WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Admins read sync failures" ON public.sync_failures;
 DROP POLICY IF EXISTS "Admins read sync failures" ON public.sync_failures;
 CREATE POLICY "Admins read sync failures" ON public.sync_failures FOR SELECT USING ((SELECT role FROM public.profiles WHERE id = auth.uid()) = 'admin');
 
 DROP POLICY IF EXISTS "Clients read API versions" ON public.api_client_versions;
+DROP POLICY IF EXISTS "Clients read API versions" ON public.api_client_versions;
 CREATE POLICY "Clients read API versions" ON public.api_client_versions FOR SELECT USING (true);
 
+DROP POLICY IF EXISTS "Users read own booking items" ON public.booking_items;
 DROP POLICY IF EXISTS "Users read own booking items" ON public.booking_items;
 CREATE POLICY "Users read own booking items" ON public.booking_items FOR SELECT USING (
   EXISTS (SELECT 1 FROM public.bookings b WHERE b.id = booking_items.booking_id AND b.user_id = auth.uid())
 );
 
+DROP POLICY IF EXISTS "Users read own tickets" ON public.tickets;
 DROP POLICY IF EXISTS "Users read own tickets" ON public.tickets;
 CREATE POLICY "Users read own tickets" ON public.tickets FOR SELECT USING (
   EXISTS (SELECT 1 FROM public.bookings b WHERE b.id = tickets.booking_id AND b.user_id = auth.uid())

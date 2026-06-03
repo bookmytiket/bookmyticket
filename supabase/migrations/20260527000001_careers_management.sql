@@ -2,7 +2,7 @@
 -- Description: Creates tables for jobs and job applications, sets up RLS policies, and creates a storage bucket for resumes.
 
 CREATE TABLE IF NOT EXISTS public.jobs (
-    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     title TEXT NOT NULL,
     department TEXT NOT NULL,
     type TEXT NOT NULL,
@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS public.jobs (
 );
 
 CREATE TABLE IF NOT EXISTS public.job_applications (
-    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     job_id UUID REFERENCES public.jobs(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
     email TEXT NOT NULL,

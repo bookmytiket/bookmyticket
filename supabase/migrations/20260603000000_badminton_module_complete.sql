@@ -9,7 +9,7 @@
 
 -- ── A. badminton_events ───────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.badminton_events (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   organiser_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
   event_name TEXT NOT NULL,
   slug TEXT,
@@ -92,7 +92,7 @@ CREATE POLICY "Organisers can insert badminton events"
 
 -- ── B. badminton_categories ───────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.badminton_categories (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   event_id UUID REFERENCES public.badminton_events(id) ON DELETE CASCADE,
   category_name TEXT NOT NULL,
   age_rule TEXT,
@@ -142,7 +142,7 @@ CREATE POLICY "Organisers can insert badminton categories"
 
 -- ── C. badminton_registrations ────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.badminton_registrations (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   registration_number TEXT,
   event_id UUID REFERENCES public.badminton_events(id) ON DELETE CASCADE,
   category_id UUID REFERENCES public.badminton_categories(id) ON DELETE SET NULL,
@@ -230,7 +230,7 @@ CREATE POLICY "Users can update own badminton registrations"
 -- ── D. badminton_player_documents (Age Verification) ─────────────────────────
 -- Named badminton_player_documents to avoid conflict with participant_documents
 CREATE TABLE IF NOT EXISTS public.badminton_player_documents (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   registration_id UUID REFERENCES public.badminton_registrations(id) ON DELETE CASCADE,
   document_type TEXT NOT NULL,
   document_url TEXT NOT NULL,
@@ -276,7 +276,7 @@ CREATE POLICY "Admins can manage badminton documents"
 -- ── E. badminton_matches (Tournament Draw & Fixtures) ────────────────────────
 -- Named badminton_matches to avoid conflict with any existing tournament_matches
 CREATE TABLE IF NOT EXISTS public.badminton_matches (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   event_id UUID REFERENCES public.badminton_events(id) ON DELETE CASCADE,
   category_id UUID REFERENCES public.badminton_categories(id) ON DELETE CASCADE,
   round_name TEXT NOT NULL,
@@ -321,7 +321,7 @@ CREATE POLICY "Organisers can manage badminton matches"
 
 -- ── F. badminton_sponsors ─────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.badminton_sponsors (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   event_id UUID REFERENCES public.badminton_events(id) ON DELETE CASCADE,
   sponsor_name TEXT NOT NULL,
   sponsor_type TEXT DEFAULT 'Gold Sponsor',
@@ -365,7 +365,7 @@ CREATE POLICY "Organisers can insert badminton sponsors"
 
 -- ── G. badminton_checkins ─────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.badminton_checkins (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   registration_id UUID REFERENCES public.badminton_registrations(id) ON DELETE CASCADE,
   event_id UUID REFERENCES public.badminton_events(id) ON DELETE CASCADE,
   staff_id UUID REFERENCES public.profiles(id),
@@ -395,7 +395,7 @@ CREATE POLICY "Organisers and staff can manage badminton checkins"
 
 -- ── H. badminton_notifications ────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.badminton_notifications (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   event_id UUID REFERENCES public.badminton_events(id) ON DELETE CASCADE,
   notification_type TEXT NOT NULL,
   recipient_type TEXT NOT NULL,
@@ -423,7 +423,7 @@ CREATE POLICY "Organisers can manage badminton notifications"
 
 -- ── I. badminton_results (Winners & Prizes) ───────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.badminton_results (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   event_id UUID REFERENCES public.badminton_events(id) ON DELETE CASCADE,
   category_id UUID REFERENCES public.badminton_categories(id) ON DELETE CASCADE,
   position TEXT NOT NULL,

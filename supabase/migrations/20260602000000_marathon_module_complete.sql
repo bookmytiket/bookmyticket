@@ -77,7 +77,7 @@ END $$;
 
 -- ── D. marathon_documents (Identity Verification) ───────────────────────────
 CREATE TABLE IF NOT EXISTS public.marathon_documents (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   registration_id UUID REFERENCES public.marathon_registrations(id) ON DELETE CASCADE,
   document_type TEXT NOT NULL, -- 'Aadhaar', 'Passport', 'Driving License', 'School ID', 'College ID'
   document_url TEXT NOT NULL,
@@ -90,8 +90,8 @@ CREATE TABLE IF NOT EXISTS public.marathon_documents (
 
 ALTER TABLE public.marathon_documents ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS \"Users can view their own documents\" ON public.marathon_documents;
-CREATE POLICY \"Users can view their own documents\"
+DROP POLICY IF EXISTS "Users can view their own documents" ON public.marathon_documents;
+CREATE POLICY "Users can view their own documents"
   ON public.marathon_documents FOR SELECT
   USING (
     EXISTS (
@@ -101,8 +101,8 @@ CREATE POLICY \"Users can view their own documents\"
     )
   );
 
-DROP POLICY IF EXISTS \"Organisers can view documents for their events\" ON public.marathon_documents;
-CREATE POLICY \"Organisers can view documents for their events\"
+DROP POLICY IF EXISTS "Organisers can view documents for their events" ON public.marathon_documents;
+CREATE POLICY "Organisers can view documents for their events"
   ON public.marathon_documents FOR SELECT
   USING (
     EXISTS (
@@ -113,8 +113,8 @@ CREATE POLICY \"Organisers can view documents for their events\"
     )
   );
 
-DROP POLICY IF EXISTS \"Users can upload their own documents\" ON public.marathon_documents;
-CREATE POLICY \"Users can upload their own documents\"
+DROP POLICY IF EXISTS "Users can upload their own documents" ON public.marathon_documents;
+CREATE POLICY "Users can upload their own documents"
   ON public.marathon_documents FOR INSERT
   WITH CHECK (
     EXISTS (
@@ -124,8 +124,8 @@ CREATE POLICY \"Users can upload their own documents\"
     )
   );
 
-DROP POLICY IF EXISTS \"Admins can manage all documents\" ON public.marathon_documents;
-CREATE POLICY \"Admins can manage all documents\"
+DROP POLICY IF EXISTS "Admins can manage all documents" ON public.marathon_documents;
+CREATE POLICY "Admins can manage all documents"
   ON public.marathon_documents FOR ALL
   USING (
     EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
@@ -133,7 +133,7 @@ CREATE POLICY \"Admins can manage all documents\"
 
 -- ── E. marathon_checkins ─────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.marathon_checkins (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   registration_id UUID REFERENCES public.marathon_registrations(id) ON DELETE CASCADE,
   staff_id UUID REFERENCES public.profiles(id),
   checkin_time TIMESTAMPTZ DEFAULT NOW(),
@@ -146,16 +146,16 @@ CREATE TABLE IF NOT EXISTS public.marathon_checkins (
 
 ALTER TABLE public.marathon_checkins ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS \"Staff can manage checkins for their organiser\" ON public.marathon_checkins;
-CREATE POLICY \"Staff can manage checkins for their organiser\"
+DROP POLICY IF EXISTS "Staff can manage checkins for their organiser" ON public.marathon_checkins;
+CREATE POLICY "Staff can manage checkins for their organiser"
   ON public.marathon_checkins FOR ALL
   USING (
     staff_id = auth.uid()
     OR EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role IN ('admin', 'organiser'))
   );
 
-DROP POLICY IF EXISTS \"Participants can view their own checkins\" ON public.marathon_checkins;
-CREATE POLICY \"Participants can view their own checkins\"
+DROP POLICY IF EXISTS "Participants can view their own checkins" ON public.marathon_checkins;
+CREATE POLICY "Participants can view their own checkins"
   ON public.marathon_checkins FOR SELECT
   USING (
     EXISTS (
@@ -167,7 +167,7 @@ CREATE POLICY \"Participants can view their own checkins\"
 
 -- ── F. marathon_notifications ────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.marathon_notifications (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   event_id UUID REFERENCES public.marathon_events(id) ON DELETE CASCADE,
   notification_type TEXT NOT NULL, -- 'new_event', 'registration_confirmation', 'reminder', 'checkin_reminder'
   recipient_type TEXT NOT NULL,    -- 'all_users', 'registered_participants', 'running_clubs', 'subscribers'
@@ -181,8 +181,8 @@ CREATE TABLE IF NOT EXISTS public.marathon_notifications (
 
 ALTER TABLE public.marathon_notifications ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS \"Organisers can manage notifications for their events\" ON public.marathon_notifications;
-CREATE POLICY \"Organisers can manage notifications for their events\"
+DROP POLICY IF EXISTS "Organisers can manage notifications for their events" ON public.marathon_notifications;
+CREATE POLICY "Organisers can manage notifications for their events"
   ON public.marathon_notifications FOR ALL
   USING (
     EXISTS (
@@ -195,7 +195,7 @@ CREATE POLICY \"Organisers can manage notifications for their events\"
 
 -- ── G. runner_registrations table (used by existing /api/runner-registration) ──
 CREATE TABLE IF NOT EXISTS public.runner_registrations (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   event_id UUID REFERENCES public.events(id) ON DELETE CASCADE,
   booking_id UUID REFERENCES public.bookings(id) ON DELETE SET NULL,
   user_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
@@ -214,18 +214,18 @@ CREATE TABLE IF NOT EXISTS public.runner_registrations (
 
 ALTER TABLE public.runner_registrations ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS \"Users can view own runner registrations\" ON public.runner_registrations;
-CREATE POLICY \"Users can view own runner registrations\"
+DROP POLICY IF EXISTS "Users can view own runner registrations" ON public.runner_registrations;
+CREATE POLICY "Users can view own runner registrations"
   ON public.runner_registrations FOR SELECT
   USING (user_id = auth.uid());
 
-DROP POLICY IF EXISTS \"Users can insert own runner registrations\" ON public.runner_registrations;
-CREATE POLICY \"Users can insert own runner registrations\"
+DROP POLICY IF EXISTS "Users can insert own runner registrations" ON public.runner_registrations;
+CREATE POLICY "Users can insert own runner registrations"
   ON public.runner_registrations FOR INSERT
   WITH CHECK (user_id = auth.uid() OR auth.uid() IS NOT NULL);
 
-DROP POLICY IF EXISTS \"Organisers can view registrations for their events\" ON public.runner_registrations;
-CREATE POLICY \"Organisers can view registrations for their events\"
+DROP POLICY IF EXISTS "Organisers can view registrations for their events" ON public.runner_registrations;
+CREATE POLICY "Organisers can view registrations for their events"
   ON public.runner_registrations FOR SELECT
   USING (
     EXISTS (

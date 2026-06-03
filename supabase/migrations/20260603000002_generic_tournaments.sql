@@ -5,7 +5,7 @@
 
 -- ── 1. tournaments ──────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.tournaments (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   organizer_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
   sport_type TEXT NOT NULL,
   tournament_name TEXT NOT NULL,
@@ -55,15 +55,17 @@ CREATE TABLE IF NOT EXISTS public.tournaments (
 
 ALTER TABLE public.tournaments ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Public can view published tournaments" ON public.tournaments;
 CREATE POLICY "Public can view published tournaments" ON public.tournaments
   FOR SELECT USING (status = 'published' OR organizer_id = auth.uid() OR EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin'));
 
+DROP POLICY IF EXISTS "Organizers can manage tournaments" ON public.tournaments;
 CREATE POLICY "Organizers can manage tournaments" ON public.tournaments
   FOR ALL USING (organizer_id = auth.uid() OR EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role IN ('admin', 'super_admin')));
 
 -- ── 2. tournament_categories ────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.tournament_categories (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tournament_id UUID REFERENCES public.tournaments(id) ON DELETE CASCADE,
   category_title TEXT NOT NULL,
   age_group TEXT,
@@ -78,8 +80,10 @@ CREATE TABLE IF NOT EXISTS public.tournament_categories (
 
 ALTER TABLE public.tournament_categories ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Public can view tournament categories" ON public.tournament_categories;
 CREATE POLICY "Public can view tournament categories" ON public.tournament_categories FOR SELECT USING (TRUE);
 
+DROP POLICY IF EXISTS "Organizers can manage tournament categories" ON public.tournament_categories;
 CREATE POLICY "Organizers can manage tournament categories" ON public.tournament_categories
   FOR ALL USING (
     EXISTS (SELECT 1 FROM public.tournaments t WHERE t.id = tournament_id AND t.organizer_id = auth.uid())
@@ -88,7 +92,7 @@ CREATE POLICY "Organizers can manage tournament categories" ON public.tournament
 
 -- ── 3. tournament_registrations ─────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.tournament_registrations (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tournament_id UUID REFERENCES public.tournaments(id) ON DELETE CASCADE,
   category_id UUID REFERENCES public.tournament_categories(id) ON DELETE SET NULL,
   participant_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
@@ -108,6 +112,7 @@ CREATE TABLE IF NOT EXISTS public.tournament_registrations (
 
 ALTER TABLE public.tournament_registrations ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users view own tournament registrations" ON public.tournament_registrations;
 CREATE POLICY "Users view own tournament registrations" ON public.tournament_registrations
   FOR SELECT USING (
     participant_id = auth.uid()
@@ -115,9 +120,11 @@ CREATE POLICY "Users view own tournament registrations" ON public.tournament_reg
     OR EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
   );
 
+DROP POLICY IF EXISTS "Users can register" ON public.tournament_registrations;
 CREATE POLICY "Users can register" ON public.tournament_registrations
   FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
 
+DROP POLICY IF EXISTS "Users can update own registration" ON public.tournament_registrations;
 CREATE POLICY "Users can update own registration" ON public.tournament_registrations
   FOR UPDATE USING (
     participant_id = auth.uid()
@@ -127,7 +134,7 @@ CREATE POLICY "Users can update own registration" ON public.tournament_registrat
 
 -- ── 4. tournament_documents ─────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.tournament_documents (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   registration_id UUID REFERENCES public.tournament_registrations(id) ON DELETE CASCADE,
   document_type TEXT NOT NULL,
   document_url TEXT NOT NULL,
@@ -137,12 +144,14 @@ CREATE TABLE IF NOT EXISTS public.tournament_documents (
 
 ALTER TABLE public.tournament_documents ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users view own docs" ON public.tournament_documents;
 CREATE POLICY "Users view own docs" ON public.tournament_documents
   FOR SELECT USING (
     EXISTS (SELECT 1 FROM public.tournament_registrations r WHERE r.id = registration_id AND r.participant_id = auth.uid())
     OR EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role IN ('admin', 'organiser'))
   );
 
+DROP POLICY IF EXISTS "Users upload docs" ON public.tournament_documents;
 CREATE POLICY "Users upload docs" ON public.tournament_documents
   FOR INSERT WITH CHECK (
     EXISTS (SELECT 1 FROM public.tournament_registrations r WHERE r.id = registration_id AND r.participant_id = auth.uid())
@@ -150,7 +159,7 @@ CREATE POLICY "Users upload docs" ON public.tournament_documents
 
 -- ── 5. tournament_sponsors ──────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.tournament_sponsors (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tournament_id UUID REFERENCES public.tournaments(id) ON DELETE CASCADE,
   sponsor_type TEXT,
   sponsor_name TEXT NOT NULL,
@@ -161,8 +170,10 @@ CREATE TABLE IF NOT EXISTS public.tournament_sponsors (
 
 ALTER TABLE public.tournament_sponsors ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Public can view sponsors" ON public.tournament_sponsors;
 CREATE POLICY "Public can view sponsors" ON public.tournament_sponsors FOR SELECT USING (TRUE);
 
+DROP POLICY IF EXISTS "Organizers manage sponsors" ON public.tournament_sponsors;
 CREATE POLICY "Organizers manage sponsors" ON public.tournament_sponsors
   FOR ALL USING (
     EXISTS (SELECT 1 FROM public.tournaments t WHERE t.id = tournament_id AND t.organizer_id = auth.uid())

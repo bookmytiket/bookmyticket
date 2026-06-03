@@ -3,7 +3,7 @@
 
 -- 1. Sports Events Configuration
 CREATE TABLE IF NOT EXISTS sports_events (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     event_id UUID REFERENCES events(id) ON DELETE CASCADE,
     sport_type TEXT NOT NULL, -- 'Badminton Championship', 'Marathon', etc.
     competition_format TEXT, -- 'Knockout', 'League', 'Time-Trial'
@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS sports_events (
 
 -- 2. Sports Categories (Age & Gender validation)
 CREATE TABLE IF NOT EXISTS sports_categories (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     sports_event_id UUID REFERENCES sports_events(id) ON DELETE CASCADE,
     category_name TEXT NOT NULL, -- 'U-12', 'Senior', 'Open'
     dob_from DATE,
@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS sports_categories (
 
 -- 3. Sports Match Types (Singles, Doubles, Team Entry)
 CREATE TABLE IF NOT EXISTS sports_match_types (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     sports_event_id UUID REFERENCES sports_events(id) ON DELETE CASCADE,
     match_type TEXT NOT NULL, -- 'Men Singles', 'Mixed Doubles', 'Team Tournament'
     entry_mode TEXT NOT NULL, -- 'Individual', 'Doubles', 'Team'
@@ -58,7 +58,7 @@ ALTER TABLE participant_documents
 
 -- 6. Team Registrations
 CREATE TABLE IF NOT EXISTS team_registrations (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     sports_event_id UUID REFERENCES sports_events(id) ON DELETE CASCADE,
     team_name TEXT NOT NULL,
     captain_name TEXT,
@@ -68,7 +68,7 @@ CREATE TABLE IF NOT EXISTS team_registrations (
 
 -- 7. Team Members
 CREATE TABLE IF NOT EXISTS team_members (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     team_registration_id UUID REFERENCES team_registrations(id) ON DELETE CASCADE,
     participant_id UUID REFERENCES participants(id) ON DELETE CASCADE,
     role TEXT DEFAULT 'Player', -- 'Captain', 'Player', 'Substitute'
@@ -77,7 +77,7 @@ CREATE TABLE IF NOT EXISTS team_members (
 
 -- 8. Sports Registrations (Booking Record)
 CREATE TABLE IF NOT EXISTS sports_registrations (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     sports_event_id UUID REFERENCES sports_events(id) ON DELETE CASCADE,
     user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
     participant_id UUID REFERENCES participants(id) ON DELETE CASCADE, -- For individual entry
@@ -90,7 +90,7 @@ CREATE TABLE IF NOT EXISTS sports_registrations (
 
 -- 9. Payments
 CREATE TABLE IF NOT EXISTS payments (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     registration_id UUID REFERENCES sports_registrations(id) ON DELETE CASCADE,
     amount DECIMAL(10,2) NOT NULL,
     gateway TEXT NOT NULL, -- 'Razorpay', 'UPI', 'Stripe'

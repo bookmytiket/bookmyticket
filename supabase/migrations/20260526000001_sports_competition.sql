@@ -1,6 +1,6 @@
 -- Competition Categories
 CREATE TABLE IF NOT EXISTS competition_categories (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     event_id UUID REFERENCES events(id) ON DELETE CASCADE,
     category_name TEXT NOT NULL,
     dob_from DATE,
@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS competition_categories (
 
 -- Competition Events (Races/Matches)
 CREATE TABLE IF NOT EXISTS competition_events (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     event_id UUID REFERENCES events(id) ON DELETE CASCADE,
     event_name TEXT NOT NULL,
     distance TEXT,
@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS competition_events (
 
 -- Participants
 CREATE TABLE IF NOT EXISTS participants (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
     full_name TEXT NOT NULL,
     dob DATE,
@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS participants (
 
 -- Participant Documents
 CREATE TABLE IF NOT EXISTS participant_documents (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     participant_id UUID REFERENCES participants(id) ON DELETE CASCADE,
     document_type TEXT NOT NULL,
     file_url TEXT NOT NULL,
@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS participant_documents (
 
 -- Registrations
 CREATE TABLE IF NOT EXISTS registrations (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     event_id UUID REFERENCES events(id) ON DELETE CASCADE,
     user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
     participant_id UUID REFERENCES participants(id) ON DELETE CASCADE,
@@ -61,7 +61,7 @@ CREATE TABLE IF NOT EXISTS registrations (
 
 -- Registration Items
 CREATE TABLE IF NOT EXISTS registration_items (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     registration_id UUID REFERENCES registrations(id) ON DELETE CASCADE,
     competition_event_id UUID REFERENCES competition_events(id) ON DELETE CASCADE,
     price DECIMAL(10,2) DEFAULT 0,
@@ -70,7 +70,7 @@ CREATE TABLE IF NOT EXISTS registration_items (
 
 -- Relay Teams
 CREATE TABLE IF NOT EXISTS relay_teams (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     registration_id UUID REFERENCES registrations(id) ON DELETE CASCADE,
     team_name TEXT NOT NULL,
     captain_name TEXT,
@@ -79,7 +79,7 @@ CREATE TABLE IF NOT EXISTS relay_teams (
 
 -- Relay Members
 CREATE TABLE IF NOT EXISTS relay_members (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     relay_team_id UUID REFERENCES relay_teams(id) ON DELETE CASCADE,
     member_name TEXT NOT NULL,
     role TEXT,
@@ -88,7 +88,7 @@ CREATE TABLE IF NOT EXISTS relay_members (
 
 -- QR Tickets
 CREATE TABLE IF NOT EXISTS qr_tickets (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     registration_id UUID REFERENCES registrations(id) ON DELETE CASCADE,
     qr_token TEXT NOT NULL UNIQUE,
     ticket_status TEXT DEFAULT 'Active',
@@ -97,7 +97,7 @@ CREATE TABLE IF NOT EXISTS qr_tickets (
 
 -- Checkins
 CREATE TABLE IF NOT EXISTS checkins (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     registration_id UUID REFERENCES registrations(id) ON DELETE CASCADE,
     staff_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
     verification_status TEXT DEFAULT 'Checked-In',
@@ -130,7 +130,7 @@ CREATE POLICY "Users can insert their own registrations" ON registrations FOR IN
 
 -- Competition Types
 CREATE TABLE IF NOT EXISTS competition_types (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL UNIQUE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

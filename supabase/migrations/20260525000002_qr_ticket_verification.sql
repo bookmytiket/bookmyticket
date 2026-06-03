@@ -16,11 +16,14 @@ CREATE TABLE IF NOT EXISTS public.ticket_scan_logs (
 -- Enable RLS on ticket_scan_logs
 ALTER TABLE public.ticket_scan_logs ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Enable read access for event staff" ON public.ticket_scan_logs;
+DROP POLICY IF EXISTS "Enable read access for event staff" ON public.ticket_scan_logs;
 CREATE POLICY "Enable read access for event staff" ON public.ticket_scan_logs
     FOR SELECT USING (true);
 DROP POLICY IF EXISTS "Enable insert for authenticated users" ON public.ticket_scan_logs;
+DROP POLICY IF EXISTS "Enable insert for authenticated users" ON public.ticket_scan_logs;
 CREATE POLICY "Enable insert for authenticated users" ON public.ticket_scan_logs
     FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "Enable all access for service role" ON public.ticket_scan_logs;
 DROP POLICY IF EXISTS "Enable all access for service role" ON public.ticket_scan_logs;
 CREATE POLICY "Enable all access for service role" ON public.ticket_scan_logs
     FOR ALL USING (true);
@@ -39,8 +42,10 @@ CREATE TABLE IF NOT EXISTS public.scanner_devices (
 -- Enable RLS on scanner_devices
 ALTER TABLE public.scanner_devices ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Enable read access for scanner_devices" ON public.scanner_devices;
+DROP POLICY IF EXISTS "Enable read access for scanner_devices" ON public.scanner_devices;
 CREATE POLICY "Enable read access for scanner_devices" ON public.scanner_devices
     FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Enable all access for service role" ON public.scanner_devices;
 DROP POLICY IF EXISTS "Enable all access for service role" ON public.scanner_devices;
 CREATE POLICY "Enable all access for service role" ON public.scanner_devices
     FOR ALL USING (true);
@@ -59,8 +64,10 @@ CREATE TABLE IF NOT EXISTS public.event_access_control (
 -- Enable RLS on event_access_control
 ALTER TABLE public.event_access_control ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Enable read access for event_access_control" ON public.event_access_control;
+DROP POLICY IF EXISTS "Enable read access for event_access_control" ON public.event_access_control;
 CREATE POLICY "Enable read access for event_access_control" ON public.event_access_control
     FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Enable all access for service role" ON public.event_access_control;
 DROP POLICY IF EXISTS "Enable all access for service role" ON public.event_access_control;
 CREATE POLICY "Enable all access for service role" ON public.event_access_control
     FOR ALL USING (true);
