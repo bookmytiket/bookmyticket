@@ -2,11 +2,10 @@
 import React from "react";
 import { useSupabaseQuery } from "@/hooks/useSupabase";
 import { Swiper, SwiperSlide } from 'swiper/react';
-import { Autoplay, Pagination, Navigation } from 'swiper/modules';
+import { Autoplay, Pagination } from 'swiper/modules';
 
 import 'swiper/css';
 import 'swiper/css/pagination';
-import 'swiper/css/navigation';
 
 export default function RecentMemories({ memories: propMemories = [] }) {
     const { data: convexMemories } = useSupabaseQuery('memories', (q) => q, []);
@@ -59,29 +58,14 @@ export default function RecentMemories({ memories: propMemories = [] }) {
                         .memories-swiper .swiper-pagination-bullet-active {
                             background: #f43f5e;
                         }
-                        .memories-swiper .swiper-button-next,
-                        .memories-swiper .swiper-button-prev {
-                            color: #f43f5e;
-                            background: rgba(255, 255, 255, 0.9);
-                            width: 40px;
-                            height: 40px;
-                            border-radius: 50%;
-                            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-                        }
-                        .memories-swiper .swiper-button-next:after,
-                        .memories-swiper .swiper-button-prev:after {
-                            font-size: 16px;
-                            font-weight: 900;
-                        }
                     `}</style>
                     <Swiper
-                        modules={[Autoplay, Pagination, Navigation]}
+                        modules={[Autoplay, Pagination]}
                         spaceBetween={24}
                         slidesPerView={1}
                         loop={galleryItems.length > 3}
                         autoplay={{ delay: 2500, disableOnInteraction: false }}
                         pagination={{ clickable: true, dynamicBullets: true }}
-                        navigation={true}
                         breakpoints={{
                             640: {
                                 slidesPerView: 2,
