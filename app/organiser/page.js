@@ -6852,7 +6852,9 @@ function OrganiserPanel() {
                                             justifyContent: "center",
                                           }}
                                         >
-                                          {ev.type === "Online" ? (
+                                          {ev.img || ev.image_url || ev.banner_preview ? (
+                                            <img src={ev.img || ev.image_url || ev.banner_preview} alt={ev.title} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "10px" }} />
+                                          ) : ev.type === "Online" ? (
                                             <CloudUpload
                                               size={24}
                                               color="#22c55e"

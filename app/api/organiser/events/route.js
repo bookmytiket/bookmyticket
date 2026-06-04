@@ -66,7 +66,7 @@ export async function GET(request) {
     // 4. Fetch events scoped to this organiser
     const { data: events, error: evErr } = await adminClient
       .from('events')
-      .select('*, tournament_events!event_id(*), tournament_categories!event_id(*), marathon_config!event_id(*), sports_events!event_id(*, sports_categories(*), sports_match_types(*)), competition_categories!event_id(*), competition_events!event_id(*), registration_fields!event_id(*), event_media!event_id(*), event_terms!event_id(*), event_amenities!event_id(*), virtual_event_configs!event_id(*)')
+      .select('*, tournament_events!event_id(*), marathon_config!event_id(*), sports_events!event_id(*, sports_categories(*), sports_match_types(*)), competition_categories!event_id(*), competition_events!event_id(*), registration_fields!event_id(*), event_media!event_id(*), event_terms!event_id(*), event_amenities!event_id(*), virtual_event_configs!event_id(*)')
       .eq('organiser_id', targetId)
       .order('created_at', { ascending: false });
 
