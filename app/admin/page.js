@@ -29,10 +29,17 @@ import FinanceCrossVerificationAdmin from "@/app/admin/components/FinanceCrossVe
 import EmailDashboard from "@/app/admin/components/EmailDashboard";
 import EmailSettingsAdmin from "@/app/admin/components/EmailSettingsAdmin";
 import AdminEventApprovalQueue from "@/app/admin/components/AdminEventApprovalQueue";
+import OrganizerReportsAdmin from "@/app/admin/components/OrganizerReportsAdmin";
+import UserRegistrationAnalytics from "@/app/admin/components/UserRegistrationAnalytics";
+import AdminEventPublishing from "@/app/admin/components/AdminEventPublishing";
+import ProfessionalServicesAdmin from "@/app/admin/components/ProfessionalServicesAdmin";
+import DirectOnboardingAdmin from "@/app/admin/components/DirectOnboardingAdmin";
+import AdminRevenueCommissionDashboard from "@/app/admin/components/AdminRevenueCommissionDashboard";
 import { 
     MoreVertical, Zap, Briefcase, LayoutDashboard, Settings, Video, Image as ImageIcon, 
     Sparkles, CheckCircle, Ticket, Users, Menu, Bell, Save, X, Plus, Trash2, Mail, Lock, 
     CreditCard, Code, Globe, Shield, FileText, Megaphone, Tag, LayoutGrid, Calendar, 
+    Wallet, UserCheck, TrendingUp,
     ShoppingCart, UserCircle, Gift, Send, BarChart3, Archive, MessageCircle, Upload, 
     Edit, Search, AlertCircle, ChevronDown, ChevronRight, LogOut, Activity, RefreshCw, 
     AlertTriangle, Info, Smartphone, MessageSquare, Landmark, Ban, Sun, Moon, Filter, 
@@ -3438,6 +3445,15 @@ function AdminHomePage() {
                         
                         <GroupTitle title="Partners" t={t} />
                         <NavLink 
+                            id="admin_onboarding" 
+                            label="Onboarding Center" 
+                            icon={UserCheck} 
+                            active={activeTab === "admin_onboarding"} 
+                            setActiveTab={setActiveTab}
+                            router={router}
+                            setIsSidebarOpen={setIsSidebarOpen}
+                        />
+                        <NavLink 
                             id="org_requests" 
                             label="Organiser Requests" 
                             icon={Briefcase} 
@@ -3479,6 +3495,7 @@ function AdminHomePage() {
                                 )}
 
                                 <GroupTitle title="Services" t={t} />
+                                <NavLink id="professional_services_mgmt" label="Pro Services Publish" icon={Briefcase} active={activeTab === "professional_services_mgmt"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
                                 <NavLink id="service_requests" label="Service Requests" icon={Briefcase} active={activeTab === "service_requests"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
                                 <NavLink id="providers" label="Service Providers" icon={Briefcase} active={activeTab === "providers" || activeTab === "service_active"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
                                 <NavLink id="turf_partners" label="Turf Booking" icon={Landmark} active={activeTab === "turf_partners"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
@@ -3498,6 +3515,7 @@ function AdminHomePage() {
                                 <NavLink id="send_notif" label="Push Notifications" icon={Send} active={activeTab === "send_notif"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
 
                                 <GroupTitle title="Finance" t={t} />
+                                <NavLink id="admin_revenue_dashboard" label="Commission Board" icon={Wallet} active={activeTab === "admin_revenue_dashboard"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
                                 <NavLink id="payments" label="Revenue Ledger" icon={BarChart3} active={activeTab === "payments" || activeTab === "revenue"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
                                 <NavLink id="settlement_verification" label="Settlement Audit" icon={FileText} active={activeTab === "settlement_verification"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
                                 <NavLink id="payout_requests" label="Payouts" icon={CreditCard} active={activeTab === "payout_requests"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
@@ -3511,6 +3529,8 @@ function AdminHomePage() {
                                 <NavLink id="email_logs" label="Email Engine" icon={Mail} active={activeTab === "email_logs"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
 
                                 <GroupTitle title="Reports" t={t} />
+                                <NavLink id="organizer_reports" label="Organizer Reports" icon={TrendingUp} active={activeTab === "organizer_reports"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
+                                <NavLink id="user_analytics" label="User Registration Stats" icon={Users} active={activeTab === "user_analytics"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
                                 <NavLink id="support_tickets" label="Ticket System" icon={MessageCircle} active={activeTab === "support_tickets"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
                                 <NavLink id="contact_inquiries" label="Inquiry Inbox" icon={Mail} active={activeTab === "contact_inquiries"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
                                 <NavLink id="branding_partners" label="Brand Requests" icon={Briefcase} active={activeTab === "branding_partners"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
@@ -3857,6 +3877,36 @@ function AdminHomePage() {
                     {activeTab === "fraud_dashboard" && (
                         <div className="px-8 lg:px-12 py-8">
                             <FraudDashboard t={t} theme={theme} />
+                        </div>
+                    )}
+                    {activeTab === "admin_events_mgmt" && (
+                        <div className="px-8 lg:px-12 py-8 bg-slate-50 min-h-screen">
+                            <AdminEventPublishing t={t} theme={theme} />
+                        </div>
+                    )}
+                    {activeTab === "organizer_reports" && (
+                        <div className="px-8 lg:px-12 py-8 bg-slate-50 min-h-screen">
+                            <OrganizerReportsAdmin t={t} theme={theme} />
+                        </div>
+                    )}
+                    {activeTab === "user_analytics" && (
+                        <div className="px-8 lg:px-12 py-8 bg-slate-50 min-h-screen">
+                            <UserRegistrationAnalytics t={t} theme={theme} />
+                        </div>
+                    )}
+                    {activeTab === "professional_services_mgmt" && (
+                        <div className="px-8 lg:px-12 py-8 bg-slate-50 min-h-screen">
+                            <ProfessionalServicesAdmin t={t} theme={theme} />
+                        </div>
+                    )}
+                    {activeTab === "admin_onboarding" && (
+                        <div className="px-8 lg:px-12 py-8 bg-slate-50 min-h-screen">
+                            <DirectOnboardingAdmin t={t} theme={theme} />
+                        </div>
+                    )}
+                    {activeTab === "admin_revenue_dashboard" && (
+                        <div className="px-8 lg:px-12 py-8 bg-slate-50 min-h-screen">
+                            <AdminRevenueCommissionDashboard t={t} theme={theme} />
                         </div>
                     )}
                     {activeTab === "flash_deals" && (
