@@ -216,7 +216,7 @@ export default function BecomePartnerModal({ isOpen, onClose }) {
                             right: 0;
                             max-width: none !important;
                             animation: slideSheet 0.5s cubic-bezier(0.32, 0.72, 0, 1) !important;
-                            padding-bottom: env(safe-area-inset-bottom, 20px);
+                            padding-bottom: calc(env(safe-area-inset-bottom, 20px) + 80px) !important;
                             max-height: 90vh;
                             overflow-y: auto;
                         }
