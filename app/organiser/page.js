@@ -199,6 +199,7 @@ import {
   Timer,
   Dribbble,
   Target,
+  Download,
 } from "lucide-react";
 
 const ACCENT_PINK = "#ec4899";
@@ -7303,6 +7304,26 @@ function OrganiserPanel() {
                                           >
                                             Publish Event
                                           </button>
+                                        )}
+                                        {(ev.banner || ev.img) && (
+                                            <a 
+                                                href={ev.banner || ev.img} 
+                                                download={`poster-${ev.id}.jpg`}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                title="Download Poster"
+                                                style={{
+                                                  border: `1px solid ${t.border}`,
+                                                  background: t.cardBg,
+                                                  color: "#3b82f6",
+                                                  padding: "8px",
+                                                  borderRadius: "8px",
+                                                  cursor: "pointer",
+                                                  display: "inline-flex"
+                                                }}
+                                            >
+                                                <Download size={16} />
+                                            </a>
                                         )}
                                         {ev.uiStatus !== 'expired' && ev.uiStatus !== 'archived' && (
                                           <button

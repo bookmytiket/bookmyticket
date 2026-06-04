@@ -37,7 +37,7 @@ import {
     Edit, Search, AlertCircle, ChevronDown, ChevronRight, LogOut, Activity, RefreshCw, 
     AlertTriangle, Info, Smartphone, MessageSquare, Landmark, Ban, Sun, Moon, Filter, 
     Building2, Cpu, ExternalLink, Eye, Layout, Settings2, ShieldCheck, Slash, ArrowRight, 
-    User, Phone, Star, Trophy, Timer, Key, Layers, ShoppingBag, Utensils, Car, ShieldAlert
+    User, Phone, Star, Trophy, Timer, Key, Layers, ShoppingBag, Utensils, Car, ShieldAlert, Download
 } from "lucide-react";
 import { HOME_EVENTS, HERO_BANNER_SLIDES } from "@/app/data/homeEvents";
 import { eventMatchesCategory } from "@/app/utils/categoryMatch";
@@ -3703,9 +3703,25 @@ function AdminHomePage() {
                                             >
                                                 <Star size={18} fill={ev.is_exclusive ? "currentColor" : "none"} />
                                             </button>
-                                            <button className="p-2.5 bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition-all shadow-lg shadow-black/10">
+                                            <button 
+                                                onClick={() => { setEventEditForm(ev); setShowEditEventModal(true); }}
+                                                className="p-2.5 bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition-all shadow-lg shadow-black/10"
+                                                title="Edit Event"
+                                            >
                                                 <Edit size={18} />
                                             </button>
+                                            {(ev.banner || ev.img) && (
+                                                <a 
+                                                    href={ev.banner || ev.img} 
+                                                    download={`poster-${ev.id}.jpg`}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl hover:bg-emerald-100 transition-all border border-emerald-100 flex items-center justify-center"
+                                                    title="Download Poster"
+                                                >
+                                                    <Download size={18} />
+                                                </a>
+                                            )}
                                         </div>
                                     </div>
                                 ))}
