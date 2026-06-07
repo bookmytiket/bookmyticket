@@ -44,8 +44,8 @@ import PayoutRequestPanel from "@/components/PayoutRequestPanel";
 import GoogleInlineMap from "./components/GoogleInlineMap";
 import { reverseGeocode, geocode } from "@/lib/googleMaps";
 import TransactionHistory from "./components/TransactionHistory";
+import CategorySelection from "./components/CategorySelection";
 import KYCOnboarding from "./components/KYCOnboarding/KYCOnboarding";
-
 class OrganiserErrorBoundary extends Component {
   state = { error: null };
   static getDerivedStateFromError(error) {
@@ -3096,6 +3096,35 @@ function OrganiserPanel() {
               console.error("Relational update failed:", err);
             }
 
+            // Sync RSVP Event Data
+            if (postEvent.ticketMode === 'free') {
+              try {
+                await supabase.from("rsvp_events").delete().eq("event_id", editingEvent.id);
+                await supabase.from("rsvp_events").insert({
+                  event_id: editingEvent.id,
+                  capacity: Number(postEvent.maxCapacity) || 0,
+                  registration_open: postEvent.rsvpOpenDate || null,
+                  registration_close: postEvent.rsvpCloseDate || null,
+                  waitlist_enabled: !!postEvent.waitlistEnabled,
+                  auto_confirm: postEvent.autoConfirm !== false
+                });
+
+                if (postEvent.rsvpFields?.length > 0) {
+                  await supabase.from("rsvp_fields").delete().eq("event_id", editingEvent.id);
+                  await supabase.from("rsvp_fields").insert(
+                    postEvent.rsvpFields.map(f => ({
+                      event_id: editingEvent.id,
+                      field_name: f,
+                      field_type: "text",
+                      required: false
+                    }))
+                  );
+                }
+              } catch (err) {
+                console.error("RSVP sync failed:", err);
+              }
+            }
+
             // Sync General Admission Categories & Inventory
             if (postEvent.ticketType === 'general' && categories.length > 0) {
               try {
@@ -3394,6 +3423,32 @@ function OrganiserPanel() {
               }
             } catch (err) {
               console.error("Failed to save general categories:", err);
+            }
+          }
+
+          if (postEvent.ticketMode === 'free' && newEvent?.id) {
+            try {
+              await supabase.from("rsvp_events").insert({
+                event_id: newEvent.id,
+                capacity: Number(postEvent.maxCapacity) || 0,
+                registration_open: postEvent.rsvpOpenDate || null,
+                registration_close: postEvent.rsvpCloseDate || null,
+                waitlist_enabled: !!postEvent.waitlistEnabled,
+                auto_confirm: postEvent.autoConfirm !== false
+              });
+
+              if (postEvent.rsvpFields?.length > 0) {
+                await supabase.from("rsvp_fields").insert(
+                  postEvent.rsvpFields.map(f => ({
+                    event_id: newEvent.id,
+                    field_name: f,
+                    field_type: "text",
+                    required: false
+                  }))
+                );
+              }
+            } catch (err) {
+              console.error("RSVP sync failed:", err);
             }
           }
 
@@ -7407,8 +7462,8 @@ function OrganiserPanel() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-10 w-full max-w-6xl mx-auto px-4">
                   <button
                     onClick={() => {
-                      setPostEvent((pe) => ({ ...pe, type: "Physical Event" }));
-                      setAddEventStep("form");
+                      setPostEvent((pe) => ({ ...pe, type: "Physical Event", ticketMode: undefined }));
+                      setAddEventStep("category_selection");
                     }}
                     className="group relative bg-white border border-slate-100 rounded-[3rem] p-12 flex flex-col items-center gap-8 cursor-pointer overflow-hidden transition-all duration-500 hover:shadow-[0_40px_80px_-20px_rgba(236,72,153,0.15)] hover:border-pink-200 hover:-translate-y-2"
                   >
@@ -7431,7 +7486,7 @@ function OrganiserPanel() {
                   </button>
                   <button
                     onClick={() => {
-                      setPostEvent((pe) => ({ ...pe, type: "Virtual Event" }));
+                      setPostEvent((pe) => ({ ...pe, type: "Virtual Event", ticketMode: undefined }));
                       setAddEventStep("form");
                     }}
                     className="group relative bg-white border border-slate-100 rounded-[3rem] p-12 flex flex-col items-center gap-8 cursor-pointer overflow-hidden transition-all duration-500 hover:shadow-[0_40px_80px_-20px_rgba(59,130,246,0.15)] hover:border-blue-200 hover:-translate-y-2"
@@ -7455,30 +7510,25 @@ function OrganiserPanel() {
                   </button>
                   <button
                     onClick={() => {
-                      setPostEvent((pe) => ({
-                        ...pe,
-                        type: "Sports Event",
-                        category: "Sports",
-                        seatingEnabled: false,
-                      }));
-                      setAddEventStep("sports_type");
+                      setPostEvent((pe) => ({ ...pe, type: "Physical Event", ticketMode: 'free', isReservedSeating: false }));
+                      setAddEventStep("category_selection");
                     }}
-                    className="group relative bg-white border border-slate-100 rounded-[3rem] p-12 flex flex-col items-center gap-8 cursor-pointer overflow-hidden transition-all duration-500 hover:shadow-[0_40px_80px_-20px_rgba(139,92,246,0.15)] hover:border-purple-200 hover:-translate-y-2"
+                    className="group relative bg-white border border-slate-100 rounded-[3rem] p-12 flex flex-col items-center gap-8 cursor-pointer overflow-hidden transition-all duration-500 hover:shadow-[0_40px_80px_-20px_rgba(16,185,129,0.15)] hover:border-emerald-200 hover:-translate-y-2"
                   >
-                    <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-pink-600/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                    <div className="w-24 h-24 rounded-[2rem] bg-gradient-to-br from-purple-500 to-indigo-700 flex items-center justify-center shadow-2xl shadow-purple-500/30 group-hover:scale-110 group-hover:rotate-12 transition-all duration-500">
-                      <Trophy
+                    <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-teal-600/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div className="w-24 h-24 rounded-[2rem] bg-gradient-to-br from-emerald-400 to-teal-600 flex items-center justify-center shadow-2xl shadow-emerald-500/30 group-hover:scale-110 group-hover:rotate-6 transition-all duration-500">
+                      <CheckCircle2
                         size={48}
                         className="text-white"
                         strokeWidth={1.5}
                       />
                     </div>
                     <div className="text-center space-y-3 z-10">
-                      <span className="block text-2xl font-black text-slate-900 tracking-tighter uppercase italic group-hover:text-purple-600 transition-colors">
-                        Sports Event
+                      <span className="block text-2xl font-black text-slate-900 tracking-tighter uppercase italic group-hover:text-emerald-600 transition-colors">
+                        RSVP Event
                       </span>
                       <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest leading-relaxed">
-                        Marathon, Cricket, Football & Turf
+                        Direct RSVP & Guestlist Registration
                       </p>
                     </div>
                   </button>
@@ -7486,131 +7536,80 @@ function OrganiserPanel() {
               </div>
             );
           }
-          if (addEventStep === "sports_type") {
-            const sportsTypes = [
-              {
-                id: "Marathon",
-                label: "Marathon",
-                sub: "Running & Athletics",
-                icon: Activity,
-                color: "from-blue-500 to-indigo-600",
-              },
-              {
-                id: "Tournament",
-                label: "Tournament",
-                sub: "Competitions & Leagues",
-                icon: Trophy,
-                color: "from-orange-500 to-red-600",
-              },
-              {
-                id: "Coaching",
-                label: "Coaching Session",
-                sub: "Training & Sessions",
-                icon: Target,
-                color: "from-purple-500 to-pink-600",
-              },
-              {
-                id: "Competition",
-                label: "Competition",
-                sub: "Swimming, Athletics & Races",
-                icon: Goal,
-                color: "from-teal-500 to-emerald-600",
-              },
-              {
-                id: "Racing",
-                label: "Racing",
-                sub: "Racing Event Based",
-                icon: Activity,
-                color: "from-yellow-400 to-amber-600",
-              },
-            ];
-
+          if (addEventStep === "category_selection") {
             return (
-              <div className="flex flex-col items-center justify-center min-h-[60vh] p-8 animate-in fade-in zoom-in duration-500">
-                <div className="text-center mb-16 space-y-4">
-                  <div className="inline-flex items-center gap-2 px-6 py-2 rounded-full bg-blue-50/50 border border-blue-100 text-[10px] font-black uppercase tracking-[0.2em] text-blue-600 mb-2">
-                    <Trophy size={14} /> Athletics Module
-                  </div>
-                  <h2 className="text-5xl font-black text-slate-900 tracking-tighter uppercase italic leading-none">
-                    Sports Category
-                  </h2>
-                  <p className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">
-                    Define the discipline for your sporting event
-                  </p>
-                </div>
-                <div className="flex flex-wrap justify-center gap-8 w-full max-w-7xl [&>*]:w-full [&>*]:sm:w-[calc(50%-1rem)] [&>*]:md:w-[calc(33.33%-1rem)] [&>*]:lg:w-[calc(20%-1.6rem)]">
-                  {sportsTypes.map((st) => (
-                    <button
-                      key={st.id}
-                      onClick={() => {
-                        if (st.id === "Marathon") {
-                          setPostEvent((pe) => ({
-                            ...pe,
-                            type: "Marathon",
-                            sportType: "Marathon",
-                          }));
-                          setAddEventStep("form");
-                        } else if (st.id === "Tournament") {
-                          setPostEvent((pe) => ({
-                            ...pe,
-                            type: "Tournament",
-                            sportType: "Tournament",
-                          }));
-                          setAddEventStep("form");
-                        } else if (st.id === "Competition") {
-                          setPostEvent((pe) => ({
-                            ...pe,
-                            type: "Competition",
-                            sportType: "Competition",
-                          }));
-                          setAddEventStep("form");
-                        } else if (st.id === "Racing") {
-                          setPostEvent((pe) => ({
-                            ...pe,
-                            type: "Facility",
-                            category: "Facility",
-                            seatingEnabled: false,
-                          }));
-                          setAddEventStep("form");
-                        } else {
-                          setPostEvent((pe) => ({ ...pe, sportType: st.id }));
-                          setAddEventStep("form");
-                        }
-                      }}
-                      className="group relative bg-white border border-slate-100 rounded-[2.5rem] p-10 flex flex-col items-center gap-6 cursor-pointer overflow-hidden transition-all duration-500 hover:shadow-2xl hover:-translate-y-2"
-                    >
-                      <div
-                        className={`absolute inset-0 bg-gradient-to-br ${st.color} opacity-0 group-hover:opacity-5 transition-opacity`}
-                      />
-                      <div
-                        className={`w-20 h-20 rounded-3xl bg-gradient-to-br ${st.color} flex items-center justify-center shadow-xl group-hover:scale-110 group-hover:rotate-6 transition-all duration-500`}
-                      >
-                        <st.icon
-                          size={36}
-                          className="text-white"
-                          strokeWidth={1.5}
-                        />
-                      </div>
-                      <div className="text-center space-y-2 z-10">
-                        <span className="block text-xl font-black text-slate-900 tracking-tighter uppercase italic group-hover:text-blue-600 transition-colors">
-                          {st.label}
-                        </span>
-                        <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest leading-relaxed">
-                          {st.sub}
-                        </p>
-                      </div>
-                    </button>
-                  ))}
-                </div>
+              <div className="relative">
+                <CategorySelection
+                  onSelectCategory={(categoryId) => {
+                    let eventType = "Physical Event";
+                    let eventCat = "";
+                    let sportType = "";
+                    let seatingEnabled = true;
+
+                    if (categoryId === "marathon") {
+                      eventType = "Marathon";
+                      eventCat = "Sports";
+                      sportType = "Marathon";
+                      seatingEnabled = false;
+                    } else if (categoryId === "tournament") {
+                      eventType = "Tournament";
+                      eventCat = "Sports";
+                      sportType = "Tournament";
+                      seatingEnabled = false;
+                    } else if (categoryId === "coaching") {
+                      eventType = "Sports Event";
+                      eventCat = "Sports";
+                      sportType = "Coaching";
+                      seatingEnabled = false;
+                    } else if (categoryId === "competition") {
+                      eventType = "Competition";
+                      eventCat = "Sports";
+                      sportType = "Competition";
+                      seatingEnabled = false;
+                    } else if (categoryId === "racing") {
+                      eventType = "Facility";
+                      eventCat = "Facility";
+                      seatingEnabled = false;
+                    } else if (categoryId === "music") {
+                      eventCat = "Music Concerts";
+                    } else if (categoryId === "college") {
+                      eventCat = "College Events";
+                    } else if (categoryId === "conference") {
+                      eventType = "Virtual Event";
+                      eventCat = "Conferences & Seminars";
+                    } else if (categoryId === "theatre") {
+                      eventCat = "Theatre & Cultural Shows";
+                    } else if (categoryId === "festival") {
+                      eventCat = "Festivals & Celebrations";
+                    } else if (categoryId === "corporate") {
+                      eventCat = "Corporate Events";
+                    }
+
+                    setPostEvent((pe) => ({ 
+                      ...pe, 
+                      type: eventType, 
+                      category: eventCat,
+                      ...(sportType ? { sportType } : {}),
+                      seatingEnabled: (seatingEnabled && eventType === "Physical Event") 
+                    }));
+                    
+                    if (eventType === "Marathon") {
+                      setAddEventStep("form");
+                    } else {
+                      setAddEventStep("form");
+                    }
+                  }}
+                />
                 <button
                   onClick={() => setAddEventStep("select_type")}
-                  className="mt-16 flex items-center gap-2 text-slate-400 hover:text-slate-900 font-black uppercase tracking-widest text-[10px] transition-colors"
+                  className="mt-8 mx-auto flex items-center justify-center gap-2 text-slate-400 hover:text-slate-900 font-black uppercase tracking-widest text-[10px] transition-colors"
                 >
-                  <ArrowLeft size={14} /> Back to Frameworks
+                  <ArrowLeft size={14} /> Back to Event Types
                 </button>
               </div>
             );
           }
+
           // Step 2: Form Dispatcher
           if (addEventStep === "form") {
             if (postEvent.type === "Physical Event") {

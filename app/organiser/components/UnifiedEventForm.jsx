@@ -46,23 +46,26 @@ const renderInput = (label, value, onChange, type = "text", placeholder = "", fu
 export default function UnifiedEventForm({ postEvent, setPostEvent, onCancel, onPublish, isEditing }) {
     const [currentStep, setCurrentStep] = useState(1);
     
-    // Internal mappings for the 11-step process
     const steps = [
-        { id: 1, title: "Event Type", icon: List },
-        { id: 2, title: "Pricing Model", icon: IndianRupee },
-        { id: 3, title: "Ticketing Format", icon: Ticket },
-        { id: 4, title: "Event Details", icon: FileText },
-        { id: 5, title: "Date & Time", icon: Clock },
-        { id: 6, title: "Venue", icon: MapPin },
-        { id: 7, title: "Media", icon: Camera },
-        { id: 8, title: "Pricing", icon: IndianRupee },
-        { id: 9, title: "Capacity", icon: Users },
-        { id: 10, title: "Terms", icon: Shield },
-        { id: 11, title: isEditing ? "Update" : "Publish", icon: Zap }
+        { id: 1, title: "Event Details", icon: FileText },
+        { id: 2, title: "Date & Time", icon: Clock },
+        { id: 3, title: "Venue", icon: MapPin },
+        { id: 4, title: "Pricing Model", icon: IndianRupee },
+        { id: 5, title: "Ticketing Format", icon: Ticket },
+        { id: 6, title: "Media", icon: Camera },
+        { id: 7, title: "Pricing & Capacity", icon: IndianRupee },
+        { id: 8, title: "Terms", icon: Shield },
+        { id: 9, title: isEditing ? "Update" : "Publish", icon: Zap }
     ];
 
-    const nextStep = () => setCurrentStep(prev => Math.min(prev + 1, steps.length));
-    const prevStep = () => setCurrentStep(prev => Math.max(prev - 1, 1));
+    const nextStep = () => setCurrentStep(prev => {
+        if (postEvent.ticketMode === 'free' && prev === 3) return 6;
+        return Math.min(prev + 1, steps.length);
+    });
+    const prevStep = () => setCurrentStep(prev => {
+        if (postEvent.ticketMode === 'free' && prev === 6) return 3;
+        return Math.max(prev - 1, 1);
+    });
 
     // Handle initial state setup
     useEffect(() => {
@@ -133,26 +136,60 @@ export default function UnifiedEventForm({ postEvent, setPostEvent, onCancel, on
 
             <div className="bg-white rounded-[3rem] border border-slate-100 shadow-[0_40px_80px_-20px_rgba(0,0,0,0.05)] p-12">
                 
-                {/* Step 1: Event Type */}
+                {/* Step 1: Event Details */}
                 {currentStep === 1 && (
-                    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-8">
+                    <div className="space-y-10 animate-in fade-in slide-in-from-right-8">
                         <div>
-                            <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter italic">1. Event Category & Format</h2>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">Classify your event accurately</p>
+                            <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter italic">1. Event Details</h2>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">Core information</p>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <CustomSelect 
-                                label="Event Category"
-                                value={postEvent.category}
-                                options={["Concert", "Marathon", "Cinema", "Sports", "Circus", "Comedy Show", "Conference", "Workshop", "Meetup", "Festival", "Kids Event", "Religious Event", "Exhibition", "College Event", "Corporate Event"]}
-                                onChange={(v) => setPostEvent(p => ({ ...p, category: v }))}
-                            />
-                            <div className="space-y-3">
-                                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] pl-1">Event Format</label>
-                                <div className="w-full bg-slate-50/50 border border-slate-100 text-slate-900 text-sm font-bold px-6 py-4 rounded-2xl cursor-not-allowed opacity-70">
-                                    Venue Event
-                                </div>
-                            </div>
+                            {renderInput(postEvent.category === "Music Concerts" ? "Concert Name*" : (postEvent.category === "Theatre & Cultural Shows" ? "Show Name*" : "Event Name*"), postEvent.title, (v) => setPostEvent(p => ({ ...p, title: v })), "text", "Full title of the event")}
+                            {renderInput("Short Title", postEvent.shortTitle, (v) => setPostEvent(p => ({ ...p, shortTitle: v })))}
+                            
+                            {/* Dynamic Category Fields */}
+                            {postEvent.category === "Music Concerts" && (
+                                <>
+                                    {renderInput("Artist Name", postEvent.artistName, (v) => setPostEvent(p => ({ ...p, artistName: v })))}
+                                    {renderInput("Music Genre", postEvent.musicGenre, (v) => setPostEvent(p => ({ ...p, musicGenre: v })))}
+                                    {renderInput("Sponsor Details", postEvent.sponsorDetails, (v) => setPostEvent(p => ({ ...p, sponsorDetails: v })))}
+                                </>
+                            )}
+                            {postEvent.category === "College Events" && (
+                                <>
+                                    {renderInput("College Name", postEvent.collegeName, (v) => setPostEvent(p => ({ ...p, collegeName: v })))}
+                                    {renderInput("Department", postEvent.department, (v) => setPostEvent(p => ({ ...p, department: v })))}
+                                </>
+                            )}
+                            {postEvent.category === "Conferences & Seminars" && (
+                                <>
+                                    {renderInput("Speaker Information", postEvent.speakerInfo, (v) => setPostEvent(p => ({ ...p, speakerInfo: v })))}
+                                    {renderInput("Session Schedule", postEvent.sessionSchedule, (v) => setPostEvent(p => ({ ...p, sessionSchedule: v })))}
+                                </>
+                            )}
+                            {postEvent.category === "Theatre & Cultural Shows" && (
+                                <>
+                                    {renderInput("Performance Type", postEvent.performanceType, (v) => setPostEvent(p => ({ ...p, performanceType: v })))}
+                                    {renderInput("Artist Information", postEvent.artistInfo, (v) => setPostEvent(p => ({ ...p, artistInfo: v })))}
+                                </>
+                            )}
+                            {postEvent.category === "Festivals & Celebrations" && (
+                                <>
+                                    {renderInput("Celebration Type", postEvent.celebrationType, (v) => setPostEvent(p => ({ ...p, celebrationType: v })))}
+                                    {renderInput("Sponsor Information", postEvent.sponsorInfo, (v) => setPostEvent(p => ({ ...p, sponsorInfo: v })))}
+                                </>
+                            )}
+                            {postEvent.category === "Corporate Events" && (
+                                <>
+                                    {renderInput("Company Name", postEvent.companyName, (v) => setPostEvent(p => ({ ...p, companyName: v })))}
+                                    {renderInput("Workshop Sessions", postEvent.workshopSessions, (v) => setPostEvent(p => ({ ...p, workshopSessions: v })))}
+                                </>
+                            )}
+
+                            {renderInput("Event Subtitle", postEvent.subtitle, (v) => setPostEvent(p => ({ ...p, subtitle: v })), "text", "Optional catchy subtitle", true)}
+                            {renderInput("Description", postEvent.description, (v) => setPostEvent(p => ({ ...p, description: v })), "textarea", "Detailed description...", true)}
+                            {renderInput("Language", postEvent.language, (v) => setPostEvent(p => ({ ...p, language: v })))}
+                            {renderInput("Age Restriction", postEvent.ageRestriction, (v) => setPostEvent(p => ({ ...p, ageRestriction: v })), "text", "e.g. 18+")}
                         </div>
                         <div className="flex justify-end pt-10">
                             <button onClick={nextStep} className="px-10 py-4 bg-blue-600 text-white rounded-[2rem] text-xs font-black uppercase tracking-widest flex items-center gap-3">Next Step <ArrowRight size={16} /></button>
@@ -160,97 +197,11 @@ export default function UnifiedEventForm({ postEvent, setPostEvent, onCancel, on
                     </div>
                 )}
 
-                {/* Step 2: Pricing Model */}
+                {/* Step 2: Date & Time */}
                 {currentStep === 2 && (
                     <div className="space-y-10 animate-in fade-in slide-in-from-right-8">
                         <div>
-                            <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter italic">2. Pricing Model</h2>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">Free or Paid</p>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <button 
-                                onClick={() => setPostEvent(p => ({ ...p, ticketMode: 'free' }))}
-                                className={`p-8 rounded-[2rem] border-2 text-left transition-all ${postEvent.ticketMode === 'free' ? 'border-emerald-500 bg-emerald-50 scale-[1.02]' : 'border-slate-100 hover:border-emerald-200 grayscale hover:grayscale-0'}`}
-                            >
-                                <div className="text-emerald-500 mb-4"><CheckCircle2 size={32} /></div>
-                                <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter mb-2">FREE EVENT</h3>
-                                <p className="text-[10px] font-bold text-slate-500 uppercase leading-relaxed">No payment gateway required. Direct RSVP / registration.</p>
-                            </button>
-                            <button 
-                                onClick={() => setPostEvent(p => ({ ...p, ticketMode: 'paid' }))}
-                                className={`p-8 rounded-[2rem] border-2 text-left transition-all ${postEvent.ticketMode === 'paid' ? 'border-blue-500 bg-blue-50 scale-[1.02]' : 'border-slate-100 hover:border-blue-200 grayscale hover:grayscale-0'}`}
-                            >
-                                <div className="text-blue-500 mb-4"><IndianRupee size={32} /></div>
-                                <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter mb-2">PAID EVENT</h3>
-                                <p className="text-[10px] font-bold text-slate-500 uppercase leading-relaxed">Payment required. Gateway integration and invoice generation.</p>
-                            </button>
-                        </div>
-                        <div className="flex justify-between pt-10">
-                            <button onClick={prevStep} className="px-8 py-4 text-slate-400 font-bold uppercase text-[10px]"><ArrowLeft size={16} className="inline mr-2" /> Back</button>
-                            <button onClick={nextStep} className="px-10 py-4 bg-blue-600 text-white rounded-[2rem] text-xs font-black uppercase tracking-widest flex items-center gap-3">Next Step <ArrowRight size={16} /></button>
-                        </div>
-                    </div>
-                )}
-
-                {/* Step 3: Ticketing Format */}
-                {currentStep === 3 && (
-                    <div className="space-y-10 animate-in fade-in slide-in-from-right-8">
-                        <div>
-                            <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter italic">3. Ticketing Format</h2>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">GA vs Reserved Seating</p>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <button 
-                                onClick={() => setPostEvent(p => ({ ...p, isReservedSeating: false }))}
-                                className={`p-8 rounded-[2rem] border-2 text-left transition-all ${!postEvent.isReservedSeating ? 'border-purple-500 bg-purple-50 scale-[1.02]' : 'border-slate-100 hover:border-purple-200 grayscale hover:grayscale-0'}`}
-                            >
-                                <div className="text-purple-500 mb-4"><Users size={32} /></div>
-                                <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter mb-2">GENERAL ADMISSION</h3>
-                                <p className="text-[10px] font-bold text-slate-500 uppercase leading-relaxed">No seat map required. Ticket quantity based booking with capacity limits.</p>
-                            </button>
-                            <button 
-                                onClick={() => setPostEvent(p => ({ ...p, isReservedSeating: true }))}
-                                className={`p-8 rounded-[2rem] border-2 text-left transition-all ${postEvent.isReservedSeating ? 'border-orange-500 bg-orange-50 scale-[1.02]' : 'border-slate-100 hover:border-orange-200 grayscale hover:grayscale-0'}`}
-                            >
-                                <div className="text-orange-500 mb-4"><Ticket size={32} /></div>
-                                <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter mb-2">RESERVED SEATING</h3>
-                                <p className="text-[10px] font-bold text-slate-500 uppercase leading-relaxed">Seat map required. Dynamic seat selection, locking, and section pricing.</p>
-                            </button>
-                        </div>
-                        <div className="flex justify-between pt-10">
-                            <button onClick={prevStep} className="px-8 py-4 text-slate-400 font-bold uppercase text-[10px]"><ArrowLeft size={16} className="inline mr-2" /> Back</button>
-                            <button onClick={nextStep} className="px-10 py-4 bg-blue-600 text-white rounded-[2rem] text-xs font-black uppercase tracking-widest flex items-center gap-3">Next Step <ArrowRight size={16} /></button>
-                        </div>
-                    </div>
-                )}
-
-                {/* Step 4: Event Details */}
-                {currentStep === 4 && (
-                    <div className="space-y-10 animate-in fade-in slide-in-from-right-8">
-                        <div>
-                            <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter italic">4. Event Details</h2>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">Core information</p>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            {renderInput("Event Name*", postEvent.title, (v) => setPostEvent(p => ({ ...p, title: v })), "text", "Full title of the event")}
-                            {renderInput("Short Title", postEvent.shortTitle, (v) => setPostEvent(p => ({ ...p, shortTitle: v })))}
-                            {renderInput("Event Subtitle", postEvent.subtitle, (v) => setPostEvent(p => ({ ...p, subtitle: v })), "text", "Optional catchy subtitle", true)}
-                            {renderInput("Description", postEvent.description, (v) => setPostEvent(p => ({ ...p, description: v })), "textarea", "Detailed description...", true)}
-                            {renderInput("Language", postEvent.language, (v) => setPostEvent(p => ({ ...p, language: v })))}
-                            {renderInput("Age Restriction", postEvent.ageRestriction, (v) => setPostEvent(p => ({ ...p, ageRestriction: v })), "text", "e.g. 18+")}
-                        </div>
-                        <div className="flex justify-between pt-10">
-                            <button onClick={prevStep} className="px-8 py-4 text-slate-400 font-bold uppercase text-[10px]"><ArrowLeft size={16} className="inline mr-2" /> Back</button>
-                            <button onClick={nextStep} className="px-10 py-4 bg-blue-600 text-white rounded-[2rem] text-xs font-black uppercase tracking-widest flex items-center gap-3">Next Step <ArrowRight size={16} /></button>
-                        </div>
-                    </div>
-                )}
-
-                {/* Step 5: Date & Time */}
-                {currentStep === 5 && (
-                    <div className="space-y-10 animate-in fade-in slide-in-from-right-8">
-                        <div>
-                            <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter italic">5. Schedule</h2>
+                            <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter italic">2. Schedule</h2>
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">Timeline configuration</p>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -266,11 +217,11 @@ export default function UnifiedEventForm({ postEvent, setPostEvent, onCancel, on
                     </div>
                 )}
 
-                {/* Step 6: Venue */}
-                {currentStep === 6 && (
+                {/* Step 3: Venue */}
+                {currentStep === 3 && (
                     <div className="space-y-10 animate-in fade-in slide-in-from-right-8">
                         <div>
-                            <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter italic">6. Venue Details</h2>
+                            <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter italic">3. Venue Details</h2>
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">Geospatial positioning</p>
                         </div>
                         {postEvent.eventFormat !== 'online' && (
@@ -358,11 +309,73 @@ export default function UnifiedEventForm({ postEvent, setPostEvent, onCancel, on
                     </div>
                 )}
 
-                {/* Step 7: Media */}
-                {currentStep === 7 && (
+                {/* Step 4: Pricing Model */}
+                {currentStep === 4 && (
                     <div className="space-y-10 animate-in fade-in slide-in-from-right-8">
                         <div>
-                            <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter italic">7. Media Upload</h2>
+                            <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter italic">4. Pricing Model</h2>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">Free or Paid</p>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <button 
+                                onClick={() => { setPostEvent(p => ({ ...p, ticketMode: 'free', isReservedSeating: false })); setCurrentStep(6); }}
+                                className={`p-8 rounded-[2rem] border-2 text-left transition-all ${postEvent.ticketMode === 'free' ? 'border-emerald-500 bg-emerald-50 scale-[1.02]' : 'border-slate-100 hover:border-emerald-200 grayscale hover:grayscale-0'}`}
+                            >
+                                <div className="text-emerald-500 mb-4"><CheckCircle2 size={32} /></div>
+                                <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter mb-2">FREE EVENT</h3>
+                                <p className="text-[10px] font-bold text-slate-500 uppercase leading-relaxed">No payment gateway required. Direct RSVP / registration.</p>
+                            </button>
+                            <button 
+                                onClick={() => { setPostEvent(p => ({ ...p, ticketMode: 'paid' })); nextStep(); }}
+                                className={`p-8 rounded-[2rem] border-2 text-left transition-all ${postEvent.ticketMode === 'paid' ? 'border-blue-500 bg-blue-50 scale-[1.02]' : 'border-slate-100 hover:border-blue-200 grayscale hover:grayscale-0'}`}
+                            >
+                                <div className="text-blue-500 mb-4"><IndianRupee size={32} /></div>
+                                <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter mb-2">PAID EVENT</h3>
+                                <p className="text-[10px] font-bold text-slate-500 uppercase leading-relaxed">Payment required. Gateway integration and invoice generation.</p>
+                            </button>
+                        </div>
+                        <div className="flex justify-between pt-10">
+                            <button onClick={prevStep} className="px-8 py-4 text-slate-400 font-bold uppercase text-[10px]"><ArrowLeft size={16} className="inline mr-2" /> Back</button>
+                        </div>
+                    </div>
+                )}
+
+                {/* Step 5: Ticketing Format */}
+                {currentStep === 5 && (
+                    <div className="space-y-10 animate-in fade-in slide-in-from-right-8">
+                        <div>
+                            <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter italic">5. Ticketing Format</h2>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">GA vs Reserved Seating</p>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <button 
+                                onClick={() => { setPostEvent(p => ({ ...p, isReservedSeating: false })); nextStep(); }}
+                                className={`p-8 rounded-[2rem] border-2 text-left transition-all ${!postEvent.isReservedSeating ? 'border-purple-500 bg-purple-50 scale-[1.02]' : 'border-slate-100 hover:border-purple-200 grayscale hover:grayscale-0'}`}
+                            >
+                                <div className="text-purple-500 mb-4"><Users size={32} /></div>
+                                <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter mb-2">GENERAL ADMISSION</h3>
+                                <p className="text-[10px] font-bold text-slate-500 uppercase leading-relaxed">No seat map required. Ticket quantity based booking with capacity limits.</p>
+                            </button>
+                            <button 
+                                onClick={() => { setPostEvent(p => ({ ...p, isReservedSeating: true })); nextStep(); }}
+                                className={`p-8 rounded-[2rem] border-2 text-left transition-all ${postEvent.isReservedSeating ? 'border-orange-500 bg-orange-50 scale-[1.02]' : 'border-slate-100 hover:border-orange-200 grayscale hover:grayscale-0'}`}
+                            >
+                                <div className="text-orange-500 mb-4"><Ticket size={32} /></div>
+                                <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter mb-2">RESERVED SEATING</h3>
+                                <p className="text-[10px] font-bold text-slate-500 uppercase leading-relaxed">Seat map required. Dynamic seat selection, locking, and section pricing.</p>
+                            </button>
+                        </div>
+                        <div className="flex justify-between pt-10">
+                            <button onClick={prevStep} className="px-8 py-4 text-slate-400 font-bold uppercase text-[10px]"><ArrowLeft size={16} className="inline mr-2" /> Back</button>
+                        </div>
+                    </div>
+                )}
+
+                {/* Step 6: Media */}
+                {currentStep === 6 && (
+                    <div className="space-y-10 animate-in fade-in slide-in-from-right-8">
+                        <div>
+                            <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter italic">6. Media Upload</h2>
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">Banners & Branding</p>
                         </div>
                         <div className="space-y-8">
@@ -383,68 +396,153 @@ export default function UnifiedEventForm({ postEvent, setPostEvent, onCancel, on
                     </div>
                 )}
 
-                {/* Step 8 & 9 Combined: Pricing & Capacity */}
-                {currentStep === 8 && (
+                {/* Step 7: Pricing & Capacity */}
+                {currentStep === 7 && (
                     <div className="space-y-10 animate-in fade-in slide-in-from-right-8">
                         <div>
-                            <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter italic">8. Pricing & Capacity</h2>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">{postEvent.ticketMode === 'free' ? 'Free Event Limits' : 'Ticket Tiers'}</p>
+                            <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter italic">7. {postEvent.ticketMode === 'free' ? 'RSVP Settings' : 'Pricing & Capacity'}</h2>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">{postEvent.ticketMode === 'free' ? 'Configure Capacity & Registration Form' : 'Ticket Tiers'}</p>
                         </div>
-                        <div className="space-y-6">
-                            {(postEvent.categories || []).map((cat, idx) => (
-                                <div key={idx} className="flex flex-col md:flex-row gap-4 p-6 border border-slate-100 rounded-2xl items-end relative">
-                                    <button 
-                                        onClick={() => {
-                                            const next = postEvent.categories.filter((_, i) => i !== idx);
-                                            setPostEvent(p => ({ ...p, categories: next }));
-                                        }}
-                                        className="absolute top-4 right-4 text-slate-300 hover:text-red-500"
-                                    >
-                                        <Trash2 size={16} />
-                                    </button>
-                                    <div className="flex-1 w-full">
-                                        <label className="block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-2">Category Name</label>
-                                        <input className="w-full bg-slate-50 p-3 rounded-xl border-none focus:ring-2 focus:ring-blue-100 font-bold text-sm text-slate-900" value={cat.name} onChange={e => {
-                                            const c = [...postEvent.categories]; c[idx].name = e.target.value; setPostEvent(p => ({ ...p, categories: c }));
-                                        }} />
+                        {postEvent.ticketMode === 'free' ? (
+                            <div className="space-y-8">
+                                <div className="p-6 bg-emerald-50/50 rounded-[2rem] border-2 border-emerald-100 relative overflow-hidden group hover:border-emerald-200 transition-all">
+                                    <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-100 rounded-bl-[100px] -z-10 opacity-50 group-hover:scale-110 transition-transform duration-500" />
+                                    
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
+                                        <div className="md:col-span-2">
+                                            <label className="block text-[10px] font-black text-emerald-600 uppercase tracking-[0.2em] mb-4">Total Event Capacity</label>
+                                            <div className="flex items-center gap-4">
+                                                <Users className="text-emerald-500" size={24} />
+                                                <input type="number" className="flex-1 bg-white p-4 rounded-xl border-none focus:ring-2 focus:ring-emerald-200 font-black text-2xl text-slate-900 shadow-sm" placeholder="e.g. 500" value={postEvent.maxCapacity || ''} onChange={e => setPostEvent(p => ({ ...p, maxCapacity: e.target.value }))} />
+                                            </div>
+                                            <p className="text-[10px] font-bold text-emerald-700/60 uppercase mt-4">RSVP Registrations will automatically close when this limit is reached.</p>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-[10px] font-black text-emerald-600 uppercase tracking-[0.2em] mb-4">Registration Open Date</label>
+                                            <input type="date" className="w-full bg-white p-4 rounded-xl border-none focus:ring-2 focus:ring-emerald-200 font-bold text-sm text-slate-900 shadow-sm" value={postEvent.rsvpOpenDate || ''} onChange={e => setPostEvent(p => ({ ...p, rsvpOpenDate: e.target.value }))} />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-[10px] font-black text-emerald-600 uppercase tracking-[0.2em] mb-4">Registration Close Date</label>
+                                            <input type="date" className="w-full bg-white p-4 rounded-xl border-none focus:ring-2 focus:ring-emerald-200 font-bold text-sm text-slate-900 shadow-sm" value={postEvent.rsvpCloseDate || ''} onChange={e => setPostEvent(p => ({ ...p, rsvpCloseDate: e.target.value }))} />
+                                        </div>
+
+                                        <div className="flex items-center justify-between p-4 bg-white rounded-xl shadow-sm mt-2">
+                                            <div>
+                                                <span className="block text-xs font-black text-slate-900 uppercase tracking-wider">Auto Confirmation</span>
+                                                <span className="block text-[9px] font-bold text-slate-500 uppercase mt-1">Approve instantly</span>
+                                            </div>
+                                            <label className="relative flex items-center cursor-pointer">
+                                                <input type="checkbox" className="sr-only peer" checked={postEvent.autoConfirm !== false} onChange={e => setPostEvent(p => ({ ...p, autoConfirm: e.target.checked }))} />
+                                                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+                                            </label>
+                                        </div>
+
+                                        <div className="flex items-center justify-between p-4 bg-white rounded-xl shadow-sm mt-2">
+                                            <div>
+                                                <span className="block text-xs font-black text-slate-900 uppercase tracking-wider">Waitlist Enabled</span>
+                                                <span className="block text-[9px] font-bold text-slate-500 uppercase mt-1">If capacity is full</span>
+                                            </div>
+                                            <label className="relative flex items-center cursor-pointer">
+                                                <input type="checkbox" className="sr-only peer" checked={postEvent.waitlistEnabled || false} onChange={e => setPostEvent(p => ({ ...p, waitlistEnabled: e.target.checked }))} />
+                                                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+                                            </label>
+                                        </div>
                                     </div>
-                                    {postEvent.ticketMode !== 'free' && (
+                                </div>
+                                <div className="p-8 border-2 border-slate-100 rounded-[2rem] bg-white shadow-sm">
+                                    <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-6 flex items-center gap-2"><FileText size={16} className="text-blue-500"/> Registration Form Fields</h3>
+                                    <div className="space-y-3">
+                                        <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                            <span className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-2"><CheckCircle2 size={14} className="text-emerald-500"/> Full Name</span>
+                                            <span className="text-[9px] font-black text-emerald-600 uppercase tracking-widest bg-emerald-100 px-3 py-1.5 rounded-full">Required</span>
+                                        </div>
+                                        <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                            <span className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-2"><CheckCircle2 size={14} className="text-emerald-500"/> Email Address</span>
+                                            <span className="text-[9px] font-black text-emerald-600 uppercase tracking-widest bg-emerald-100 px-3 py-1.5 rounded-full">Required</span>
+                                        </div>
+                                        <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                            <span className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-2"><CheckCircle2 size={14} className="text-emerald-500"/> Mobile Number</span>
+                                            <span className="text-[9px] font-black text-emerald-600 uppercase tracking-widest bg-emerald-100 px-3 py-1.5 rounded-full">Required</span>
+                                        </div>
+                                        <div className="pt-6 pb-4">
+                                            <div className="h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
+                                        </div>
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 pl-1">Optional Fields</p>
+                                        {['Company Name', 'Designation', 'Gender', 'Age', 'City', 'Address'].map(field => (
+                                            <label key={field} className="flex items-center justify-between p-4 bg-white border-2 border-slate-100 rounded-2xl cursor-pointer hover:border-blue-200 hover:bg-blue-50/50 transition-all group">
+                                                <span className="text-xs font-black text-slate-600 uppercase tracking-wider group-hover:text-blue-700">{field}</span>
+                                                <div className="relative flex items-center">
+                                                    <input type="checkbox" className="peer sr-only" 
+                                                        checked={(postEvent.rsvpFields || []).includes(field)}
+                                                        onChange={e => {
+                                                            const fields = postEvent.rsvpFields || [];
+                                                            setPostEvent(p => ({ ...p, rsvpFields: e.target.checked ? [...fields, field] : fields.filter(f => f !== field) }));
+                                                        }}
+                                                    />
+                                                    <div className="w-10 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500"></div>
+                                                </div>
+                                            </label>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="space-y-6">
+                                {(postEvent.categories || []).map((cat, idx) => (
+                                    <div key={idx} className="flex flex-col md:flex-row gap-4 p-6 border border-slate-100 rounded-2xl items-end relative">
+                                        <button 
+                                            onClick={() => {
+                                                const next = postEvent.categories.filter((_, i) => i !== idx);
+                                                setPostEvent(p => ({ ...p, categories: next }));
+                                            }}
+                                            className="absolute top-4 right-4 text-slate-300 hover:text-red-500"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                        <div className="flex-1 w-full">
+                                            <label className="block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-2">Category Name</label>
+                                            <input className="w-full bg-slate-50 p-3 rounded-xl border-none focus:ring-2 focus:ring-blue-100 font-bold text-sm text-slate-900" value={cat.name} onChange={e => {
+                                                const c = [...postEvent.categories]; c[idx].name = e.target.value; setPostEvent(p => ({ ...p, categories: c }));
+                                            }} />
+                                        </div>
                                         <div className="w-full md:w-1/4">
                                             <label className="block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-2">Price (₹)</label>
                                             <input type="number" className="w-full bg-slate-50 p-3 rounded-xl border-none focus:ring-2 focus:ring-blue-100 font-bold text-sm text-slate-900" value={cat.price} onChange={e => {
                                                 const c = [...postEvent.categories]; c[idx].price = e.target.value; setPostEvent(p => ({ ...p, categories: c }));
                                             }} />
                                         </div>
-                                    )}
-                                    <div className="w-full md:w-1/4">
-                                        <label className="block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-2">Capacity</label>
-                                        <input type="number" className="w-full bg-slate-50 p-3 rounded-xl border-none focus:ring-2 focus:ring-blue-100 font-bold text-sm text-slate-900" value={cat.totalSlots} onChange={e => {
-                                            const c = [...postEvent.categories]; c[idx].totalSlots = e.target.value; setPostEvent(p => ({ ...p, categories: c }));
-                                        }} />
+                                        <div className="w-full md:w-1/4">
+                                            <label className="block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-2">Capacity</label>
+                                            <input type="number" className="w-full bg-slate-50 p-3 rounded-xl border-none focus:ring-2 focus:ring-blue-100 font-bold text-sm text-slate-900" value={cat.totalSlots} onChange={e => {
+                                                const c = [...postEvent.categories]; c[idx].totalSlots = e.target.value; setPostEvent(p => ({ ...p, categories: c }));
+                                            }} />
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
-                            <button 
-                                onClick={() => {
-                                    setPostEvent(p => ({ ...p, categories: [...(p.categories || []), { name: "Standard", price: postEvent.ticketMode === 'free' ? 0 : 500, totalSlots: 100 }] }));
-                                }}
-                                className="w-full py-4 border-2 border-dashed border-slate-200 text-slate-500 rounded-2xl font-bold text-xs uppercase tracking-widest hover:border-blue-300 hover:text-blue-500 transition-colors flex justify-center gap-2"
-                            >
-                                <Plus size={16} /> Add Ticket Category
-                            </button>
-                        </div>
+                                ))}
+                                <button 
+                                    onClick={() => {
+                                        setPostEvent(p => ({ ...p, categories: [...(p.categories || []), { name: "Standard", price: 500, totalSlots: 100 }] }));
+                                    }}
+                                    className="w-full py-4 border-2 border-dashed border-slate-200 text-slate-500 rounded-2xl font-bold text-xs uppercase tracking-widest hover:border-blue-300 hover:text-blue-500 transition-colors flex justify-center gap-2"
+                                >
+                                    <Plus size={16} /> Add Ticket Category
+                                </button>
+                            </div>
+                        )}
                         <div className="flex justify-between pt-10">
                             <button onClick={prevStep} className="px-8 py-4 text-slate-400 font-bold uppercase text-[10px]"><ArrowLeft size={16} className="inline mr-2" /> Back</button>
-                            <button onClick={(e) => { nextStep(); nextStep(); }} className="px-10 py-4 bg-blue-600 text-white rounded-[2rem] text-xs font-black uppercase tracking-widest flex items-center gap-3">Next Step <ArrowRight size={16} /></button>
+                            <button onClick={nextStep} className="px-10 py-4 bg-blue-600 text-white rounded-[2rem] text-xs font-black uppercase tracking-widest flex items-center gap-3">Next Step <ArrowRight size={16} /></button>
                         </div>
                     </div>
                 )}
 
-                {/* Step 10: Terms */}
-                {currentStep === 10 && (
+                {/* Step 8: Terms */}
+                {currentStep === 8 && (
                     <div className="space-y-10 animate-in fade-in slide-in-from-right-8">
                         <div>
-                            <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter italic">10. Terms & Policies</h2>
+                            <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter italic">8. Terms & Policies</h2>
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">Rules for attendees</p>
                         </div>
                         <div className="grid grid-cols-1 gap-8">
@@ -452,14 +550,14 @@ export default function UnifiedEventForm({ postEvent, setPostEvent, onCancel, on
                             {renderInput("Entry Rules", postEvent.entryRules, (v) => setPostEvent(p => ({ ...p, entryRules: v })), "textarea", "What to bring, gate closing times...")}
                         </div>
                         <div className="flex justify-between pt-10">
-                            <button onClick={() => { prevStep(); prevStep(); }} className="px-8 py-4 text-slate-400 font-bold uppercase text-[10px]"><ArrowLeft size={16} className="inline mr-2" /> Back</button>
+                            <button onClick={prevStep} className="px-8 py-4 text-slate-400 font-bold uppercase text-[10px]"><ArrowLeft size={16} className="inline mr-2" /> Back</button>
                             <button onClick={nextStep} className="px-10 py-4 bg-blue-600 text-white rounded-[2rem] text-xs font-black uppercase tracking-widest flex items-center gap-3">Final Review <ArrowRight size={16} /></button>
                         </div>
                     </div>
                 )}
 
-                {/* Step 11: Publish */}
-                {currentStep === 11 && (
+                {/* Step 9: Publish */}
+                {currentStep === 9 && (
                     <div className="space-y-12 animate-in fade-in slide-in-from-right-8 text-center py-10">
                         <div className="w-24 h-24 rounded-[3rem] bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-2xl shadow-blue-500/20 mx-auto">
                             <Zap size={48} strokeWidth={1.5} />

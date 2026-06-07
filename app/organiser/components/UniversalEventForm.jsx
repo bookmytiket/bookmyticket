@@ -374,48 +374,7 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
         };
     });
 
-    useEffect(() => {
-        const hasStoredLocation = postEvent.latitude && postEvent.longitude;
-        if (isEditing || hasStoredLocation) return;
-
-        const timer = setTimeout(() => {
-            if (typeof window !== "undefined" && navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(async (pos) => {
-                    const { latitude: lat, longitude: lng } = pos.coords;
-                    try {
-                        const geo = await reverseGeocode(lat, lng);
-                        if (geo) {
-                            setConfig(prev => ({
-                                ...prev,
-                                country: geo.country || prev.country,
-                                countryCode: geo.countryCode || prev.countryCode,
-                                state: geo.state || prev.state,
-                                stateCode: geo.stateCode || prev.stateCode,
-                                district: geo.district || prev.district,
-                                city: geo.city || prev.city,
-                                zipCode: geo.pincode || prev.zipCode,
-                                location: { 
-                                    ...prev.location, 
-                                    address: geo.fullAddress,
-                                    city: geo.city,
-                                    pincode: geo.pincode,
-                                    coordinates: { lat, lng }
-                                }
-                            }));
-                            showToast(`Auto-Located: ${geo.city || geo.district}`, "success");
-                        }
-                    } catch (err) {
-                        console.error("Auto-location geocode error:", err);
-                    }
-                }, (err) => {
-                    console.warn("Auto-location permission denied or failed:", err);
-                }, { enableHighAccuracy: true, timeout: 10000 });
-            }
-        }, 1000);
-        
-        return () => clearTimeout(timer);
-    }, []);
-
+    // Auto-location removed as requested
     const [dbDistricts, setDbDistricts] = useState([]);
     const [dbCities, setDbCities] = useState([]);
     const [distLoading, setDistLoading] = useState(false);

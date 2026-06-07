@@ -19,6 +19,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/AuthContext';
 import { getFeeBreakdown, DEFAULT_FEE_SETTINGS, resolveFeeSettings } from '@/app/utils/feeBreakdown';
 import EventMap from './EventMap';
+import EarlyBirdPricingCards from '@/components/EarlyBirdPricingCards';
 import { Outfit } from 'next/font/google';
 const outfit = Outfit({ 
     subsets: ['latin'],
@@ -629,64 +630,14 @@ export default function DynamicEventClient({ event }) {
                                     )}
 
                                     <div className="flex flex-col gap-6">
-                                        {(hasDistances && selectedKM != null ? baseCategories.filter(c => Number(c.distance_km) === Number(selectedKM)) : baseCategories).map((cat, idx) => {
-                                            const isSelected = selectedCategory?.id === cat.id || (selectedCategory?.category_name === cat.category_name && !cat.id);
-                                            const priceDisplay = (() => {
-                                                if (cat.price !== undefined) return Number(cat.price) === 0 ? 'FREE' : `₹${cat.price}`;
-                                                const rates = cat.ageRates || cat.agePricing || cat.age_rates || cat.age_pricing || [];
-                                                if (rates.length > 0) {
-                                                    const prices = rates.map(r => Number(r.price || 0));
-                                                    const min = Math.min(...prices);
-                                                    const max = Math.max(...prices);
-                                                    return min === max ? `₹${min}` : `₹${min}-₹${max}`;
-                                                }
-                                                return `₹${cat.price || 0}`;
-                                            })();
-                                            
-                                            // Handle various slot field names
-                                            const slotsAvailable = cat.slots_total || cat.total_slots || cat.slots || cat.totalSlots || cat.capacity;
-                                            
-                                            return (
-                                                <div 
-                                                    key={idx}
-                                                    onClick={() => {
-                                                        setSelectedCategory(cat);
-                                                        setSelectedAgeRate(null);
-                                                    }}
-                                                    className={`p-6 rounded-[32px] border-2 transition-all cursor-pointer relative group flex flex-col justify-between h-full ${
-                                                        isSelected 
-                                                        ? 'bg-gradient-to-br from-[#ec4899] to-[#8b5cf6] border-transparent shadow-xl' 
-                                                        : 'bg-slate-50 border-slate-50 hover:border-pink-500'
-                                                    }`}
-                                                >
-                                                    <div className="flex justify-between items-start mb-4">
-                                                        <div className="space-y-1">
-                                                            <div className={`text-[8px] font-black uppercase tracking-[0.2em] mb-1 ${isSelected ? 'text-white/70' : 'text-slate-400'}`}>
-                                                                {cat.distance_km ? `${cat.distance_km}KM DISTANCE` : 'Category'}
-                                                            </div>
-                                                            <h5 className={`text-base font-bold uppercase tracking-normal ${isSelected ? 'text-white' : 'text-slate-900'}`}>{cat.category_name || cat.title || cat.name}</h5>
-                                                            {cat.age_group && (
-                                                                <p className={`text-[9px] font-bold uppercase tracking-widest ${isSelected ? 'text-white/80' : 'text-slate-500'}`}>
-                                                                    Age: {cat.age_group}
-                                                                </p>
-                                                            )}
-                                                        </div>
-                                                        <div className="text-right">
-                                                            <div className={`text-xl font-bold tracking-tight ${isSelected ? 'text-[#fde047]' : 'text-[#ec4899]'}`}>
-                                                                {priceDisplay}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="flex items-center justify-between mt-auto pt-4 border-t border-white/20">
-                                                        <span className={`text-[11px] font-bold uppercase tracking-widest ${isSelected ? 'text-white/90' : 'text-slate-400'}`}>
-                                                            {slotsAvailable ? `${slotsAvailable} Slots` : "Unlimited Slots"}
-                                                        </span>
-                                                        {isSelected && <CheckCircle2 size={24} className="text-[#fde047]" />}
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
+                                        <EarlyBirdPricingCards
+                                            raceCategories={hasDistances && selectedKM != null ? baseCategories.filter(c => Number(c.distance_km) === Number(selectedKM)) : baseCategories}
+                                            selectedCategoryId={selectedCategory?.id || selectedCategory?.category_name}
+                                            onSelect={(cat) => {
+                                                setSelectedCategory(cat);
+                                                setSelectedAgeRate(null);
+                                            }}
+                                        />
                                     </div>
                                 </div>
 
