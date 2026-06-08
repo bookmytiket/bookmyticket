@@ -33,6 +33,8 @@ const DataService = {
     const { data, error } = await supabase
       .from('events')
       .select('*')
+      .neq('is_deleted', true)
+      .not('status', 'in', '("CANCELLED","DELETED","CANCELLATION_REQUESTED","DELETION_REQUESTED")')
       .order('created_at', { ascending: false });
     
     if (error) throw error;

@@ -827,6 +827,8 @@ function OrganiserPanel() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [eventToDelete, setEventToDelete] = useState(null);
+  const [deletionReason, setDeletionReason] = useState("");
+  const [deletionActionType, setDeletionActionType] = useState(""); // 'DELETE' | 'REQUEST_DELETION' | 'REQUEST_CANCELLATION'
   const [deletionProgress, setDeletionProgress] = useState(null);
   const dropdownRef = React.useRef(null);
   const handleLogout = () => {
@@ -1707,28 +1709,60 @@ function OrganiserPanel() {
     }
   };
 
-  const executeEventDeletion = async (event, isCancellationRequest = false) => {
+  const executeEventDeletion = async (event, actionType) => {
     if (!event) return;
     
     try {
-      if (isCancellationRequest) {
-        setDeletionProgress(["Submitting cancellation request..."]);
+      if (!deletionReason && actionType !== 'HARD_DELETE') {
+        showToast("Please provide a reason for this request.", "error");
+        return;
+      }
+
+      if (actionType === 'REQUEST_CANCELLATION' || actionType === 'REQUEST_DELETION') {
+        const reqType = actionType === 'REQUEST_CANCELLATION' ? 'CANCELLATION' : 'DELETION';
+        const newStatus = actionType === 'REQUEST_CANCELLATION' ? 'CANCELLATION_REQUESTED' : 'DELETION_REQUESTED';
+        setDeletionProgress([`Submitting ${reqType.toLowerCase()} request...`]);
         
-        await supabase.from("event_cancellation_requests").insert({
+        await supabase.from("event_requests").insert({
             event_id: event.id,
             organizer_id: user?.id,
-            reason: "Requested by organizer via dashboard",
+            request_type: reqType,
+            reason: deletionReason,
             status: "PENDING"
         });
         
-        await supabase.from("events").update({ status: "CANCELLATION_REQUESTED" }).eq("id", event.id);
+        await supabase.from("event_status_history").insert({
+            event_id: event.id,
+            previous_status: event.status || 'published',
+            new_status: newStatus,
+            changed_by: user?.id
+        });
+
+        await supabase.from("events").update({ status: newStatus }).eq("id", event.id);
         
-        setDeletionProgress(prev => [...prev, "Cancellation request submitted.", "Completed"]);
+        // Notify organizer
+        fetch('/api/comm/trigger', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: user?.email,
+            type: "ORGANIZER_REQUEST_SUBMITTED",
+            data: {
+              eventName: event.title,
+              requestType: reqType,
+              status: "PENDING"
+            }
+          })
+        }).catch(err => console.error("Failed to notify organizer", err));
+        
+        setDeletionProgress(prev => [...prev, `${reqType} request submitted.`, "Completed"]);
         setTimeout(() => {
           setEventToDelete(null);
+          setDeletionReason("");
+          setDeletionActionType("");
           setDeletionProgress(null);
           refreshEvents();
-          showToast("Cancellation request sent to Admin", "success");
+          showToast(`${reqType} request sent to Admin`, "success");
         }, 1500);
         return;
       }
@@ -1765,6 +1799,8 @@ function OrganiserPanel() {
 
       setTimeout(() => {
         setEventToDelete(null);
+        setDeletionReason("");
+        setDeletionActionType("");
         setDeletionProgress(null);
         showToast("Event deleted successfully", "success");
         refreshEvents();
@@ -1774,7 +1810,7 @@ function OrganiserPanel() {
       console.error("Delete error:", err);
       setDeletionProgress(null);
       showToast(
-        "Failed to delete event: " + (err.message || "Unknown error"),
+        "Failed to perform action: " + (err.message || "Unknown error"),
         "error",
       );
     }
@@ -15092,31 +15128,50 @@ function OrganiserPanel() {
                 </div>
               ) : (
                 <>
-                  {eventToDelete.totalBookings > 0 ? (
+                  {eventToDelete.status === 'draft' || eventToDelete.uiStatus === 'draft' ? (
                     <div>
-                      <p style={{ color: "#ef4444", fontSize: "14px", fontWeight: 600, marginBottom: "24px" }}>
-                        This event has confirmed bookings and cannot be permanently deleted.
+                      <p style={{ color: t.textSub, fontSize: "14px", marginBottom: "24px" }}>
+                        Are you sure you want to delete this draft event? This action cannot be undone.
                       </p>
                       <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end" }}>
-                        <button onClick={() => setEventToDelete(null)} style={{ padding: "12px 24px", borderRadius: "12px", background: t.cardBg, color: t.textMain, border: `1px solid ${t.border}`, fontWeight: 700, cursor: "pointer" }}>
-                          Cancel Event
+                        <button onClick={() => { setEventToDelete(null); setDeletionReason(""); }} style={{ padding: "12px 24px", borderRadius: "12px", background: t.cardBg, color: t.textMain, border: `1px solid ${t.border}`, fontWeight: 700, cursor: "pointer" }}>
+                          Cancel
                         </button>
-                        <button onClick={() => executeEventDeletion(eventToDelete, true)} style={{ padding: "12px 24px", borderRadius: "12px", background: "#f59e0b", color: "#fff", border: "none", fontWeight: 700, cursor: "pointer" }}>
-                          Request Event Cancellation
+                        <button onClick={() => executeEventDeletion(eventToDelete, 'HARD_DELETE')} style={{ padding: "12px 24px", borderRadius: "12px", background: "#ef4444", color: "#fff", border: "none", fontWeight: 700, cursor: "pointer" }}>
+                          Delete Permanently
                         </button>
                       </div>
                     </div>
                   ) : (
-                    <div>
-                      <p style={{ color: t.textSub, fontSize: "14px", marginBottom: "24px" }}>
-                        Are you sure you want to delete this event? This action cannot be undone.
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                      <p style={{ color: "#ef4444", fontSize: "14px", fontWeight: 600 }}>
+                        Published events cannot be permanently deleted or directly cancelled. You must submit a request to the Admin for approval.
                       </p>
-                      <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end" }}>
-                        <button onClick={() => setEventToDelete(null)} style={{ padding: "12px 24px", borderRadius: "12px", background: t.cardBg, color: t.textMain, border: `1px solid ${t.border}`, fontWeight: 700, cursor: "pointer" }}>
-                          Cancel
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '8px', fontSize: '12px', fontWeight: 700, color: t.textMain, textTransform: 'uppercase' }}>Reason for Request <span style={{ color: '#ef4444' }}>*</span></label>
+                        <textarea 
+                          value={deletionReason} 
+                          onChange={(e) => setDeletionReason(e.target.value)}
+                          placeholder="Please explain why this event needs to be cancelled or deleted..."
+                          rows={4}
+                          style={{ width: "100%", padding: "12px", borderRadius: "12px", border: `1px solid ${t.border}`, background: t.bg, color: t.textMain, fontSize: "14px", resize: "none" }}
+                        />
+                      </div>
+                      <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end", marginTop: '8px' }}>
+                        <button onClick={() => { setEventToDelete(null); setDeletionReason(""); }} style={{ padding: "12px 24px", borderRadius: "12px", background: t.cardBg, color: t.textMain, border: `1px solid ${t.border}`, fontWeight: 700, cursor: "pointer" }}>
+                          Close
                         </button>
-                        <button onClick={() => executeEventDeletion(eventToDelete, false)} style={{ padding: "12px 24px", borderRadius: "12px", background: "#ef4444", color: "#fff", border: "none", fontWeight: 700, cursor: "pointer" }}>
-                          Delete Permanently
+                        <button 
+                          onClick={() => executeEventDeletion(eventToDelete, 'REQUEST_DELETION')} 
+                          style={{ padding: "12px 24px", borderRadius: "12px", background: "#f59e0b", color: "#fff", border: "none", fontWeight: 700, cursor: "pointer" }}
+                        >
+                          Request Deletion
+                        </button>
+                        <button 
+                          onClick={() => executeEventDeletion(eventToDelete, 'REQUEST_CANCELLATION')} 
+                          style={{ padding: "12px 24px", borderRadius: "12px", background: "#ef4444", color: "#fff", border: "none", fontWeight: 700, cursor: "pointer" }}
+                        >
+                          Request Cancellation
                         </button>
                       </div>
                     </div>

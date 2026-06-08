@@ -26,7 +26,9 @@ export interface Event {
 // --- Events ---
 
 export const getEvents = async (filters: { city?: string; category?: string } = {}) => {
-  let query = supabase.from('events').select('*');
+  let query = supabase.from('events').select('*')
+    .neq('is_deleted', true)
+    .not('status', 'in', '("CANCELLED","DELETED","CANCELLATION_REQUESTED","DELETION_REQUESTED")');
   
   if (filters.city && filters.city !== 'All Cities') {
     query = query.ilike('city', `%${filters.city}%`);
@@ -46,6 +48,8 @@ export const getEventById = async (id: string) => {
     .from('events')
     .select('*')
     .eq('id', id)
+    .neq('is_deleted', true)
+    .not('status', 'in', '("DELETED")')
     .single();
   if (error) throw error;
   return data as Event;

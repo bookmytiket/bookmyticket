@@ -45,7 +45,7 @@ export async function GET(request, { params }) {
       if (evt) eventData = evt;
     }
 
-    if (!eventData) {
+    if (!eventData || eventData.is_deleted || eventData.status === 'DELETED') {
       return NextResponse.json({ error: 'Marathon not found' }, { status: 404 });
     }
 

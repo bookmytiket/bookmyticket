@@ -12,12 +12,13 @@ export default function AdminCancellationRequests({ t, theme }) {
         setLoading(true);
         try {
             const { data, error } = await supabase
-                .from('event_cancellation_requests')
+                .from('event_requests')
                 .select(`
                     id, 
                     event_id, 
                     reason, 
                     status, 
+                    request_type,
                     created_at, 
                     events ( title, date, location )
                 `)
@@ -38,25 +39,44 @@ export default function AdminCancellationRequests({ t, theme }) {
         setActionLoading(request.id);
         try {
             if (newStatus === "APPROVED") {
-                // Perform Hard Delete on event and related data
-                await supabase.from("bookings").delete().eq("event_id", request.event_id);
-                await supabase.from("events").delete().eq("id", request.event_id);
-                // The DB constraints/cascades should handle everything if set properly
+                if (request.request_type === 'DELETION') {
+                    // Soft Delete
+                    await supabase.from("events").update({ is_deleted: true, deleted_at: new Date().toISOString(), status: 'DELETED' }).eq("id", request.event_id);
+                } else {
+                    // Cancellation
+                    await supabase.from("events").update({ status: 'CANCELLED' }).eq("id", request.event_id);
+                }
                 
                 // Update request
-                await supabase.from('event_cancellation_requests')
-                    .update({ status: "APPROVED", admin_notes: "Approved by Admin" })
+                await supabase.from('event_requests')
+                    .update({ status: "APPROVED" })
                     .eq("id", request.id);
 
             } else {
                 // Reject
-                await supabase.from('event_cancellation_requests')
-                    .update({ status: "REJECTED", admin_notes: "Rejected by Admin" })
+                await supabase.from('event_requests')
+                    .update({ status: "REJECTED" })
                     .eq("id", request.id);
 
                 // Reactivate Event
-                await supabase.from('events').update({ is_deleted: false, status: "Published" }).eq("id", request.event_id);
+                await supabase.from('events').update({ status: "Published" }).eq("id", request.event_id);
             }
+
+            // Notify Organizer
+            fetch('/api/comm/trigger', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email: "organiser@bookmyticket.com", // Fallback, could fetch specific email
+                    type: newStatus === "APPROVED" ? "ORGANIZER_REQUEST_APPROVED" : "ORGANIZER_REQUEST_REJECTED",
+                    data: {
+                        eventName: request.events?.title,
+                        requestType: request.request_type,
+                        status: newStatus
+                    }
+                })
+            }).catch(console.error);
+
             fetchRequests();
         } catch (err) {
             console.error("Error updating request:", err);
@@ -100,7 +120,7 @@ export default function AdminCancellationRequests({ t, theme }) {
                             <div key={req.id} className="bg-white p-6 rounded-[24px] border border-red-100 shadow-sm shadow-red-50 flex flex-col md:flex-row md:items-center justify-between gap-6 hover:shadow-md transition-all">
                                 <div className="flex-1">
                                     <div className="flex items-center gap-2 mb-2">
-                                        <span className="px-2 py-0.5 bg-red-500 text-white rounded-full text-[9px] font-black uppercase tracking-widest">Deletion Requested</span>
+                                        <span className="px-2 py-0.5 bg-red-500 text-white rounded-full text-[9px] font-black uppercase tracking-widest">{req.request_type === 'DELETION' ? 'Deletion Requested' : 'Cancellation Requested'}</span>
                                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
                                             <Clock size={12} /> {new Date(req.created_at).toLocaleString()}
                                         </span>
@@ -119,7 +139,7 @@ export default function AdminCancellationRequests({ t, theme }) {
                                         disabled={actionLoading === req.id}
                                         className="px-6 py-3 bg-red-500 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-red-600 transition-all flex items-center justify-center gap-2 shadow-lg shadow-red-500/20 disabled:opacity-50"
                                     >
-                                        <Trash2 size={16} /> Approve Deletion
+                                        <Trash2 size={16} /> Approve {req.request_type === 'DELETION' ? 'Deletion' : 'Cancellation'}
                                     </button>
                                     <button 
                                         onClick={() => handleAction(req, "REJECTED")}
@@ -143,6 +163,7 @@ export default function AdminCancellationRequests({ t, theme }) {
                             <thead>
                                 <tr className="bg-slate-50/50">
                                     <th className="p-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Event</th>
+                                    <th className="p-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Type</th>
                                     <th className="p-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Reason</th>
                                     <th className="p-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Status</th>
                                     <th className="p-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Date Processed</th>
@@ -152,6 +173,7 @@ export default function AdminCancellationRequests({ t, theme }) {
                                 {pastRequests.map(req => (
                                     <tr key={req.id} className="hover:bg-slate-50 transition-colors">
                                         <td className="p-4 text-[12px] font-black text-slate-900">{req.events?.title || "Unknown"}</td>
+                                        <td className="p-4 text-[11px] font-bold text-slate-500">{req.request_type}</td>
                                         <td className="p-4 text-[11px] font-bold text-slate-500 max-w-[200px] truncate" title={req.reason}>{req.reason}</td>
                                         <td className="p-4">
                                             <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${req.status === 'APPROVED' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-600'}`}>

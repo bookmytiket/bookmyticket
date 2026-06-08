@@ -33,7 +33,9 @@ export async function GET(request) {
             .eq('visibility_status', 'public')
             .eq('approval_status', 'approved')
             .eq('listing_status', 'active')
-            .eq('entity_type', 'event');
+            .eq('entity_type', 'event')
+            .not('is_deleted', 'eq', true)
+            .not('status', 'in', '("CANCELLED","DELETED","CANCELLATION_REQUESTED","DELETION_REQUESTED")');
 
         // Apply District Filter (Highest Priority)
         if (district && district !== 'All' && district !== 'India') {

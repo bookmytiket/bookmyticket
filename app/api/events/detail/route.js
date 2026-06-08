@@ -27,7 +27,7 @@ export async function GET(request) {
 
         if (error) throw error;
         
-        if (!event) {
+        if (!event || event.is_deleted || event.status === 'DELETED') {
             return NextResponse.json({ error: 'Event not found' }, { status: 404 });
         }
 
