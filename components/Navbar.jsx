@@ -244,7 +244,7 @@ export default function Navbar({ compact = false }) {
   /* scroll detection */
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 10);
-    window.addEventListener("scroll", fn);
+    window.addEventListener("scroll", fn, { passive: true });
     return () => window.removeEventListener("scroll", fn);
   }, []);
 
