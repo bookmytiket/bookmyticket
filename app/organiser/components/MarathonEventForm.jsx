@@ -18,6 +18,7 @@ import { INDIAN_STATES, getIndianDistricts, getIndianCities } from "@/app/data/i
 import { COUNTRIES } from "@/app/data/locationData";
 import { reverseGeocode, geocode } from "@/lib/googleMaps";
 import LocationSelectionModal from "@/components/LocationSelectionModal";
+import AboutEventEditor from "@/components/AboutEventEditor";
 
 const BENEFIT_ICONS = [
     { key: "ambulance", icon: HeartPulse, label: "Ambulance" },
@@ -1298,6 +1299,22 @@ export default function MarathonEventForm({ marathonId, isRSVP, onCancel, onPubl
                                 onChange={e => setEventData(p => ({ ...p, terms: e.target.value }))}
                             />
                         </div>
+
+                        {/* About Event Rich Editor — saves directly to Supabase */}
+                        {localMarathonId && (
+                            <div className="pt-8 border-t border-slate-100">
+                                <div className="flex items-center gap-3 mb-6">
+                                    <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center text-white">
+                                        <Star size={15} />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-sm font-black text-slate-900 uppercase">About Event — Rich Content</h3>
+                                        <p className="text-[10px] text-slate-400">Highlights, FAQs, Rules & more — saved directly to event</p>
+                                    </div>
+                                </div>
+                                <AboutEventEditor eventId={localMarathonId} eventType="marathon" />
+                            </div>
+                        )}
                     </section>
 
                     <div className="flex justify-between mt-8">

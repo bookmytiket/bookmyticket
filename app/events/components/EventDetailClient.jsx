@@ -16,6 +16,7 @@ import { getFeeBreakdown, resolveFeeSettings, DEFAULT_FEE_SETTINGS } from '@/app
 import TournamentRegistration from '@/app/organiser/components/TournamentRegistration';
 import ReviewsSection from '@/components/ReviewsSection';
 import WishlistButton from '@/components/WishlistButton';
+import AboutEventSection from '@/components/AboutEventSection';
 
 const DEFAULT_IMG = "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&q=80";
 const DEFAULT_FEATURES = [
@@ -459,77 +460,10 @@ export default function EventDetailClient({ id }) {
                                 </div>
                             )}
 
-                            <h2 className="text-xl font-black text-slate-900 uppercase tracking-tighter mb-4 flex items-center gap-3">
-                                <Info className="text-pink-500" size={24} /> About the Event
-                            </h2>
-                            <p className="text-[15px] font-medium text-slate-600 leading-relaxed whitespace-pre-line mb-8">
-                                {event.description}
-                            </p>
-                            
-                            <hr className="border-slate-100 mb-8" />
-                            
-                            {(parsedConfig?.location?.coordinates?.lat || event.latitude) && (
-                                <div className="mt-8 pt-8 border-t border-slate-100">
-                                    <h2 className="text-xl font-black text-slate-900 mb-6 flex items-center gap-3 uppercase tracking-tight">
-                                        <MapPin className="text-pink-500" size={24} /> Venue Location
-                                    </h2>
-                                    <EventMap 
-                                        lat={parsedConfig?.location?.coordinates?.lat || event.latitude}
-                                        lng={parsedConfig?.location?.coordinates?.lng || event.longitude}
-                                        venueName={parsedConfig?.location?.venueName || event.venue}
-                                        address={parsedConfig?.location?.address || event.address}
-                                    />
-                                </div>
-                            )}
+                            <AboutEventSection event={event} config={parsedConfig || {}} />
 
                             <hr className="border-slate-100 my-8" />
                             
-                            <h2 className="text-xl font-black text-slate-900 uppercase tracking-tighter mb-4 flex items-center gap-3">
-                                <Warehouse className="text-pink-500" size={24} /> Venue & Amenities
-                            </h2>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                                {event.features.map((feature, idx) => (
-                                    <div key={idx} className="flex items-center gap-3 p-4 bg-slate-50 rounded-[24px] border border-slate-100">
-                                        <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm text-xl">
-                                            {feature.icon || "✓"}
-                                        </div>
-                                        <span className="text-[13px] font-bold text-slate-800 uppercase tracking-widest">{feature.label || feature}</span>
-                                    </div>
-                                ))}
-                            </div>
-
-                            {parsedConfig?.faqs?.length > 0 && (
-                                <div className="mt-12">
-                                    <h2 className="text-xl font-black text-slate-900 uppercase tracking-tighter mb-6 flex items-center gap-3">
-                                        <HelpCircle className="text-pink-500" size={24} /> Frequently Asked Questions
-                                    </h2>
-                                    <div className="space-y-4">
-                                        {parsedConfig.faqs.map((faq, idx) => (
-                                            <details key={idx} className="group p-6 bg-slate-50 rounded-[24px] border border-slate-100 hover:bg-white hover:shadow-xl hover:shadow-slate-100 transition-all cursor-pointer">
-                                                <summary className="flex items-center justify-between font-bold text-slate-800 uppercase tracking-wider text-[12px] list-none">
-                                                    {faq.question}
-                                                    <ChevronDown className="group-open:rotate-180 transition-transform text-pink-500" size={18} />
-                                                </summary>
-                                                <p className="mt-4 text-[13px] font-medium text-slate-600 leading-relaxed normal-case tracking-normal">
-                                                    {faq.answer}
-                                                </p>
-                                            </details>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-
-                            {parsedConfig?.terms && (
-                                <div className="mt-12 p-8 bg-amber-50/50 rounded-[32px] border border-amber-100/50">
-                                    <h2 className="text-lg font-black text-amber-900 uppercase tracking-tight mb-4 flex items-center gap-3">
-                                        <ShieldCheck className="text-amber-500" size={22} /> Event Rules & Terms
-                                    </h2>
-                                    <div className="text-[12px] font-semibold text-amber-800/80 leading-relaxed whitespace-pre-wrap uppercase tracking-wider">
-                                        {parsedConfig.terms}
-                                    </div>
-                                </div>
-                            )}
-
                             <div className="mt-12 p-8 bg-slate-900 rounded-[32px] text-white">
                                 <h2 className="text-xs font-black text-slate-400 uppercase tracking-[0.3em] mb-6">Organised By</h2>
                                 <div className="flex items-center gap-5">

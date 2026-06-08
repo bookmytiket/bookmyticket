@@ -18,6 +18,7 @@ import { useSupabaseQuery } from "@/hooks/useSupabase";
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/AuthContext';
 import { getFeeBreakdown, DEFAULT_FEE_SETTINGS, resolveFeeSettings } from '@/app/utils/feeBreakdown';
+import AboutEventSection from '@/components/AboutEventSection';
 import EventMap from './EventMap';
 import EarlyBirdPricingCards from '@/components/EarlyBirdPricingCards';
 import { Outfit } from 'next/font/google';
@@ -569,44 +570,8 @@ export default function DynamicEventClient({ event }) {
                     {/* Left Column: Event Content */}
                     <div className="lg:col-span-8 space-y-8">
 
-                        <motion.div 
-                            initial={{ clipPath: 'inset(0 100% 0 0)' }}
-                            animate={{ clipPath: 'inset(0 0% 0 0)' }}
-                            transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
-                            className="bg-white rounded-[24px] border border-slate-100 shadow-sm p-5 md:p-6 space-y-4 relative overflow-hidden"
-                        >
-                            {/* Animated Background Shimmer for Masking effect */}
-                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full animate-shimmer pointer-events-none" />
+                        <AboutEventSection event={event} config={config} />
 
-                            <div className="space-y-0.5">
-                                <motion.h2 
-                                    initial={{ opacity: 0, x: -20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    className="text-2xl md:text-3xl font-[900] uppercase tracking-normal bg-gradient-to-r from-[#ec4899] via-[#8b5cf6] to-[#ec4899] bg-[length:200%_auto] bg-clip-text text-transparent animate-gradient-x"
-                                >
-                                    About Event
-                                </motion.h2>
-                                {config.subtitle && <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{config.subtitle}</p>}
-                            </div>
-
-                            <div className="space-y-6">
-                                {config.awareness_text && (
-                                    <div className="p-6 bg-gradient-to-br from-[#ec4899]/5 to-[#8b5cf6]/5 border border-[#ec4899]/10 rounded-[2rem]">
-                                        <div className="flex items-center gap-3 mb-3">
-                                            <Sparkles className="text-[#ec4899]" size={20} />
-                                            <h4 className="text-xs font-black text-slate-900 uppercase">Special Note</h4>
-                                        </div>
-                                        <p className="text-sm font-medium text-slate-600 leading-relaxed italic">"{config.awareness_text}"</p>
-                                    </div>
-                                )}
-
-                                <div className="prose prose-slate max-w-none">
-                                    <p className="text-sm font-medium text-slate-600 leading-relaxed whitespace-pre-wrap">
-                                        {event.description || config.description || "No description provided."}
-                                    </p>
-                                </div>
-                            </div>
-                        </motion.div>
 
                         <motion.div 
                             initial={{ opacity: 0, y: 20 }}

@@ -148,7 +148,7 @@ export default function HeroBanner({ slides: propSlides, showDetails = true, sho
                 onMouseLeave={() => setIsHovered(false)}
                 onTouchStart={onTouchStart}
                 onTouchEnd={onTouchEnd}
-                style={{ position: 'relative', overflow: 'hidden', background: '#fff' }}
+                style={{ position: 'relative', overflow: 'hidden', background: '#f4f4f4' }}
             >
                 {/* Slide content fills the aspect-ratio stage absolutely */}
                 <AnimatePresence initial={false} custom={dir} mode="wait">
