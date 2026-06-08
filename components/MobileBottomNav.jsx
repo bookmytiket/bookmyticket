@@ -103,9 +103,9 @@ export default function MobileBottomNav() {
           -webkit-backdrop-filter: blur(20px);
           border-top: 1px solid rgba(226, 232, 240, 0.8);
           z-index: 10000;
-          padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
           display: none;
           box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.05);
+          padding-bottom: env(safe-area-inset-bottom, 0px);
         }
 
         @media (max-width: 768px) {
@@ -118,11 +118,10 @@ export default function MobileBottomNav() {
           display: grid;
           grid-template-columns: repeat(5, minmax(0, 1fr));
           align-items: center;
-          height: 60px;
+          height: 65px;
           width: 100%;
           max-width: 480px;
           margin: 0 auto;
-          padding: 0 8px;
           box-sizing: border-box;
         }
 
@@ -137,6 +136,7 @@ export default function MobileBottomNav() {
           width: 100%;
           transition: color 0.2s ease, transform 0.1s ease;
           cursor: pointer;
+          gap: 4px;
         }
 
         .nav-item:active {
@@ -148,7 +148,6 @@ export default function MobileBottomNav() {
         }
 
         .nav-icon {
-          margin-bottom: 4px;
           transition: transform 0.2s ease;
         }
 
@@ -160,8 +159,9 @@ export default function MobileBottomNav() {
           font-size: 10px;
           font-weight: 800;
           text-transform: uppercase;
-          letter-spacing: 0.8px;
+          letter-spacing: 0.5px;
           white-space: nowrap;
+          line-height: 1;
         }
 
         .nav-item-action {
@@ -175,7 +175,7 @@ export default function MobileBottomNav() {
 
         .book-now-floating {
           position: absolute;
-          top: -24px;
+          bottom: 15px; /* Changed from top: -24px to bottom anchored to prevent cutoff */
           width: 58px;
           height: 58px;
           border-radius: 50%;
@@ -190,6 +190,7 @@ export default function MobileBottomNav() {
           transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
           outline: none;
           z-index: 10001;
+          padding: 0;
         }
 
         .book-now-floating:active {
@@ -211,7 +212,7 @@ export default function MobileBottomNav() {
           font-size: 8px;
           font-weight: 800;
           text-transform: uppercase;
-          margin-top: 1px;
+          margin-top: 2px;
           line-height: 1;
         }
       `}</style>
