@@ -15,6 +15,7 @@ import {
     Zap
 } from "lucide-react"; 
 import * as htmlToImage from 'html-to-image';
+import { jsPDF } from "jspdf";
 import { supabase } from "@/lib/supabase";
 
 export default function DigitalTicket({ booking, event, ticket: initialTicket, showDownload = true, branding = {} }) {
@@ -103,9 +104,16 @@ export default function DigitalTicket({ booking, event, ticket: initialTicket, s
             }).join(', ');
         }
 
+        const bibNumber = booking?.customer_details?.bib_number;
+
         return {
             label: category || "Event",
-            fields: [
+            fields: bibNumber ? [
+                { label: "ATTENDEE", value: booking?.customer_name || booking?.customer_details?.name || booking?.customer_email || "Guest" },
+                { label: "EVENT TYPE", value: event?.category || "General" },
+                { label: "CATEGORY", value: booking?.customer_details?.packageId || zone },
+                { label: "BIB NUMBER", value: bibNumber }
+            ] : [
                 { label: "ATTENDEE", value: booking?.customer_name || booking?.customer_details?.name || booking?.customer_email || "Guest" },
                 { label: "EVENT TYPE", value: event?.category || "General" },
                 { label: "SEAT CATEGORY", value: zone },
@@ -125,17 +133,23 @@ export default function DigitalTicket({ booking, event, ticket: initialTicket, s
         
         try {
             await new Promise(resolve => setTimeout(resolve, 800));
-            // Capturing at 1200x600 for High Quality as requested
+            // Capturing at 1200x600 for High Quality
             const dataUrl = await htmlToImage.toJpeg(ticketRef.current, { 
                 quality: 1.0, 
                 pixelRatio: 2,
                 width: 1200,
                 height: 600
             });
-            const link = document.createElement('a');
-            link.download = `Ticket-${event.title}-${ticketNumber}.jpg`;
-            link.href = dataUrl;
-            link.click();
+            
+            // Create PDF
+            const pdf = new jsPDF({
+                orientation: "landscape",
+                unit: "px",
+                format: [1200, 600]
+            });
+            
+            pdf.addImage(dataUrl, 'JPEG', 0, 0, 1200, 600);
+            pdf.save(`Ticket-${event.title}-${ticketNumber}.pdf`);
         } catch (error) {
             console.error('Download failed:', error);
         } finally {

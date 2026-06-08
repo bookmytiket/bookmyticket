@@ -40,7 +40,7 @@ const BENEFIT_ICONS = [
 
 const SPONSOR_TYPES = ["Title", "Powered By", "Associate", "Partner", "Media", "Hydration", "Medical"];
 
-export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
+export default function MarathonEventForm({ marathonId, isRSVP, onCancel, onPublish }) {
     const { user } = useAuth();
     const { showToast } = useToast();
     const [currentStep, setCurrentStep] = useState(1);
@@ -366,7 +366,10 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
                 listing_status: 'active',
                 entity_type: 'event',
                 type: 'Marathon',
-                event_type: 'Marathon',
+                event_type: isRSVP ? 'RSVP' : 'Marathon',
+                is_paid: !isRSVP,
+                requires_payment: !isRSVP,
+                ticket_mode: isRSVP ? 'free' : 'paid',
                 organiser_id: user.id,
                 latitude: Number(eventData.map_location.lat),
                 longitude: Number(eventData.map_location.lng),
@@ -386,18 +389,20 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
                 end_date: eventData.event_end_date || null,
                 end_time: eventData.event_end_time || null,
                 expiry_date: eventData.expiry_date || null,
-                price: categories.length > 0 ? Math.min(...categories.map(c => Number(c.price) || 0)) : 0,
+                price: isRSVP ? 0 : (categories.length > 0 ? Math.min(...categories.map(c => Number(c.price) || 0)) : 0),
                 dynamic_config: {
                     // Simplified categories for booking sidebar price display
                     categories: categories.map(c => ({
                         id: c.id || Math.random().toString(36).substr(2, 9),
                         title: `${c.category_name} (${c.distance_km}KM)`,
                         name: `${c.category_name} (${c.distance_km}KM)`,
-                        price: Number(c.price) || 0,
+                        price: isRSVP ? 0 : (Number(c.price) || 0),
                         distance_km: Number(c.distance_km) || 0,
                         age_group: c.age_group || 'Open',
                         gender_category: c.gender_category || 'All',
-                        slots_total: Number(c.slots_total) || 100
+                        slots_total: Number(c.slots_total) || 100,
+                        waitlist: c.waitlist || false,
+                        autoApprove: c.autoApprove !== false
                     })),
                     form_fields: customFields.map(f => ({
                         ...f,
@@ -413,10 +418,12 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
                         distance_km: Number(c.distance_km) || 0,
                         age_group: c.age_group || 'Open',
                         gender_category: c.gender_category || 'All',
-                        price: Number(c.price) || 0,
+                        price: isRSVP ? 0 : (Number(c.price) || 0),
                         slots: Number(c.slots_total) || 100,
                         totalSlots: Number(c.slots_total) || 100,
-                        ageRates: c.pricing || c.ageRates || [] // Preserve age-based pricing
+                        waitlist: c.waitlist || false,
+                        autoApprove: c.autoApprove !== false,
+                        ageRates: isRSVP ? [] : (c.pricing || c.ageRates || []) // Preserve age-based pricing
                     })),
                     subtitle: eventData.subtitle,
                     awareness_text: eventData.awareness_text,
@@ -543,11 +550,11 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
 
     const steps = [
         { id: 1, title: "Event Info", icon: Info },
-        { id: 2, title: "Categories", icon: Trophy },
-        { id: 3, title: "Pricing & Rules", icon: Timer },
-        { id: 4, title: "Form Builder", icon: CheckCircle2 },
-        { id: 5, title: "Content & FAQs", icon: Star },
-        { id: 6, title: marathonId ? "Update" : "Location", icon: MapPin }
+        { id: 2, title: isRSVP ? "RSVP Settings" : "Categories", icon: isRSVP ? Users : Trophy },
+        ...(!isRSVP ? [{ id: 3, title: "Pricing & Rules", icon: Timer }] : []),
+        { id: isRSVP ? 3 : 4, title: "Form Builder", icon: CheckCircle2 },
+        { id: isRSVP ? 4 : 5, title: "Content & FAQs", icon: Star },
+        { id: isRSVP ? 5 : 6, title: marathonId ? "Update" : "Location", icon: MapPin }
     ];
 
     return (
@@ -807,8 +814,8 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
                 <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
                     <div className="flex items-center justify-between">
                         <div>
-                            <h2 className="text-2xl font-black text-slate-900 uppercase">Run Categories</h2>
-                            <p className="text-xs text-slate-500 font-bold uppercase">Define distance, age groups and pricing</p>
+                            <h2 className="text-2xl font-black text-slate-900 uppercase">{isRSVP ? "RSVP Configuration" : "Run Categories"}</h2>
+                            <p className="text-xs text-slate-500 font-bold uppercase">{isRSVP ? "Define RSVP capacity and registration dates" : "Define distance, age groups and pricing"}</p>
                         </div>
                         <button 
                             onClick={() => setCategories([...categories, { category_name: "New Run", distance_km: 5, age_group: "Open", price: 0, slots_total: 100, gender_category: "All" }])}
@@ -873,23 +880,57 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
                                         </div>
                                     </div>
                                     <div>
-                                        <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest block mb-2">Prize Amount (₹)</label>
-                                        <input type="number" className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl font-black text-sm text-slate-900" value={cat.prize_amount || ""} onChange={e => {
-                                            const nc = [...categories]; nc[idx].prize_amount = e.target.value; setCategories(nc);
-                                        }} />
-                                    </div>
-                                    <div>
-                                        <label className="text-[10px] font-black text-[#ec4899] uppercase tracking-widest block mb-2">Registration Fee (₹)</label>
-                                        <input type="number" step="any" className="w-full bg-pink-50 border border-pink-100 p-3 rounded-xl font-black text-sm text-[#ec4899]" value={cat.price} onChange={e => {
-                                            const nc = [...categories]; nc[idx].price = e.target.value; setCategories(nc);
-                                        }} />
-                                    </div>
-                                    <div>
-                                        <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest block mb-2">Participant Capacity</label>
+                                        <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest block mb-2">{isRSVP ? "Maximum Capacity" : "Participant Capacity"}</label>
                                         <input type="number" className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl font-black text-sm text-slate-900" value={cat.slots_total} onChange={e => {
                                             const nc = [...categories]; nc[idx].slots_total = e.target.value; setCategories(nc);
                                         }} />
                                     </div>
+                                    {isRSVP && (
+                                        <>
+                                            <div>
+                                                <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest block mb-2">Waitlist Enabled</label>
+                                                <div className="mt-[-12px]">
+                                                    <CustomSelect 
+                                                        value={cat.waitlist ? "Yes" : "No"} 
+                                                        options={["Yes", "No"]} 
+                                                        onChange={val => {
+                                                            const nc = [...categories]; nc[idx].waitlist = val === "Yes"; setCategories(nc);
+                                                        }} 
+                                                        searchable={false}
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest block mb-2">Approval Mode</label>
+                                                <div className="mt-[-12px]">
+                                                    <CustomSelect 
+                                                        value={cat.autoApprove === false ? "Manual Approve" : "Auto Approve"} 
+                                                        options={["Auto Approve", "Manual Approve"]} 
+                                                        onChange={val => {
+                                                            const nc = [...categories]; nc[idx].autoApprove = val === "Auto Approve"; setCategories(nc);
+                                                        }} 
+                                                        searchable={false}
+                                                    />
+                                                </div>
+                                            </div>
+                                        </>
+                                    )}
+                                    {!isRSVP && (
+                                        <>
+                                            <div>
+                                                <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest block mb-2">Prize Amount (₹)</label>
+                                                <input type="number" className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl font-black text-sm text-slate-900" value={cat.prize_amount || ""} onChange={e => {
+                                                    const nc = [...categories]; nc[idx].prize_amount = e.target.value; setCategories(nc);
+                                                }} />
+                                            </div>
+                                            <div>
+                                                <label className="text-[10px] font-black text-[#ec4899] uppercase tracking-widest block mb-2">Registration Fee (₹)</label>
+                                                <input type="number" step="any" className="w-full bg-pink-50 border border-pink-100 p-3 rounded-xl font-black text-sm text-[#ec4899]" value={cat.price} onChange={e => {
+                                                    const nc = [...categories]; nc[idx].price = e.target.value; setCategories(nc);
+                                                }} />
+                                            </div>
+                                        </>
+                                    )}
                                 </div>
                             </div>
                         ))}
@@ -897,13 +938,13 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
 
                     <div className="flex justify-between mt-8">
                         <button onClick={() => setCurrentStep(1)} className="px-10 py-4 text-slate-800 font-bold uppercase tracking-widest text-xs flex items-center gap-2"><ChevronLeft size={16} /> Back</button>
-                        <button onClick={() => handleNext(3)} className="px-10 py-4 bg-slate-900 text-white rounded-2xl font-bold uppercase tracking-widest text-xs shadow-xl flex items-center gap-2">Next <ChevronRight size={16} /></button>
+                        <button onClick={() => handleNext(isRSVP ? 3 : 3)} className="px-10 py-4 bg-slate-900 text-white rounded-2xl font-bold uppercase tracking-widest text-xs shadow-xl flex items-center gap-2">Next <ChevronRight size={16} /></button>
                     </div>
                 </div>
             )}
 
             {/* Step 3: Pricing & Rules */}
-            {currentStep === 3 && (
+            {!isRSVP && currentStep === 3 && (
                 <div className="space-y-10 animate-in fade-in slide-in-from-right-4 duration-500">
                     <section className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl space-y-6">
                         <div className="flex items-center gap-4">
@@ -1104,7 +1145,7 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
             )}
 
             {/* Step 4: Form Builder */}
-            {currentStep === 4 && (
+            {currentStep === (isRSVP ? 3 : 4) && (
                 <div className="space-y-10 animate-in fade-in slide-in-from-right-4 duration-500">
                     <section className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl space-y-8">
                         <div className="flex items-center justify-between">
@@ -1192,14 +1233,14 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
                     </section>
 
                     <div className="flex justify-between mt-8">
-                        <button onClick={() => setCurrentStep(3)} className="px-10 py-4 text-slate-800 font-bold uppercase tracking-widest text-xs flex items-center gap-2"><ChevronLeft size={16} /> Back</button>
-                        <button onClick={() => handleNext(5)} className="px-10 py-4 bg-slate-900 text-white rounded-2xl font-bold uppercase tracking-widest text-xs shadow-xl flex items-center gap-2">Next <ChevronRight size={16} /></button>
+                        <button onClick={() => setCurrentStep(isRSVP ? 2 : 3)} className="px-10 py-4 text-slate-800 font-bold uppercase tracking-widest text-xs flex items-center gap-2"><ChevronLeft size={16} /> Back</button>
+                        <button onClick={() => handleNext(isRSVP ? 4 : 5)} className="px-10 py-4 bg-slate-900 text-white rounded-2xl font-bold uppercase tracking-widest text-xs shadow-xl flex items-center gap-2">Next <ChevronRight size={16} /></button>
                     </div>
                 </div>
             )}
 
             {/* Step 5: Content & FAQs */}
-            {currentStep === 5 && (
+            {currentStep === (isRSVP ? 4 : 5) && (
                 <div className="space-y-10 animate-in fade-in slide-in-from-right-4 duration-500">
                     <section className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl space-y-8">
                         <div className="flex items-center justify-between">
@@ -1260,14 +1301,14 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
                     </section>
 
                     <div className="flex justify-between mt-8">
-                        <button onClick={() => setCurrentStep(4)} className="px-10 py-4 text-slate-800 font-bold uppercase tracking-widest text-xs flex items-center gap-2"><ChevronLeft size={16} /> Back</button>
-                        <button onClick={() => handleNext(6)} className="px-10 py-4 bg-slate-900 text-white rounded-2xl font-bold uppercase tracking-widest text-xs shadow-xl flex items-center gap-2">Next <ChevronRight size={16} /></button>
+                        <button onClick={() => setCurrentStep(isRSVP ? 3 : 4)} className="px-10 py-4 text-slate-800 font-bold uppercase tracking-widest text-xs flex items-center gap-2"><ChevronLeft size={16} /> Back</button>
+                        <button onClick={() => handleNext(isRSVP ? 5 : 6)} className="px-10 py-4 bg-slate-900 text-white rounded-2xl font-bold uppercase tracking-widest text-xs shadow-xl flex items-center gap-2">Next <ChevronRight size={16} /></button>
                     </div>
                 </div>
             )}
 
             {/* Step 6: Location */}
-            {currentStep === 6 && (
+            {currentStep === (isRSVP ? 5 : 6) && (
                 <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
                     <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl space-y-8">
                         <div className="flex items-center gap-4">
@@ -1418,7 +1459,7 @@ export default function MarathonEventForm({ marathonId, onCancel, onPublish }) {
                     </div>
 
                     <div className="flex justify-between mt-8">
-                        <button onClick={() => setCurrentStep(5)} className="px-10 py-4 text-slate-800 font-bold uppercase tracking-widest text-xs flex items-center gap-2"><ChevronLeft size={16} /> Back</button>
+                        <button onClick={() => setCurrentStep(isRSVP ? 4 : 5)} className="px-10 py-4 text-slate-800 font-bold uppercase tracking-widest text-xs flex items-center gap-2"><ChevronLeft size={16} /> Back</button>
                         <div className="flex gap-4">
                             <button onClick={() => saveMarathon('Draft')} disabled={loading} className="px-8 py-4 bg-white border border-slate-200 text-slate-900 rounded-2xl font-bold uppercase tracking-widest text-xs hover:bg-slate-50 transition-all">Save Draft</button>
                             <button onClick={() => saveMarathon('PendingReview')} disabled={loading} className="px-12 py-4 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-2xl flex items-center gap-2">

@@ -826,6 +826,8 @@ function OrganiserPanel() {
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [eventToDelete, setEventToDelete] = useState(null);
+  const [deletionProgress, setDeletionProgress] = useState(null);
   const dropdownRef = React.useRef(null);
   const handleLogout = () => {
     setProfileDropdownOpen(false);
@@ -1678,44 +1680,99 @@ function OrganiserPanel() {
   };
 
   const handleDeleteEvent = async (event) => {
-    if (
-      !confirm(
-        `Are you sure you want to delete "${event.title}"? This action cannot be undone.`,
-      )
-    )
-      return;
-
     try {
-      // 0. Manual Cascade: Delete dependent bookings/registrations to avoid FK constraints
-      if (event.type === "Marathon") {
-        await supabase
-          .from("marathon_registrations")
-          .delete()
-          .eq("marathon_id", event.id);
-        await supabase
-          .from("marathon_categories")
-          .delete()
-          .eq("marathon_id", event.id);
-      }
-      await supabase.from("bookings").delete().eq("event_id", event.id);
+      let totalBookings = 0;
+      
+      const { data: bookings } = await supabase
+        .from('bookings')
+        .select('id')
+        .eq('event_id', event.id)
+        .in('payment_status', ['success', 'paid', 'completed']); // some tables use different statuses
+      
+      if (bookings) totalBookings += bookings.length;
 
-      // 1. Delete from specialized tables
       if (event.type === "Marathon") {
+        const { data: mRegs } = await supabase.from("marathon_registrations").select('id').eq('marathon_id', event.id).in('payment_status', ['paid', 'completed', 'success']);
+        if (mRegs) totalBookings += mRegs.length;
+      }
+      if (["Tournament Event", "Tournament", "Sports Tournament"].includes(event.type)) {
+        const { data: tTeams } = await supabase.from("tournament_teams").select('id').eq('tournament_event_id', event.id).in('payment_status', ['paid', 'completed', 'success']);
+        if (tTeams) totalBookings += tTeams.length;
+      }
+
+      setEventToDelete({ ...event, totalBookings });
+    } catch (err) {
+      console.error("Failed to fetch booking count for deletion:", err);
+      showToast("Error checking event status before deletion.", "error");
+    }
+  };
+
+  const executeEventDeletion = async (event, isCancellationRequest = false) => {
+    if (!event) return;
+    
+    try {
+      if (isCancellationRequest) {
+        setDeletionProgress(["Submitting cancellation request..."]);
+        
+        await supabase.from("event_cancellation_requests").insert({
+            event_id: event.id,
+            organizer_id: user?.id,
+            reason: "Requested by organizer via dashboard",
+            status: "PENDING"
+        });
+        
+        await supabase.from("events").update({ status: "CANCELLATION_REQUESTED" }).eq("id", event.id);
+        
+        setDeletionProgress(prev => [...prev, "Cancellation request submitted.", "Completed"]);
+        setTimeout(() => {
+          setEventToDelete(null);
+          setDeletionProgress(null);
+          refreshEvents();
+          showToast("Cancellation request sent to Admin", "success");
+        }, 1500);
+        return;
+      }
+
+      // No bookings exist -> Delete Flow
+      setDeletionProgress(["Deleting Event...", "Removing Categories..."]);
+      
+      // 0. Manual Cascade: Delete dependent configs
+      if (event.type === "Marathon") {
+        await supabase.from("marathon_categories").delete().eq("marathon_id", event.id);
         await supabase.from("marathon_config").delete().eq("id", event.id);
       }
       if (["Tournament Event", "Tournament", "Sports Tournament"].includes(event.type)) {
         await supabase.from("tournament_events").delete().eq("id", event.id);
         await supabase.from("tournament_categories").delete().eq("event_id", event.id);
-        await supabase.from("tournament_teams").delete().eq("tournament_event_id", event.id);
       }
+
+      setDeletionProgress(prev => [...prev, "Removing Images..."]);
+      setDeletionProgress(prev => [...prev, "Updating Database..."]);
+
+      // Insert deletion log
+      await supabase.from("event_deletion_logs").insert({
+        event_id: event.id,
+        deleted_by: user?.id,
+        user_role: "organiser",
+        deletion_type: "hard",
+        reason: "Organizer deleted event with no bookings"
+      });
 
       // 2. Delete from shadow events table
       await deleteEventMutation({ id: event.id });
+      
+      setDeletionProgress(prev => [...prev, "Completed"]);
 
-      showToast("Event deleted successfully", "success");
-      refreshEvents();
+      setTimeout(() => {
+        setEventToDelete(null);
+        setDeletionProgress(null);
+        showToast("Event deleted successfully", "success");
+        refreshEvents();
+      }, 1500);
+
     } catch (err) {
       console.error("Delete error:", err);
+      setDeletionProgress(null);
       showToast(
         "Failed to delete event: " + (err.message || "Unknown error"),
         "error",
@@ -3634,6 +3691,27 @@ function OrganiserPanel() {
               }
             } catch (syncErr) {
               console.error("Failed to sync unified tables:", syncErr);
+            }
+
+            if (postEvent.category === "Marathon" || postEvent.category === "Sports Event" || postEvent.type === "Marathon") {
+              try {
+                const bibConfigs = (postEvent.dynamic_config?.categories || []).map(cat => ({
+                  event_id: activeEventId,
+                  category_id: cat.id || cat.name || cat.category_name || "default",
+                  category_name: cat.name || cat.category_name || "Default Category",
+                  prefix: cat.bibPrefix || "",
+                  start_number: parseInt(cat.bibStart) || 0,
+                  end_number: parseInt(cat.bibEnd) || 0,
+                  current_number: parseInt(cat.bibStart) || 0,
+                })).filter(c => c.start_number > 0 && c.end_number > 0);
+
+                if (bibConfigs.length > 0) {
+                  await supabase.from('marathon_bib_config').delete().eq('event_id', activeEventId);
+                  await supabase.from('marathon_bib_config').insert(bibConfigs);
+                }
+              } catch (bibErr) {
+                console.error("Failed to sync bib configs:", bibErr);
+              }
             }
           }
 
@@ -6069,6 +6147,7 @@ function OrganiserPanel() {
           return (
             <MarathonEventForm
               marathonId={editingMarathonId}
+              isRSVP={postEvent?.ticketMode === 'free'}
               onCancel={() => {
                 setEditingMarathonId(null);
                 setEditingEvent(null);
@@ -7594,7 +7673,7 @@ function OrganiserPanel() {
                     }));
                     
                     if (eventType === "Marathon") {
-                      setAddEventStep("form");
+                      setActiveTab("marathon_publish");
                     } else {
                       setAddEventStep("form");
                     }
@@ -7677,6 +7756,7 @@ function OrganiserPanel() {
               return (
                 <MarathonEventForm
                   marathonId={editingEvent?.id}
+                  isRSVP={postEvent?.ticketMode === 'free'}
                   onCancel={() => {
                     setPostEvent(getInitialPostEvent());
                     setAddEventStep("select_type");
@@ -14979,6 +15059,74 @@ function OrganiserPanel() {
 
   const renderModals = () => (
     <>
+      {eventToDelete && (
+        <div style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.8)", backdropFilter: "blur(8px)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
+          <div style={{ backgroundColor: t.bg, width: "100%", maxWidth: "500px", borderRadius: "24px", overflow: "hidden", border: `1px solid ${t.border}`, boxShadow: "0 25px 50px -12px rgba(0,0,0,0.5)" }}>
+            <div style={{ padding: "32px", borderBottom: `1px solid ${t.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <h2 style={{ fontSize: "24px", fontWeight: 800, color: t.textMain, margin: 0, fontStyle: "italic" }}>
+                Delete Event
+              </h2>
+              <button onClick={() => { setEventToDelete(null); setDeletionProgress(null); }} style={{ background: "none", border: "none", color: t.textSub, cursor: "pointer" }}>
+                <X size={24} />
+              </button>
+            </div>
+            
+            <div style={{ padding: "32px" }}>
+              <div style={{ marginBottom: "24px", padding: "16px", backgroundColor: t.cardBg, borderRadius: "16px", border: `1px solid ${t.border}` }}>
+                <div style={{ fontSize: "14px", fontWeight: 700, color: t.textMain, marginBottom: "8px" }}>{eventToDelete.title}</div>
+                <div style={{ fontSize: "12px", color: t.textSub }}>{eventToDelete.date || eventToDelete.startDate}</div>
+                <div style={{ fontSize: "12px", fontWeight: 700, color: eventToDelete.totalBookings > 0 ? "#ef4444" : "#10b981", marginTop: "8px" }}>
+                  {eventToDelete.totalBookings} Confirmed Bookings
+                </div>
+              </div>
+
+              {deletionProgress ? (
+                <div style={{ padding: "16px", backgroundColor: t.cardBg, borderRadius: "12px", border: `1px solid ${t.border}` }}>
+                  <h4 style={{ margin: "0 0 12px", fontSize: "12px", fontWeight: 800, color: t.textMain, textTransform: "uppercase" }}>Deletion Progress</h4>
+                  {deletionProgress.map((step, idx) => (
+                    <div key={idx} style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", color: t.textSub, marginBottom: "8px" }}>
+                      <CheckCircle size={14} color="#10b981" />
+                      {step}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <>
+                  {eventToDelete.totalBookings > 0 ? (
+                    <div>
+                      <p style={{ color: "#ef4444", fontSize: "14px", fontWeight: 600, marginBottom: "24px" }}>
+                        This event has confirmed bookings and cannot be permanently deleted.
+                      </p>
+                      <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end" }}>
+                        <button onClick={() => setEventToDelete(null)} style={{ padding: "12px 24px", borderRadius: "12px", background: t.cardBg, color: t.textMain, border: `1px solid ${t.border}`, fontWeight: 700, cursor: "pointer" }}>
+                          Cancel Event
+                        </button>
+                        <button onClick={() => executeEventDeletion(eventToDelete, true)} style={{ padding: "12px 24px", borderRadius: "12px", background: "#f59e0b", color: "#fff", border: "none", fontWeight: 700, cursor: "pointer" }}>
+                          Request Event Cancellation
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <p style={{ color: t.textSub, fontSize: "14px", marginBottom: "24px" }}>
+                        Are you sure you want to delete this event? This action cannot be undone.
+                      </p>
+                      <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end" }}>
+                        <button onClick={() => setEventToDelete(null)} style={{ padding: "12px 24px", borderRadius: "12px", background: t.cardBg, color: t.textMain, border: `1px solid ${t.border}`, fontWeight: 700, cursor: "pointer" }}>
+                          Cancel
+                        </button>
+                        <button onClick={() => executeEventDeletion(eventToDelete, false)} style={{ padding: "12px 24px", borderRadius: "12px", background: "#ef4444", color: "#fff", border: "none", fontWeight: 700, cursor: "pointer" }}>
+                          Delete Permanently
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       {showUpgradeModal && (
         <div
           style={{

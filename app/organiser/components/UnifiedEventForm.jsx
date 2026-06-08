@@ -46,25 +46,39 @@ const renderInput = (label, value, onChange, type = "text", placeholder = "", fu
 export default function UnifiedEventForm({ postEvent, setPostEvent, onCancel, onPublish, isEditing }) {
     const [currentStep, setCurrentStep] = useState(1);
     
-    const steps = [
+    const isMarathon = postEvent.category === "Marathon" || postEvent.category === "Sports Event" || postEvent.type === "Marathon";
+
+    const allSteps = [
         { id: 1, title: "Event Details", icon: FileText },
         { id: 2, title: "Date & Time", icon: Clock },
         { id: 3, title: "Venue", icon: MapPin },
         { id: 4, title: "Pricing Model", icon: IndianRupee },
         { id: 5, title: "Ticketing Format", icon: Ticket },
         { id: 6, title: "Media", icon: Camera },
-        { id: 7, title: "Pricing & Capacity", icon: IndianRupee },
+        { id: 7, title: postEvent.ticketMode === 'free' ? "RSVP Settings" : "Pricing & Capacity", icon: postEvent.ticketMode === 'free' ? Users : IndianRupee },
         { id: 8, title: "Terms", icon: Shield },
-        { id: 9, title: isEditing ? "Update" : "Publish", icon: Zap }
+        ...(isMarathon ? [{ id: 9, title: "Bib Config", icon: Ticket }] : []),
+        { id: 10, title: isEditing ? "Update" : "Publish", icon: Zap }
     ];
 
+    const steps = postEvent.ticketMode === 'free' 
+        ? allSteps.filter(s => s.id !== 4 && s.id !== 5)
+        : allSteps;
+
     const nextStep = () => setCurrentStep(prev => {
-        if (postEvent.ticketMode === 'free' && prev === 3) return 6;
-        return Math.min(prev + 1, steps.length);
+        const currentIndex = steps.findIndex(s => s.id === prev);
+        if (currentIndex < steps.length - 1) {
+            return steps[currentIndex + 1].id;
+        }
+        return prev;
     });
+
     const prevStep = () => setCurrentStep(prev => {
-        if (postEvent.ticketMode === 'free' && prev === 6) return 3;
-        return Math.max(prev - 1, 1);
+        const currentIndex = steps.findIndex(s => s.id === prev);
+        if (currentIndex > 0) {
+            return steps[currentIndex - 1].id;
+        }
+        return prev;
     });
 
     // Handle initial state setup
@@ -551,13 +565,83 @@ export default function UnifiedEventForm({ postEvent, setPostEvent, onCancel, on
                         </div>
                         <div className="flex justify-between pt-10">
                             <button onClick={prevStep} className="px-8 py-4 text-slate-400 font-bold uppercase text-[10px]"><ArrowLeft size={16} className="inline mr-2" /> Back</button>
+                            <button onClick={nextStep} className="px-10 py-4 bg-blue-600 text-white rounded-[2rem] text-xs font-black uppercase tracking-widest flex items-center gap-3">Next Step <ArrowRight size={16} /></button>
+                        </div>
+                    </div>
+                )}
+
+                {/* Step 9: Bib Configuration (Marathon Only) */}
+                {currentStep === 9 && isMarathon && (
+                    <div className="space-y-10 animate-in fade-in slide-in-from-right-8">
+                        <div>
+                            <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter italic">9. Bib Configuration</h2>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">Configure bib numbers for categories</p>
+                        </div>
+                        <div className="space-y-6">
+                            {(postEvent.dynamic_config?.categories || []).map((cat, idx) => (
+                                <div key={idx} className="bg-slate-50 border border-slate-100 rounded-[2rem] p-6 space-y-4">
+                                    <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">{cat.name || cat.category_name}</h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Bib Prefix</label>
+                                            <input 
+                                                type="text" 
+                                                value={cat.bibPrefix || ""} 
+                                                onChange={(e) => {
+                                                    const newCats = [...(postEvent.dynamic_config?.categories || [])];
+                                                    newCats[idx] = { ...newCats[idx], bibPrefix: e.target.value };
+                                                    setPostEvent(p => ({ ...p, dynamic_config: { ...p.dynamic_config, categories: newCats } }));
+                                                }}
+                                                className="w-full bg-white border border-slate-200 text-slate-900 text-sm font-bold px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                                placeholder="e.g. PRO"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Start Number</label>
+                                            <input 
+                                                type="number" 
+                                                value={cat.bibStart || ""} 
+                                                onChange={(e) => {
+                                                    const newCats = [...(postEvent.dynamic_config?.categories || [])];
+                                                    newCats[idx] = { ...newCats[idx], bibStart: parseInt(e.target.value) || 0 };
+                                                    setPostEvent(p => ({ ...p, dynamic_config: { ...p.dynamic_config, categories: newCats } }));
+                                                }}
+                                                className="w-full bg-white border border-slate-200 text-slate-900 text-sm font-bold px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                                placeholder="e.g. 1000"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">End Number</label>
+                                            <input 
+                                                type="number" 
+                                                value={cat.bibEnd || ""} 
+                                                onChange={(e) => {
+                                                    const newCats = [...(postEvent.dynamic_config?.categories || [])];
+                                                    newCats[idx] = { ...newCats[idx], bibEnd: parseInt(e.target.value) || 0 };
+                                                    setPostEvent(p => ({ ...p, dynamic_config: { ...p.dynamic_config, categories: newCats } }));
+                                                }}
+                                                className="w-full bg-white border border-slate-200 text-slate-900 text-sm font-bold px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                                placeholder="e.g. 5000"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                            {(!postEvent.dynamic_config?.categories || postEvent.dynamic_config?.categories?.length === 0) && (
+                                <div className="text-center py-8">
+                                    <p className="text-slate-400 font-bold text-sm">Please add categories in Pricing & Capacity first to configure bibs.</p>
+                                </div>
+                            )}
+                        </div>
+                        <div className="flex justify-between pt-10">
+                            <button onClick={prevStep} className="px-8 py-4 text-slate-400 font-bold uppercase text-[10px]"><ArrowLeft size={16} className="inline mr-2" /> Back</button>
                             <button onClick={nextStep} className="px-10 py-4 bg-blue-600 text-white rounded-[2rem] text-xs font-black uppercase tracking-widest flex items-center gap-3">Final Review <ArrowRight size={16} /></button>
                         </div>
                     </div>
                 )}
 
-                {/* Step 9: Publish */}
-                {currentStep === 9 && (
+                {/* Step 10: Publish */}
+                {currentStep === 10 && (
                     <div className="space-y-12 animate-in fade-in slide-in-from-right-8 text-center py-10">
                         <div className="w-24 h-24 rounded-[3rem] bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-2xl shadow-blue-500/20 mx-auto">
                             <Zap size={48} strokeWidth={1.5} />

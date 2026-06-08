@@ -10,7 +10,8 @@ export async function POST(req) {
         let emailTemplate = null;
 
         if (type === "BOOKING") {
-            message = `Booking Confirmed! Event: ${data.eventName}. Date: ${data.date}. Booking ID: ${data.bookingId}. Thanks for choosing BookMyTicket!`;
+            const directionsText = data.mapUrl ? ` Directions: ${data.mapUrl}` : '';
+            message = `Booking Confirmed! Event: ${data.eventName}. Date: ${data.date}. Venue: ${data.venue || 'TBA'}.${directionsText} Booking ID: ${data.bookingId}. Thanks for choosing BookMyTicket!`;
             isWhatsAppEligible = true;
             emailTemplate = "booking";
         } else if (type === "CANCELLATION") {
@@ -23,6 +24,10 @@ export async function POST(req) {
             message = `Welcome to BookMyTicket! 🎉\n\nYour account has been successfully created.\n\nStart exploring events and book your tickets now:\nhttps://bookmyticket.net`;
             isWhatsAppEligible = true;
             emailTemplate = "welcome_registration";
+        } else if (type === "NEW_EVENT") {
+            message = `New Event Published: ${data.eventName}. Date: ${data.date}. Venue: ${data.venue}. Register now on BookMyTicket!`;
+            isWhatsAppEligible = true;
+            emailTemplate = "new_event";
         } else {
             message = data.message;
         }

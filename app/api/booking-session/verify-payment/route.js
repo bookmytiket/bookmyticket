@@ -116,14 +116,56 @@ export async function POST(request) {
 
         const nowIso = new Date().toISOString();
 
+        // 3.5 Auto-Assign Bib Number for Marathons
+        let assignedBibNumber = null;
+        if (session.events?.category === "Marathon" || session.events?.category === "Sports Event" || session.events?.type === "Marathon") {
+            try {
+                const packageId = session.package_id || "default";
+                
+                const { data: bibConfig, error: bibErr } = await supabaseAdmin
+                    .from("marathon_bib_config")
+                    .select("*")
+                    .eq("event_id", session.event_id)
+                    .ilike("category_id", packageId)
+                    .maybeSingle();
+
+                if (bibConfig && bibConfig.current_number <= bibConfig.end_number) {
+                    assignedBibNumber = `${bibConfig.prefix ? bibConfig.prefix + '-' : ''}${bibConfig.current_number}`;
+                    
+                    // Increment current_number
+                    await supabaseAdmin
+                        .from("marathon_bib_config")
+                        .update({ current_number: bibConfig.current_number + 1 })
+                        .eq("id", bibConfig.id);
+                    
+                    // Save to participant_bibs
+                    await supabaseAdmin
+                        .from("participant_bibs")
+                        .insert({
+                            event_id: session.event_id,
+                            booking_id: bookingId,
+                            category_id: packageId,
+                            bib_number: assignedBibNumber
+                        });
+                }
+            } catch (bibAssignErr) {
+                console.error("Bib Assignment Error:", bibAssignErr);
+            }
+        }
+
         // 4. Update Booking Status to Confirmed immediately
+        const updatedCustomerDetails = {
+            ...(booking.customer_details || {}),
+            ...(assignedBibNumber ? { bib_number: assignedBibNumber } : {})
+        };
         await supabaseAdmin
             .from("bookings")
             .update({ 
                 status: "Confirmed",
                 payment_status: "paid",
                 confirmed_at: nowIso,
-                booking_ref: bookingId.slice(-8).toUpperCase()
+                booking_ref: bookingId.slice(-8).toUpperCase(),
+                customer_details: updatedCustomerDetails
             })
             .eq("id", bookingId);
 
@@ -367,6 +409,8 @@ export async function POST(request) {
                         name: customerDetails.name || "Customer",
                         eventName: session.events?.title || "Event",
                         date: session.events?.date || "TBA",
+                        venue: session.events?.venue || "TBA",
+                        mapUrl: session.events?.latitude && session.events?.longitude ? `https://www.google.com/maps/dir/?api=1&destination=${session.events.latitude},${session.events.longitude}` : "",
                         ticketNumber
                     }
                 });
@@ -381,6 +425,8 @@ export async function POST(request) {
                         name: customerDetails.name || "Customer",
                         eventName: session.events?.title || "Event",
                         date: session.events?.date || "TBA",
+                        venue: session.events?.venue || "TBA",
+                        mapUrl: session.events?.latitude && session.events?.longitude ? `https://www.google.com/maps/dir/?api=1&destination=${session.events.latitude},${session.events.longitude}` : "",
                         ticketNumber
                     },
                     origin

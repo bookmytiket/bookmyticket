@@ -105,6 +105,7 @@ export default function CheckoutClient({ id: propId, sessionToken }) {
     const [selectedSeats, setSelectedSeats] = useState([]);
     const [selectedPackageName, setSelectedPackageName] = useState('');
     const [regDataParam, setRegDataParam] = useState('');
+    const [rsvpAnswers, setRsvpAnswers] = useState({});
     const [participantParam, setParticipantParam] = useState('');
     const [teamParam, setTeamParam] = useState('');
     const [bookingType, setBookingType] = useState('standard');
@@ -652,11 +653,28 @@ export default function CheckoutClient({ id: propId, sessionToken }) {
     const handleConfirmPay = async () => {
         if (!event || !user || !termsAccepted || isProcessing) return;
         
+        if (event?.rsvpFields?.length > 0) {
+            const missing = event.rsvpFields.filter(f => !rsvpAnswers[f]);
+            if (missing.length > 0) {
+                setNotification({ message: `Please fill out all required RSVP fields: ${missing.join(', ')}`, type: 'error' });
+                return;
+            }
+        }
+
         setIsProcessing(true);
         try {
             const isFree = total === 0;
 
             if (sessionToken) {
+                // Update participantData with RSVP answers in the session before confirming
+                if (event?.rsvpFields?.length > 0) {
+                    await fetch('/api/booking-session/update-participant', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ sessionToken, extraDetails: rsvpAnswers })
+                    }).catch(() => {});
+                }
+
                 // 1. Accept terms on session
                 await fetch('/api/booking-session/accept-terms', {
                     method: 'POST',
@@ -1187,10 +1205,10 @@ export default function CheckoutClient({ id: propId, sessionToken }) {
                                     <div className="space-y-3">
                                         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                                             <div className="space-y-1">
-                                                <h4 className="text-[12px] font-black text-slate-900 uppercase tracking-[0.2em]">Ticket Details</h4>
+                                                <h4 className="text-[12px] font-black text-slate-900 uppercase tracking-[0.2em]">{isFree ? 'RSVP Registration' : 'Ticket Details'}</h4>
                                                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Review your selection</p>
                                             </div>
-                                            <span className="text-[10px] font-black text-pink-500 uppercase tracking-widest bg-pink-50 px-4 py-2 rounded-full border border-pink-100/50">Secure Checkout</span>
+                                            <span className="text-[10px] font-black text-pink-500 uppercase tracking-widest bg-pink-50 px-4 py-2 rounded-full border border-pink-100/50">{isFree ? 'Free Registration' : 'Secure Checkout'}</span>
                                         </div>
 
                                         {selectedSeats.length > 0 ? (
@@ -1216,7 +1234,7 @@ export default function CheckoutClient({ id: propId, sessionToken }) {
                                                         <button onClick={() => handleQtyChange(qty + 1)} className="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-pink-500 transition-colors bg-slate-50 rounded-lg"><Plus size={12} /></button>
                                                     </div>
                                                     <div className="text-right shrink-0">
-                                                        <span className="text-[16px] md:text-xl font-black text-slate-900 tracking-tighter">₹{baseAmount.toFixed(2)}</span>
+                                                        <span className="text-[16px] md:text-xl font-black text-slate-900 tracking-tighter">{isFree ? 'FREE' : `₹${baseAmount.toFixed(2)}`}</span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -1224,7 +1242,7 @@ export default function CheckoutClient({ id: propId, sessionToken }) {
                                     </div>
 
                                     <div className="space-y-4">
-                                        {!appliedCoupon ? (
+                                        {!isFree && !appliedCoupon ? (
                                             <div className="space-y-3 relative">
                                                 <div className="flex gap-2">
                                                     <input 
@@ -1302,7 +1320,7 @@ export default function CheckoutClient({ id: propId, sessionToken }) {
                                                     )}
                                                 </AnimatePresence>
                                             </div>
-                                        ) : (
+                                        ) : !isFree && appliedCoupon ? (
                                             <div className="flex items-center justify-between p-3 bg-emerald-50 rounded-xl border border-emerald-100 border-dashed">
                                                 <div className="flex items-center gap-2 text-emerald-600">
                                                     <Sparkles size={14} />
@@ -1312,59 +1330,61 @@ export default function CheckoutClient({ id: propId, sessionToken }) {
                                                     <X size={16} />
                                                 </button>
                                             </div>
-                                        )}
+                                        ) : null}
                                     </div>
 
                                     <div className="space-y-0 pt-4 mt-2">
                                         {/* Ticket Price */}
                                         <div className="flex justify-between items-center text-[13px] font-medium text-slate-700 py-1.5">
-                                            <span>Ticket(s) price</span>
-                                            <span>₹{baseAmount.toFixed(2)}</span>
+                                            <span>{isFree ? 'Registration Fee' : 'Ticket(s) price'}</span>
+                                            <span>{isFree ? 'FREE' : `₹${baseAmount.toFixed(2)}`}</span>
                                         </div>
 
-                                        {/* Convenience Fees */}
-                                        <div className="flex flex-col text-[13px] text-slate-700 py-1.5 w-full">
-                                            <div 
-                                                className="flex justify-between items-start cursor-pointer font-medium text-slate-700 hover:text-slate-900 transition-colors" 
-                                                onClick={() => setShowFeesDropdown(!showFeesDropdown)}
-                                            >
-                                                <div className="flex items-center gap-1">
-                                                    <span>Convenience fees</span>
-                                                    <ChevronDown size={14} className={`transition-transform text-slate-400 ${showFeesDropdown ? 'rotate-180' : ''}`} />
-                                                </div>
-                                                <span className="font-medium shrink-0">₹{(convenienceFee + gst).toFixed(2)}</span>
-                                            </div>
-                                            {showFeesDropdown && (
-                                                <div className="text-[11px] text-slate-500 mt-2 space-y-1.5 font-medium pb-2">
-                                                    <div className="flex justify-between">
-                                                        <span>Base Amount</span>
-                                                        <span>₹{convenienceFee.toFixed(2)}</span>
+                                        {!isFree && (
+                                            <>
+                                                {/* Convenience Fees */}
+                                                <div className="flex flex-col text-[13px] text-slate-700 py-1.5 w-full">
+                                                    <div 
+                                                        className="flex justify-between items-start cursor-pointer font-medium text-slate-700 hover:text-slate-900 transition-colors" 
+                                                        onClick={() => setShowFeesDropdown(!showFeesDropdown)}
+                                                    >
+                                                        <div className="flex items-center gap-1">
+                                                            <span>Convenience fees</span>
+                                                            <ChevronDown size={14} className={`transition-transform text-slate-400 ${showFeesDropdown ? 'rotate-180' : ''}`} />
+                                                        </div>
+                                                        <span className="font-medium shrink-0">₹{(convenienceFee + gst).toFixed(2)}</span>
                                                     </div>
-                                                    <div className="flex justify-between">
-                                                        <span>Integrated GST (IGST) @ {gstPercent}%</span>
-                                                        <span>₹{gst.toFixed(2)}</span>
-                                                    </div>
+                                                    {showFeesDropdown && (
+                                                        <div className="text-[11px] text-slate-500 mt-2 space-y-1.5 font-medium pb-2">
+                                                            <div className="flex justify-between">
+                                                                <span>Base Amount</span>
+                                                                <span>₹{convenienceFee.toFixed(2)}</span>
+                                                            </div>
+                                                            <div className="flex justify-between">
+                                                                <span>Integrated GST (IGST) @ {gstPercent}%</span>
+                                                                <span>₹{gst.toFixed(2)}</span>
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                 </div>
-                                            )}
-                                        </div>
 
+                                                {/* Discount */}
+                                                {appliedCoupon && (
+                                                    <div className="flex justify-between items-center text-[13px] font-medium text-emerald-600 mt-3 pt-3 border-t border-slate-100">
+                                                        <span>Discount Applied</span>
+                                                        <span>- ₹{discountAmount.toFixed(2)}</span>
+                                                    </div>
+                                                )}
 
-                                        {/* Discount */}
-                                        {appliedCoupon && (
-                                            <div className="flex justify-between items-center text-[13px] font-medium text-emerald-600 mt-3 pt-3 border-t border-slate-100">
-                                                <span>Discount Applied</span>
-                                                <span>- ₹{discountAmount.toFixed(2)}</span>
-                                            </div>
+                                                {/* Separator */}
+                                                <div className="border-t border-dashed border-slate-300 my-4"></div>
+
+                                                <div className="flex justify-between items-center mb-6">
+                                                    <span className="text-[15px] font-black text-slate-900">Order total</span>
+                                                    <span className="text-lg font-black text-slate-900">₹{total.toFixed(2)}</span>
+                                                </div>
+                                            </>
                                         )}
-
-                                        {/* Separator */}
-                                        <div className="border-t border-dashed border-slate-300 my-4"></div>
-
-                                        <div className="flex justify-between items-center mb-6">
-                                            <span className="text-[15px] font-black text-slate-900">Order total</span>
-                                            <span className="text-lg font-black text-slate-900">₹{total.toFixed(2)}</span>
-                                        </div>
-                                        
 
 
                                         <div className="bg-white p-3 rounded-2xl border-2 border-slate-100 shadow-sm transition-all hover:border-pink-100 mb-4">
@@ -1397,7 +1417,7 @@ export default function CheckoutClient({ id: propId, sessionToken }) {
                                                     Processing...
                                                 </div>
                                             ) : (
-                                                <>Proceed to Payment <ArrowRight size={16} /></>
+                                                <>{isFree ? 'Confirm RSVP' : 'Proceed to Payment'} <ArrowRight size={16} /></>
                                             )}
                                         </button>
                                     </div>
@@ -1443,6 +1463,18 @@ export default function CheckoutClient({ id: propId, sessionToken }) {
                                         className="w-full px-8 py-5 bg-slate-50 border border-slate-100 rounded-[2rem] text-sm font-bold text-slate-900 outline-none"
                                     />
                                 </div>
+                                {isFree && event?.rsvpFields?.map((field) => (
+                                    <div key={field} className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">{field}</label>
+                                        <input 
+                                            type="text"
+                                            value={rsvpAnswers[field] || ""}
+                                            onChange={(e) => setRsvpAnswers(prev => ({...prev, [field]: e.target.value}))}
+                                            placeholder={`Enter your ${field.toLowerCase()}`}
+                                            className="w-full px-8 py-5 bg-white border border-slate-100 focus:border-pink-200 focus:ring-4 focus:ring-pink-500/10 rounded-[2rem] text-sm font-bold text-slate-900 outline-none transition-all"
+                                        />
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     </div>

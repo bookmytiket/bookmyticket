@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS public.rsvp_events (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     event_id UUID REFERENCES public.admin_events(id) ON DELETE CASCADE,
     capacity INT NOT NULL DEFAULT 0,
     registration_open DATE,
@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS public.rsvp_events (
 );
 
 CREATE TABLE IF NOT EXISTS public.rsvp_fields (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     event_id UUID REFERENCES public.admin_events(id) ON DELETE CASCADE,
     field_name TEXT NOT NULL,
     field_type TEXT NOT NULL DEFAULT 'text',
@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS public.rsvp_fields (
 );
 
 CREATE TABLE IF NOT EXISTS public.rsvp_registrations (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     event_id UUID REFERENCES public.admin_events(id) ON DELETE CASCADE,
     user_id UUID,
     registration_id TEXT UNIQUE NOT NULL,
@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS public.rsvp_registrations (
 );
 
 CREATE TABLE IF NOT EXISTS public.rsvp_checkins (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     registration_id TEXT REFERENCES public.rsvp_registrations(registration_id) ON DELETE CASCADE,
     checked_in_by UUID,
     checked_in_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())

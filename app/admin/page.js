@@ -35,6 +35,7 @@ import AdminEventPublishing from "@/app/admin/components/AdminEventPublishing";
 import ProfessionalServicesAdmin from "@/app/admin/components/ProfessionalServicesAdmin";
 import DirectOnboardingAdmin from "@/app/admin/components/DirectOnboardingAdmin";
 import AdminRevenueCommissionDashboard from "@/app/admin/components/AdminRevenueCommissionDashboard";
+import AdminCancellationRequests from "@/app/admin/components/AdminCancellationRequests";
 import { 
     MoreVertical, Zap, Briefcase, LayoutDashboard, Settings, Video, Image as ImageIcon, 
     Sparkles, CheckCircle, Ticket, Users, Menu, Bell, Save, X, Plus, Trash2, Mail, Lock, 
@@ -2705,6 +2706,51 @@ function AdminHomePage() {
     };
 
     const [deleteEvent] = useSupabaseMutation('events', 'delete', (q, p) => q.eq('id', p.id));
+    
+    const [adminEventToDelete, setAdminEventToDelete] = useState(null);
+    const [adminDeletionProgress, setAdminDeletionProgress] = useState(null);
+
+    const executeAdminEventDeletion = async (event, type) => {
+        if (!event) return;
+        
+        try {
+            if (type === "soft") {
+                setAdminDeletionProgress(["Archiving Event..."]);
+                await handlePlatformEventUpdate(event, { status: "ARCHIVED" });
+                setAdminDeletionProgress(prev => [...prev, "Completed"]);
+                setTimeout(() => {
+                    setAdminEventToDelete(null);
+                    setAdminDeletionProgress(null);
+                    showToast("Event softly deleted (Archived)", "success");
+                }, 1500);
+                return;
+            }
+
+            // Hard Delete
+            setAdminDeletionProgress(["Permanently Deleting Event...", "Removing Dependencies..."]);
+            if (event.event_category === 'Tournament') {
+                await supabase.from("tournament_events").delete().eq("id", event.id);
+            } else if (event.event_category === 'Marathon') {
+                await supabase.from("marathon_config").delete().eq("id", event.id);
+            } else {
+                await supabase.from("bookings").delete().eq("event_id", event.id);
+            }
+            setAdminDeletionProgress(prev => [...prev, "Removing from Database..."]);
+            await deleteEvent({ id: event.id });
+            
+            setAdminDeletionProgress(prev => [...prev, "Completed"]);
+            setTimeout(() => {
+                setAdminEventToDelete(null);
+                setAdminDeletionProgress(null);
+                showToast("Event permanently deleted", "success");
+            }, 1500);
+        } catch (err) {
+            console.error("Delete error:", err);
+            setAdminDeletionProgress(null);
+            showToast("Failed to delete event: " + err.message, "error");
+        }
+    };
+
     const [createAdmin] = useSupabaseMutation('admins', 'insert');
     const [updateAdminStatus] = useSupabaseMutation('admins', 'update', (q, p) => q.eq('id', p.id));
     const [deleteAdmin] = useSupabaseMutation('admins', 'delete', (q, p) => q.eq('id', p.id));
@@ -3527,6 +3573,7 @@ function AdminHomePage() {
                                 <NavLink id="scanner_monitor" label="Scanner Analytics" icon={Activity} active={activeTab === "scanner_monitor"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
                                 <NavLink id="audit_logs" label="Audit Logs" icon={Archive} active={activeTab === "audit_logs"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
                                 <NavLink id="email_logs" label="Email Engine" icon={Mail} active={activeTab === "email_logs"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
+                                <NavLink id="cancellations" label="Cancellation Queue" icon={AlertCircle} active={activeTab === "cancellations"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
 
                                 <GroupTitle title="Reports" t={t} />
                                 <NavLink id="organizer_reports" label="Organizer Reports" icon={TrendingUp} active={activeTab === "organizer_reports"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
@@ -3742,6 +3789,13 @@ function AdminHomePage() {
                                                     <Download size={18} />
                                                 </a>
                                             )}
+                                            <button 
+                                                onClick={() => setAdminEventToDelete(ev)}
+                                                className="p-2.5 bg-red-50 text-red-500 rounded-xl hover:bg-red-100 transition-all border border-red-100 flex items-center justify-center"
+                                                title="Delete Event"
+                                            >
+                                                <Trash2 size={18} />
+                                            </button>
                                         </div>
                                     </div>
                                 ))}
@@ -3877,6 +3931,11 @@ function AdminHomePage() {
                     {activeTab === "fraud_dashboard" && (
                         <div className="px-8 lg:px-12 py-8">
                             <FraudDashboard t={t} theme={theme} />
+                        </div>
+                    )}
+                    {activeTab === "cancellations" && (
+                        <div className="px-8 lg:px-12 py-8 bg-slate-50 min-h-screen">
+                            <AdminCancellationRequests t={t} theme={theme} />
                         </div>
                     )}
                     {activeTab === "admin_events_mgmt" && (
@@ -4202,6 +4261,58 @@ function AdminHomePage() {
                                             </div>
                                         </div>
                                     ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Admin Event Deletion Modal */}
+                    {adminEventToDelete && (
+                        <div className="modal-backdrop" onClick={() => setAdminEventToDelete(null)} style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.8)", backdropFilter: "blur(8px)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
+                            <div className="org-modal" onClick={(e) => e.stopPropagation()} style={{ backgroundColor: t.bg, width: "100%", maxWidth: "500px", borderRadius: "24px", overflow: "hidden", border: `1px solid ${t.border}`, boxShadow: "0 25px 50px -12px rgba(0,0,0,0.5)" }}>
+                                <div style={{ padding: "32px", borderBottom: `1px solid ${t.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                    <h2 style={{ fontSize: "24px", fontWeight: 800, color: t.textMain, margin: 0, fontStyle: "italic" }}>
+                                        Delete Event (Admin)
+                                    </h2>
+                                    <button onClick={() => { setAdminEventToDelete(null); setAdminDeletionProgress(null); }} style={{ background: "none", border: "none", color: t.textSub, cursor: "pointer" }}>
+                                        <X size={24} />
+                                    </button>
+                                </div>
+                                <div style={{ padding: "32px" }}>
+                                    <div style={{ marginBottom: "24px", padding: "16px", backgroundColor: t.cardBg, borderRadius: "16px", border: `1px solid ${t.border}` }}>
+                                        <div style={{ fontSize: "14px", fontWeight: 700, color: t.textMain, marginBottom: "8px" }}>{adminEventToDelete.title || adminEventToDelete.event_name}</div>
+                                        <div style={{ fontSize: "12px", color: t.textSub }}>{new Date(adminEventToDelete.created_at).toLocaleDateString()}</div>
+                                        <div style={{ fontSize: "12px", fontWeight: 700, color: "#ef4444", marginTop: "8px" }}>Admin Override Mode</div>
+                                    </div>
+
+                                    {adminDeletionProgress ? (
+                                        <div style={{ padding: "16px", backgroundColor: t.cardBg, borderRadius: "12px", border: `1px solid ${t.border}` }}>
+                                            <h4 style={{ margin: "0 0 12px", fontSize: "12px", fontWeight: 800, color: t.textMain, textTransform: "uppercase" }}>Deletion Progress</h4>
+                                            {adminDeletionProgress.map((step, idx) => (
+                                                <div key={idx} style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", color: t.textSub, marginBottom: "8px" }}>
+                                                    <CheckCircle size={14} color="#10b981" />
+                                                    {step}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div>
+                                            <p style={{ color: t.textSub, fontSize: "14px", marginBottom: "24px" }}>
+                                                Select deletion type. Soft delete archives the event, Hard delete permanently removes it.
+                                            </p>
+                                            <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end" }}>
+                                                <button onClick={() => setAdminEventToDelete(null)} style={{ padding: "12px 24px", borderRadius: "12px", background: t.cardBg, color: t.textMain, border: `1px solid ${t.border}`, fontWeight: 700, cursor: "pointer" }}>
+                                                    Cancel
+                                                </button>
+                                                <button onClick={() => executeAdminEventDeletion(adminEventToDelete, "soft")} style={{ padding: "12px 24px", borderRadius: "12px", background: "#f59e0b", color: "#fff", border: "none", fontWeight: 700, cursor: "pointer" }}>
+                                                    Archive (Soft Delete)
+                                                </button>
+                                                <button onClick={() => executeAdminEventDeletion(adminEventToDelete, "hard")} style={{ padding: "12px 24px", borderRadius: "12px", background: "#ef4444", color: "#fff", border: "none", fontWeight: 700, cursor: "pointer" }}>
+                                                    Hard Delete
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -8312,7 +8423,7 @@ function AdminHomePage() {
                         <AdminEventApprovalQueue />
                     )}
 
-                    {(["dashboard", "banner_ads", "revenue", "payout_requests", "fee_settings", "exclusive_settings", "email_broadcast", "careers", "subscribers", "subscriptions", "turf_partners", "turf_active", "turf_banned", "branding", "categories", "subnav", "events_settings", "event_partners", "pages", "compliance_cms", "sections", "all_org", "active_org", "banned_org", "email_unverified", "mobile_unverified", "kyc_unverified", "kyc_pending", "kyc_verified", "with_balance", "org_requests", "partner_requests", "service_active", "service_banned", "send_notif", "payment_settings", "ticket_settings", "comm_hub", "email_settings", "email_templates", "disclaimer_settings", "sso_settings", "api_settings", "meta_management", "all_events", "event_reviews", "tournaments", "marathons", "customers", "bookings", "all_turfs", "turf_active", "turf_banned", "turf_bookings", "pool_bookings", "gst", "coupons", "promotions", "financials", "support_tickets", "branding_partners", "hero", "video", "video_banner", "mobile_banners", "site_branding", "memories", "copyright", "meeting_settings", "admin_management", "ad_popups", "meetings", "checkout_footer", "careers_management", "careers_banner", "contact_inquiries", "contact_settings", "scanner_monitor", "fraud_dashboard", "flash_deals", "audit_logs", "settlement_verification", "email_logs", "kyc", "digilocker_kyc_review"].includes(activeTab)) ? null : (
+                    {(["dashboard", "banner_ads", "revenue", "payout_requests", "fee_settings", "exclusive_settings", "email_broadcast", "careers", "subscribers", "subscriptions", "turf_partners", "turf_active", "turf_banned", "branding", "categories", "subnav", "events_settings", "event_partners", "pages", "compliance_cms", "sections", "all_org", "active_org", "banned_org", "email_unverified", "mobile_unverified", "kyc_unverified", "kyc_pending", "kyc_verified", "with_balance", "org_requests", "partner_requests", "service_active", "service_banned", "send_notif", "payment_settings", "ticket_settings", "comm_hub", "email_settings", "email_templates", "disclaimer_settings", "sso_settings", "api_settings", "meta_management", "all_events", "event_reviews", "tournaments", "marathons", "customers", "bookings", "all_turfs", "turf_active", "turf_banned", "turf_bookings", "pool_bookings", "gst", "coupons", "promotions", "financials", "support_tickets", "branding_partners", "hero", "video", "video_banner", "mobile_banners", "site_branding", "memories", "copyright", "meeting_settings", "admin_management", "ad_popups", "meetings", "checkout_footer", "careers_management", "careers_banner", "contact_inquiries", "contact_settings", "scanner_monitor", "fraud_dashboard", "flash_deals", "audit_logs", "settlement_verification", "email_logs", "kyc", "digilocker_kyc_review", "cancellations", "admin_events_mgmt", "organizer_reports", "user_analytics", "professional_services_mgmt", "admin_onboarding", "admin_revenue_dashboard"].includes(activeTab)) ? null : (
                         <div style={{ backgroundColor: t.cardBg, padding: "60px 24px", textAlign: "center", borderRadius: "10px", border: `1px solid ${t.border}` }}>
                             <h2 style={{ fontSize: "20px", fontWeight: 800, color: t.textMain }}>{activeTab.replace(/_/g, ' ').toUpperCase()}</h2>
                             <p style={{ color: t.textSub, marginTop: "8px", maxWidth: "350px", margin: "8px auto", fontSize: "14px" }}>This management module is currently being configured. You will be able to manage these settings shortly.</p>

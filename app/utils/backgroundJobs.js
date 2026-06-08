@@ -105,6 +105,8 @@ export async function executeJob({ jobId, jobType, bookingId, payload = {}, orig
                             name: payload.name || "Customer",
                             eventName: payload.eventName || "Event",
                             date: payload.date || "TBA",
+                            venue: payload.venue || "TBA",
+                            mapUrl: payload.mapUrl || "",
                             bookingId: bookingId,
                             ticketNumber: payload.ticketNumber
                         }
@@ -118,6 +120,40 @@ export async function executeJob({ jobId, jobType, bookingId, payload = {}, orig
             } else {
                 success = true; // No contact info to notify
             }
+        } else if (jobType === "event_marketing") {
+            const targetOrigin = origin || process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+            
+            // Send to subscribers
+            const { data: subscribers } = await supabaseAdmin
+                .from('subscriber_lists')
+                .select('user_id, profiles(email, full_name)')
+                .eq('category', payload.category || 'Marathon')
+                .eq('subscribed', true);
+            
+            if (subscribers && subscribers.length > 0) {
+                for (const sub of subscribers) {
+                    if (sub.profiles?.email) {
+                        try {
+                            await fetch(`${targetOrigin}/api/comm/trigger`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    email: sub.profiles.email,
+                                    type: "NEW_EVENT",
+                                    data: {
+                                        name: sub.profiles.full_name || "User",
+                                        eventName: payload.eventName,
+                                        date: payload.date,
+                                        venue: payload.venue,
+                                        posterUrl: payload.posterUrl
+                                    }
+                                })
+                            });
+                        } catch(e) {}
+                    }
+                }
+            }
+            success = true;
         } else {
             throw new Error(`Unknown job type: ${jobType}`);
         }
