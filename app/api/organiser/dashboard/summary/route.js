@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
 export async function GET(request) {
+  console.log("DASHBOARD SUMMARY API HIT");
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -55,6 +56,7 @@ export async function GET(request) {
         if (staffMember) {
           organiser = { 
             id: staffMember.organiser_id, 
+            auth_user_id: staffMember.organisers?.auth_user_id,
             business_name: staffMember.organisers?.business_name 
           };
         }
@@ -76,16 +78,18 @@ export async function GET(request) {
     const targetId = organiser?.id || user.id;
     const now = new Date().toISOString();
 
+    const targetIds = [...new Set([targetId, user.id, organiser?.auth_user_id].filter(Boolean))];
+
     // 3. Fetch Events and Bookings
     const [eventsResult, bookingsData] = await Promise.all([
       // Fetch all events for organiser to classify status
       adminClient.from('events')
         .select('id, publish_status, listing_status, event_start_at, event_end_at, date, time, end_date, end_time, dynamic_config')
-        .eq('organiser_id', targetId),
+        .in('organiser_id', targetIds),
       // Bookings & Revenue (Join through events)
       adminClient.from('bookings')
         .select('id, total_price, base_amount, partner_total, ticket_count, status, event_id, events!inner(organiser_id)')
-        .eq('events.organiser_id', targetId)
+        .in('events.organiser_id', targetIds)
     ]);
 
     const eventsList = eventsResult.data || [];

@@ -72,12 +72,7 @@ export default function SignInPage() {
 
     useEffect(() => {
         setMounted(true);
-        // Detect if we are on a real mobile device
-        const checkMobile = () => {
-            setIsRealMobile(window.innerWidth < 640 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent));
-        };
-        checkMobile();
-        window.addEventListener('resize', checkMobile);
+        // Removed mobile detection to keep phone mockup always visible
 
         const updateTime = () => {
             const now = new Date();
@@ -110,7 +105,6 @@ export default function SignInPage() {
         
         return () => { 
             clearInterval(timer); 
-            window.removeEventListener('resize', checkMobile);
             if (batteryObj) {
                 batteryObj.removeEventListener('levelchange', updateBattery);
                 batteryObj.removeEventListener('chargingchange', updateBattery);
@@ -792,22 +786,7 @@ export default function SignInPage() {
                     .signin-wrapper { justify-content: center !important; }
                 }
                 @media (max-width: 640px) {
-                    .signin-wrapper { padding: 0 !important; background: #fff !important; }
-                    .phone-mockup {
-                        width: 100vw !important;
-                        max-width: 100vw !important;
-                        height: 100vh !important;
-                        max-height: 100vh !important;
-                        border: none !important;
-                        border-radius: 0 !important;
-                        margin: 0 !important;
-                        background: #ffffff !important;
-                        box-shadow: none !important;
-                        position: fixed !important;
-                        inset: 0 !important;
-                    }
-                    .phone-notch, .phone-status-bar { display: none !important; }
-                    .no-scrollbar { padding: 15px !important; }
+                    .signin-wrapper { padding: 10px !important; background: transparent !important; }
                 }
                 /* Phone mockup frame stays consistent across all devices */
                 body { overflow-x: hidden; margin: 0; }
@@ -960,26 +939,24 @@ export default function SignInPage() {
                     </div>
                 )}
                 
-                {/* ══ MOBILE PHONE FRAME (Mock-up) ══ */}
                 <div className="phone-mockup" style={{ 
-                    width: isRealMobile ? "100vw" : "320px", 
-                    maxWidth: "100vw",
-                    height: isRealMobile ? "100vh" : "600px", 
+                    width: "320px", 
+                    maxWidth: "100%",
+                    height: "600px", 
                     maxHeight: "100vh",
                     background: "#ffffff", 
-                    borderRadius: isRealMobile ? "0" : "32px", 
-                    border: isRealMobile ? "none" : "8px solid #000", 
+                    borderRadius: "32px", 
+                    border: "8px solid #000", 
                     position: "relative", 
-                    boxShadow: isRealMobile ? "none" : "0 20px 50px -12px rgba(0,0,0,0.25)",
+                    boxShadow: "0 20px 50px -12px rgba(0,0,0,0.25)",
                     display: "flex",
                     flexDirection: "column",
                     overflow: "hidden",
-                    margin: isRealMobile ? "0" : "10px auto",
+                    margin: "10px auto",
                     zIndex: 10
                 }}>
                     {/* Notch (Dynamic Island Style) */}
-                    {!isRealMobile && (
-                        <div className="phone-notch" style={{ 
+                    <div className="phone-notch" style={{ 
                             width: "110px", 
                             height: "25px", 
                             background: "#101010", 
@@ -997,11 +974,10 @@ export default function SignInPage() {
                              <div style={{ width: "6px", height: "6px", background: "#1e293b", borderRadius: "50%", marginRight: "8px", opacity: 0.8 }} />
                              <div style={{ width: "10px", height: "10px", background: "radial-gradient(circle, #2d3748 0%, #1a202c 100%)", borderRadius: "50%", border: "1px solid #2d3748" }} />
                         </div>
-                    )}
+                    
 
                     {/* Status Bar */}
-                    {!isRealMobile && (
-                        <div className="phone-status-bar" style={{ 
+                    <div className="phone-status-bar" style={{ 
                             padding: "12px 22px 4px", 
                             display: "flex", 
                             justifyContent: "space-between", 
@@ -1055,8 +1031,8 @@ export default function SignInPage() {
                                 </div>
                             </div>
                         </div>
-                    )}
                     
+
                     {/* Internal Screen Content */}
                     <div className="no-scrollbar" style={{ flex: 1, overflowY: "hidden", padding: "4px 20px 12px", position: "relative", display: "flex", flexDirection: "column", justifyContent: "center" }}>
                         

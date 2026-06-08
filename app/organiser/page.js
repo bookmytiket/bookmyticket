@@ -7610,12 +7610,13 @@ function OrganiserPanel() {
                       try {
                           const { data, error } = await supabase.from('events').insert({
                               title: 'Untitled Draft',
+                              event_name: 'Untitled Draft',
                               type: "Virtual Event",
+                              event_type: "Virtual Event",
                               category: "Virtual",
                               organiser_id: user?.id,
                               status: 'draft',
-                              publish_status: 'draft',
-                              approval_status: 'approved',
+                              publish_status: 'unpublished',
                               visibility_status: 'private',
                               entity_type: 'event'
                           }).select('id').single();
@@ -7730,16 +7731,15 @@ function OrganiserPanel() {
                         const isRSVP = postEvent?.ticketMode === 'free';
                         const { data, error } = await supabase.from('events').insert({
                             title: 'Untitled Draft',
+                            event_name: 'Untitled Draft',
                             type: eventType,
+                            event_type: eventType,
                             category: eventCat,
                             organiser_id: user?.id,
                             status: 'draft',
-                            publish_status: 'draft',
-                            approval_status: 'approved',
+                            publish_status: 'unpublished',
                             visibility_status: 'private',
-                            entity_type: 'event',
-                            ticket_mode: isRSVP ? 'free' : 'paid',
-                            is_paid: !isRSVP
+                            entity_type: 'event'
                         }).select('id').single();
 
                         if (error) throw error;
