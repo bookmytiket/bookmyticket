@@ -114,14 +114,14 @@ export default function MobileBottomNav() {
 
         .bottom-nav-container {
           display: grid;
-          grid-template-columns: repeat(5, minmax(0, 1fr));
+          grid-template-columns: repeat(5, 1fr);
           align-items: center;
-          height: 70px; /* Taller, premium feel */
+          height: 70px;
           width: 100%;
           max-width: 480px;
           margin: 0 auto;
           box-sizing: border-box;
-          padding: 0 10px;
+          padding: 0 4px;
         }
 
         .nav-item {
@@ -129,14 +129,13 @@ export default function MobileBottomNav() {
           display: flex;
           flex-direction: column;
           align-items: center;
-          justify-content: center;
+          justify-content: center !important;
           text-decoration: none;
           color: #94a3b8;
           height: 100%;
           width: 100%;
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
           cursor: pointer;
-          gap: 5px;
         }
 
         .nav-item:active {
@@ -149,6 +148,7 @@ export default function MobileBottomNav() {
 
         .nav-icon {
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          margin-bottom: 4px !important;
         }
 
         .nav-item.active .nav-icon {
@@ -195,15 +195,15 @@ export default function MobileBottomNav() {
           display: flex;
           align-items: center;
           justify-content: center;
-          width: 100%;
+          flex: 1;
           height: 100%;
         }
 
         .book-now-floating {
           position: absolute;
-          bottom: 20px; /* Floats perfectly above */
-          width: 64px; /* Larger, more attractive */
-          height: 64px;
+          bottom: 22px; /* Floats perfectly above */
+          width: 56px; /* Smaller to prevent overlapping nearby icons on small screens */
+          height: 56px;
           border-radius: 50%;
           background: linear-gradient(135deg, #f844a4 0%, #8b5cf6 100%);
           border: 4px solid #fff;
