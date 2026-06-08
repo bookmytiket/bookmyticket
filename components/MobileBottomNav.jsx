@@ -98,13 +98,11 @@ export default function MobileBottomNav() {
           bottom: 0;
           left: 0;
           right: 0;
-          background: rgba(255, 255, 255, 0.98);
-          backdrop-filter: blur(20px);
-          -webkit-backdrop-filter: blur(20px);
-          border-top: 1px solid rgba(226, 232, 240, 0.8);
+          background: #ffffff; /* Solid white prevents text bleed completely */
+          border-top: 1px solid rgba(226, 232, 240, 0.6);
           z-index: 10000;
           display: none;
-          box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.05);
+          box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.06);
           padding-bottom: env(safe-area-inset-bottom, 0px);
         }
 
@@ -118,14 +116,16 @@ export default function MobileBottomNav() {
           display: grid;
           grid-template-columns: repeat(5, minmax(0, 1fr));
           align-items: center;
-          height: 65px;
+          height: 70px; /* Taller, premium feel */
           width: 100%;
           max-width: 480px;
           margin: 0 auto;
           box-sizing: border-box;
+          padding: 0 10px;
         }
 
         .nav-item {
+          position: relative;
           display: flex;
           flex-direction: column;
           align-items: center;
@@ -134,9 +134,9 @@ export default function MobileBottomNav() {
           color: #94a3b8;
           height: 100%;
           width: 100%;
-          transition: color 0.2s ease, transform 0.1s ease;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
           cursor: pointer;
-          gap: 4px;
+          gap: 5px;
         }
 
         .nav-item:active {
@@ -144,24 +144,50 @@ export default function MobileBottomNav() {
         }
 
         .nav-item.active {
-          color: #f84464;
+          color: #000000; /* High contrast active state */
         }
 
         .nav-icon {
-          transition: transform 0.2s ease;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .nav-item.active .nav-icon {
-          transform: scale(1.05);
+          transform: translateY(-2px);
+          color: #ec4899; /* Vibrant pink accent */
+          filter: drop-shadow(0 4px 8px rgba(236, 72, 153, 0.3));
         }
 
         .nav-label {
           font-size: 10px;
-          font-weight: 800;
+          font-weight: 700;
           text-transform: uppercase;
           letter-spacing: 0.5px;
           white-space: nowrap;
           line-height: 1;
+          transition: all 0.3s ease;
+        }
+
+        .nav-item.active .nav-label {
+          font-weight: 900;
+        }
+
+        /* Active Indicator Dot */
+        .nav-item::after {
+          content: '';
+          position: absolute;
+          bottom: 8px;
+          width: 4px;
+          height: 4px;
+          border-radius: 50%;
+          background: #ec4899;
+          opacity: 0;
+          transform: scale(0);
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .nav-item.active::after {
+          opacity: 1;
+          transform: scale(1);
         }
 
         .nav-item-action {
@@ -175,13 +201,13 @@ export default function MobileBottomNav() {
 
         .book-now-floating {
           position: absolute;
-          bottom: 15px; /* Changed from top: -24px to bottom anchored to prevent cutoff */
-          width: 58px;
-          height: 58px;
+          bottom: 20px; /* Floats perfectly above */
+          width: 64px; /* Larger, more attractive */
+          height: 64px;
           border-radius: 50%;
-          background: linear-gradient(135deg, #f844a4 0%, #a855f7 100%);
+          background: linear-gradient(135deg, #f844a4 0%, #8b5cf6 100%);
           border: 4px solid #fff;
-          box-shadow: 0 8px 24px rgba(248, 68, 164, 0.45);
+          box-shadow: 0 8px 24px rgba(248, 68, 164, 0.4), 0 0 0 0 rgba(248, 68, 164, 0.4);
           display: flex;
           flex-direction: column;
           align-items: center;
@@ -191,11 +217,19 @@ export default function MobileBottomNav() {
           outline: none;
           z-index: 10001;
           padding: 0;
+          animation: pulse-ring 2s infinite;
+        }
+
+        @keyframes pulse-ring {
+          0% { box-shadow: 0 8px 24px rgba(248, 68, 164, 0.4), 0 0 0 0 rgba(248, 68, 164, 0.4); }
+          70% { box-shadow: 0 8px 24px rgba(248, 68, 164, 0.4), 0 0 0 10px rgba(248, 68, 164, 0); }
+          100% { box-shadow: 0 8px 24px rgba(248, 68, 164, 0.4), 0 0 0 0 rgba(248, 68, 164, 0); }
         }
 
         .book-now-floating:active {
           transform: scale(0.9) translateY(2px);
           box-shadow: 0 4px 12px rgba(248, 68, 164, 0.3);
+          animation: none;
         }
 
         .book-now-text {
