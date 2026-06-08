@@ -60,7 +60,7 @@ export default function EarlyBirdPricingCards({ raceCategories, onSelect, select
                 {isEarlyBirdActive ? (
                   <>
                     <div className="text-slate-400 font-semibold text-lg line-through decoration-red-500 decoration-2 mb-2">
-                      ₹{category.regular_price}
+                      ₹{category.regular_price || category.price}
                     </div>
                     <div className="flex items-center gap-2 text-pink-600 font-black text-4xl mb-4 drop-shadow-sm">
                       <span className="text-2xl">₹</span>{category.early_bird_price}
@@ -71,7 +71,7 @@ export default function EarlyBirdPricingCards({ raceCategories, onSelect, select
                   </>
                 ) : (
                   <div className="flex items-center gap-2 text-slate-800 font-black text-4xl mb-4 mt-6">
-                    <span className="text-2xl">₹</span>{category.regular_price}
+                    <span className="text-2xl">₹</span>{category.regular_price || category.price}
                   </div>
                 )}
               </div>
