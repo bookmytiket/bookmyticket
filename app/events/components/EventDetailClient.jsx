@@ -3,7 +3,7 @@ import React, { useMemo, useEffect, useState } from 'react';
 import { 
     Calendar, MapPin, Clock, Users, Languages, Share2, Heart, 
     CheckCircle, ShieldCheck, Warehouse, Info, Sparkles, ChevronRight,
-    ArrowRight, CheckCircle2, InfoIcon, ArrowLeft, Phone, MessageCircle, ChevronDown, HelpCircle,
+    ArrowRight, CheckCircle2, InfoIcon, ArrowLeft, ChevronLeft, Phone, MessageCircle, ChevronDown, HelpCircle,
     Trophy
 } from 'lucide-react';
 import Link from 'next/link';
@@ -316,22 +316,33 @@ export default function EventDetailClient({ id }) {
         <main className="min-h-screen bg-slate-50/50">
             {/* --- SCROLLED STICKY HEADER --- */}
             <div 
-                className={`fixed top-0 left-0 right-0 z-[100] bg-white/95 backdrop-blur-md border-b border-slate-100 shadow-sm transition-transform duration-300 flex items-center justify-between px-6 py-4 ${scrolled ? 'translate-y-0' : '-translate-y-full'}`}
+                className={`fixed top-0 left-0 right-0 z-[100] bg-white border-b border-slate-200 shadow-sm transition-transform duration-300 flex items-center justify-between px-4 sm:px-8 py-3 ${scrolled ? 'translate-y-0' : '-translate-y-full'}`}
             >
                 <div className="flex items-center gap-4">
                     <button 
                         onClick={() => router.push("/events")}
-                        className="p-2 -ml-2 text-slate-600 hover:text-pink-500 hover:bg-slate-50 rounded-full transition-colors"
+                        className="p-2 -ml-2 text-slate-600 hover:text-pink-500 transition-colors"
                     >
-                        <ArrowLeft size={20} />
+                        <ChevronLeft size={24} />
                     </button>
-                    <div className="hidden sm:block w-px h-6 bg-slate-200"></div>
-                    <h2 className="text-[13px] font-black text-slate-900 uppercase tracking-tight truncate max-w-[200px] sm:max-w-[400px]">
-                        {event.title}
-                    </h2>
+                    <div className="flex flex-col">
+                        <h2 className="text-base sm:text-lg font-bold text-slate-900 leading-tight truncate max-w-[200px] sm:max-w-[600px]">
+                            {event.title}
+                        </h2>
+                        <div className="flex items-center gap-3 text-[11px] font-medium text-slate-500 mt-1">
+                            <div className="flex items-center gap-1">
+                                <Calendar size={12} className="text-emerald-500" />
+                                <span>{event.date}{event.time ? `, ${event.time}` : ''}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                                <MapPin size={12} className="text-rose-500" />
+                                <span className="truncate max-w-[100px] sm:max-w-[200px]">{event.venue || event.location || 'TBA'}</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div className="flex items-center gap-2 sm:gap-4">
-                    <button className="px-3 py-2 text-slate-600 hover:bg-slate-50 rounded-xl transition-colors flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest border border-transparent hover:border-slate-200">
+                    <button className="px-3 py-2 text-slate-600 hover:bg-slate-50 rounded-xl transition-colors flex items-center gap-2 text-[12px] font-semibold border border-transparent hover:border-slate-200">
                         <Share2 size={16} /> <span className="hidden sm:inline">Share</span>
                     </button>
                     <WishlistButton eventId={event.id} />
