@@ -24,7 +24,7 @@ export async function GET(request) {
     const userClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: `Bearer ${userJwt}` } },
     });
-    const { data: { user }, error: authErr } = await userClient.auth.getUser();
+    const { data: { user }, error: authErr } = await userClient.auth.getUser(userJwt);
     if (authErr || !user) {
       return NextResponse.json({ error: 'Invalid auth token' }, { status: 401 });
     }

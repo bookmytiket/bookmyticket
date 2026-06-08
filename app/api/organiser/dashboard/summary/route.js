@@ -18,7 +18,7 @@ export async function GET(request) {
     const userClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: `Bearer ${userJwt}` } },
     });
-    const { data: { user }, error: authErr } = await userClient.auth.getUser();
+    const { data: { user }, error: authErr } = await userClient.auth.getUser(userJwt);
     if (authErr || !user) {
       return NextResponse.json({ error: 'Invalid auth token' }, { status: 401 });
     }
@@ -154,6 +154,55 @@ export async function GET(request) {
     const totalTicketsSold = confirmedBookings.reduce((sum, b) =>
         sum + (Number(b.ticket_count) || 1), 0);
 
+    // Revenue Analytics
+    const nowMs = new Date().getTime();
+    const oneDayMs = 24 * 60 * 60 * 1000;
+    
+    let todayRevenue = 0;
+    let thisWeekRevenue = 0;
+    let thisMonthRevenue = 0;
+    let lifetimeRevenue = 0;
+    
+    const eventWiseBookings = {};
+    let rsvpEventsCount = 0;
+    let rsvpConfirmedCount = 0;
+    let rsvpCheckedInCount = 0;
+    
+    let marathonEventsCount = 0;
+    let marathonRegistrations = 0;
+    let marathonBibs = 0;
+    let marathonCheckins = 0;
+
+    eventsList.forEach(e => {
+        eventWiseBookings[e.id] = { name: e.title || e.event_name || 'Unnamed Event', count: 0 };
+        // Check dynamic config to classify
+        if (e.event_type === 'rsvp' || e.dynamic_config?.rsvp) {
+            rsvpEventsCount++;
+        }
+        if (e.event_type === 'marathon' || e.dynamic_config?.marathonCategories) {
+            marathonEventsCount++;
+        }
+    });
+
+    confirmedBookings.forEach(b => {
+        const amt = Number(b.partner_total) || Number(b.base_amount) || 0;
+        lifetimeRevenue += amt;
+        
+        const bDate = b.created_at ? new Date(b.created_at).getTime() : nowMs;
+        const diffMs = nowMs - bDate;
+        
+        if (diffMs <= oneDayMs) todayRevenue += amt;
+        if (diffMs <= 7 * oneDayMs) thisWeekRevenue += amt;
+        if (diffMs <= 30 * oneDayMs) thisMonthRevenue += amt;
+        
+        if (eventWiseBookings[b.event_id]) {
+            eventWiseBookings[b.event_id].count += (Number(b.ticket_count) || 1);
+        }
+        
+        if (b.status === 'Confirmed' || b.status === 'CheckedIn') rsvpConfirmedCount++;
+        if (b.status === 'CheckedIn') rsvpCheckedInCount++;
+    });
+
     // Fetch organiser wallet balance
     const { data: walletData } = await adminClient
         .from('organiser_wallet')
@@ -173,6 +222,13 @@ export async function GET(request) {
         totalBookings: confirmedBookings.length,
         totalTicketsSold: totalTicketsSold,
         revenue: totalRevenue,
+        todayRevenue,
+        thisWeekRevenue,
+        thisMonthRevenue,
+        lifetimeRevenue,
+        eventWiseBookings: Object.values(eventWiseBookings).filter(e => e.count > 0),
+        rsvpAnalytics: { events: rsvpEventsCount, confirmed: rsvpConfirmedCount, checkedIn: rsvpCheckedInCount },
+        marathonAnalytics: { events: marathonEventsCount, registrations: marathonRegistrations, bibs: marathonBibs, checkins: marathonCheckins },
         walletBalance: walletData?.balance || 0,
         organiserName: organiser?.business_name || 'Organiser'
       },
