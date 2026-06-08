@@ -72,7 +72,16 @@ export default function EventDetailClient({ id }) {
     const [storageLoaded, setStorageLoaded] = useState(false);
     const [showTournamentReg, setShowTournamentReg] = useState(false);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-    useEffect(() => { setStorageLoaded(true); }, []);
+    const [scrolled, setScrolled] = useState(false);
+
+    useEffect(() => { 
+        setStorageLoaded(true); 
+        const handleScroll = () => {
+            setScrolled(window.scrollY > 200);
+        };
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
 
     const [rawEvent, setRawEvent] = useState(null);
     const [eventLoading, setEventLoading] = useState(true);
@@ -305,8 +314,32 @@ export default function EventDetailClient({ id }) {
 
     return (
         <main className="min-h-screen bg-slate-50/50">
-            {/* --- FLOATING BACK BUTTON --- */}
-            <div className="fixed top-6 left-6 z-[100] pointer-events-none">
+            {/* --- SCROLLED STICKY HEADER --- */}
+            <div 
+                className={`fixed top-0 left-0 right-0 z-[100] bg-white/95 backdrop-blur-md border-b border-slate-100 shadow-sm transition-transform duration-300 flex items-center justify-between px-6 py-4 ${scrolled ? 'translate-y-0' : '-translate-y-full'}`}
+            >
+                <div className="flex items-center gap-4">
+                    <button 
+                        onClick={() => router.push("/events")}
+                        className="p-2 -ml-2 text-slate-600 hover:text-pink-500 hover:bg-slate-50 rounded-full transition-colors"
+                    >
+                        <ArrowLeft size={20} />
+                    </button>
+                    <div className="hidden sm:block w-px h-6 bg-slate-200"></div>
+                    <h2 className="text-[13px] font-black text-slate-900 uppercase tracking-tight truncate max-w-[200px] sm:max-w-[400px]">
+                        {event.title}
+                    </h2>
+                </div>
+                <div className="flex items-center gap-2 sm:gap-4">
+                    <button className="px-3 py-2 text-slate-600 hover:bg-slate-50 rounded-xl transition-colors flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest border border-transparent hover:border-slate-200">
+                        <Share2 size={16} /> <span className="hidden sm:inline">Share</span>
+                    </button>
+                    <WishlistButton eventId={event.id} />
+                </div>
+            </div>
+
+            {/* --- FLOATING BACK BUTTON (When NOT scrolled) --- */}
+            <div className={`fixed top-6 left-6 z-[90] transition-opacity duration-300 pointer-events-none ${scrolled ? 'opacity-0' : 'opacity-100'}`}>
                 <button 
                     onClick={() => router.push("/events")}
                     className="pointer-events-auto p-3 bg-white/80 backdrop-blur-md rounded-full shadow-lg border border-white/20 text-slate-600 hover:text-pink-500 hover:scale-110 transition-all group"
