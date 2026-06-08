@@ -6800,7 +6800,11 @@ function OrganiserPanel() {
                   <button
                     onClick={() => {
                       setEditingEvent(null);
+                      setEditingMarathonId(null);
+                      if (typeof setEditingStaffId !== 'undefined') setEditingStaffId(null);
                       setPostEvent(getInitialPostEvent());
+                      localStorage.removeItem("organiser_draft");
+                      sessionStorage.clear();
                       setAddEventStep("select_type");
                       setActiveTab("post_event");
                     }}
@@ -7600,9 +7604,31 @@ function OrganiserPanel() {
                     </div>
                   </button>
                   <button
-                    onClick={() => {
+                    onClick={async () => {
                       setPostEvent((pe) => ({ ...pe, type: "Virtual Event", ticketMode: undefined }));
-                      setAddEventStep("form");
+                      
+                      try {
+                          const { data, error } = await supabase.from('events').insert({
+                              title: 'Untitled Draft',
+                              type: "Virtual Event",
+                              category: "Virtual",
+                              organiser_id: user?.id,
+                              status: 'draft',
+                              publish_status: 'draft',
+                              approval_status: 'approved',
+                              visibility_status: 'private',
+                              entity_type: 'event'
+                          }).select('id').single();
+
+                          if (error) throw error;
+                          
+                          setEditingEvent({ ...data, id: data.id, type: "Virtual Event", category: "Virtual" });
+                          setPostEvent(pe => ({ ...pe, id: data.id, type: "Virtual Event", category: "Virtual" }));
+                          setAddEventStep("form");
+                      } catch(e) {
+                          console.error(e);
+                          showToast("Failed to create virtual draft.", "error");
+                      }
                     }}
                     className="group relative bg-white border border-slate-100 rounded-[3rem] p-12 flex flex-col items-center gap-8 cursor-pointer overflow-hidden transition-all duration-500 hover:shadow-[0_40px_80px_-20px_rgba(59,130,246,0.15)] hover:border-blue-200 hover:-translate-y-2"
                   >
@@ -7655,7 +7681,7 @@ function OrganiserPanel() {
             return (
               <div className="relative">
                 <CategorySelection
-                  onSelectCategory={(categoryId) => {
+                  onSelectCategory={async (categoryId) => {
                     let eventType = "Physical Event";
                     let eventCat = "";
                     let sportType = "";
@@ -7699,19 +7725,44 @@ function OrganiserPanel() {
                     } else if (categoryId === "corporate") {
                       eventCat = "Corporate Events";
                     }
-
-                    setPostEvent((pe) => ({ 
-                      ...pe, 
-                      type: eventType, 
-                      category: eventCat,
-                      ...(sportType ? { sportType } : {}),
-                      seatingEnabled: (seatingEnabled && eventType === "Physical Event") 
-                    }));
                     
-                    if (eventType === "Marathon") {
-                      setActiveTab("marathon_publish");
-                    } else {
-                      setAddEventStep("form");
+                    try {
+                        const isRSVP = postEvent?.ticketMode === 'free';
+                        const { data, error } = await supabase.from('events').insert({
+                            title: 'Untitled Draft',
+                            type: eventType,
+                            category: eventCat,
+                            organiser_id: user?.id,
+                            status: 'draft',
+                            publish_status: 'draft',
+                            approval_status: 'approved',
+                            visibility_status: 'private',
+                            entity_type: 'event',
+                            ticket_mode: isRSVP ? 'free' : 'paid',
+                            is_paid: !isRSVP
+                        }).select('id').single();
+
+                        if (error) throw error;
+
+                        setEditingEvent({ ...data, id: data.id, type: eventType, category: eventCat });
+
+                        if (eventType === "Marathon") {
+                            setEditingMarathonId(data.id);
+                            setActiveTab("marathon_publish");
+                        } else {
+                            setPostEvent((pe) => ({ 
+                                ...pe, 
+                                id: data.id,
+                                type: eventType, 
+                                category: eventCat,
+                                ...(sportType ? { sportType } : {}),
+                                seatingEnabled: (seatingEnabled && eventType === "Physical Event") 
+                            }));
+                            setAddEventStep("form");
+                        }
+                    } catch(e) {
+                        console.error(e);
+                        showToast("Failed to create draft.", "error");
                     }
                   }}
                 />

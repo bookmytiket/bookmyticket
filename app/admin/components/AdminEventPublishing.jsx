@@ -53,7 +53,10 @@ export default function AdminEventPublishing() {
                     <p className="text-slate-500 text-sm mt-1">Directly create and publish events bypassing organizer workflow.</p>
                 </div>
                 <button 
-                    onClick={() => setShowForm(!showForm)}
+                    onClick={() => {
+                        setFormData({ event_name: '', category: 'Concerts', organizer_type: 'Admin', publish_status: 'Draft' });
+                        setShowForm(!showForm);
+                    }}
                     className="px-4 py-2 bg-pink-500 text-white font-bold rounded-lg hover:bg-pink-600 text-sm flex items-center gap-2">
                     <Plus size={16} /> Create Event
                 </button>
