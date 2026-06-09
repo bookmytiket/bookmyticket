@@ -179,52 +179,33 @@ export default function TicketDetailScreen() {
 
   const handleDownloadInvoice = async () => {
     try {
+      if (!viewRef.current) return;
+      
+      const uri = await captureRef(viewRef, {
+        format: 'png',
+        quality: 1.0,
+      });
+
       const event = booking.events || {};
       const html = `
         <html>
           <head>
             <style>
-              body { font-family: 'Helvetica', sans-serif; padding: 40px; color: #1e293b; }
-              .header { text-align: center; margin-bottom: 40px; }
-              .logo { font-size: 32px; font-weight: 900; color: #f844a4; }
-              .ticket-card { border: 1px solid #e2e8f0; border-radius: 20px; padding: 30px; margin-bottom: 30px; }
-              .title { font-size: 24px; font-weight: bold; margin-bottom: 10px; }
-              .details { display: flex; justify-content: space-between; margin-top: 20px; }
-              .label { color: #64748b; font-size: 12px; text-transform: uppercase; margin-bottom: 4px; }
-              .value { font-size: 16px; font-weight: bold; }
-              .breakdown { margin-top: 40px; border-top: 2px solid #f1f5f9; padding-top: 20px; }
-              .row { display: flex; justify-content: space-between; padding: 8px 0; }
-              .total { font-size: 20px; font-weight: 900; color: #f844a4; border-top: 2px solid #f1f5f9; margin-top: 15px; padding-top: 15px; }
+              body { margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; background-color: #f1f5f9; }
+              img { max-width: 100%; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
             </style>
           </head>
           <body>
-            <div class="header">
-              <div class="logo">BOOKMYTICKET</div>
-              <p>Official Digital Invoice</p>
-            </div>
-            <div class="ticket-card">
-              <div class="title">${event.title}</div>
-              <div class="details">
-                <div><div class="label">Date</div><div class="value">${event.date || 'TBA'}</div></div>
-                <div><div class="label">Booking ID</div><div class="value">#${booking.id.slice(0, 8).toUpperCase()}</div></div>
-              </div>
-            </div>
-            <div class="breakdown">
-              <h3>Payment Summary</h3>
-              <div class="row"><span>Base Amount</span><span>₹${Number(booking.amount).toFixed(2)}</span></div>
-              <div class="row"><span>Platform Fee</span><span>₹${Number(booking.platform_fee || 15).toFixed(2)}</span></div>
-              <div class="row"><span>GST (18%)</span><span>₹${(Number(booking.amount) * 0.18).toFixed(2)}</span></div>
-              <div class="total"><div class="row"><span>Total Paid</span><span>₹${(Number(booking.amount) + Number(booking.platform_fee || 15) + (Number(booking.amount) * 0.18)).toFixed(2)}</span></div></div>
-            </div>
+            <img src="${uri}" />
           </body>
         </html>
       `;
 
-      const { uri } = await Print.printToFileAsync({ html });
-      await Sharing.shareAsync(uri, { UTI: '.pdf', mimeType: 'application/pdf' });
+      const { uri: pdfUri } = await Print.printToFileAsync({ html });
+      await Sharing.shareAsync(pdfUri, { UTI: '.pdf', mimeType: 'application/pdf', dialogTitle: `Ticket: ${event.title}` });
     } catch (err) {
       console.error('Error generating PDF:', err);
-      Alert.alert('Download Failed', 'Could not generate PDF invoice.');
+      Alert.alert('Download Failed', 'Could not generate PDF ticket.');
     }
   };
 
@@ -284,7 +265,7 @@ export default function TicketDetailScreen() {
           transition={{ type: 'spring', damping: 15 }}
           style={styles.ticketGlowContainer}
         >
-          <View ref={viewRef} collapsable={false} style={styles.ticketCardWrapper}>
+          <RNView ref={viewRef} collapsable={false} style={styles.ticketCardWrapper}>
             <View style={styles.ticketCard}>
             {/* Ticket Top - Gradient Header */}
             <LinearGradient
@@ -333,11 +314,11 @@ export default function TicketDetailScreen() {
               <RNView style={styles.secondaryDetails}>
                 <View style={styles.infoCol}>
                   <Text style={styles.infoLabel}>ATTENDEE</Text>
-                  <Text style={styles.infoValue}>{booking.customer_details?.name || booking.attendee_name || user?.user_metadata?.full_name || 'Guest'}</Text>
+                  <Text style={styles.infoValue}>{booking.customer_details?.name || booking.attendee_name || 'Guest'}</Text>
                 </View>
                 <View style={styles.infoCol}>
-                  <Text style={styles.infoLabel}>QUANTITY</Text>
-                  <Text style={styles.infoValue}>{booking.quantity || 1} Person(s)</Text>
+                  <Text style={styles.infoLabel}>{booking.customer_details?.bib_number ? 'BIB NUMBER' : 'QUANTITY'}</Text>
+                  <Text style={styles.infoValue}>{booking.customer_details?.bib_number || `${booking.quantity || 1} Person(s)`}</Text>
                 </View>
                 <View style={styles.infoCol}>
                   <Text style={styles.infoLabel}>BOOKING ID</Text>
@@ -392,7 +373,7 @@ export default function TicketDetailScreen() {
               </View>
             </View>
           </View>
-        </View>
+          </RNView>
       </MotiView>
 
         {/* Payment Summary - Professional Breakdown */}
@@ -442,7 +423,7 @@ export default function TicketDetailScreen() {
             onPress={handleDownloadInvoice}
           >
             <Download size={20} color="#fff" />
-            <Text style={styles.actionText}>Download PDF Invoice</Text>
+            <Text style={styles.actionText}>Download E-Ticket (PDF)</Text>
           </Pressable>
         </View>
 

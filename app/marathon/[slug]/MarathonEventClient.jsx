@@ -204,12 +204,22 @@ export default function MarathonEventClient({ marathon, categories, sponsors, be
         {/* ── Benefits strip ── */}
         {benefits.length > 0 && (
           <div className="flex flex-wrap gap-3 mb-10">
-            {benefits.map((b, i) => (
+            {benefits.map((rawB, i) => {
+              let b = rawB;
+              if (typeof rawB === 'string') {
+                try {
+                  const parsed = JSON.parse(rawB);
+                  if (typeof parsed === 'object' && parsed !== null) b = parsed;
+                } catch(e) {}
+              }
+              const label = typeof b === 'string' ? b : b.benefit_name || b.title || b.label || '';
+              if (!label) return null;
+              return (
               <span key={i} className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-full text-sm text-white/80">
                 <span>{BENEFIT_ICONS[b.icon_key] || '✅'}</span>
-                {b.benefit_name}
+                {label}
               </span>
-            ))}
+            )})}
           </div>
         )}
 

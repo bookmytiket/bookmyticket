@@ -16,6 +16,7 @@ import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
+import { DataService } from '../../services/DataService';
 import { isFreeEvent } from '@/lib/eventUtils';
 import { useAuth } from '@/hooks/useSupabase';
 import { Image } from 'expo-image';
@@ -51,6 +52,7 @@ import {
   Camera,
   CheckCircle2,
   HelpCircle,
+  Timer
 } from 'lucide-react-native';
 
 export default function EventDetailScreen() {
@@ -62,6 +64,7 @@ export default function EventDetailScreen() {
 
   const [event, setEvent] = useState<any>(null);
   const [marathonV2, setMarathonV2] = useState<any>(null);
+  const [isOrganiser, setIsOrganiser] = useState(false);
   const [marathonCategories, setMarathonCategories] = useState<any[]>([]);
   const [sponsors, setSponsors] = useState<any[]>([]);
   const [benefits, setBenefits] = useState<any[]>([]);
@@ -76,74 +79,59 @@ export default function EventDetailScreen() {
   const fetchEvent = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('events')
-        .select(`
-          *,
-          event_ticket_categories (*),
-          ticket_categories (*)
-        `)
-        .eq('id', id)
-        .single();
-      if (error) throw error;
+      const data = await DataService.getEventDetail(id);
+      if (!data) throw new Error('Event not found');
+
       setEvent(data);
 
-      // Check if it's a V2 Marathon
-      const { data: v2Data } = await supabase
-        .from('marathon_events')
-        .select('*')
-        .eq('id', id)
-        .single();
+      if (data.marathon_events && data.marathon_events.length > 0) {
+        setMarathonV2(data.marathon_events[0]);
+      }
       
-      if (v2Data) {
-        setMarathonV2(v2Data);
-        
-        // Fetch V2 Categories
-        const { data: catData } = await supabase
-          .from('marathon_categories')
-          .select('*')
-          .eq('marathon_id', id)
-          .order('distance_km', { ascending: true });
-        
-        if (catData) {
-          setMarathonCategories(catData);
-          if (catData.length > 0) {
-            const kms = [...new Set(catData.map(c => Number(c.distance_km)))].sort((a, b) => a - b);
-            setSelectedKM(kms[0]);
-          }
-        }
+      if (user && data.organiser_id === user.id) {
+        setIsOrganiser(true);
+      }
 
-        // Fetch Sponsors
-        const { data: sponData } = await supabase
-          .from('marathon_sponsors')
-          .select('*')
-          .eq('marathon_id', id)
-          .order('rank_order', { ascending: true });
-        if (sponData) setSponsors(sponData);
-
-        // Fetch Benefits
-        const { data: benData } = await supabase
-          .from('marathon_benefits')
-          .select('*')
-          .eq('marathon_id', id);
-        if (benData) setBenefits(benData);
-
-      } else {
-        // Fallback to legacy categories if not V2
-        const { data: catData } = await supabase
-          .from('marathon_categories')
-          .select('*')
-          .or(`marathon_id.eq.${data.id},event_id.eq.${data.id}`)
-          .order('distance_km', { ascending: true });
-        
-        if (catData) {
-          setMarathonCategories(catData);
-          if (catData.length > 0) {
-            const kms = [...new Set(catData.map(c => Number(c.distance_km)))].sort((a, b) => a - b);
-            setSelectedKM(kms[0]);
-          }
+      if (data.marathon_categories && data.marathon_categories.length > 0) {
+        setMarathonCategories(data.marathon_categories);
+        const kms = [...new Set(data.marathon_categories.map((c: any) => Number(c.distance_km)))].sort((a, b) => a - b);
+        if (kms.length > 0) {
+          setSelectedKM(kms[0]);
         }
       }
+
+      if (data.marathon_sponsors) {
+        setSponsors(data.marathon_sponsors);
+      }
+      
+      if (data.marathon_benefits) {
+        setBenefits(data.marathon_benefits);
+      }
+
+      // Fetch About Event descriptions, faqs and highlights directly
+      try {
+        const [descResult, faqResult, highlightResult] = await Promise.all([
+          supabase.from('event_descriptions').select('*').eq('event_id', id).maybeSingle(),
+          supabase.from('event_faqs').select('*').eq('event_id', id).order('display_order'),
+          supabase.from('event_highlights').select('*').eq('event_id', id).order('display_order')
+        ]);
+        
+        if (descResult.data) {
+          data.event_descriptions = descResult.data;
+        }
+        if (faqResult.data && faqResult.data.length > 0) {
+          data.event_faqs = faqResult.data;
+        }
+        if (highlightResult.data && highlightResult.data.length > 0) {
+          data.event_highlights = highlightResult.data;
+        }
+        
+        // Update state with newly attached data
+        setEvent(data);
+      } catch (e) {
+        console.warn('Could not fetch rich about event data:', e);
+      }
+      
     } catch (err) {
       console.error('Error fetching event:', err);
     } finally {
@@ -751,7 +739,16 @@ export default function EventDetailScreen() {
             <RNView style={styles.section}>
               <Text style={[styles.sectionTitle, { color: colors.text }]}>Available Amenities</Text>
               <RNView style={styles.amenitiesGrid}>
-                {displayAmenities.map((item: any, i: number) => {
+                {displayAmenities.map((rawItem: any, i: number) => {
+                  let item = rawItem;
+                  if (typeof rawItem === 'string') {
+                    try {
+                      const parsed = JSON.parse(rawItem);
+                      if (typeof parsed === 'object' && parsed !== null) {
+                        item = parsed;
+                      }
+                    } catch (e) {}
+                  }
                   const label = typeof item === 'string' ? item : (item.benefit_name || item.label || 'Amenity');
                   const iconKey = typeof item === 'string' ? item : (item.icon_key || item.icon || 'Star');
                   return (
@@ -769,13 +766,102 @@ export default function EventDetailScreen() {
             </RNView>
           )}
 
-          {/* Description */}
-          {(event.description || event.about || dynamicConfig.description || dynamicConfig.basicInfo?.description) && (
+          {/* Organiser Actions panel if user is organiser */}
+          {isOrganiser && (
+            <MotiView from={{ opacity: 0, translateY: 10 }} animate={{ opacity: 1, translateY: 0 }} style={styles.section}>
+              <Text style={[styles.sectionTitle, { color: '#f59e0b' }]}>Organiser Actions</Text>
+              <RNView style={[{ padding: 16, borderRadius: 20, borderWidth: 1, backgroundColor: 'rgba(245, 158, 11, 0.05)', borderColor: 'rgba(245, 158, 11, 0.2)' }]}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <View style={{ flex: 1, paddingRight: 10 }}>
+                    <Text style={{ fontSize: 16, fontWeight: '800', color: colors.text }}>Event Status: {event.status === 'published' ? 'Live' : event.status}</Text>
+                    <Text style={{ fontSize: 12, color: colors.muted, marginTop: 4 }}>Need to cancel this event? Request cancellation for admin approval.</Text>
+                  </View>
+                  <Pressable 
+                    style={{ backgroundColor: '#ef4444', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12 }}
+                    onPress={() => {
+                      Alert.alert(
+                        'Request Cancellation',
+                        'Are you sure you want to request cancellation? An admin must approve this.',
+                        [
+                          { text: 'No', style: 'cancel' },
+                          { text: 'Yes, Cancel', style: 'destructive', onPress: async () => {
+                            try {
+                              await supabase.from('events').update({ status: 'CANCELLATION_REQUESTED' }).eq('id', event.id);
+                              Alert.alert('Requested', 'Cancellation request sent to admins.');
+                              fetchEvent();
+                            } catch (e) {
+                              Alert.alert('Error', 'Could not request cancellation');
+                            }
+                          }}
+                        ]
+                      );
+                    }}
+                  >
+                    <Text style={{ color: '#fff', fontWeight: '800', fontSize: 12 }}>Cancel Event</Text>
+                  </Pressable>
+                </View>
+              </RNView>
+            </MotiView>
+          )}
+
+          {/* Detailed About Event Section */}
+          {(event.event_descriptions?.about_event || event.description || event.about || dynamicConfig.description || dynamicConfig.basicInfo?.description || (event.event_highlights && event.event_highlights.length > 0)) && (
             <RNView style={styles.section}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>About</Text>
-              <Text style={[styles.description, { color: colors.muted }]}>
-                {event.description || event.about || dynamicConfig.description || dynamicConfig.basicInfo?.description}
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>About Event</Text>
+              
+              {/* Highlights */}
+              {event.event_highlights && event.event_highlights.length > 0 && (
+                <RNView style={{ marginBottom: 16 }}>
+                  {event.event_highlights.map((h: any, idx: number) => (
+                    <RNView key={idx} style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 8 }}>
+                      <ShieldCheck size={16} color={colors.tint} style={{ marginTop: 2, marginRight: 8 }} />
+                      <Text style={{ color: colors.text, flex: 1, fontSize: 14, fontWeight: '600' }}>{h.highlight_text}</Text>
+                    </RNView>
+                  ))}
+                </RNView>
+              )}
+
+              {/* Description */}
+              <Text style={[styles.description, { color: colors.muted, marginBottom: 16 }]}>
+                {event.event_descriptions?.about_event || event.description || event.about || dynamicConfig.description || dynamicConfig.basicInfo?.description}
               </Text>
+
+              {/* Rules */}
+              {event.event_descriptions?.rules && (
+                <RNView style={{ marginTop: 16, padding: 16, backgroundColor: 'rgba(239, 68, 68, 0.05)', borderRadius: 16, borderWidth: 1, borderColor: 'rgba(239, 68, 68, 0.1)' }}>
+                  <Text style={{ color: '#ef4444', fontWeight: '800', marginBottom: 8, fontSize: 14, textTransform: 'uppercase' }}>Rules & Regulations</Text>
+                  <Text style={{ color: colors.muted, fontSize: 13, lineHeight: 20 }}>{event.event_descriptions.rules}</Text>
+                </RNView>
+              )}
+
+              {/* Terms */}
+              {event.event_descriptions?.terms && (
+                <RNView style={{ marginTop: 16, padding: 16, backgroundColor: colors.card, borderRadius: 16, borderWidth: 1, borderColor: colors.border }}>
+                  <Text style={{ color: colors.text, fontWeight: '800', marginBottom: 8, fontSize: 14, textTransform: 'uppercase' }}>Terms & Conditions</Text>
+                  <Text style={{ color: colors.muted, fontSize: 13, lineHeight: 20 }}>{event.event_descriptions.terms}</Text>
+                </RNView>
+              )}
+
+              {/* Important Instructions */}
+              {event.event_descriptions?.instructions && (
+                <RNView style={{ marginTop: 16, padding: 16, backgroundColor: 'rgba(245, 158, 11, 0.05)', borderRadius: 16, borderWidth: 1, borderColor: 'rgba(245, 158, 11, 0.1)' }}>
+                  <Text style={{ color: '#f59e0b', fontWeight: '800', marginBottom: 8, fontSize: 14, textTransform: 'uppercase' }}>Important Instructions</Text>
+                  <Text style={{ color: colors.muted, fontSize: 13, lineHeight: 20 }}>{event.event_descriptions.instructions}</Text>
+                </RNView>
+              )}
+            </RNView>
+          )}
+
+          {/* FAQs Section */}
+          {event.event_faqs && event.event_faqs.length > 0 && (
+            <RNView style={styles.section}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Frequently Asked Questions</Text>
+              {event.event_faqs.map((faq: any, idx: number) => (
+                <RNView key={idx} style={{ marginBottom: 12, padding: 16, backgroundColor: colors.card, borderRadius: 16, borderWidth: 1, borderColor: colors.border }}>
+                  <Text style={{ color: colors.text, fontWeight: '800', fontSize: 14, marginBottom: 4 }}>{faq.question}</Text>
+                  <Text style={{ color: colors.muted, fontSize: 13, lineHeight: 20 }}>{faq.answer}</Text>
+                </RNView>
+              ))}
             </RNView>
           )}
 
@@ -896,22 +982,23 @@ function TimeUnit({ value, label }: { value: number; label: string }) {
 function AmenityIcon({ name, color }: { name: string; color: string }) {
   const iconSize = 20;
   const map: any = {
-    'Ambulance': Activity,
-    'First Aid': HeartPulse,
-    'Certificate': FileText,
-    'Medal': Award,
-    'T-Shirt': Shirt,
-    'Breakfast': Coffee,
-    'Refreshments': Utensils,
-    'Accommodation': Home,
-    'Parking': Car,
-    'Safety': ShieldCheck,
-    'Family': Smile,
-    'Cash Prize': DollarSign,
-    'Trophy': Trophy,
-    'Bib': Target,
-    'Selfie': Camera,
-    'Washroom': CheckCircle2,
+    'Ambulance': Activity, 'ambulance': Activity,
+    'First Aid': HeartPulse, 'medical': HeartPulse,
+    'Certificate': FileText, 'certificate': FileText,
+    'Medal': Award, 'medal': Award,
+    'T-Shirt': Shirt, 'tshirt': Shirt,
+    'Breakfast': Coffee, 'breakfast': Coffee,
+    'Refreshments': Utensils, 'refreshment': Utensils,
+    'Accommodation': Home, 'accommodation': Home,
+    'Parking': Car, 'parking': Car,
+    'Safety': ShieldCheck, 'safety': ShieldCheck,
+    'Family': Smile, 'family': Smile,
+    'Cash Prize': DollarSign, 'prize': DollarSign,
+    'Trophy': Trophy, 'trophy': Trophy,
+    'Bib': Target, 'bib': Target,
+    'Selfie': Camera, 'selfie': Camera,
+    'Washroom': CheckCircle2, 'washroom': CheckCircle2,
+    'timer': Timer, 'timer_chip': Timer
   };
   const IconComp = map[name] || HelpCircle;
   return <IconComp size={iconSize} color={color} />;

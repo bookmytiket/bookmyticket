@@ -368,8 +368,6 @@ export default function MarathonEventForm({ marathonId, isRSVP, onCancel, onPubl
                 entity_type: 'event',
                 type: 'Marathon',
                 event_type: isRSVP ? 'RSVP' : 'Marathon',
-                is_paid: !isRSVP,
-                requires_payment: !isRSVP,
                 ticket_mode: isRSVP ? 'free' : 'paid',
                 organiser_id: user.id,
                 latitude: Number(eventData.map_location.lat),
@@ -548,6 +546,133 @@ export default function MarathonEventForm({ marathonId, isRSVP, onCancel, onPubl
         await saveMarathon('Draft', true);
         setCurrentStep(step);
     };
+
+    const renderBenefitsAndSponsors = () => (
+        <div className="mt-8 pt-8 border-t border-slate-100">
+            <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-black text-slate-900 uppercase">Benefits & Sponsors</h3>
+                <div className="flex items-center gap-4">
+                    <label className="cursor-pointer text-[10px] font-black uppercase text-indigo-500 hover:underline flex items-center gap-1">
+                        <CloudUpload size={14} /> Batch Upload Logos
+                        <input type="file" multiple className="hidden" accept="image/*" onChange={async (e) => {
+                            const files = Array.from(e.target.files || []);
+                            if (!files.length) return;
+                            
+                            showToast(`Uploading ${files.length} sponsor logos...`, "info");
+                            const newSponsors = [...sponsors];
+                            
+                            for (const f of files) {
+                                const url = await handleImageUpload(f, 'sponsors');
+                                if (url) {
+                                    // Extract name from filename (remove extension and replace special chars)
+                                    let name = f.name.split('.').slice(0, -1).join('.');
+                                    name = name.replace(/[-_]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                                    
+                                    newSponsors.push({ 
+                                        sponsor_name: name, 
+                                        logo_url: url, 
+                                        sponsor_type: "Partner" 
+                                    });
+                                }
+                            }
+                            
+                            setSponsors(newSponsors);
+                            showToast("Sponsors uploaded successfully", "success");
+                        }} />
+                    </label>
+                    <button 
+                        onClick={() => setSponsors([...sponsors, { sponsor_name: "", logo_url: "", sponsor_type: "Partner" }])}
+                        className="text-[10px] font-black uppercase text-pink-500 hover:underline"
+                    >
+                        + Add Sponsor
+                    </button>
+                </div>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {BENEFIT_ICONS.map(b => {
+                    const active = benefits.find(ben => ben.icon_key === b.key);
+                    return (
+                        <button 
+                            key={b.key}
+                            onClick={() => {
+                                if(active) setBenefits(benefits.filter(ben => ben.icon_key !== b.key));
+                                else setBenefits([...benefits, { benefit_name: b.label, icon_key: b.key }]);
+                            }}
+                            className={`p-4 rounded-2xl border flex flex-col items-center gap-2 transition-all ${
+                                active ? 'bg-pink-50 border-[#ec4899] text-[#ec4899]' : 'bg-slate-50 border-slate-100 text-slate-400'
+                            }`}
+                        >
+                            <b.icon size={18} />
+                            <span className="text-[9px] font-black uppercase text-center leading-tight">{b.label}</span>
+                        </button>
+                    );
+                })}
+            </div>
+
+            {/* Added Sponsors List */}
+            {sponsors.length > 0 && (
+                <div className="mt-6 space-y-3">
+                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Manage Sponsors</h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {sponsors.map((s, idx) => (
+                            <div key={idx} className="bg-slate-50 p-4 rounded-[2rem] border border-slate-100 relative group">
+                                <button 
+                                    onClick={() => setSponsors(sponsors.filter((_, i) => i !== idx))}
+                                    className="absolute -top-2 -right-2 w-6 h-6 bg-white rounded-full shadow-md text-red-500 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                                >
+                                    <X size={12} />
+                                </button>
+                                <div className="space-y-3">
+                                    <div className="flex items-center gap-3">
+                                        <label className="w-16 h-16 rounded-xl bg-white border border-slate-200 flex items-center justify-center overflow-hidden cursor-pointer hover:border-pink-400 transition-colors relative group/logo">
+                                            {s.logo_url ? <img src={s.logo_url} className="w-full h-full object-contain p-2" /> : <CloudUpload size={20} className="text-slate-300" />}
+                                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/logo:opacity-100 flex items-center justify-center transition-opacity">
+                                                <CloudUpload size={16} className="text-white" />
+                                            </div>
+                                            <input type="file" className="hidden" accept="image/*" onChange={async (e) => {
+                                                const f = e.target.files?.[0];
+                                                if(f) {
+                                                    const url = await handleImageUpload(f, 'sponsors');
+                                                    if(url) {
+                                                        const ns = [...sponsors];
+                                                        ns[idx].logo_url = url;
+                                                        setSponsors(ns);
+                                                    }
+                                                }
+                                            }} />
+                                        </label>
+                                        <div className="flex-1">
+                                            <input 
+                                                className="w-full bg-transparent border-b border-slate-200 text-sm font-black text-slate-900 focus:outline-none focus:border-pink-500 pb-1"
+                                                placeholder="Sponsor Name"
+                                                value={s.sponsor_name}
+                                                onChange={e => {
+                                                    const ns = [...sponsors];
+                                                    ns[idx].sponsor_name = e.target.value;
+                                                    setSponsors(ns);
+                                                }}
+                                            />
+                                            <div className="mt-2 relative z-50 min-w-[150px]">
+                                                <CustomSelect 
+                                                    value={s.sponsor_type}
+                                                    onChange={val => {
+                                                        const ns = [...sponsors];
+                                                        ns[idx].sponsor_type = val;
+                                                        setSponsors(ns);
+                                                    }}
+                                                    options={["Title Sponsor", "Powered By", "Associate Partner", "Partner"]}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
 
     const steps = [
         { id: 1, title: "Event Info", icon: Info },
@@ -1012,130 +1137,7 @@ export default function MarathonEventForm({ marathonId, isRSVP, onCancel, onPubl
                             </div>
                         </div>
 
-                        <div className="mt-8">
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-sm font-black text-slate-900 uppercase">Benefits & Sponsors</h3>
-                                <div className="flex items-center gap-4">
-                                    <label className="cursor-pointer text-[10px] font-black uppercase text-indigo-500 hover:underline flex items-center gap-1">
-                                        <CloudUpload size={14} /> Batch Upload Logos
-                                        <input type="file" multiple className="hidden" accept="image/*" onChange={async (e) => {
-                                            const files = Array.from(e.target.files || []);
-                                            if (!files.length) return;
-                                            
-                                            showToast(`Uploading ${files.length} sponsor logos...`, "info");
-                                            const newSponsors = [...sponsors];
-                                            
-                                            for (const f of files) {
-                                                const url = await handleImageUpload(f, 'sponsors');
-                                                if (url) {
-                                                    // Extract name from filename (remove extension and replace special chars)
-                                                    let name = f.name.split('.').slice(0, -1).join('.');
-                                                    name = name.replace(/[-_]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-                                                    
-                                                    newSponsors.push({ 
-                                                        sponsor_name: name, 
-                                                        logo_url: url, 
-                                                        sponsor_type: "Partner" 
-                                                    });
-                                                }
-                                            }
-                                            
-                                            setSponsors(newSponsors);
-                                            showToast("Sponsors uploaded successfully", "success");
-                                        }} />
-                                    </label>
-                                    <button 
-                                        onClick={() => setSponsors([...sponsors, { sponsor_name: "", logo_url: "", sponsor_type: "Partner" }])}
-                                        className="text-[10px] font-black uppercase text-pink-500 hover:underline"
-                                    >
-                                        + Add Sponsor
-                                    </button>
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                                {BENEFIT_ICONS.map(b => {
-                                    const active = benefits.find(ben => ben.icon_key === b.key);
-                                    return (
-                                        <button 
-                                            key={b.key}
-                                            onClick={() => {
-                                                if(active) setBenefits(benefits.filter(ben => ben.icon_key !== b.key));
-                                                else setBenefits([...benefits, { benefit_name: b.label, icon_key: b.key }]);
-                                            }}
-                                            className={`p-4 rounded-2xl border flex flex-col items-center gap-2 transition-all ${
-                                                active ? 'bg-pink-50 border-[#ec4899] text-[#ec4899]' : 'bg-slate-50 border-slate-100 text-slate-400'
-                                            }`}
-                                        >
-                                            <b.icon size={18} />
-                                            <span className="text-[9px] font-black uppercase text-center leading-tight">{b.label}</span>
-                                        </button>
-                                    );
-                                })}
-                            </div>
-
-                            {/* Added Sponsors List */}
-                            {sponsors.length > 0 && (
-                                <div className="mt-6 space-y-3">
-                                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Manage Sponsors</h4>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                        {sponsors.map((s, idx) => (
-                                            <div key={idx} className="bg-slate-50 p-4 rounded-[2rem] border border-slate-100 relative group">
-                                                <button 
-                                                    onClick={() => setSponsors(sponsors.filter((_, i) => i !== idx))}
-                                                    className="absolute -top-2 -right-2 w-6 h-6 bg-white rounded-full shadow-md text-red-500 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                                                >
-                                                    <X size={12} />
-                                                </button>
-                                                <div className="space-y-3">
-                                                    <div className="flex items-center gap-3">
-                                                        <label className="w-16 h-16 rounded-xl bg-white border border-slate-200 flex items-center justify-center overflow-hidden cursor-pointer hover:border-pink-400 transition-colors relative group/logo">
-                                                            {s.logo_url ? <img src={s.logo_url} className="w-full h-full object-contain p-2" /> : <CloudUpload size={20} className="text-slate-300" />}
-                                                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/logo:opacity-100 flex items-center justify-center transition-opacity">
-                                                                <CloudUpload size={16} className="text-white" />
-                                                            </div>
-                                                            <input type="file" className="hidden" accept="image/*" onChange={async (e) => {
-                                                                const f = e.target.files?.[0];
-                                                                if(f) {
-                                                                    const url = await handleImageUpload(f, 'sponsors');
-                                                                    if(url) {
-                                                                        const ns = [...sponsors];
-                                                                        ns[idx].logo_url = url;
-                                                                        setSponsors(ns);
-                                                                    }
-                                                                }
-                                                            }} />
-                                                        </label>
-                                                        <div className="flex-1">
-                                                            <input 
-                                                                className="w-full bg-transparent border-b border-slate-200 text-sm font-black text-slate-900 focus:outline-none focus:border-pink-500 pb-1"
-                                                                placeholder="Sponsor Name"
-                                                                value={s.sponsor_name}
-                                                                onChange={e => {
-                                                                    const ns = [...sponsors];
-                                                                    ns[idx].sponsor_name = e.target.value;
-                                                                    setSponsors(ns);
-                                                                }}
-                                                            />
-                                                            <div className="mt-2 relative z-50 min-w-[150px]">
-                                                                <CustomSelect 
-                                                                    value={s.sponsor_type}
-                                                                    onChange={val => {
-                                                                        const ns = [...sponsors];
-                                                                        ns[idx].sponsor_type = val;
-                                                                        setSponsors(ns);
-                                                                    }}
-                                                                    options={["Title Sponsor", "Powered By", "Associate Partner", "Partner"]}
-                                                                />
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
+                        {renderBenefitsAndSponsors()}
                     </section>
 
                     <div className="flex justify-between mt-8">
@@ -1299,6 +1301,9 @@ export default function MarathonEventForm({ marathonId, isRSVP, onCancel, onPubl
                                 onChange={e => setEventData(p => ({ ...p, terms: e.target.value }))}
                             />
                         </div>
+
+                        {/* Add Benefits & Sponsors here for RSVP since the Pricing step is skipped */}
+                        {isRSVP && renderBenefitsAndSponsors()}
 
                         {/* About Event Rich Editor — saves directly to Supabase */}
                         {localMarathonId && (

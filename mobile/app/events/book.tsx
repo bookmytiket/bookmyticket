@@ -296,54 +296,36 @@ export default function BookEventScreen() {
   const fetchEvent = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('events')
-        .select(`
-          *,
-          organiser:profiles!events_organiser_id_fkey (*),
-          event_ticket_categories (*),
-          ticket_categories (*),
-          competition_categories (*),
-          competition_events (*),
-          registration_fields (*)
-        `)
-        .eq('id', id)
-        .single();
-      if (error) throw error;
+      const data = await DataService.getEventDetail(id);
+      if (!data) throw new Error('Event not found');
+
       setEvent(data);
       processEventData(data);
 
-      if (data.booking_mode === 'multi_show') {
-          const { data: shows } = await supabase
-            .from('event_showtimes')
-            .select('*')
-            .eq('event_id', id)
-            .order('show_date', { ascending: true })
-            .order('start_time', { ascending: true });
-          
-          if (shows && shows.length > 0) {
+      if (data.booking_mode === 'multi_show' && data.event_showtimes) {
+          const shows = data.event_showtimes.sort((a: any, b: any) => {
+            const dateA = new Date(a.show_date + 'T' + a.start_time);
+            const dateB = new Date(b.show_date + 'T' + b.start_time);
+            return dateA.getTime() - dateB.getTime();
+          });
+          if (shows.length > 0) {
               setShowtimes(shows);
               setSelectedShowtime(shows[0]);
           }
       }
 
-      // Fetch Marathon Categories
-      const { data: cats, error: catError } = await supabase
-        .from('marathon_categories')
-        .select('*')
-        .eq('marathon_id', id)
-        .order('distance_km', { ascending: true });
-      
+      // Marathon Categories from unified fetch
+      const cats = data.marathon_categories || [];
       const parsedConfig = safeParse(data.dynamic_config) || {};
       const configCats = parsedConfig.marathonCategories || parsedConfig.marathon_categories || [];
       
-      const allCats = [...(cats || []), ...configCats];
+      const allCats = [...cats, ...configCats];
       if (allCats.length > 0) {
         setMarathonCategories(allCats);
-        const kms = [...new Set(allCats.map(c => Number(c.distance_km)))].sort((a, b) => a - b);
+        const kms = [...new Set(allCats.map((c: any) => Number(c.distance_km)))].sort((a, b) => a - b);
         if (kms.length > 0) {
           setSelectedKM(kms[0]);
-          const firstTier = allCats.find(c => Number(c.distance_km) === kms[0]);
+          const firstTier = allCats.find((c: any) => Number(c.distance_km) === kms[0]);
           if (firstTier) {
             setSelectedTier(firstTier);
             const rawRates = firstTier.ageRates || firstTier.agePricing || firstTier.age_rates || firstTier.age_pricing || firstTier.pricing || [];
@@ -1563,18 +1545,28 @@ export default function BookEventScreen() {
           <RNView style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Race Amenities</Text>
             <RNView style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
-              {(dynamicConfig.benefits || [
+              {((event?.marathon_benefits?.length > 0 ? event.marathon_benefits : dynamicConfig.benefits) || [
                 { benefit_name: 'Finisher Medal' }, { benefit_name: 'Technical T-Shirt' },
                 { benefit_name: 'E-Certificate' }, { benefit_name: 'Post-Run Breakfast' },
                 { benefit_name: 'Hydration Stations' }, { benefit_name: 'First Aid' },
-              ]).map((b: any, i: number) => (
+              ]).map((rawB: any, i: number) => {
+                let b = rawB;
+                if (typeof rawB === 'string') {
+                  try {
+                    const parsed = JSON.parse(rawB);
+                    if (typeof parsed === 'object' && parsed !== null) b = parsed;
+                  } catch(e) {}
+                }
+                const label = typeof b === 'string' ? b : b.benefit_name || b.title || b.label || '';
+                if (!label) return null;
+                return (
                 <RNView key={i} style={{ width: '47%', padding: 16, borderRadius: 20, borderWidth: 1, alignItems: 'center', gap: 8, backgroundColor: colors.card, borderColor: colors.border }}>
                   <RNView style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: colors.tint + '20', alignItems: 'center', justifyContent: 'center' }}>
                     <Star size={18} color={colors.tint} />
                   </RNView>
-                  <Text style={{ fontSize: 11, fontWeight: '800', color: colors.text, textAlign: 'center' }}>{b.benefit_name}</Text>
+                  <Text style={{ fontSize: 11, fontWeight: '800', color: colors.text, textAlign: 'center' }}>{label}</Text>
                 </RNView>
-              ))}
+              )})}
             </RNView>
           </RNView>
         )}

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, Image, TouchableOpacity, ActivityIndicator, StyleSheet, Share } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { MapPin, Calendar, Clock, ArrowRight, Share2, Award, QrCode } from 'lucide-react-native';
-import { supabase } from '../../utils/supabase'; // Assuming standard supabase client
+import { supabase } from '@/lib/supabase';
 
 export default function MarathonDetail() {
   const { slug } = useLocalSearchParams();

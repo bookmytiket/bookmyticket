@@ -82,6 +82,28 @@ export default function EventCard({ event, onPress }: EventCardProps) {
             </LinearGradient>
           )}
 
+          {!event.featured && event.trending && (
+            <LinearGradient
+              colors={['#f59e0b', '#fbbf24']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.featuredBadge}
+            >
+              <Text style={styles.featuredText}>🔥 TRENDING</Text>
+            </LinearGradient>
+          )}
+
+          {!event.featured && !event.trending && event.is_spotlight && (
+            <LinearGradient
+              colors={['#ef4444', '#f87171']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.featuredBadge}
+            >
+              <Text style={styles.featuredText}>⚡ HOT</Text>
+            </LinearGradient>
+          )}
+
           <View style={styles.likeButtonContainer}>
             <LikeButton 
               ref={likeRef}

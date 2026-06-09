@@ -44,7 +44,11 @@ export default function OrganiserDashboard() {
   const [stats, setStats] = useState({
     totalBookings: 0,
     totalRevenue: 0,
+    totalEvents: 0,
     activeEvents: 0,
+    pendingReview: 0,
+    draftEvents: 0,
+    expiredEvents: 0,
     pendingKYC: 0
   });
 
@@ -94,20 +98,49 @@ export default function OrganiserDashboard() {
       const totalRev = bookingsData.reduce((acc, b) => acc + (Number(b.total_price) || 0), 0);
       
       const now = new Date();
-      const activeCount = events.filter(e => {
-        const pStatus = e.publish_status || (e.status === 'draft' ? 'draft' : 'published');
-        const lStatus = e.listing_status || (e.status === 'archived' ? 'archived' : 'active');
-        const endAt = e.event_end_at ? new Date(e.event_end_at) : new Date(e.date);
-        return lStatus !== 'archived' && pStatus === 'published' && endAt >= now;
-      }).length;
+      let activeCount = 0;
+      let draftCount = 0;
+      let pendingCount = 0;
+      let expiredCount = 0;
+
+      events.forEach(e => {
+        const pStatus = String(e.publish_status || e.status || '').toLowerCase();
+        const lStatus = String(e.listing_status || '').toLowerCase();
+        const endAt = e.event_end_at ? new Date(e.event_end_at) : (e.date ? new Date(e.date) : now);
+        
+        if (lStatus === 'archived') {
+            // Ignored or handled differently
+        } else if (pStatus === 'draft') {
+            draftCount++;
+        } else if (pStatus === 'pending') {
+            pendingCount++;
+        } else if (endAt < now) {
+            expiredCount++;
+        } else if (pStatus === 'published' || pStatus === 'active') {
+            activeCount++;
+        }
+      });
 
       setStats({
         totalBookings: bookingsData.length,
         totalRevenue: totalRev,
+        totalEvents: events.length,
         activeEvents: activeCount,
+        pendingReview: pendingCount,
+        draftEvents: draftCount,
+        expiredEvents: expiredCount,
         pendingKYC: pendingDocs.length
       });
     }
+
+  };
+
+  const safeParse = (val: any) => {
+    if (!val) return null;
+    if (typeof val === 'string') {
+      try { return JSON.parse(val); } catch (e) { return null; }
+    }
+    return val;
   };
 
   useEffect(() => {
@@ -179,7 +212,7 @@ export default function OrganiserDashboard() {
             </Pressable>
         </RNView>
 
-        {/* Business Metrics */}
+        {/* Row 1: Revenue & Bookings */}
         <RNView style={styles.metricsContainer}>
             <RNView style={[styles.metricCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
                 <RNView style={[styles.metricIconWrap, { backgroundColor: 'rgba(34, 197, 94, 0.1)' }]}>
@@ -194,6 +227,53 @@ export default function OrganiserDashboard() {
                 </RNView>
                 <Text style={[styles.metricLabel, { color: colors.muted }]}>Total Bookings</Text>
                 <Text style={[styles.metricValue, { color: colors.text }]}>{stats.totalBookings}</Text>
+            </RNView>
+        </RNView>
+
+        {/* Row 2: Total & Active Events */}
+        <RNView style={styles.metricsContainer}>
+            <RNView style={[styles.metricCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <RNView style={[styles.metricIconWrap, { backgroundColor: 'rgba(59, 130, 246, 0.1)' }]}>
+                    <Calendar size={20} color="#3b82f6" />
+                </RNView>
+                <Text style={[styles.metricLabel, { color: colors.muted }]}>Total Events</Text>
+                <Text style={[styles.metricValue, { color: colors.text }]}>{stats.totalEvents}</Text>
+            </RNView>
+            <RNView style={[styles.metricCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <RNView style={[styles.metricIconWrap, { backgroundColor: 'rgba(34, 197, 94, 0.1)' }]}>
+                    <Activity size={20} color="#22c55e" />
+                </RNView>
+                <Text style={[styles.metricLabel, { color: colors.muted }]}>Active Events</Text>
+                <Text style={[styles.metricValue, { color: colors.text }]}>{stats.activeEvents}</Text>
+            </RNView>
+        </RNView>
+
+        {/* Row 3: Draft & Pending */}
+        <RNView style={styles.metricsContainer}>
+            <RNView style={[styles.metricCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <RNView style={[styles.metricIconWrap, { backgroundColor: 'rgba(100, 116, 139, 0.1)' }]}>
+                    <FileCheck size={20} color="#64748b" />
+                </RNView>
+                <Text style={[styles.metricLabel, { color: colors.muted }]}>Draft Events</Text>
+                <Text style={[styles.metricValue, { color: colors.text }]}>{stats.draftEvents}</Text>
+            </RNView>
+            <RNView style={[styles.metricCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <RNView style={[styles.metricIconWrap, { backgroundColor: 'rgba(245, 158, 11, 0.1)' }]}>
+                    <Clock size={20} color="#f59e0b" />
+                </RNView>
+                <Text style={[styles.metricLabel, { color: colors.muted }]}>Pending Review</Text>
+                <Text style={[styles.metricValue, { color: colors.text }]}>{stats.pendingReview}</Text>
+            </RNView>
+        </RNView>
+
+        {/* Row 4: Expired Events */}
+        <RNView style={styles.metricsContainer}>
+            <RNView style={[styles.metricCard, { backgroundColor: colors.card, borderColor: colors.border, flex: 1, marginRight: '50%' }]}>
+                <RNView style={[styles.metricIconWrap, { backgroundColor: 'rgba(239, 68, 68, 0.1)' }]}>
+                    <ShieldCheck size={20} color="#ef4444" />
+                </RNView>
+                <Text style={[styles.metricLabel, { color: colors.muted }]}>Expired Events</Text>
+                <Text style={[styles.metricValue, { color: colors.text }]}>{stats.expiredEvents}</Text>
             </RNView>
         </RNView>
 

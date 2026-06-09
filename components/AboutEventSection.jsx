@@ -4,9 +4,30 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     ChevronDown, ChevronUp, Info, AlertTriangle, Star, CheckCircle2,
     HelpCircle, Trophy, Medal, BookOpen, FileText, Calendar,
-    Sparkles, Shield, Zap, Users, MapPin, Clock, Phone, Mail
+    Sparkles, Shield, Zap, Users, MapPin, Clock, Phone, Mail,
+    Shirt, Coffee, Utensils, Car, Gift, Camera
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+
+// ────────────────────────────────────────────────
+// Icon Mapper
+// ────────────────────────────────────────────────
+const AmenityIcon = ({ name, className, size = 16 }) => {
+    const icons = {
+        tshirt: Shirt,
+        medal: Medal,
+        trophy: Trophy,
+        coffee: Coffee,
+        food: Utensils,
+        parking: Car,
+        gift: Gift,
+        photo: Camera,
+        certificate: FileText,
+        star: Star
+    };
+    const Icon = icons[name?.toLowerCase()] || CheckCircle2;
+    return <Icon size={size} className={className} />;
+};
 
 // ────────────────────────────────────────────────
 // Default highlight templates per event category
@@ -308,14 +329,29 @@ export default function AboutEventSection({ event, config = {} }) {
                     className="bg-white rounded-[24px] border border-slate-100 shadow-sm p-6"
                 >
                     <SectionHeader icon={Trophy} title="Participant Benefits" subtitle="What you get" />
-                    <ul className="space-y-2">
-                        {benefitsList.map((b, i) => (
-                            <li key={i} className="flex items-start gap-3 text-sm text-slate-700">
-                                <CheckCircle2 size={16} className="text-emerald-500 mt-0.5 shrink-0" />
-                                <span>{typeof b === 'string' ? b : b.title || b.label || JSON.stringify(b)}</span>
-                            </li>
-                        ))}
-                    </ul>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {benefitsList.map((rawB, i) => {
+                            let b = rawB;
+                            if (typeof rawB === 'string') {
+                                try {
+                                    const parsed = JSON.parse(rawB);
+                                    if (typeof parsed === 'object' && parsed !== null) b = parsed;
+                                } catch(e) {}
+                            }
+                            const label = typeof b === 'string' ? b : b.benefit_name || b.title || b.label || '';
+                            const iconKey = typeof b === 'string' ? 'star' : b.icon_key || 'check';
+                            if (!label) return null;
+                            
+                            return (
+                                <div key={i} className="flex items-center gap-3 p-3 bg-slate-50 rounded-2xl border border-slate-100 hover:border-pink-200 transition-colors">
+                                    <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center shrink-0 shadow-sm border border-slate-100">
+                                        <AmenityIcon name={iconKey} size={16} className="text-pink-500" />
+                                    </div>
+                                    <span className="text-sm font-bold text-slate-700 leading-tight">{label}</span>
+                                </div>
+                            );
+                        })}
+                    </div>
                 </motion.div>
             )}
 

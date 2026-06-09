@@ -8,7 +8,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
     Calendar, MapPin, CheckCircle, ChevronLeft, Ticket, 
     ShieldCheck, Zap, Info, CreditCard, Users, Clock,
-    ArrowRight, Star, Sparkles, Trophy
+    ArrowRight, Star, Sparkles, Trophy,
+    HeartPulse, Award, Shirt, Coffee, Utensils, Globe, Camera, Gift
 } from 'lucide-react';
 import { supabase } from "@/lib/supabase";
 import { HOME_EVENTS } from '@/app/data/homeEvents';
@@ -21,6 +22,7 @@ import PackageSelector from '@/components/booking/PackageSelector';
 import EventMap from './EventMap';
 import VisualSeatPicker from './VisualSeatPicker';
 import { useSeatLocking } from '@/hooks/useSeatLocking';
+import AboutEventSection from '@/components/AboutEventSection';
 
 const DEFAULT_IMG = 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200&h=600&fit=crop';
 const ROW_LABELS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
@@ -48,11 +50,30 @@ function getCatColor(name) {
     if (n === 'premium') return '#3B82F6'; // Blue
     if (n === 'silver') return '#10B981'; // Emerald
     if (n === 'general') return '#6366F1'; // Indigo
-    const COLORS = ['#6366F1', '#8B5CF6', '#10B981', '#F59E0B', '#EF4444', '#06B6D4', '#F43F5E'];
-    let hash = 0;
-    for (let i = 0; i < (name || '').length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-    return COLORS[Math.abs(hash) % COLORS.length];
+    return '#EC4899'; // Default Pink
 }
+
+const getBenefitIcon = (key) => {
+    switch (key) {
+        case 'ambulance': return HeartPulse;
+        case 'medical': return ShieldCheck;
+        case 'certificate': return ShieldCheck;
+        case 'medal': return Award;
+        case 'tshirt': return Shirt;
+        case 'breakfast': return Coffee;
+        case 'refreshment': return Utensils;
+        case 'accommodation': return Globe;
+        case 'parking': return MapPin;
+        case 'safety': return ShieldCheck;
+        case 'family': return Users;
+        case 'prize': return Gift;
+        case 'trophy': return Trophy;
+        case 'timer': return Clock;
+        case 'selfie': return Camera;
+        case 'washroom': return Info;
+        default: return Star;
+    }
+};
 
 function CustomDropdown({ options, value, onChange, placeholder }) {
     const [isOpen, setIsOpen] = useState(false);
@@ -681,6 +702,13 @@ export default function EventBookClient({ id }) {
                     {/* Left Column: Selection Flow */}
                     <div className="lg:col-span-8 space-y-8">
                         
+                        {/* Mobile Booking Page Fix: Show About Event directly in Booking flow for Free/RSVP events */}
+                        {event?.isFree && (
+                            <div className="mb-10">
+                                <AboutEventSection event={rawEvent || event} config={event?.dynamic_config || {}} />
+                            </div>
+                        )}
+
                         {(isMarathon || isTournament) && (
                             <div className="mb-8">
                                 <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter leading-none mb-2">
@@ -927,14 +955,26 @@ export default function EventBookClient({ id }) {
                                                 { benefit_name: "Technical T-Shirt", icon_key: "tshirt" },
                                                 { benefit_name: "E-Certificate", icon_key: "certificate" },
                                                 { benefit_name: "Post-Run Breakfast", icon_key: "breakfast" }
-                                            ]).map((ben, idx) => (
-                                                <div key={idx} className="flex flex-col items-center gap-3 p-6 bg-slate-50 rounded-3xl border border-slate-100">
-                                                    <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-pink-500 shadow-sm">
-                                                        <Star size={18} />
+                                            ]).map((rawBen, idx) => {
+                                                let ben = rawBen;
+                                                if (typeof rawBen === 'string') {
+                                                    try {
+                                                        const parsed = JSON.parse(rawBen);
+                                                        if (typeof parsed === 'object' && parsed !== null) ben = parsed;
+                                                    } catch(e) {}
+                                                }
+                                                const label = typeof ben === 'string' ? ben : ben.benefit_name || ben.title || ben.label || '';
+                                                if (!label) return null;
+                                                const Icon = getBenefitIcon(ben.icon_key);
+                                                return (
+                                                    <div key={idx} className="flex flex-col items-center gap-3 p-6 bg-slate-50 rounded-3xl border border-slate-100">
+                                                        <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-pink-500 shadow-sm">
+                                                            <Icon size={18} />
+                                                        </div>
+                                                        <span className="text-[10px] font-black uppercase text-slate-900 text-center leading-tight">{label}</span>
                                                     </div>
-                                                    <span className="text-[10px] font-black uppercase text-slate-900 text-center leading-tight">{ben.benefit_name}</span>
-                                                </div>
-                                            ))}
+                                                );
+                                            })}
                                         </div>
                                     )}
                                 </motion.div>

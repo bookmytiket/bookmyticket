@@ -51,6 +51,7 @@ export default function TicketScanningScreen() {
   const [rejectionReason, setRejectionReason] = useState("");
   const [isActioning, setIsActioning] = useState(false);
   const [manualCode, setManualCode] = useState('');
+  const [kitCollected, setKitCollected] = useState(false);
 
   useEffect(() => {
     if (!permission) {
@@ -242,6 +243,7 @@ export default function TicketScanningScreen() {
             registration_id: lastResult.registrationId,
             staff_id: user?.id,
             verification_status: 'Checked-In',
+            kit_collected: kitCollected,
             remarks: 'Verified at Main Entry'
           });
           await supabase.from('qr_tickets').update({ status: 'Scanned' }).eq('id', lastResult.qrTicketId);
@@ -254,6 +256,7 @@ export default function TicketScanningScreen() {
             action: 'approve',
             gateName: 'Main Entry',
             scannerUserId: user?.id,
+            kitCollected
           });
         }
         
@@ -262,6 +265,7 @@ export default function TicketScanningScreen() {
         setLastResult(finalResult);
         setScanHistory(prev => [{ ...finalResult, id: Math.random().toString(), time: new Date().toISOString() }, ...prev].slice(0, 10));
         Vibration.vibrate(200);
+        setKitCollected(false);
       } else {
         await UnifiedApi.submitTicketScanAction({
           ticketId: lastResult.ticketId,
@@ -413,7 +417,17 @@ export default function TicketScanningScreen() {
                   <DetailItem icon={<Layers size={18} color="#666" />} label="Category" value={lastResult.category} colors={{ text: '#000', muted: '#666' }} />
                   <DetailItem icon={<Ticket size={18} color="#666" />} label="Quantity" value={`${lastResult.quantity} Tickets`} colors={{ text: '#000', muted: '#666' }} />
                 </View>
-                <Text style={[styles.resultMessage, { color: '#444' }]}>Please check government ID against expected name.</Text>
+                <Text style={[styles.resultMessage, { color: '#444', marginBottom: 10 }]}>Please check government ID against expected name.</Text>
+
+                <Pressable 
+                  style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: kitCollected ? 'rgba(16, 185, 129, 0.1)' : 'rgba(0,0,0,0.05)', padding: 12, borderRadius: 12, width: '100%', marginBottom: 20 }}
+                  onPress={() => setKitCollected(!kitCollected)}
+                >
+                  <View style={{ width: 24, height: 24, borderRadius: 6, borderWidth: 2, borderColor: kitCollected ? '#10b981' : '#a1a1aa', alignItems: 'center', justifyContent: 'center', marginRight: 12, backgroundColor: kitCollected ? '#10b981' : 'transparent' }}>
+                    {kitCollected && <CheckCircle size={16} color="#fff" />}
+                  </View>
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: kitCollected ? '#10b981' : '#666' }}>Participant Kit Distributed</Text>
+                </Pressable>
 
                 <View style={{ flexDirection: 'row', gap: 10, width: '100%' }}>
                   <Pressable 
