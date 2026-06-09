@@ -70,9 +70,7 @@ export default function SocialMediaManagement() {
             <div style={{ marginBottom: '24px' }}>
                 <h2 style={{ fontSize: '24px', fontWeight: 800, margin: 0 }}>Social Media Management</h2>
                 <p style={{ color: '#64748b', fontSize: '14px', margin: '4px 0 0' }}>Manage WhatsApp Channel and Instagram Community links across the platform.</p>
-                <div style={{ background: '#fef3c7', padding: '12px', borderRadius: '8px', marginTop: '16px', fontSize: '13px', color: '#92400e', border: '1px solid #fcd34d' }}>
-                    <strong>Note:</strong> Please run the SQL migration `supabase/migrations/20260609_social_links.sql` in your Supabase SQL Editor if you haven't already.
-                </div>
+
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '32px' }}>
