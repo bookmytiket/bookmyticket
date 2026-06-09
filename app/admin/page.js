@@ -71,8 +71,43 @@ const NavIcon = ({ icon: Icon, size = 18, color }) => (
         <Icon size={size} strokeWidth={2.5} />
     </div>
 );
-const GroupTitle = ({ title, t }) => (
-    <p className="px-8 mt-6 mb-2 text-[10px] font-extrabold uppercase tracking-[0.2em]" style={{ color: t?.textSub || '#64748b', opacity: 0.4 }}>{title}</p>
+const GroupTitle = ({ title, t, isOpen, onClick }) => (
+    <div 
+        onClick={onClick} 
+        className={`mx-3 px-4 py-3.5 mt-2 flex items-center justify-between cursor-pointer transition-all duration-300 rounded-xl group relative overflow-hidden ${
+            isOpen 
+                ? 'bg-gradient-to-r from-pink-50/80 to-purple-50/80 shadow-sm border border-pink-100/50' 
+                : 'hover:bg-slate-50'
+        }`}
+    >
+        {/* Dynamic Left Accent Bar */}
+        <div className={`absolute left-0 top-0 bottom-0 w-1 rounded-r-full transition-all duration-300 ${
+            isOpen 
+                ? 'bg-gradient-to-b from-pink-500 to-purple-500 opacity-100' 
+                : 'bg-pink-400 opacity-0 group-hover:opacity-100 scale-y-50 group-hover:scale-y-100'
+        }`} />
+        
+        {/* Typography */}
+        <p className={`text-[11px] font-black uppercase tracking-[0.2em] ml-1 transition-colors duration-300 ${
+            isOpen 
+                ? 'text-transparent bg-clip-text bg-gradient-to-r from-pink-600 to-purple-600' 
+                : 'text-slate-500 group-hover:text-slate-800'
+        }`}>
+            {title}
+        </p>
+        
+        {/* Enclosed Chevron Micro-animation */}
+        <div className={`flex items-center justify-center w-6 h-6 rounded-full transition-all duration-300 ${
+            isOpen ? 'bg-white shadow-sm' : 'bg-transparent group-hover:bg-white group-hover:shadow-sm'
+        }`}>
+            <ChevronDown 
+                size={14} 
+                className={`transition-transform duration-300 ${
+                    isOpen ? 'rotate-180 text-pink-500' : 'text-slate-400 group-hover:text-pink-400'
+                }`} 
+            />
+        </div>
+    </div>
 );
 const NavLink = ({ id, label, icon: Icon, active, setActiveTab, setIsSidebarOpen }) => (
     <div 
@@ -1761,6 +1796,15 @@ function AdminHomePage() {
     const { confirm } = useConfirm();
     const searchParams = useSearchParams();
     const router = useRouter();
+
+    const [isMainGroupOpen, setIsMainGroupOpen] = useState(false);
+    const [isPartnersGroupOpen, setIsPartnersGroupOpen] = useState(false);
+    const [isServicesGroupOpen, setIsServicesGroupOpen] = useState(false);
+    const [isGrowthGroupOpen, setIsGrowthGroupOpen] = useState(false);
+    const [isFinanceGroupOpen, setIsFinanceGroupOpen] = useState(false);
+    const [isSecurityGroupOpen, setIsSecurityGroupOpen] = useState(false);
+    const [isReportsGroupOpen, setIsReportsGroupOpen] = useState(false);
+    const [isSettingsGroupOpen, setIsSettingsGroupOpen] = useState(false);
 
     // Admin Security Gate: Support all administrative roles
     const adminRoles = useMemo(() => ["admin", "super_admin", "system_admin", "finance_admin", "moderator", "support_admin"], []);
@@ -3467,66 +3511,47 @@ function AdminHomePage() {
                 <div className="flex-1 overflow-y-auto py-6">
                     {/* Navigation Groups */}
                     <div className="space-y-1">
-                        <GroupTitle title="Main" t={t} />
-                        {[
-                            { id: "dashboard", label: "Overview", icon: LayoutDashboard },
-                            { id: "analytics", label: "Insights", icon: BarChart3, alias: "financials" },
-                            { id: "all_events", label: "Physical Events", icon: Calendar },
-                            { id: "event_reviews", label: "Event Approvals", icon: ShieldAlert },
-                            { id: "tournaments", label: "Tournaments", icon: Trophy },
-                            { id: "marathons", label: "Marathons", icon: Timer },
-                            { id: "bookings", label: "Ticket Orders", icon: ShoppingCart },
-                            { id: "users", label: "Users & Profiles", icon: Users, alias: "customers" }
-                        ].map(item => (
-                            <NavLink 
-                                key={item.id}
-                                id={item.id} 
-                                label={item.label} 
-                                icon={item.icon} 
-                                active={activeTab === item.id || activeTab === item.alias} 
-                                setActiveTab={setActiveTab}
-                                router={router}
-                                setIsSidebarOpen={setIsSidebarOpen}
-                            />
-                        ))}
+                        <GroupTitle title="Main" t={t} isOpen={isMainGroupOpen} onClick={() => setIsMainGroupOpen(!isMainGroupOpen)} />
+                        {isMainGroupOpen && (
+                            <div className="animate-in slide-in-from-top-2 fade-in duration-200">
+                                {[
+                                    { id: "dashboard", label: "Overview", icon: LayoutDashboard },
+                                    { id: "analytics", label: "Insights", icon: BarChart3, alias: "financials" },
+                                    { id: "all_events", label: "Physical Events", icon: Calendar },
+                                    { id: "event_reviews", label: "Event Approvals", icon: ShieldAlert },
+                                    { id: "tournaments", label: "Tournaments", icon: Trophy },
+                                    { id: "marathons", label: "Marathons", icon: Timer },
+                                    { id: "bookings", label: "Ticket Orders", icon: ShoppingCart },
+                                    { id: "users", label: "Users & Profiles", icon: Users, alias: "customers" }
+                                ].map(item => (
+                                    <NavLink 
+                                        key={item.id}
+                                        id={item.id} 
+                                        label={item.label} 
+                                        icon={item.icon} 
+                                        active={activeTab === item.id || activeTab === item.alias} 
+                                        setActiveTab={setActiveTab}
+                                        router={router}
+                                        setIsSidebarOpen={setIsSidebarOpen}
+                                    />
+                                ))}
+                            </div>
+                        )}
                         
-                        <GroupTitle title="Partners" t={t} />
-                        <NavLink 
-                            id="admin_onboarding" 
-                            label="Onboarding Center" 
-                            icon={UserCheck} 
-                            active={activeTab === "admin_onboarding"} 
-                            setActiveTab={setActiveTab}
-                            router={router}
-                            setIsSidebarOpen={setIsSidebarOpen}
-                        />
-                        <NavLink 
-                            id="org_requests" 
-                            label="Organiser Requests" 
-                            icon={Briefcase} 
-                            active={activeTab === "org_requests"} 
-                            setActiveTab={setActiveTab}
-                            router={router}
-                            setIsSidebarOpen={setIsSidebarOpen}
-                        />
-
-                        <NavLink 
-                            id="digilocker_kyc_review" 
-                            label="DigiLocker KYC" 
-                            icon={ShieldCheck} 
-                            active={activeTab === "digilocker_kyc_review"} 
-                            setActiveTab={setActiveTab}
-                            router={router}
-                            setIsSidebarOpen={setIsSidebarOpen}
-                        />
-                        <div 
-                            className={`sidebar-item-new ${["organisers", "all_org", "active_org", "kyc_verified", "kyc_pending", "kyc_unverified", "banned_org"].includes(activeTab) ? 'active' : ''}`} 
-                            onClick={() => setIsOrganizersOpen(!isOrganizersOpen)}
-                        >
-                            <Users size={20} />
-                            <span>Organisers</span>
-                            <ChevronDown size={14} className={`ml-auto transition-transform ${isOrganizersOpen ? 'rotate-180' : ''}`} />
-                        </div>
+                        <GroupTitle title="Partners" t={t} isOpen={isPartnersGroupOpen} onClick={() => setIsPartnersGroupOpen(!isPartnersGroupOpen)} />
+                        {isPartnersGroupOpen && (
+                            <div className="animate-in slide-in-from-top-2 fade-in duration-200">
+                                <NavLink id="admin_onboarding" label="Onboarding Center" icon={UserCheck} active={activeTab === "admin_onboarding"} setActiveTab={setActiveTab} router={router} setIsSidebarOpen={setIsSidebarOpen} />
+                                <NavLink id="org_requests" label="Organiser Requests" icon={Briefcase} active={activeTab === "org_requests"} setActiveTab={setActiveTab} router={router} setIsSidebarOpen={setIsSidebarOpen} />
+                                <NavLink id="digilocker_kyc_review" label="DigiLocker KYC" icon={ShieldCheck} active={activeTab === "digilocker_kyc_review"} setActiveTab={setActiveTab} router={router} setIsSidebarOpen={setIsSidebarOpen} />
+                                <div 
+                                    className={`sidebar-item-new ${["organisers", "all_org", "active_org", "kyc_verified", "kyc_pending", "kyc_unverified", "banned_org"].includes(activeTab) ? 'active' : ''}`} 
+                                    onClick={() => setIsOrganizersOpen(!isOrganizersOpen)}
+                                >
+                                    <Users size={20} />
+                                    <span>Organisers</span>
+                                    <ChevronDown size={14} className={`ml-auto transition-transform ${isOrganizersOpen ? 'rotate-180' : ''}`} />
+                                </div>
                                 {isOrganizersOpen && (
                                     <div className="ml-8 mr-4 mt-1 flex flex-col gap-1">
                                         {[
@@ -3540,16 +3565,24 @@ function AdminHomePage() {
                                         ))}
                                     </div>
                                 )}
+                            </div>
+                        )}
 
-                                <GroupTitle title="Services" t={t} />
+                        <GroupTitle title="Services" t={t} isOpen={isServicesGroupOpen} onClick={() => setIsServicesGroupOpen(!isServicesGroupOpen)} />
+                        {isServicesGroupOpen && (
+                            <div className="animate-in slide-in-from-top-2 fade-in duration-200">
                                 <NavLink id="professional_services_mgmt" label="Pro Services Publish" icon={Briefcase} active={activeTab === "professional_services_mgmt"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
                                 <NavLink id="service_requests" label="Service Requests" icon={Briefcase} active={activeTab === "service_requests"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
                                 <NavLink id="providers" label="Service Providers" icon={Briefcase} active={activeTab === "providers" || activeTab === "service_active"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
                                 <NavLink id="turf_partners" label="Turf Booking" icon={Landmark} active={activeTab === "turf_partners"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
                                 <NavLink id="pool_bookings" label="Pool Requests" icon={Smartphone} active={activeTab === "pool_bookings"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
                                 <NavLink id="meetings" label="Meeting Hub" icon={Video} active={activeTab === "meetings"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
+                            </div>
+                        )}
 
-                                <GroupTitle title="Growth" t={t} />
+                        <GroupTitle title="Growth" t={t} isOpen={isGrowthGroupOpen} onClick={() => setIsGrowthGroupOpen(!isGrowthGroupOpen)} />
+                        {isGrowthGroupOpen && (
+                            <div className="animate-in slide-in-from-top-2 fade-in duration-200">
                                 <NavLink id="coupons" label="Advanced Coupons" icon={Tag} active={activeTab === "coupons"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
                                 <NavLink id="promotions" label="Promotional Hub" icon={Sparkles} active={activeTab === "promotions"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
                                 <NavLink id="banner_ads" label="Marketing Banners" icon={Megaphone} active={activeTab === "banner_ads"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
@@ -3560,23 +3593,35 @@ function AdminHomePage() {
                                 <NavLink id="email_broadcast" label="Newsletter Hub" icon={Mail} active={activeTab === "email_broadcast"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
                                 <NavLink id="subscribers" label="Subscriber Base" icon={Users} active={activeTab === "subscribers"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
                                 <NavLink id="send_notif" label="Push Notifications" icon={Send} active={activeTab === "send_notif"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
+                            </div>
+                        )}
 
-                                <GroupTitle title="Finance" t={t} />
+                        <GroupTitle title="Finance" t={t} isOpen={isFinanceGroupOpen} onClick={() => setIsFinanceGroupOpen(!isFinanceGroupOpen)} />
+                        {isFinanceGroupOpen && (
+                            <div className="animate-in slide-in-from-top-2 fade-in duration-200">
                                 <NavLink id="admin_revenue_dashboard" label="Commission Board" icon={Wallet} active={activeTab === "admin_revenue_dashboard"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
                                 <NavLink id="payments" label="Revenue Ledger" icon={BarChart3} active={activeTab === "payments" || activeTab === "revenue"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
                                 <NavLink id="settlement_verification" label="Settlement Audit" icon={FileText} active={activeTab === "settlement_verification"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
                                 <NavLink id="payout_requests" label="Payouts" icon={CreditCard} active={activeTab === "payout_requests"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
                                 <NavLink id="gst" label="Tax Audits" icon={FileText} active={activeTab === "gst"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
                                 <NavLink id="subscriptions" label="Staff Subscriptions" icon={Zap} active={activeTab === "subscriptions"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
-                                
-                                <GroupTitle title="Security & Monitoring" t={t} />
+                            </div>
+                        )}
+                        
+                        <GroupTitle title="Security & Monitoring" t={t} isOpen={isSecurityGroupOpen} onClick={() => setIsSecurityGroupOpen(!isSecurityGroupOpen)} />
+                        {isSecurityGroupOpen && (
+                            <div className="animate-in slide-in-from-top-2 fade-in duration-200">
                                 <NavLink id="fraud_monitoring" label="Fraud Detection" icon={ShieldCheck} active={activeTab === "fraud_monitoring" || activeTab === "fraud_dashboard"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
                                 <NavLink id="scanner_monitor" label="Scanner Analytics" icon={Activity} active={activeTab === "scanner_monitor"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
                                 <NavLink id="audit_logs" label="Audit Logs" icon={Archive} active={activeTab === "audit_logs"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
                                 <NavLink id="email_logs" label="Email Engine" icon={Mail} active={activeTab === "email_logs"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
                                 <NavLink id="cancellations" label="Cancellation Queue" icon={AlertCircle} active={activeTab === "cancellations"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
+                            </div>
+                        )}
 
-                                <GroupTitle title="Reports" t={t} />
+                        <GroupTitle title="Reports" t={t} isOpen={isReportsGroupOpen} onClick={() => setIsReportsGroupOpen(!isReportsGroupOpen)} />
+                        {isReportsGroupOpen && (
+                            <div className="animate-in slide-in-from-top-2 fade-in duration-200">
                                 <NavLink id="organizer_reports" label="Organizer Reports" icon={TrendingUp} active={activeTab === "organizer_reports"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
                                 <NavLink id="user_analytics" label="User Registration Stats" icon={Users} active={activeTab === "user_analytics"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
                                 <NavLink id="support_tickets" label="Ticket System" icon={MessageCircle} active={activeTab === "support_tickets"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
@@ -3585,8 +3630,12 @@ function AdminHomePage() {
                                 <NavLink id="pages" label="Pages" icon={FileText} active={activeTab === "pages"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
                                 <NavLink id="compliance_cms" label="Compliance CMS" icon={ShieldCheck} active={activeTab === "compliance_cms"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
                                 <NavLink id="sections" label="Site Sections" icon={LayoutGrid} active={activeTab === "sections"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
+                            </div>
+                        )}
 
-                                <GroupTitle title="Settings" t={t} />
+                        <GroupTitle title="Settings" t={t} isOpen={isSettingsGroupOpen} onClick={() => setIsSettingsGroupOpen(!isSettingsGroupOpen)} />
+                        {isSettingsGroupOpen && (
+                            <div className="animate-in slide-in-from-top-2 fade-in duration-200">
                                 <NavLink id="admin_management" label="Team Management" icon={Shield} active={activeTab === "admin_management"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
                                 <NavLink id="careers_management" label="Careers Management" icon={Briefcase} active={activeTab === "careers_management"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
                                 <NavLink id="site_branding" label="Branding & Logos" icon={Sparkles} active={activeTab === "site_branding"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
@@ -3598,6 +3647,8 @@ function AdminHomePage() {
                                 <NavLink id="meta_management" label="Meta / SEO" icon={Globe} active={activeTab === "meta_management"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
                                 <NavLink id="contact_settings" label="Contact Settings" icon={Phone} active={activeTab === "contact_settings"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
                                 <NavLink id="email_settings" label="Email Settings" icon={Mail} active={activeTab === "email_settings"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
+                            </div>
+                        )}
                     </div>
                 </div>
 

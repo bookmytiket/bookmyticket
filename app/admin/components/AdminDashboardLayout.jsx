@@ -42,6 +42,12 @@ export default function AdminDashboardLayout({ children, activeTab: initialActiv
         if (settingTabs.includes(activeTab)) setIsSettingsOpen(true);
     }, [activeTab]);
 
+    // Sidebar section states
+    const [isMainOpen, setIsMainOpen] = useState(true);
+    const [isOperationsOpen, setIsOperationsOpen] = useState(true);
+    const [isPartnersOpen, setIsPartnersOpen] = useState(true);
+    const [isSystemOpen, setIsSystemOpen] = useState(true);
+
     const handleLogout = () => {
         logout();
         router.push("/signin");
@@ -71,8 +77,14 @@ export default function AdminDashboardLayout({ children, activeTab: initialActiv
         </button>
     );
 
-    const SidebarGroupTitle = ({ title }) => (
-        <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] mt-4 mb-1 px-4 first:mt-2">{title}</p>
+    const SidebarGroupTitle = ({ title, isOpen, onClick }) => (
+        <button 
+            onClick={onClick} 
+            className="w-full flex items-center justify-between px-4 mt-6 mb-2 first:mt-2 group cursor-pointer"
+        >
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] group-hover:text-slate-700 transition-colors">{title}</span>
+            <ChevronDown size={14} className={`text-slate-400 group-hover:text-slate-700 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
+        </button>
     );
 
     const SidebarCategoryHeader = ({ label, icon: Icon, isOpen, onClick }) => (
@@ -128,7 +140,6 @@ export default function AdminDashboardLayout({ children, activeTab: initialActiv
             )}
 
             {/* Sidebar */}
-            {/* Sidebar */}
             <aside className={`fixed md:sticky top-0 z-50 w-64 bg-white border-r border-slate-200 flex flex-col flex-shrink-0 h-screen transition-all  ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'} md:flex shadow-2xl shadow-slate-200/50`}>
                 <div className="h-16 flex items-center justify-center border-b border-slate-50 bg-white">
                     <div className="flex items-center cursor-pointer group" onClick={() => navigateToTab("dashboard")}>
@@ -149,52 +160,68 @@ export default function AdminDashboardLayout({ children, activeTab: initialActiv
                 </div>
 
                 <nav className="flex-1 px-4 py-4 space-y-1 overflow-y-auto custom-scrollbar">
-                    <SidebarGroupTitle title="Home" />
-                    <SidebarItem id="dashboard" label="Dashboard" icon={LayoutDashboard} active={activeTab === "dashboard"} />
-                    <SidebarItem id="partner_requests" label="Partner Requests" icon={Users} active={activeTab === "partner_requests"} />
-                    
-                    <SidebarCategoryHeader label="Home Page" icon={Globe} isOpen={isHomeSettingsOpen} onClick={() => setIsHomeSettingsOpen(!isHomeSettingsOpen)} />
-                    {isHomeSettingsOpen && (
-                        <div className="space-y-0.5">
-                            {[
-                                { label: "Hero Banner", id: "hero" },
-                                { label: "Mobile Banners", id: "mobile_banners" },
-                                { label: "Video Banner", id: "video_banner" },
-                                { label: "Site Branding", id: "site_branding" },
-                                { label: "Exclusive Events", id: "exclusive_settings" },
-                                { label: "Featured Events", id: "events_settings" },
-                                { label: "Event Partners", id: "event_partners" },
-                                { label: "Recent Memories", id: "memories" },
-                                { label: "Maintenance Mode", id: "maintenance" }
-                            ].map(sub => (
-                                <SidebarSubItem key={sub.id} id={sub.id} label={sub.label} active={activeTab === sub.id} />
-                            ))}
+                    <SidebarGroupTitle title="Home" isOpen={isMainOpen} onClick={() => setIsMainOpen(!isMainOpen)} />
+                    {isMainOpen && (
+                        <div className="space-y-1 animate-in slide-in-from-top-2 fade-in duration-200">
+                            <SidebarItem id="dashboard" label="Dashboard" icon={LayoutDashboard} active={activeTab === "dashboard"} />
+                            <SidebarItem id="partner_requests" label="Partner Requests" icon={Users} active={activeTab === "partner_requests"} />
+                            
+                            <SidebarCategoryHeader label="Home Page" icon={Globe} isOpen={isHomeSettingsOpen} onClick={() => setIsHomeSettingsOpen(!isHomeSettingsOpen)} />
+                            {isHomeSettingsOpen && (
+                                <div className="space-y-0.5">
+                                    {[
+                                        { label: "Hero Banner", id: "hero" },
+                                        { label: "Mobile Banners", id: "mobile_banners" },
+                                        { label: "Video Banner", id: "video_banner" },
+                                        { label: "Site Branding", id: "site_branding" },
+                                        { label: "Exclusive Events", id: "exclusive_settings" },
+                                        { label: "Featured Events", id: "events_settings" },
+                                        { label: "Event Partners", id: "event_partners" },
+                                        { label: "Recent Memories", id: "memories" },
+                                        { label: "Maintenance Mode", id: "maintenance" }
+                                    ].map(sub => (
+                                        <SidebarSubItem key={sub.id} id={sub.id} label={sub.label} active={activeTab === sub.id} />
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     )}
 
-                    <SidebarGroupTitle title="Operations" />
-                    <SidebarItem id="all_events" label="Events" icon={Calendar} active={activeTab === "all_events"} />
-                    <SidebarItem id="bookings" label="Bookings" icon={ShoppingCart} active={activeTab === "bookings"} />
+                    <SidebarGroupTitle title="Operations" isOpen={isOperationsOpen} onClick={() => setIsOperationsOpen(!isOperationsOpen)} />
+                    {isOperationsOpen && (
+                        <div className="space-y-1 animate-in slide-in-from-top-2 fade-in duration-200">
+                            <SidebarItem id="all_events" label="Events" icon={Calendar} active={activeTab === "all_events"} />
+                            <SidebarItem id="bookings" label="Bookings" icon={ShoppingCart} active={activeTab === "bookings"} />
+                        </div>
+                    )}
 
-                    <SidebarGroupTitle title="Partners" />
-                    <SidebarItem id="customers" label="Customers" icon={UserCircle} active={activeTab === "customers"} />
-                    <SidebarItem id="subscribers" label="Subscribers" icon={Mail} active={activeTab === "subscribers"} />
+                    <SidebarGroupTitle title="Partners" isOpen={isPartnersOpen} onClick={() => setIsPartnersOpen(!isPartnersOpen)} />
+                    {isPartnersOpen && (
+                        <div className="space-y-1 animate-in slide-in-from-top-2 fade-in duration-200">
+                            <SidebarItem id="customers" label="Customers" icon={UserCircle} active={activeTab === "customers"} />
+                            <SidebarItem id="subscribers" label="Subscribers" icon={Mail} active={activeTab === "subscribers"} />
+                        </div>
+                    )}
 
-                    <SidebarGroupTitle title="System" />
-                    <SidebarCategoryHeader label="Settings" icon={Settings} isOpen={isSettingsOpen} onClick={() => setIsSettingsOpen(!isSettingsOpen)} />
-                    {isSettingsOpen && (
-                        <div className="space-y-0.5">
-                            {[
-                                { label: "Email System", id: "email_templates" },
-                                { label: "SMS & WhatsApp", id: "comm_hub" },
-                                { label: "Payments", id: "payment_settings" },
-                                { label: "SEO & Analytics", id: "seo_settings" },
-                                { label: "SSO Config", id: "sso_settings" },
-                                { label: "Terms & Conditions", id: "terms_settings" },
-                                { label: "Bulk Discounts", id: "bulk_discounts" },
-                            ].map(sub => (
-                                <SidebarSubItem key={sub.id} id={sub.id} label={sub.label} active={activeTab === sub.id} />
-                            ))}
+                    <SidebarGroupTitle title="System" isOpen={isSystemOpen} onClick={() => setIsSystemOpen(!isSystemOpen)} />
+                    {isSystemOpen && (
+                        <div className="space-y-1 animate-in slide-in-from-top-2 fade-in duration-200">
+                            <SidebarCategoryHeader label="Settings" icon={Settings} isOpen={isSettingsOpen} onClick={() => setIsSettingsOpen(!isSettingsOpen)} />
+                            {isSettingsOpen && (
+                                <div className="space-y-0.5">
+                                    {[
+                                        { label: "Email System", id: "email_templates" },
+                                        { label: "SMS & WhatsApp", id: "comm_hub" },
+                                        { label: "Payments", id: "payment_settings" },
+                                        { label: "SEO & Analytics", id: "seo_settings" },
+                                        { label: "SSO Config", id: "sso_settings" },
+                                        { label: "Terms & Conditions", id: "terms_settings" },
+                                        { label: "Bulk Discounts", id: "bulk_discounts" },
+                                    ].map(sub => (
+                                        <SidebarSubItem key={sub.id} id={sub.id} label={sub.label} active={activeTab === sub.id} />
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     )}
                 </nav>

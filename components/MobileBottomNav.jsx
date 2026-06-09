@@ -10,6 +10,11 @@ export default function MobileBottomNav() {
   const router = useRouter();
   const { user } = useAuth();
 
+  // Hide bottom nav entirely on contact pages
+  if (pathname === '/contact' || pathname === '/contact-us') {
+    return null;
+  }
+
   const handleBookNow = () => {
     // If we're on a turf or service page, scroll to booking section
     if (pathname.includes('/turfs/') || pathname.includes('/services/')) {

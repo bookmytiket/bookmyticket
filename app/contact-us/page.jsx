@@ -461,7 +461,12 @@ export default function ContactPage() {
             {/* Social Media Section */}
             <section className="py-20 border-t border-slate-100 bg-white">
                 <div className="max-w-[1240px] mx-auto text-center">
-                    <h2 className="text-3xl font-black italic tracking-tighter uppercase text-slate-900 mb-2">Follow BookMyTicket</h2>
+                    <div className="flex flex-col items-center justify-center gap-2 mb-6">
+                        <img src="/logo.png" alt="BookMyTicket" className="h-16 md:h-20 w-auto object-contain drop-shadow-md" />
+                        <h2 className="text-xs font-black tracking-widest uppercase text-slate-400">
+                            Follow
+                        </h2>
+                    </div>
                     <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-10 max-w-xl mx-auto leading-relaxed">
                         Stay updated with our latest news, offers, and industry insights through our social media channels.
                     </p>
