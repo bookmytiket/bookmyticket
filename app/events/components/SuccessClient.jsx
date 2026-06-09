@@ -9,8 +9,10 @@ import DigitalTicket from '@/components/DigitalTicket';
 import DigitalInvoice from '@/components/DigitalInvoice';
 import confetti from 'canvas-confetti';
 import { supabase } from "@/lib/supabase";
+import { useSocialLinks } from "@/hooks/useSocialLinks";
 
 export default function SuccessClient({ eventId, bookingId }) {
+    const { bookingLinks, trackClick, whatsapp, instagram } = useSocialLinks();
     const [celebrated, setCelebrated] = useState(false);
     const [showInvoice, setShowInvoice] = useState(false);
     const [rewards, setRewards] = useState([]);
@@ -240,6 +242,37 @@ export default function SuccessClient({ eventId, bookingId }) {
                                     </div>
                                 );
                             })}
+                        </div>
+                    </div>
+                )}
+
+                {/* Social Community Call to Action */}
+                {bookingLinks && bookingLinks.length > 0 && (
+                    <div className="mb-12 bg-white border border-slate-200 rounded-[2.5rem] p-8 shadow-sm text-center">
+                        <div className="w-16 h-16 bg-blue-50 text-blue-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                            <Share2 size={32} />
+                        </div>
+                        <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tighter mb-2">Join the Community</h3>
+                        <p className="text-slate-500 font-medium mb-8 max-w-md mx-auto">
+                            Don't miss out on event updates, discussions, and exclusive media. Connect with fellow attendees!
+                        </p>
+                        <div className="flex flex-col sm:flex-row justify-center gap-4">
+                            {whatsapp && (
+                                <button
+                                    onClick={() => { trackClick('whatsapp', 'booking_success'); window.open(whatsapp.url, '_blank'); }}
+                                    className="flex items-center justify-center gap-2 px-8 py-4 bg-[#25D366] hover:bg-[#20bd5a] text-white rounded-2xl font-black uppercase tracking-widest text-[11px] transition-all shadow-lg shadow-[#25D366]/20"
+                                >
+                                    🟢 Join {whatsapp.title || 'WhatsApp'} Group
+                                </button>
+                            )}
+                            {instagram && (
+                                <button
+                                    onClick={() => { trackClick('instagram', 'booking_success'); window.open(instagram.url, '_blank'); }}
+                                    className="flex items-center justify-center gap-2 px-8 py-4 bg-gradient-to-r from-[#f09433] via-[#dc2743] to-[#bc1888] hover:opacity-90 text-white rounded-2xl font-black uppercase tracking-widest text-[11px] transition-all shadow-lg shadow-pink-500/20"
+                                >
+                                    📸 Follow {instagram.title || 'Instagram'}
+                                </button>
+                            )}
                         </div>
                     </div>
                 )}

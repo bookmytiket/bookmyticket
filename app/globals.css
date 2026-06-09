@@ -1027,22 +1027,23 @@ nextjs-portal {
   display: flex;
   align-items: center;
   gap: 0.35rem;
-  padding: 0.5rem 1rem;
+  padding: 0.55rem 1.2rem;
   border-radius: 50px;
-  background: rgba(255, 255, 255, 0.8);
-  border: 1.5px solid var(--accent);
-  color: #000;
+  background: #ffffff;
+  border: 1px solid rgba(0,0,0,0.05);
+  color: #1e293b;
   font-size: 0.85rem;
-  font-weight: 700;
+  font-weight: 800;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 0 0 0 rgba(252, 225, 93, 0);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .nav-location-btn:hover {
-  background: var(--accent);
+  background: #ffffff;
   color: #000;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 15px var(--accent-glow);
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+  border-color: rgba(248, 68, 164, 0.3);
 }
 
 .nav-loc-chevron {
@@ -1188,6 +1189,10 @@ nextjs-portal {
 
 .subnav-link.active {
   color: #000000 !important;
+}
+
+.subnav-link.active:hover {
+  color: var(--evente-pink) !important;
 }
 
 .subnav-underline {

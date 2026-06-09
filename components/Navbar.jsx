@@ -11,6 +11,8 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/components/AuthContext";
 import { useSupabaseQuery } from "@/hooks/useSupabase";
 import NotificationsDrawer from "@/components/NotificationsDrawer";
+import { useSocialLinks } from "@/hooks/useSocialLinks";
+import { FaWhatsapp, FaInstagram } from 'react-icons/fa';
 
 const SUBNAV_LINKS = [
   { href: "/#featured-events", label: "Events" },
@@ -150,6 +152,7 @@ const DEFAULT_CATEGORIES = [
 ];
 
 export default function Navbar({ compact = false }) {
+  const { whatsapp, instagram, trackClick } = useSocialLinks();
   const { user, logout, selectedCity, selectedDistrict, updateCity } = useAuth();
   const [scrolled, setScrolled] = useState(false);
   const [search, setSearch] = useState("");
@@ -555,7 +558,7 @@ export default function Navbar({ compact = false }) {
             {/* Location Selection Button - Mobile Only (next to logo) */}
             {isMobile && (
               <motion.button
-                whileHover={{ scale: 1.05, background: scrolled ? 'rgba(255,255,255,0.2)' : 'rgba(248, 68, 100, 0.1)' }}
+                whileHover={{ scale: 1.05, background: '#ffffff', boxShadow: '0 8px 20px rgba(0, 0, 0, 0.2)', borderColor: 'rgba(248, 68, 164, 0.4)' }}
                 whileTap={{ scale: 0.95 }}
                 className="nav-loc-btn"
                 onClick={() => setLocOpen(true)}
@@ -563,25 +566,26 @@ export default function Navbar({ compact = false }) {
                   display: 'flex',
                   alignItems: 'center',
                   gap: '4px',
-                  background: scrolled ? 'rgba(255,255,255,0.1)' : 'rgba(255, 255, 255, 0.4)',
-                  border: scrolled ? '1px solid rgba(255,255,255,0.2)' : '1px solid #e2e8f0',
+                  background: '#ffffff',
+                  border: scrolled ? '1px solid rgba(255,255,255,0.5)' : '1px solid rgba(0,0,0,0.05)',
                   padding: '4px 10px',
-                  borderRadius: '12px',
+                  borderRadius: '50px',
                   cursor: 'pointer',
-                  color: scrolled ? '#fff' : '#1e293b',
+                  color: '#1e293b',
                   marginLeft: '8px',
                   transition: 'all 0.3s ease',
-                  backdropFilter: 'blur(8px)',
+                  backdropFilter: 'none',
                   maxWidth: '120px',
                   overflow: 'hidden',
                   flexShrink: 0,
-                  height: '44px'
+                  height: '44px',
+                  boxShadow: scrolled ? '0 4px 15px rgba(0,0,0,0.3)' : '0 4px 12px rgba(0, 0, 0, 0.08)'
                 }}
               >
-                <MapPin size={12} color={scrolled ? "#fff" : "#f84464"} strokeWidth={2.5} />
+                <MapPin size={14} color="#f84464" strokeWidth={2.5} />
                 <div suppressHydrationWarning style={{ 
                   fontWeight: 800, 
-                  fontSize: '10px', 
+                  fontSize: '11px', 
                   letterSpacing: '-0.01em', 
                   whiteSpace: 'nowrap', 
                   overflow: 'hidden', 
@@ -654,7 +658,7 @@ export default function Navbar({ compact = false }) {
           {/* Location Selection Button - Desktop (next to search) */}
           {!isMobile && (
             <motion.button
-              whileHover={{ scale: 1.05, background: scrolled ? 'rgba(255,255,255,0.2)' : 'rgba(248, 68, 100, 0.1)' }}
+              whileHover={{ scale: 1.05, background: '#ffffff', boxShadow: '0 8px 20px rgba(0, 0, 0, 0.2)', borderColor: 'rgba(248, 68, 164, 0.4)' }}
               whileTap={{ scale: 0.95 }}
               className="nav-loc-btn hide-mobile"
               onClick={() => setLocOpen(true)}
@@ -662,95 +666,36 @@ export default function Navbar({ compact = false }) {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
-                background: scrolled ? 'rgba(255,255,255,0.1)' : 'rgba(255, 255, 255, 0.4)',
-                border: scrolled ? '1px solid rgba(255,255,255,0.2)' : '1px solid #e2e8f0',
+                background: '#ffffff',
+                border: scrolled ? '1px solid rgba(255,255,255,0.5)' : '1px solid rgba(0,0,0,0.05)',
                 padding: '0 20px',
-                borderRadius: '12px',
+                borderRadius: '50px',
                 cursor: 'pointer',
-                color: scrolled ? '#fff' : '#1e293b',
+                color: '#1e293b',
                 transition: 'all 0.3s ease',
-                backdropFilter: 'blur(8px)',
+                backdropFilter: 'none',
                 flexShrink: 0,
-                height: '44px'
+                height: '44px',
+                boxShadow: scrolled ? '0 4px 15px rgba(0,0,0,0.3)' : '0 4px 12px rgba(0, 0, 0, 0.08)'
               }}
             >
-              <MapPin size={18} color={scrolled ? "#fff" : "#f84464"} strokeWidth={2.5} />
+              <MapPin size={18} color="#f84464" strokeWidth={2.5} />
               <div suppressHydrationWarning style={{ fontWeight: 800, fontSize: '14px', letterSpacing: '-0.01em' }}>
                 {mounted ? (selectedDistrict || selectedCity || "Select Location") : "Select Location"}
               </div>
-              <ChevronDown size={14} opacity={0.5} />
+              <ChevronDown size={14} opacity={0.5} color="#1e293b" />
             </motion.button>
           )}
 
           {/* Desktop Actions Area */}
-          <div className="nav-desktop-actions hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+          <div className="nav-desktop-actions hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
             
-            {/* Dynamic Support Icon */}
-            <motion.button
-              whileHover={{ scale: 1.05, boxShadow: '0 4px 15px rgba(248, 68, 164, 0.4)' }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => router.push('/contact-us')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: '44px',
-                height: '44px',
-                borderRadius: '12px',
-                background: scrolled ? 'rgba(255,255,255,0.1)' : 'rgba(255, 255, 255, 0.4)',
-                border: scrolled ? '1px solid rgba(255,255,255,0.2)' : '1.5px solid rgba(248, 68, 164, 0.5)',
-                color: scrolled ? '#fff' : '#f844a4',
-                cursor: 'pointer',
-                backdropFilter: 'blur(8px)',
-                position: 'relative',
-                transition: 'all 0.3s ease',
-                boxShadow: scrolled ? 'none' : '0 4px 12px rgba(248, 68, 164, 0.1)'
-              }}
-              title="24/7 Support"
-            >
-              <motion.div
-                animate={{ 
-                  rotate: [0, -15, 15, -15, 15, 0],
-                  scale: [1, 1.1, 1]
-                }}
-                transition={{ duration: 2, repeat: Infinity, repeatDelay: 4 }}
-              >
-                <Headset size={20} strokeWidth={2.5} />
-              </motion.div>
-              
-              {/* Pulse Ring */}
-              <motion.div
-                animate={{ 
-                  boxShadow: ['0 0 0 0 rgba(248, 68, 164, 0.4)', '0 0 0 12px rgba(248, 68, 164, 0)']
-                }}
-                transition={{ duration: 2.5, repeat: Infinity, ease: "easeOut" }}
-                style={{
-                  position: 'absolute',
-                  inset: 0,
-                  borderRadius: '12px',
-                  pointerEvents: 'none'
-                }}
-              />
-              
-              {/* Notification Dot */}
-              <motion.div 
-                animate={{ scale: [1, 1.2, 1] }}
-                transition={{ duration: 1.5, repeat: Infinity }}
-                style={{
-                  position: 'absolute',
-                  top: '8px',
-                  right: '8px',
-                  width: '8px',
-                  height: '8px',
-                  borderRadius: '50%',
-                  background: '#ef4444',
-                  border: scrolled ? '2px solid rgba(255,255,255,0.1)' : '2px solid #fff'
-                }}
-              />
-            </motion.button>
+            {/* Removed Social Links per user request */}
+
+            {/* Removed Support Icon per user request - moved to floating widget */}
 
             <motion.button
-              whileHover={{ scale: 1.05, boxShadow: '0 4px 15px rgba(248, 68, 164, 0.15)' }}
+              whileHover={{ scale: 1.05, background: '#ffffff', boxShadow: '0 8px 20px rgba(0, 0, 0, 0.2)', borderColor: 'rgba(248, 68, 164, 0.4)' }}
               whileTap={{ scale: 0.95 }}
               onClick={() => setOrgOpen(true)}
               style={{ 
@@ -759,17 +704,18 @@ export default function Navbar({ compact = false }) {
                 gap: '8px', 
                 fontSize: '13px', 
                 fontWeight: 800, 
-                color: scrolled ? '#fff' : '#1e293b', 
-                background: scrolled ? 'rgba(255,255,255,0.1)' : 'rgba(255, 255, 255, 0.4)', 
-                border: scrolled ? '1px solid rgba(255,255,255,0.2)' : '1px solid rgba(248, 68, 164, 0.3)', 
-                backdropFilter: 'blur(8px)',
-                padding: '0 16px',
+                color: '#1e293b', 
+                background: '#ffffff', 
+                border: scrolled ? '1px solid rgba(255,255,255,0.5)' : '1px solid rgba(0,0,0,0.05)', 
+                backdropFilter: 'none',
+                padding: '0 20px',
                 height: '44px',
-                borderRadius: '12px',
+                borderRadius: '50px',
                 cursor: 'pointer',
                 position: 'relative',
                 overflow: 'hidden',
-                transition: 'all 0.3s ease'
+                transition: 'all 0.3s ease',
+                boxShadow: scrolled ? '0 4px 15px rgba(0,0,0,0.3)' : '0 4px 12px rgba(0, 0, 0, 0.08)'
               }}
             >
               <motion.div
@@ -821,41 +767,7 @@ export default function Navbar({ compact = false }) {
               </Link>
             ) : (
                 <>
-                {user ? (
-                    <motion.div
-                      whileHover={{ scale: 1.05, y: -2 }}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                    <Link
-                      href={
-                        ["organiser", "staff"].includes(user.role?.toLowerCase()) ? "/organiser" :
-                        ["admin", "super_admin"].includes(user.role?.toLowerCase()) ? "/admin" :
-                        "/profile?tab=my_booking"
-                      }
-                      style={{
-                        background: 'linear-gradient(135deg, #f844a4 0%, #c026d3 100%)',
-                        color: '#fff',
-                        padding: '10px 20px',
-                        borderRadius: '12px',
-                        fontWeight: 800,
-                        fontSize: '13px',
-                        textDecoration: 'none',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        boxShadow: '0 4px 12px rgba(248, 68, 164, 0.2)',
-                        transition: 'all 0.3s',
-                        height: '44px'
-                      }}
-                    >
-                      {
-                        user.role === "organiser" || user.role === "staff" ? "Organiser Panel" :
-                        user.role === "admin" || user.role === "super_admin" ? "Admin Panel" :
-                        "Dashboard"
-                      }
-                    </Link>
-                    </motion.div>
-                ) : (
+                {!user && (
                     <motion.div
                       whileHover={{ scale: 1.05, y: -2 }}
                       whileTap={{ scale: 0.95 }}
@@ -1131,8 +1043,8 @@ export default function Navbar({ compact = false }) {
                       width: '28px',
                       height: '28px',
                       borderRadius: '8px',
-                      background: (pathname === link.href || (pathname === '/' && link.label === 'Events')) ? 'var(--accent-gradient)' : 'rgba(0,0,0,0.03)',
-                      color: (pathname === link.href || (pathname === '/' && link.label === 'Events')) ? '#fff' : 'inherit',
+                      background: 'rgba(0,0,0,0.03)',
+                      color: 'inherit',
                       transition: 'all 0.3s'
                     }}>
                       {link.label === "Events" && <Calendar size={14} />}
@@ -1150,47 +1062,87 @@ export default function Navbar({ compact = false }) {
             </div>
 
             <div className="subnav-actions hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: '30px' }}>
-              <Link 
-                href="/whats-new" 
-                style={{
-                  fontSize: '14px',
-                  fontWeight: 600,
-                  color: '#475569',
-                  textDecoration: 'none',
-                  transition: 'all 0.3s ease'
-                }}
-                onMouseEnter={e => e.currentTarget.style.color = '#1e293b'}
-                onMouseLeave={e => e.currentTarget.style.color = '#475569'}
-              >
-                What's New
-              </Link>
+              {whatsapp && (
+                <motion.div
+                  whileHover={{ scale: 1.1, y: -2 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="subnav-item"
+                >
+                  <a 
+                    href={whatsapp.url || '#'}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => trackClick('whatsapp', 'subnavbar')}
+                    className="subnav-link"
+                    style={{
+                      fontSize: '14px',
+                      fontWeight: 700,
+                      letterSpacing: '0.05em',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      color: scrolled ? '#fff' : '#475569',
+                      textDecoration: 'none'
+                    }}
+                  >
+                    <span className="subnav-icon-wrap" style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      width: '28px',
+                      height: '28px',
+                      borderRadius: '8px',
+                      background: 'rgba(0,0,0,0.03)',
+                      color: 'inherit',
+                      transition: 'all 0.3s'
+                    }}>
+                      <FaWhatsapp size={14} color="#25D366" />
+                    </span>
+                    WhatsApp
+                  </a>
+                </motion.div>
+              )}
               
-              <Link
-                href="/#get-app"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  fontSize: '14px',
-                  fontWeight: 700,
-                  color: '#475569',
-                  textDecoration: 'none',
-                  transition: 'all 0.3s ease',
-                  padding: '6px 12px',
-                  borderRadius: '8px'
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.background = 'rgba(248, 68, 164, 0.08)';
-                  e.currentTarget.style.color = '#f844a4';
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.background = 'transparent';
-                  e.currentTarget.style.color = '#475569';
-                }}
-              >
-                <Smartphone size={16} strokeWidth={2.5} />
-                Get App
-              </Link>
+              {instagram && (
+                <motion.div
+                  whileHover={{ scale: 1.1, y: -2 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="subnav-item"
+                >
+                  <a
+                    href={instagram.url || '#'}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => trackClick('instagram', 'subnavbar')}
+                    className="subnav-link"
+                    style={{
+                      fontSize: '14px',
+                      fontWeight: 700,
+                      letterSpacing: '0.05em',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      color: scrolled ? '#fff' : '#475569',
+                      textDecoration: 'none'
+                    }}
+                  >
+                    <span className="subnav-icon-wrap" style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      width: '28px',
+                      height: '28px',
+                      borderRadius: '8px',
+                      background: 'rgba(0,0,0,0.03)',
+                      color: 'inherit',
+                      transition: 'all 0.3s'
+                    }}>
+                      <FaInstagram size={14} color="#E1306C" />
+                    </span>
+                    Instagram
+                  </a>
+                </motion.div>
+              )}
             </div>
           </div>
         </nav>

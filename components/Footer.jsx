@@ -3,6 +3,7 @@
 import React from "react";
 import { useSupabaseQuery } from "@/hooks/useSupabase";
 import { motion } from "framer-motion";
+import { useSocialLinks } from "@/hooks/useSocialLinks";
 
 const QUICK_LINKS = [
     { title: "About Us", slug: "about-us" },
@@ -111,6 +112,8 @@ export default function Footer() {
         { key: 'social_twitter', icon: SOCIALS[3] }
     ];
 
+    const { footerLinks, trackClick } = useSocialLinks();
+
     return (
         <footer style={{ width: "100%", position: "relative", background: "#000000", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
             <div style={{ maxWidth: "1240px", margin: "0 auto", padding: isMobile ? "20px 20px" : "20px 20px 10px" }}>
@@ -118,7 +121,7 @@ export default function Footer() {
                 {/* Upper Footer: Branding & Apps */}
                 <div style={{ 
                     display: "grid", 
-                    gridTemplateColumns: isMobile ? "1fr" : "1.5fr 1fr 1fr", 
+                    gridTemplateColumns: isMobile ? "1fr" : "1.5fr 1fr 1fr 1fr", 
                     gap: "40px",
                     marginBottom: "20px"
                 }}>
@@ -323,6 +326,33 @@ export default function Footer() {
                             {contactSettings?.address_line3 || "India"}<br /><br />
                             <a href={`mailto:${contactSettings?.support_email || "hello@bookmyticket.net"}`} style={{ color: "#ffffff", textDecoration: "none" }}>{contactSettings?.support_email || "hello@bookmyticket.net"}</a>
                         </p>
+                    </div>
+
+                    {/* Join Our Community */}
+                    <div>
+                        <h4 style={{ fontSize: "14px", fontWeight: 800, color: "#ffffff", letterSpacing: "0.1em", marginBottom: "24px", textTransform: "uppercase" }}>
+                            Join Our Community
+                        </h4>
+                        <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: "14px" }}>
+                            {footerLinks.map((link, idx) => (
+                                <li key={idx}>
+                                    <button
+                                        onClick={() => { trackClick(link.platform, 'footer'); window.open(link.url, '_blank'); }}
+                                        style={{
+                                            background: 'transparent', border: 'none', padding: 0,
+                                            fontSize: "14px", color: "rgba(255,255,255,0.5)",
+                                            textDecoration: "none", transition: "all 0.2s",
+                                            fontWeight: 500, display: "flex", alignItems: "center", gap: "8px", cursor: "pointer"
+                                        }}
+                                        onMouseEnter={e => e.currentTarget.style.color = "#ffffff"}
+                                        onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,0.5)"}
+                                    >
+                                        <span>{link.platform === 'whatsapp' ? '🟢' : link.platform === 'instagram' ? '📸' : '🔗'}</span>
+                                        <span>{link.title}</span>
+                                    </button>
+                                </li>
+                            ))}
+                        </ul>
                     </div>
                 </div>
  

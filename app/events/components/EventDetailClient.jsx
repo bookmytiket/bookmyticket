@@ -17,6 +17,7 @@ import TournamentRegistration from '@/app/organiser/components/TournamentRegistr
 import ReviewsSection from '@/components/ReviewsSection';
 import WishlistButton from '@/components/WishlistButton';
 import AboutEventSection from '@/components/AboutEventSection';
+import { useSocialLinks } from '@/hooks/useSocialLinks';
 
 const DEFAULT_IMG = "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&q=80";
 const DEFAULT_FEATURES = [
@@ -68,6 +69,7 @@ function parseEventDate(dateStr, timeStr) {
 }
 
 export default function EventDetailClient({ id }) {
+    const { eventLinks, trackClick, whatsapp, instagram } = useSocialLinks();
     const router = useRouter();
     const { user } = useAuth();
     const [storageLoaded, setStorageLoaded] = useState(false);
@@ -461,6 +463,44 @@ export default function EventDetailClient({ id }) {
                             )}
 
                             <AboutEventSection event={event} config={parsedConfig || {}} />
+
+                            {/* Stay Connected Section */}
+                            {eventLinks && eventLinks.length > 0 && (
+                                <div style={{ 
+                                    background: '#fff', borderRadius: '16px', padding: '32px',
+                                    boxShadow: '0 4px 20px rgba(0,0,0,0.03)', border: '1px solid #f1f5f9',
+                                    marginTop: '24px', textAlign: 'center'
+                                }}>
+                                    <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1e293b', marginBottom: '8px' }}>
+                                        Stay Connected With Us
+                                    </h3>
+                                    <p style={{ color: '#64748b', fontSize: '15px', marginBottom: '24px' }}>
+                                        Join our community for exclusive updates, early access, and more!
+                                    </p>
+                                    <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                                        {whatsapp && (
+                                            <button
+                                                onClick={() => { trackClick('whatsapp', 'event_page'); window.open(whatsapp.url, '_blank'); }}
+                                                style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#25D366', color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '30px', fontSize: '15px', fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 12px rgba(37, 211, 102, 0.2)', transition: 'transform 0.2s' }}
+                                                onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'}
+                                                onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+                                            >
+                                                🟢 Join {whatsapp.title || 'WhatsApp'}
+                                            </button>
+                                        )}
+                                        {instagram && (
+                                            <button
+                                                onClick={() => { trackClick('instagram', 'event_page'); window.open(instagram.url, '_blank'); }}
+                                                style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)', color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '30px', fontSize: '15px', fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 12px rgba(225, 48, 108, 0.2)', transition: 'transform 0.2s' }}
+                                                onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'}
+                                                onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+                                            >
+                                                📸 Follow {instagram.title || 'Instagram'}
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
 
                             <hr className="border-slate-100 my-8" />
                             

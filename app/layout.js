@@ -13,6 +13,7 @@ import MaintenanceGuard from '@/components/MaintenanceGuard';
 import { ToastProvider } from '@/context/ToastContext';
 import { ConfirmProvider } from '@/context/ConfirmContext';
 import ToastContainer from '@/components/ui/ToastContainer';
+import SocialFloatingWidget from '@/components/social/SocialFloatingWidget';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -195,9 +196,11 @@ export default function RootLayout({ children }) {
           <ConfirmProvider>
             <AuthProvider>
               <MaintenanceGuard>
+
                 <Suspense fallback={null}>
                   <SeoAnalyticsScripts />
                   <ConditionalNavbar />
+                  <SocialFloatingWidget />
                   <CustomerAdPopup />
                 </Suspense>
                 <ToastContainer />
