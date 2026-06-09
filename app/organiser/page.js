@@ -970,9 +970,10 @@ function OrganiserPanel() {
         return;
       }
 
-      const res = await fetch("/api/organiser/events", {
+      const res = await fetch(`/api/organiser/events?t=${Date.now()}`, {
         headers: { Authorization: `Bearer ${jwt}` },
         signal: controller.signal,
+        cache: 'no-store'
       });
 
       if (!res.ok) {

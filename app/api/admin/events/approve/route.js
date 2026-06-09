@@ -17,10 +17,18 @@ export async function POST(req) {
     // Update Event Status
     const { error: updateError } = await adminSupabase
       .from('events')
-      .update({ status: 'approved' })
+      .update({ status: 'approved', publish_status: 'approved' })
       .eq('id', event_id);
 
     if (updateError) throw updateError;
+
+    // Synchronize status across related event tables (best effort)
+    const tablesToSync = ['marathon_events', 'tournament_events', 'badminton_events', 'competition_events', 'sports_events'];
+    for (const table of tablesToSync) {
+      try {
+        await adminSupabase.from(table).update({ status: 'approved', publish_status: 'approved' }).eq('id', event_id);
+      } catch (_) {}
+    }
 
     // Update Review Status (best effort)
     try {

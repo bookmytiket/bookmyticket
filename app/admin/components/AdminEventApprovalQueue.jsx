@@ -59,7 +59,7 @@ export default function AdminEventApprovalQueue() {
         setLoading(true);
         setFetchError(null);
         try {
-            const res = await fetch('/api/admin/events/pending');
+            const res = await fetch(`/api/admin/events/pending?t=${Date.now()}`, { cache: 'no-store' });
             const json = await res.json();
             if (json.success) {
                 setPendingEvents(json.data || []);

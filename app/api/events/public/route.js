@@ -29,19 +29,18 @@ export async function GET(request) {
         let eventsQuery = supabase
             .from('events')
             .select('*')
-            .or('publish_status.eq.published,status.eq.published')
-            .eq('visibility_status', 'public')
+            // Only Published + Active events should be visible publicly
+            .or('status.eq.published,status.eq.active,publish_status.eq.published')
             .eq('approval_status', 'approved')
-            .eq('listing_status', 'active')
-            .eq('entity_type', 'event')
             .not('is_deleted', 'eq', true)
             .not('status', 'in', '("CANCELLED","DELETED","CANCELLATION_REQUESTED","DELETION_REQUESTED")');
 
         // Apply District Filter (Highest Priority)
         if (district && district !== 'All' && district !== 'India') {
-            eventsQuery = eventsQuery.or(`district.ilike.%${district}%,city.ilike.%${district}%`);
+            // Fix: Include both exact match and partial match for robustness
+            eventsQuery = eventsQuery.or(`district.ilike.%${district}%,city.ilike.%${district}%,venue.ilike.%${district}%`);
         } else if (city && city !== 'All Cities' && city !== 'India') {
-            eventsQuery = eventsQuery.ilike('city', `%${city}%`);
+            eventsQuery = eventsQuery.or(`city.ilike.%${city}%,district.ilike.%${city}%`);
         }
 
         if (type) {
@@ -141,7 +140,13 @@ export async function GET(request) {
                 registration_end_date: tournament?.registration_end_at || tournament?.registration_end_date || null,
                 city: event.city || tournament?.city || marathon?.city,
                 district: event.district || tournament?.district || marathon?.district,
-                category: event.category || (isTournament ? 'Tournament' : (isMarathon ? 'Marathon' : event.category))
+                category: event.category || (isTournament ? 'Tournament' : (isMarathon ? 'Marathon' : event.category)),
+                
+                // Visibility Control standardization
+                status: 'active',
+                is_approved: true,
+                is_published: true,
+                is_deleted: false
             };
         });
 

@@ -245,11 +245,6 @@ function HomeClient() {
   const fetchPublicEvents = useCallback(async () => {
     try {
       const params = new URLSearchParams();
-      if (selectedDistrict && selectedDistrict !== 'All' && selectedDistrict !== 'India') {
-        params.append('district', selectedDistrict);
-      } else if (selectedCity && selectedCity !== 'All Cities' && selectedCity !== 'India') {
-        params.append('city', selectedCity);
-      }
       
       if (activeOrganiser) {
           params.append('organiser', activeOrganiser);
@@ -267,7 +262,7 @@ function HomeClient() {
     } finally {
       setApiLoading(false);
     }
-  }, [selectedDistrict, selectedCity, activeOrganiser]);
+  }, [activeOrganiser]);
 
   // Initial fetch and city change fetch
   useEffect(() => {
@@ -371,25 +366,8 @@ function HomeClient() {
     ...(Array.isArray(normalizedOrgEvents) ? normalizedOrgEvents : [])
   ], [normalizedOrgEvents]);
 
-
-
-  const filteredEvents = useMemo(() => {
+  const platformEvents = useMemo(() => {
     let results = allEventsForFilter;
-
-    // 0. Filter by Selected District/City
-    if (selectedDistrict || selectedCity) {
-      const target = (selectedDistrict || selectedCity).toLowerCase();
-      
-      results = results.filter(ev => {
-        if (ev.virtual === true) return true;
-        
-        const evCity = String(ev.city || '').toLowerCase();
-        const evDistrict = String(ev.district || '').toLowerCase();
-        const evLoc = String(ev.location || '').toLowerCase();
-
-        return evCity.includes(target) || evDistrict.includes(target) || evLoc.includes(target);
-      });
-    }
 
     // 1. Filter by Search Query
     if (searchQuery) {
@@ -414,15 +392,36 @@ function HomeClient() {
       const isToday = eventDate.toDateString() === now.toDateString();
       return eventDate >= now || isToday;
     });
-  }, [activeCat, searchQuery, allEventsForFilter, selectedCity, now]);
+  }, [activeCat, searchQuery, allEventsForFilter, now]);
 
-  const featuredEventsList = useMemo(() => filteredEvents.filter((e) => e.featured || e.is_spotlight || e.is_exclusive), [filteredEvents]);
+  const filteredEvents = useMemo(() => {
+    let results = platformEvents;
 
-  const trendingEventsList = useMemo(() => filteredEvents.filter((e) => e.trending), [filteredEvents]);
+    // 0. Filter by Selected District/City (Only apply to 'Nearby' or general filtered list)
+    if (selectedDistrict || selectedCity) {
+      const target = (selectedDistrict || selectedCity).toLowerCase();
+      
+      results = results.filter(ev => {
+        if (ev.virtual === true) return true;
+        
+        const evCity = String(ev.city || '').toLowerCase();
+        const evDistrict = String(ev.district || '').toLowerCase();
+        const evLoc = String(ev.location || '').toLowerCase();
 
-  const spotlightEventsList = useMemo(() => filteredEvents.filter((e) => e.spotlight || e.is_spotlight), [filteredEvents]);
+        return evCity.includes(target) || evDistrict.includes(target) || evLoc.includes(target);
+      });
+    }
 
-  const exclusiveEventsList = useMemo(() => filteredEvents.filter((e) => e.exclusive || e.is_exclusive), [filteredEvents]);
+    return results;
+  }, [platformEvents, selectedDistrict, selectedCity]);
+
+  const featuredEventsList = useMemo(() => platformEvents.filter((e) => e.featured || e.is_spotlight || e.is_exclusive), [platformEvents]);
+
+  const trendingEventsList = useMemo(() => platformEvents.filter((e) => e.trending), [platformEvents]);
+
+  const spotlightEventsList = useMemo(() => platformEvents.filter((e) => e.spotlight || e.is_spotlight), [platformEvents]);
+
+  const exclusiveEventsList = useMemo(() => platformEvents.filter((e) => e.exclusive || e.is_exclusive), [platformEvents]);
   
   const tournamentEventsList = useMemo(() => allLiveEvents.filter((e) => 
     e.type === "Tournament Event" || 
@@ -443,11 +442,13 @@ function HomeClient() {
   const comingSoonList = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    return filteredEvents.filter(e => {
-      const eventDate = parseEventDate(e.rawDate || e.date, e.rawTime || e.time, e);
-      return eventDate && eventDate >= today;
-    });
-  }, [filteredEvents]);
+    return platformEvents.filter(e => {
+      const dt = parseEventDate(e.rawDate || e.date, e.rawTime || e.time, e);
+      if (!dt) return false;
+      const daysDiff = (dt - today) / (1000 * 60 * 60 * 24);
+      return daysDiff > 0 && daysDiff <= 14;
+    }).slice(0, 6);
+  }, [platformEvents]);
 
 
 
@@ -462,10 +463,10 @@ function HomeClient() {
 
 
   const justInEventsList = useMemo(() => {
-    return [...filteredEvents]
+    return [...platformEvents]
       .sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())
       .slice(0, 4);
-  }, [filteredEvents]);
+  }, [platformEvents]);
 
   const heroSlidesConfig = getConfigValue("admin_hero_slides");
   const eventPartnersConfig = getConfigValue("admin_event_partners");
