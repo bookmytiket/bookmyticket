@@ -679,7 +679,7 @@ export default function MarathonEventForm({ marathonId, isRSVP, onCancel, onPubl
         { id: 2, title: isRSVP ? "RSVP Settings" : "Categories", icon: isRSVP ? Users : Trophy },
         ...(!isRSVP ? [{ id: 3, title: "Pricing & Rules", icon: Timer }] : []),
         { id: isRSVP ? 3 : 4, title: "Form Builder", icon: CheckCircle2 },
-        { id: isRSVP ? 4 : 5, title: "Content & FAQs", icon: Star },
+        { id: isRSVP ? 4 : 5, title: isRSVP ? "About Event" : "Content & FAQs", icon: Star },
         { id: isRSVP ? 5 : 6, title: marathonId ? "Update" : "Location", icon: MapPin }
     ];
 
@@ -1242,7 +1242,7 @@ export default function MarathonEventForm({ marathonId, isRSVP, onCancel, onPubl
                 </div>
             )}
 
-            {/* Step 5: Content & FAQs */}
+            {/* Step 5: Content & FAQs (Paid) / About Event (RSVP) */}
             {currentStep === (isRSVP ? 4 : 5) && (
                 <div className="space-y-10 animate-in fade-in slide-in-from-right-4 duration-500">
                     <section className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl space-y-8">
@@ -1251,74 +1251,90 @@ export default function MarathonEventForm({ marathonId, isRSVP, onCancel, onPubl
                                 <div className="w-10 h-10 rounded-xl bg-pink-50 flex items-center justify-center text-[#ec4899]">
                                     <Star size={20} />
                                 </div>
-                                <h2 className="text-xl font-black text-slate-900 uppercase">Content & FAQs</h2>
+                                <h2 className="text-xl font-black text-slate-900 uppercase">
+                                    {isRSVP ? "About Event" : "Content & FAQs"}
+                                </h2>
                             </div>
-                            <button 
-                                onClick={() => setFaqs([...faqs, { question: "", answer: "" }])}
-                                className="text-[10px] font-black uppercase text-pink-500 hover:underline"
-                            >
-                                + Add FAQ
-                            </button>
+                            {!isRSVP && (
+                                <button 
+                                    onClick={() => setFaqs([...faqs, { question: "", answer: "" }])}
+                                    className="text-[10px] font-black uppercase text-pink-500 hover:underline"
+                                >
+                                    + Add FAQ
+                                </button>
+                            )}
                         </div>
 
-                        <div className="space-y-6">
-                            {faqs.map((f, idx) => (
-                                <div key={idx} className="p-6 bg-slate-50 rounded-[2rem] border border-slate-100 space-y-4 relative group">
-                                    <input 
-                                        className="w-full bg-transparent font-black text-sm text-slate-900 placeholder:text-slate-400 outline-none"
-                                        placeholder="Question"
-                                        value={f.question}
-                                        onChange={e => {
-                                            const nf = [...faqs]; nf[idx].question = e.target.value; setFaqs(nf);
-                                        }}
-                                    />
-                                    <textarea 
-                                        className="w-full bg-transparent text-xs font-medium text-slate-600 placeholder:text-slate-400 outline-none resize-none"
-                                        rows={2}
-                                        placeholder="Answer"
-                                        value={f.answer}
-                                        onChange={e => {
-                                            const nf = [...faqs]; nf[idx].answer = e.target.value; setFaqs(nf);
-                                        }}
-                                    />
-                                    <button 
-                                        onClick={() => setFaqs(faqs.filter((_, i) => i !== idx))}
-                                        className="absolute top-4 right-4 text-slate-300 opacity-0 group-hover:opacity-100 transition-all hover:text-red-500"
-                                    >
-                                        <Trash2 size={16} />
-                                    </button>
+                        {!isRSVP && (
+                            <>
+                                <div className="space-y-6">
+                                    {faqs.map((f, idx) => (
+                                        <div key={idx} className="p-6 bg-slate-50 rounded-[2rem] border border-slate-100 space-y-4 relative group">
+                                            <input 
+                                                className="w-full bg-transparent font-black text-sm text-slate-900 placeholder:text-slate-400 outline-none"
+                                                placeholder="Question"
+                                                value={f.question}
+                                                onChange={e => {
+                                                    const nf = [...faqs]; nf[idx].question = e.target.value; setFaqs(nf);
+                                                }}
+                                            />
+                                            <textarea 
+                                                className="w-full bg-transparent text-xs font-medium text-slate-600 placeholder:text-slate-400 outline-none resize-none"
+                                                rows={2}
+                                                placeholder="Answer"
+                                                value={f.answer}
+                                                onChange={e => {
+                                                    const nf = [...faqs]; nf[idx].answer = e.target.value; setFaqs(nf);
+                                                }}
+                                            />
+                                            <button 
+                                                onClick={() => setFaqs(faqs.filter((_, i) => i !== idx))}
+                                                className="absolute top-4 right-4 text-slate-300 opacity-0 group-hover:opacity-100 transition-all hover:text-red-500"
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </div>
+                                    ))}
                                 </div>
-                            ))}
-                        </div>
 
-                        <div className="pt-8 border-t border-slate-100">
-                            <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-widest mb-4 pl-1">Terms & Conditions</label>
-                            <textarea 
-                                className="w-full bg-slate-50 border border-slate-200 p-6 rounded-[2rem] text-xs font-medium text-slate-600 outline-none focus:border-pink-300 transition-all"
-                                rows={8}
-                                placeholder="Enter event rules, refund policy, etc."
-                                value={eventData.terms}
-                                onChange={e => setEventData(p => ({ ...p, terms: e.target.value }))}
-                            />
-                        </div>
+                                <div className="pt-8 border-t border-slate-100">
+                                    <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-widest mb-4 pl-1">Terms & Conditions</label>
+                                    <textarea 
+                                        className="w-full bg-slate-50 border border-slate-200 p-6 rounded-[2rem] text-xs font-medium text-slate-600 outline-none focus:border-pink-300 transition-all"
+                                        rows={8}
+                                        placeholder="Enter event rules, refund policy, etc."
+                                        value={eventData.terms}
+                                        onChange={e => setEventData(p => ({ ...p, terms: e.target.value }))}
+                                    />
+                                </div>
+                            </>
+                        )}
 
                         {/* Add Benefits & Sponsors here for RSVP since the Pricing step is skipped */}
                         {isRSVP && renderBenefitsAndSponsors()}
 
                         {/* About Event Rich Editor — saves directly to Supabase */}
-                        {localMarathonId && (
-                            <div className="pt-8 border-t border-slate-100">
-                                <div className="flex items-center gap-3 mb-6">
-                                    <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center text-white">
-                                        <Star size={15} />
+                        {localMarathonId ? (
+                            <div className={isRSVP ? "pt-2" : "pt-8 border-t border-slate-100"}>
+                                {!isRSVP && (
+                                    <div className="flex items-center gap-3 mb-6">
+                                        <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center text-white">
+                                            <Star size={15} />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-sm font-black text-slate-900 uppercase">About Event — Rich Content</h3>
+                                            <p className="text-[10px] text-slate-400">Highlights, FAQs, Rules & more — saved directly to event</p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <h3 className="text-sm font-black text-slate-900 uppercase">About Event — Rich Content</h3>
-                                        <p className="text-[10px] text-slate-400">Highlights, FAQs, Rules & more — saved directly to event</p>
-                                    </div>
-                                </div>
+                                )}
                                 <AboutEventEditor eventId={localMarathonId} eventType="marathon" />
                             </div>
+                        ) : (
+                            isRSVP && (
+                                <div className="p-8 text-center bg-slate-50 rounded-3xl border border-slate-200">
+                                    <p className="text-sm font-bold text-slate-500">Please click "Save Draft" or proceed to Next step to initialize the event before adding rich content.</p>
+                                </div>
+                            )
                         )}
                     </section>
 
