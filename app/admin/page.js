@@ -37,6 +37,7 @@ import ProfessionalServicesAdmin from "@/app/admin/components/ProfessionalServic
 import DirectOnboardingAdmin from "@/app/admin/components/DirectOnboardingAdmin";
 import AdminRevenueCommissionDashboard from "@/app/admin/components/AdminRevenueCommissionDashboard";
 import AdminCancellationRequests from "@/app/admin/components/AdminCancellationRequests";
+import RewardsManagement from "@/app/admin/components/RewardsManagement";
 import { 
     MoreVertical, Zap, Briefcase, LayoutDashboard, Settings, Video, Image as ImageIcon, 
     Sparkles, CheckCircle, Ticket, Users, Menu, Bell, Save, X, Plus, Trash2, Mail, Lock, 
@@ -1864,7 +1865,7 @@ function AdminHomePage() {
         const homeTabs = ["hero", "mobile_banners", "video_banner", "site_branding", "events_settings", "event_partners", "memories", "sections", "copyright", "meeting_settings", "maintenance", "checkout_footer", "subnav"];
         const organizerTabs = ["all_org", "active_org", "kyc_verified", "kyc_pending", "banned_org"];
         const serviceTabs = ["all_turfs", "turf_bookings", "pool_bookings", "service_active", "service_banned"];
-        const growthTabs = ["promotions", "send_notif", "email_broadcast", "comm_hub"];
+        const growthTabs = ["promotions", "send_notif", "email_broadcast", "comm_hub", "rewards_vouchers"];
         const settingTabs = ["api_settings", "payment_settings", "fee_settings", "email_settings", "meta_management", "email_templates", "disclaimer_settings", "sso_settings", "ticket_settings", "comm_hub", "terms_settings", "social_media_settings"];
         const careerTabs = ["careers_admin", "careers_banner"];
 
@@ -3585,6 +3586,7 @@ function AdminHomePage() {
                             <div className="animate-in slide-in-from-top-2 fade-in duration-200">
                                 <NavLink id="coupons" label="Advanced Coupons" icon={Tag} active={activeTab === "coupons"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
                                 <NavLink id="promotions" label="Promotional Hub" icon={Sparkles} active={activeTab === "promotions"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
+                                <NavLink id="rewards_vouchers" label="Rewards & Vouchers" icon={Gift} active={activeTab === "rewards_vouchers"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
                                 <NavLink id="banner_ads" label="Marketing Banners" icon={Megaphone} active={activeTab === "banner_ads"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
                                 <NavLink id="hero" label="Hero Banner" icon={ImageIcon} active={activeTab === "hero"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
                                 <NavLink id="video_banner" label="Video Banner" icon={Video} active={activeTab === "video_banner"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
@@ -4926,6 +4928,10 @@ function AdminHomePage() {
                         </div>
                     )}
 
+                    {activeTab === "rewards_vouchers" && (
+                        <RewardsManagement />
+                    )}
+                    
                     {activeTab === "promotions" && (
                         <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px", flexWrap: "wrap", gap: "16px" }}>
@@ -8477,7 +8483,7 @@ function AdminHomePage() {
                         <AdminEventApprovalQueue />
                     )}
 
-                    {(["dashboard", "banner_ads", "revenue", "payout_requests", "fee_settings", "exclusive_settings", "email_broadcast", "careers", "subscribers", "subscriptions", "turf_partners", "turf_active", "turf_banned", "branding", "categories", "subnav", "events_settings", "event_partners", "pages", "compliance_cms", "sections", "all_org", "active_org", "banned_org", "email_unverified", "mobile_unverified", "kyc_unverified", "kyc_pending", "kyc_verified", "with_balance", "org_requests", "partner_requests", "service_active", "service_banned", "send_notif", "payment_settings", "ticket_settings", "comm_hub", "email_settings", "email_templates", "disclaimer_settings", "sso_settings", "api_settings", "meta_management", "all_events", "event_reviews", "tournaments", "marathons", "customers", "bookings", "all_turfs", "turf_active", "turf_banned", "turf_bookings", "pool_bookings", "gst", "coupons", "promotions", "financials", "support_tickets", "branding_partners", "hero", "video", "video_banner", "mobile_banners", "site_branding", "memories", "copyright", "meeting_settings", "admin_management", "ad_popups", "meetings", "checkout_footer", "careers_management", "careers_banner", "contact_inquiries", "contact_settings", "scanner_monitor", "fraud_dashboard", "flash_deals", "audit_logs", "settlement_verification", "email_logs", "kyc", "digilocker_kyc_review", "cancellations", "admin_events_mgmt", "organizer_reports", "user_analytics", "professional_services_mgmt", "admin_onboarding", "admin_revenue_dashboard", "social_media_settings"].includes(activeTab)) ? null : (
+                    {(["dashboard", "banner_ads", "revenue", "payout_requests", "fee_settings", "exclusive_settings", "email_broadcast", "careers", "subscribers", "subscriptions", "turf_partners", "turf_active", "turf_banned", "branding", "categories", "subnav", "events_settings", "event_partners", "pages", "compliance_cms", "sections", "all_org", "active_org", "banned_org", "email_unverified", "mobile_unverified", "kyc_unverified", "kyc_pending", "kyc_verified", "with_balance", "org_requests", "partner_requests", "service_active", "service_banned", "send_notif", "payment_settings", "ticket_settings", "comm_hub", "email_settings", "email_templates", "disclaimer_settings", "sso_settings", "api_settings", "meta_management", "all_events", "event_reviews", "tournaments", "marathons", "customers", "bookings", "all_turfs", "turf_active", "turf_banned", "turf_bookings", "pool_bookings", "gst", "coupons", "promotions", "financials", "support_tickets", "branding_partners", "hero", "video", "video_banner", "mobile_banners", "site_branding", "memories", "copyright", "meeting_settings", "admin_management", "ad_popups", "meetings", "checkout_footer", "careers_management", "careers_banner", "contact_inquiries", "contact_settings", "scanner_monitor", "fraud_dashboard", "flash_deals", "audit_logs", "settlement_verification", "email_logs", "kyc", "digilocker_kyc_review", "cancellations", "admin_events_mgmt", "organizer_reports", "user_analytics", "professional_services_mgmt", "admin_onboarding", "admin_revenue_dashboard", "social_media_settings", "rewards_vouchers"].includes(activeTab)) ? null : (
                         <div style={{ backgroundColor: t.cardBg, padding: "60px 24px", textAlign: "center", borderRadius: "10px", border: `1px solid ${t.border}` }}>
                             <h2 style={{ fontSize: "20px", fontWeight: 800, color: t.textMain }}>{activeTab.replace(/_/g, ' ').toUpperCase()}</h2>
                             <p style={{ color: t.textSub, marginTop: "8px", maxWidth: "350px", margin: "8px auto", fontSize: "14px" }}>This management module is currently being configured. You will be able to manage these settings shortly.</p>
