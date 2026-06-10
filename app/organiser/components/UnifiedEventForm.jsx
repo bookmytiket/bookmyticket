@@ -10,6 +10,8 @@ import TimePicker from "./TimePicker";
 import CustomSelect from "./CustomSelect";
 import GoogleInlineMap from "./GoogleInlineMap";
 import BlockMapDesigner from "./BlockMapDesigner";
+import BibConfiguration from "./BibConfiguration";
+import { Hash } from "lucide-react";
 import { geocode, reverseGeocode } from "@/lib/googleMaps";
 import { COUNTRIES } from "@/app/data/locationData";
 import { State, City } from 'country-state-city';
@@ -57,7 +59,7 @@ export default function UnifiedEventForm({ postEvent, setPostEvent, onCancel, on
         { id: 6, title: "Media", icon: Camera },
         { id: 7, title: postEvent.ticketMode === 'free' ? "RSVP Settings" : "Pricing & Capacity", icon: postEvent.ticketMode === 'free' ? Users : IndianRupee },
         { id: 8, title: "Terms", icon: Shield },
-        ...(isMarathon ? [{ id: 9, title: "Bib Config", icon: Ticket }] : []),
+        { id: 9, title: "Bib Config", icon: Hash },
         { id: 10, title: isEditing ? "Update" : "Publish", icon: Zap }
     ];
 
@@ -90,7 +92,15 @@ export default function UnifiedEventForm({ postEvent, setPostEvent, onCancel, on
                 eventFormat: 'venue', // 'venue' or 'online'
                 isReservedSeating: false,
                 country: prev.country || "India",
-                countryCode: prev.countryCode || "IN"
+                countryCode: prev.countryCode || "IN",
+                bibConfig: prev.bibConfig || {
+                    bib_enabled: false,
+                    bib_prefix: "",
+                    bib_start_number: 1001,
+                    bib_padding: 4,
+                    bib_per_category: false,
+                    bib_display_on_ticket: true
+                }
             }));
         }
     }, []);
@@ -570,68 +580,18 @@ export default function UnifiedEventForm({ postEvent, setPostEvent, onCancel, on
                     </div>
                 )}
 
-                {/* Step 9: Bib Configuration (Marathon Only) */}
-                {currentStep === 9 && isMarathon && (
+                {/* Step 9: Bib Configuration */}
+                {currentStep === 9 && (
                     <div className="space-y-10 animate-in fade-in slide-in-from-right-8">
                         <div>
                             <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter italic">9. Bib Configuration</h2>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">Configure bib numbers for categories</p>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">Configure bib numbers</p>
                         </div>
                         <div className="space-y-6">
-                            {(postEvent.dynamic_config?.categories || []).map((cat, idx) => (
-                                <div key={idx} className="bg-slate-50 border border-slate-100 rounded-[2rem] p-6 space-y-4">
-                                    <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">{cat.name || cat.category_name}</h3>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Bib Prefix</label>
-                                            <input 
-                                                type="text" 
-                                                value={cat.bibPrefix || ""} 
-                                                onChange={(e) => {
-                                                    const newCats = [...(postEvent.dynamic_config?.categories || [])];
-                                                    newCats[idx] = { ...newCats[idx], bibPrefix: e.target.value };
-                                                    setPostEvent(p => ({ ...p, dynamic_config: { ...p.dynamic_config, categories: newCats } }));
-                                                }}
-                                                className="w-full bg-white border border-slate-200 text-slate-900 text-sm font-bold px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                                                placeholder="e.g. PRO"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Start Number</label>
-                                            <input 
-                                                type="number" 
-                                                value={cat.bibStart || ""} 
-                                                onChange={(e) => {
-                                                    const newCats = [...(postEvent.dynamic_config?.categories || [])];
-                                                    newCats[idx] = { ...newCats[idx], bibStart: parseInt(e.target.value) || 0 };
-                                                    setPostEvent(p => ({ ...p, dynamic_config: { ...p.dynamic_config, categories: newCats } }));
-                                                }}
-                                                className="w-full bg-white border border-slate-200 text-slate-900 text-sm font-bold px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                                                placeholder="e.g. 1000"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">End Number</label>
-                                            <input 
-                                                type="number" 
-                                                value={cat.bibEnd || ""} 
-                                                onChange={(e) => {
-                                                    const newCats = [...(postEvent.dynamic_config?.categories || [])];
-                                                    newCats[idx] = { ...newCats[idx], bibEnd: parseInt(e.target.value) || 0 };
-                                                    setPostEvent(p => ({ ...p, dynamic_config: { ...p.dynamic_config, categories: newCats } }));
-                                                }}
-                                                className="w-full bg-white border border-slate-200 text-slate-900 text-sm font-bold px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                                                placeholder="e.g. 5000"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                            {(!postEvent.dynamic_config?.categories || postEvent.dynamic_config?.categories?.length === 0) && (
-                                <div className="text-center py-8">
-                                    <p className="text-slate-400 font-bold text-sm">Please add categories in Pricing & Capacity first to configure bibs.</p>
-                                </div>
-                            )}
+                            <BibConfiguration 
+                                config={postEvent.bibConfig || {}}
+                                onChange={(cfg) => setPostEvent(p => ({ ...p, bibConfig: cfg }))}
+                            />
                         </div>
                         <div className="flex justify-between pt-10">
                             <button onClick={prevStep} className="px-8 py-4 text-slate-400 font-bold uppercase text-[10px]"><ArrowLeft size={16} className="inline mr-2" /> Back</button>

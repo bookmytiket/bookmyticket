@@ -2951,6 +2951,7 @@ function OrganiserPanel() {
       video_trailer_url: postEvent.videoTrailerUrl || undefined,
       terms_conditions: postEvent.termsConditions || undefined,
       seating_capacity: Number(postEvent.normalTicketCapacity) || totalSeats || undefined,
+      bib_config: postEvent.bibConfig || postEvent.dynamic_config?.bibConfig || undefined,
       event_start_at: (() => {
         const configBasic = postEvent.dynamic_config?.basicInfo || {};
         const configExpiry = configBasic.expiryDate || postEvent.expiryDate;

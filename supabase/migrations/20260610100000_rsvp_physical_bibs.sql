@@ -1,0 +1,28 @@
+-- Migration to add BIB Configuration to events, categories, and registrations
+
+ALTER TABLE IF EXISTS public.events 
+ADD COLUMN IF NOT EXISTS bib_enabled BOOLEAN DEFAULT false,
+ADD COLUMN IF NOT EXISTS bib_prefix TEXT,
+ADD COLUMN IF NOT EXISTS bib_start_number INTEGER,
+ADD COLUMN IF NOT EXISTS bib_padding INTEGER DEFAULT 4,
+ADD COLUMN IF NOT EXISTS bib_per_category BOOLEAN DEFAULT false,
+ADD COLUMN IF NOT EXISTS bib_display_on_ticket BOOLEAN DEFAULT true;
+
+ALTER TABLE IF EXISTS public.event_categories
+ADD COLUMN IF NOT EXISTS bib_start_number INTEGER,
+ADD COLUMN IF NOT EXISTS bib_prefix TEXT;
+
+ALTER TABLE IF EXISTS public.bookings
+ADD COLUMN IF NOT EXISTS bib_number TEXT,
+ADD COLUMN IF NOT EXISTS bib_assigned_at TIMESTAMP WITH TIME ZONE,
+ADD COLUMN IF NOT EXISTS bib_status TEXT;
+
+ALTER TABLE IF EXISTS public.rsvp_registrations
+ADD COLUMN IF NOT EXISTS bib_number TEXT,
+ADD COLUMN IF NOT EXISTS bib_assigned_at TIMESTAMP WITH TIME ZONE,
+ADD COLUMN IF NOT EXISTS bib_status TEXT;
+
+ALTER TABLE IF EXISTS public.free_registrations
+ADD COLUMN IF NOT EXISTS bib_number TEXT,
+ADD COLUMN IF NOT EXISTS bib_assigned_at TIMESTAMP WITH TIME ZONE,
+ADD COLUMN IF NOT EXISTS bib_status TEXT;

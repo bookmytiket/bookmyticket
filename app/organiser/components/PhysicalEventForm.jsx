@@ -7,7 +7,7 @@ import {
     CheckCircle2, Plus, Trash2, Sparkles, Search, Video, RefreshCcw,
     Car, DoorOpen, Siren, ChevronRight, Zap, Info, ShieldCheck,
     DollarSign, FileCheck2, Bike, HeartPulse, Home, Coffee, Award, Tag, Globe, 
-    Utensils, Camera, Baby, Trophy, Shirt, Bath
+    Utensils, Camera, Baby, Trophy, Shirt, Bath, Hash
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import CalendarPicker from "./CalendarPicker";
@@ -20,6 +20,7 @@ import { geocode, reverseGeocode } from "@/lib/googleMaps";
 import { COUNTRIES } from "@/app/data/locationData";
 import { State, City } from 'country-state-city';
 import BlockMapDesigner from "./BlockMapDesigner";
+import BibConfiguration from "./BibConfiguration";
 
 const EVENT_CATEGORIES = [
     "Music & Concerts", "Workshops & Training", "Sports & Fitness", 
@@ -89,7 +90,8 @@ const PhysicalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEdi
         { id: 3, title: "Logistics", icon: Car },
         { id: 4, title: "Seating", icon: Layout },
         { id: 5, title: "Tickets", icon: Ticket },
-        { id: 6, title: isEditing ? "Update" : "Finalize", icon: Zap }
+        { id: 6, title: "BIB Config", icon: Hash },
+        { id: 7, title: isEditing ? "Update" : "Finalize", icon: Zap }
     ];
 
     const nextStep = () => setCurrentStep(prev => Math.min(prev + 1, steps.length));
@@ -660,13 +662,34 @@ const PhysicalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEdi
 
                     <div className="pt-10 flex justify-between">
                         <button onClick={prevStep} className="px-10 py-5 text-slate-400 font-black uppercase tracking-widest text-[10px] flex items-center gap-3 hover:text-slate-900 transition-colors"><ArrowLeft size={18} /> Blueprint Return</button>
+                        <button onClick={nextStep} className="px-12 py-5 bg-slate-900 text-white rounded-[2.5rem] text-[11px] font-black uppercase tracking-widest flex items-center gap-4 hover:bg-emerald-600 transition-all shadow-2xl">Next: BIB Configuration <ArrowRight size={18} /></button>
+                    </div>
+                </div>
+            )}
+
+            {/* Step 6: BIB Config */}
+            {currentStep === 6 && (
+                <div className="bg-white rounded-[3rem] border border-slate-100 shadow-[0_50px_100px_-20px_rgba(0,0,0,0.05)] p-12 space-y-12 animate-in fade-in slide-in-from-right-8 duration-700">
+                    <BibConfiguration 
+                        config={postEvent.bibConfig || {
+                            bib_enabled: false,
+                            bib_prefix: "",
+                            bib_start_number: 1001,
+                            bib_padding: 4,
+                            bib_per_category: false,
+                            bib_display_on_ticket: true
+                        }} 
+                        onChange={cfg => setPostEvent(p => ({ ...p, bibConfig: cfg }))} 
+                    />
+                    <div className="pt-10 flex justify-between">
+                        <button onClick={prevStep} className="px-10 py-5 text-slate-400 font-black uppercase tracking-widest text-[10px] flex items-center gap-3 hover:text-slate-900 transition-colors"><ArrowLeft size={18} /> Ticket Return</button>
                         <button onClick={nextStep} className="px-12 py-5 bg-slate-900 text-white rounded-[2.5rem] text-[11px] font-black uppercase tracking-widest flex items-center gap-4 hover:bg-emerald-600 transition-all shadow-2xl">Next: Finalize Launch <ArrowRight size={18} /></button>
                     </div>
                 </div>
             )}
 
-            {/* Step 6: Finalize */}
-            {currentStep === 6 && (
+            {/* Step 7: Finalize */}
+            {currentStep === 7 && (
                 <div className="bg-white rounded-[3rem] border border-slate-100 shadow-[0_50px_100px_-20px_rgba(0,0,0,0.05)] p-12 space-y-12 animate-in zoom-in duration-700">
                     <div className="flex flex-col items-center text-center space-y-8">
                         <div className="w-24 h-24 rounded-[3rem] bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center text-white shadow-2xl shadow-pink-500/20 animate-pulse">

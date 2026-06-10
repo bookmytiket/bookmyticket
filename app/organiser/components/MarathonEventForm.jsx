@@ -19,6 +19,8 @@ import { COUNTRIES } from "@/app/data/locationData";
 import { reverseGeocode, geocode } from "@/lib/googleMaps";
 import LocationSelectionModal from "@/components/LocationSelectionModal";
 import AboutEventEditor from "@/components/AboutEventEditor";
+import BibConfiguration from "./BibConfiguration";
+import { Hash } from "lucide-react";
 
 const BENEFIT_ICONS = [
     { key: "ambulance", icon: HeartPulse, label: "Ambulance" },
@@ -79,6 +81,15 @@ export default function MarathonEventForm({ marathonId, isRSVP, onCancel, onPubl
         bulk_discount_percent: 0,
         min_bulk_tickets: 5,
         ticket_discount_percent: 0
+    });
+
+    const [bibConfig, setBibConfig] = useState({
+        bib_enabled: false,
+        bib_prefix: "",
+        bib_start_number: 1001,
+        bib_padding: 4,
+        bib_per_category: false,
+        bib_display_on_ticket: true
     });
 
     const [faqs, setFaqs] = useState([
@@ -227,6 +238,15 @@ export default function MarathonEventForm({ marathonId, isRSVP, onCancel, onPubl
                 bulk_discount_percent: dynCfg.discounts?.bulk_percent || 0,
                 min_bulk_tickets: dynCfg.discounts?.min_bulk_tickets || 5,
                 ticket_discount_percent: dynCfg.discounts?.ticket_percent || 0
+            });
+
+            setBibConfig({
+                bib_enabled: source.bib_enabled || false,
+                bib_prefix: source.bib_prefix || "",
+                bib_start_number: source.bib_start_number || 1001,
+                bib_padding: source.bib_padding || 4,
+                bib_per_category: source.bib_per_category || false,
+                bib_display_on_ticket: source.bib_display_on_ticket !== false
             });
 
             // ── Fetch categories (handles both FK column names for backward compatibility) ────────
@@ -389,6 +409,12 @@ export default function MarathonEventForm({ marathonId, isRSVP, onCancel, onPubl
                 end_time: eventData.event_end_time || null,
                 expiry_date: eventData.expiry_date || null,
                 price: isRSVP ? 0 : (categories.length > 0 ? Math.min(...categories.map(c => Number(c.price) || 0)) : 0),
+                bib_enabled: bibConfig.bib_enabled,
+                bib_prefix: bibConfig.bib_prefix,
+                bib_start_number: bibConfig.bib_start_number,
+                bib_padding: bibConfig.bib_padding,
+                bib_per_category: bibConfig.bib_per_category,
+                bib_display_on_ticket: bibConfig.bib_display_on_ticket,
                 dynamic_config: {
                     // Simplified categories for booking sidebar price display
                     categories: categories.map(c => ({
@@ -678,9 +704,10 @@ export default function MarathonEventForm({ marathonId, isRSVP, onCancel, onPubl
         { id: 1, title: "Event Info", icon: Info },
         { id: 2, title: isRSVP ? "RSVP Settings" : "Categories", icon: isRSVP ? Users : Trophy },
         ...(!isRSVP ? [{ id: 3, title: "Pricing & Rules", icon: Timer }] : []),
-        { id: isRSVP ? 3 : 4, title: "Form Builder", icon: CheckCircle2 },
-        { id: isRSVP ? 4 : 5, title: isRSVP ? "About Event" : "Content & FAQs", icon: Star },
-        { id: isRSVP ? 5 : 6, title: marathonId ? "Update" : "Location", icon: MapPin }
+        { id: isRSVP ? 3 : 4, title: "BIB Config", icon: Hash },
+        { id: isRSVP ? 4 : 5, title: "Form Builder", icon: CheckCircle2 },
+        { id: isRSVP ? 5 : 6, title: isRSVP ? "About Event" : "Content & FAQs", icon: Star },
+        { id: isRSVP ? 6 : 7, title: marathonId ? "Update" : "Location", icon: MapPin }
     ];
 
     return (
@@ -1064,7 +1091,7 @@ export default function MarathonEventForm({ marathonId, isRSVP, onCancel, onPubl
 
                     <div className="flex justify-between mt-8">
                         <button onClick={() => setCurrentStep(1)} className="px-10 py-4 text-slate-800 font-bold uppercase tracking-widest text-xs flex items-center gap-2"><ChevronLeft size={16} /> Back</button>
-                        <button onClick={() => handleNext(isRSVP ? 3 : 3)} className="px-10 py-4 bg-slate-900 text-white rounded-2xl font-bold uppercase tracking-widest text-xs shadow-xl flex items-center gap-2">Next <ChevronRight size={16} /></button>
+                        <button onClick={() => handleNext(3)} className="px-10 py-4 bg-slate-900 text-white rounded-2xl font-bold uppercase tracking-widest text-xs shadow-xl flex items-center gap-2">Next <ChevronRight size={16} /></button>
                     </div>
                 </div>
             )}
@@ -1147,8 +1174,18 @@ export default function MarathonEventForm({ marathonId, isRSVP, onCancel, onPubl
                 </div>
             )}
 
-            {/* Step 4: Form Builder */}
+            {/* Step BIB Config */}
             {currentStep === (isRSVP ? 3 : 4) && (
+                <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
+                    <BibConfiguration config={bibConfig} onChange={setBibConfig} />
+                    <div className="flex justify-between mt-8">
+                        <button onClick={() => setCurrentStep(isRSVP ? 2 : 3)} className="px-10 py-4 text-slate-800 font-bold uppercase tracking-widest text-xs flex items-center gap-2"><ChevronLeft size={16} /> Back</button>
+                        <button onClick={() => handleNext(isRSVP ? 4 : 5)} className="px-10 py-4 bg-slate-900 text-white rounded-2xl font-bold uppercase tracking-widest text-xs shadow-xl flex items-center gap-2">Next <ChevronRight size={16} /></button>
+                    </div>
+                </div>
+            )}
+
+            {currentStep === (isRSVP ? 4 : 5) && (
                 <div className="space-y-10 animate-in fade-in slide-in-from-right-4 duration-500">
                     <section className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl space-y-8">
                         <div className="flex items-center justify-between">
@@ -1236,14 +1273,14 @@ export default function MarathonEventForm({ marathonId, isRSVP, onCancel, onPubl
                     </section>
 
                     <div className="flex justify-between mt-8">
-                        <button onClick={() => setCurrentStep(isRSVP ? 2 : 3)} className="px-10 py-4 text-slate-800 font-bold uppercase tracking-widest text-xs flex items-center gap-2"><ChevronLeft size={16} /> Back</button>
-                        <button onClick={() => handleNext(isRSVP ? 4 : 5)} className="px-10 py-4 bg-slate-900 text-white rounded-2xl font-bold uppercase tracking-widest text-xs shadow-xl flex items-center gap-2">Next <ChevronRight size={16} /></button>
+                        <button onClick={() => setCurrentStep(isRSVP ? 3 : 4)} className="px-10 py-4 text-slate-800 font-bold uppercase tracking-widest text-xs flex items-center gap-2"><ChevronLeft size={16} /> Back</button>
+                        <button onClick={() => handleNext(isRSVP ? 5 : 6)} className="px-10 py-4 bg-slate-900 text-white rounded-2xl font-bold uppercase tracking-widest text-xs shadow-xl flex items-center gap-2">Next <ChevronRight size={16} /></button>
                     </div>
                 </div>
             )}
 
             {/* Step 5: Content & FAQs (Paid) / About Event (RSVP) */}
-            {currentStep === (isRSVP ? 4 : 5) && (
+            {currentStep === (isRSVP ? 5 : 6) && (
                 <div className="space-y-10 animate-in fade-in slide-in-from-right-4 duration-500">
                     <section className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl space-y-8">
                         <div className="flex items-center justify-between">
@@ -1339,14 +1376,14 @@ export default function MarathonEventForm({ marathonId, isRSVP, onCancel, onPubl
                     </section>
 
                     <div className="flex justify-between mt-8">
-                        <button onClick={() => setCurrentStep(isRSVP ? 3 : 4)} className="px-10 py-4 text-slate-800 font-bold uppercase tracking-widest text-xs flex items-center gap-2"><ChevronLeft size={16} /> Back</button>
-                        <button onClick={() => handleNext(isRSVP ? 5 : 6)} className="px-10 py-4 bg-slate-900 text-white rounded-2xl font-bold uppercase tracking-widest text-xs shadow-xl flex items-center gap-2">Next <ChevronRight size={16} /></button>
+                        <button onClick={() => setCurrentStep(isRSVP ? 4 : 5)} className="px-10 py-4 text-slate-800 font-bold uppercase tracking-widest text-xs flex items-center gap-2"><ChevronLeft size={16} /> Back</button>
+                        <button onClick={() => handleNext(isRSVP ? 6 : 7)} className="px-10 py-4 bg-slate-900 text-white rounded-2xl font-bold uppercase tracking-widest text-xs shadow-xl flex items-center gap-2">Next <ChevronRight size={16} /></button>
                     </div>
                 </div>
             )}
 
             {/* Step 6: Location */}
-            {currentStep === (isRSVP ? 5 : 6) && (
+            {currentStep === (isRSVP ? 6 : 7) && (
                 <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
                     <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl space-y-8">
                         <div className="flex items-center gap-4">
@@ -1497,7 +1534,7 @@ export default function MarathonEventForm({ marathonId, isRSVP, onCancel, onPubl
                     </div>
 
                     <div className="flex justify-between mt-8">
-                        <button onClick={() => setCurrentStep(isRSVP ? 4 : 5)} className="px-10 py-4 text-slate-800 font-bold uppercase tracking-widest text-xs flex items-center gap-2"><ChevronLeft size={16} /> Back</button>
+                        <button onClick={() => setCurrentStep(isRSVP ? 5 : 6)} className="px-10 py-4 text-slate-800 font-bold uppercase tracking-widest text-xs flex items-center gap-2"><ChevronLeft size={16} /> Back</button>
                         <div className="flex gap-4">
                             <button onClick={() => saveMarathon('Draft')} disabled={loading} className="px-8 py-4 bg-white border border-slate-200 text-slate-900 rounded-2xl font-bold uppercase tracking-widest text-xs hover:bg-slate-50 transition-all">Save Draft</button>
                             <button onClick={() => saveMarathon('PendingReview')} disabled={loading} className="px-12 py-4 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-2xl flex items-center gap-2">

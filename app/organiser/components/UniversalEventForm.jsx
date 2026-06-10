@@ -8,7 +8,7 @@ import {
     Bike, Award, Utensils, Shirt, Coffee, Car, Smile, Camera, Home, FileText,
     TrendingUp, Trash2, Trash, Zap, Map, Layout, ListTodo, MessageCircle, 
     Save, Eye, Globe, Lock, Share2, Phone, Mail, Bell, Gift, Scissors, HelpCircle, Ticket, ShieldCheck, Plus, ChevronDown, Wallet, Sparkles, Search,
-    FileCheck2, Tag, Baby, Bath
+    FileCheck2, Tag, Baby, Bath, Hash
 } from "lucide-react";
 import CalendarPicker from "./CalendarPicker";
 import TimePicker from "./TimePicker";
@@ -21,6 +21,7 @@ import { supabase } from "@/lib/supabase";
 import { reverseGeocode, geocode } from "@/lib/googleMaps";
 import { useToast } from "@/context/ToastContext";
 import LocationSelectionModal from "@/components/LocationSelectionModal";
+import BibConfiguration from "./BibConfiguration";
 
 const renderInput = (label, value, onChange, type = "text", placeholder = "") => (
     <div className="space-y-2">
@@ -345,6 +346,14 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                 enabled: true,
                 deadline: ""
             },
+            bibConfig: base.bibConfig || {
+                bib_enabled: false,
+                bib_prefix: "",
+                bib_start_number: 1001,
+                bib_padding: 4,
+                bib_per_category: false,
+                bib_display_on_ticket: true
+            },
             publish: base.publish || {
                 isPublic: true,
                 isDraft: false
@@ -444,11 +453,12 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
         { id: 2, title: "Location", icon: MapPin },
         { id: 3, title: "Amenities", icon: Gift },
         { id: 4, title: "Tickets", icon: Ticket },
-        { id: 5, title: "Form Builder", icon: ListTodo },
-        { id: 6, title: "Pricing & Rules", icon: DollarSign },
-        { id: 7, title: "Content & FAQs", icon: HelpCircle },
-        { id: 8, title: "SEO & Social", icon: Globe },
-        { id: 9, title: isEditing ? "Update" : "Publish", icon: ShieldCheck }
+        { id: 5, title: "BIB Config", icon: Hash },
+        { id: 6, title: "Form Builder", icon: ListTodo },
+        { id: 7, title: "Pricing & Rules", icon: DollarSign },
+        { id: 8, title: "Content & FAQs", icon: HelpCircle },
+        { id: 9, title: "SEO & Social", icon: Globe },
+        { id: 10, title: isEditing ? "Update" : "Publish", icon: ShieldCheck }
     ];
 
     return (
@@ -840,8 +850,22 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                 </div>
             )}
 
-            {/* Step 5: Form Builder */}
+            {/* Step 5: BIB Configuration */}
             {currentStep === 5 && (
+                <div className="bg-white rounded-[2rem] md:rounded-[3.5rem] border border-slate-100 shadow-2xl p-5 md:p-14 space-y-8 md:space-y-10   ">
+                    <BibConfiguration 
+                        config={config.bibConfig} 
+                        onChange={cfg => updateConfig('bibConfig', cfg)} 
+                    />
+                    <div className="pt-10 flex justify-between">
+                        <button onClick={() => setCurrentStep(4)} className="px-10 py-4 text-slate-800 font-bold uppercase tracking-widest text-[10px] flex items-center gap-2"><ArrowLeft size={16} /> Back</button>
+                        <button onClick={() => setCurrentStep(6)} className="px-12 py-4 bg-slate-900 text-white rounded-[2rem] text-xs font-bold uppercase tracking-widest flex items-center gap-3 shadow-xl shadow-slate-200 transition-all hover:bg-black">Next <ArrowRight size={18} /></button>
+                    </div>
+                </div>
+            )}
+
+            {/* Step 6: Form Builder */}
+            {currentStep === 6 && (
                 <div className="bg-white rounded-[2rem] md:rounded-[3.5rem] border border-slate-100 shadow-2xl p-5 md:p-14 space-y-8 md:space-y-10   ">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-5">
@@ -887,14 +911,14 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                     </div>
 
                     <div className="pt-10 flex justify-between">
-                        <button onClick={() => setCurrentStep(4)} className="px-10 py-4 text-slate-800 font-bold uppercase tracking-widest text-[10px] flex items-center gap-2"><ArrowLeft size={16} /> Back</button>
-                        <button onClick={() => setCurrentStep(6)} className="px-12 py-4 bg-slate-900 text-white rounded-[2rem] text-xs font-bold uppercase tracking-widest flex items-center gap-3">Next: Pricing & Rules <ArrowRight size={18} /></button>
+                        <button onClick={() => setCurrentStep(5)} className="px-10 py-4 text-slate-800 font-bold uppercase tracking-widest text-[10px] flex items-center gap-2"><ArrowLeft size={16} /> Back</button>
+                        <button onClick={() => setCurrentStep(7)} className="px-12 py-4 bg-slate-900 text-white rounded-[2rem] text-xs font-bold uppercase tracking-widest flex items-center gap-3">Next: Pricing & Rules <ArrowRight size={18} /></button>
                     </div>
                 </div>
             )}
 
-            {/* Step 6: Pricing & Rules */}
-            {currentStep === 6 && (
+            {/* Step 7: Pricing & Rules */}
+            {currentStep === 7 && (
                 <div className="bg-white rounded-[2rem] md:rounded-[3.5rem] border border-slate-100 shadow-2xl p-5 md:p-14 space-y-8 md:space-y-10   ">
                     <div className="flex items-center gap-5">
                         <div className="w-12 h-12 rounded-2xl bg-pink-50 flex items-center justify-center text-[#ec4899]">
@@ -1028,14 +1052,14 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                     </div>
 
                     <div className="pt-10 flex justify-between">
-                        <button onClick={() => setCurrentStep(5)} className="px-10 py-4 text-slate-800 font-bold uppercase tracking-widest text-[10px] flex items-center gap-2"><ArrowLeft size={16} /> Back</button>
-                        <button onClick={() => setCurrentStep(7)} className="px-12 py-4 bg-slate-900 text-white rounded-[2rem] text-xs font-bold uppercase tracking-widest flex items-center gap-3">Next: Content & FAQs <ArrowRight size={18} /></button>
+                        <button onClick={() => setCurrentStep(6)} className="px-10 py-4 text-slate-800 font-bold uppercase tracking-widest text-[10px] flex items-center gap-2"><ArrowLeft size={16} /> Back</button>
+                        <button onClick={() => setCurrentStep(8)} className="px-12 py-4 bg-slate-900 text-white rounded-[2rem] text-xs font-bold uppercase tracking-widest flex items-center gap-3">Next: Content & FAQs <ArrowRight size={18} /></button>
                     </div>
                 </div>
             )}
 
-            {/* Step 7: FAQs & Terms */}
-            {currentStep === 7 && (
+            {/* Step 8: FAQs & Terms */}
+            {currentStep === 8 && (
                 <div className="space-y-8 p-5 md:p-12 bg-white rounded-[2.5rem] md:rounded-[3rem] border border-slate-100 shadow-2xl shadow-slate-200/40">
                     <div className="flex items-center gap-5">
                         <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600">
@@ -1109,14 +1133,14 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                     </div>
 
                     <div className="pt-10 flex justify-between">
-                        <button onClick={() => setCurrentStep(6)} className="px-10 py-4 text-slate-800 font-bold uppercase tracking-widest text-[10px] flex items-center gap-2"><ArrowLeft size={16} /> Back</button>
-                        <button onClick={() => setCurrentStep(8)} className="px-12 py-4 bg-slate-900 text-white rounded-[2rem] text-xs font-bold uppercase tracking-widest flex items-center gap-3">Next: SEO & Social <ArrowRight size={18} /></button>
+                        <button onClick={() => setCurrentStep(7)} className="px-10 py-4 text-slate-800 font-bold uppercase tracking-widest text-[10px] flex items-center gap-2"><ArrowLeft size={16} /> Back</button>
+                        <button onClick={() => setCurrentStep(9)} className="px-12 py-4 bg-slate-900 text-white rounded-[2rem] text-xs font-bold uppercase tracking-widest flex items-center gap-3">Next: SEO & Social <ArrowRight size={18} /></button>
                     </div>
                 </div>
             )}
 
-            {/* Step 8: SEO & Social */}
-            {currentStep === 8 && (
+            {/* Step 9: SEO & Social */}
+            {currentStep === 9 && (
                 <div className="bg-white rounded-[2rem] md:rounded-[3.5rem] border border-slate-100 shadow-2xl p-5 md:p-14 space-y-8 md:space-y-10   ">
                     <div className="flex items-center gap-5">
                         <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600">
@@ -1194,14 +1218,14 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                     </div>
 
                     <div className="pt-10 flex justify-between">
-                        <button onClick={() => setCurrentStep(7)} className="px-10 py-4 text-slate-800 font-bold uppercase tracking-widest text-[10px] flex items-center gap-2"><ArrowLeft size={16} /> Back</button>
-                        <button onClick={() => setCurrentStep(9)} className="px-12 py-4 bg-slate-900 text-white rounded-[2rem] text-xs font-bold uppercase tracking-widest flex items-center gap-3">Next: Review & Publish <ArrowRight size={18} /></button>
+                        <button onClick={() => setCurrentStep(8)} className="px-10 py-4 text-slate-800 font-bold uppercase tracking-widest text-[10px] flex items-center gap-2"><ArrowLeft size={16} /> Back</button>
+                        <button onClick={() => setCurrentStep(10)} className="px-12 py-4 bg-slate-900 text-white rounded-[2rem] text-xs font-bold uppercase tracking-widest flex items-center gap-3">Next: Review & Publish <ArrowRight size={18} /></button>
                     </div>
                 </div>
             )}
 
-            {/* Step 9: Final Review & Publish */}
-            {currentStep === 9 && (
+            {/* Step 10: Final Review & Publish */}
+            {currentStep === 10 && (
                 <div className="bg-white rounded-[3.5rem] border border-slate-100 shadow-2xl p-10 md:p-14 space-y-10    text-center">
                     <div className="flex flex-col items-center gap-6 py-10">
                         <div className="w-24 h-24 rounded-[3rem] bg-emerald-50 text-emerald-500 flex items-center justify-center shadow-xl shadow-emerald-100 ">
@@ -1248,7 +1272,7 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                     </div>
 
                     <div className="pt-10">
-                        <button onClick={() => setCurrentStep(7)} className="px-10 py-4 text-slate-600 font-bold uppercase tracking-widest text-[10px] flex items-center gap-2 mx-auto"><ArrowLeft size={16} /> Back to Content</button>
+                        <button onClick={() => setCurrentStep(9)} className="px-10 py-4 text-slate-600 font-bold uppercase tracking-widest text-[10px] flex items-center gap-2 mx-auto"><ArrowLeft size={16} /> Back to Content</button>
                     </div>
                 </div>
             )}
