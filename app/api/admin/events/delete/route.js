@@ -13,16 +13,16 @@ export async function POST(req) {
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
-    // 1. Delete dependencies based on category
-    if (event_category === 'Tournament') {
-      await adminSupabase.from('tournament_events').delete().eq('id', event_id);
-      await adminSupabase.from('tournament_events').delete().eq('event_id', event_id);
-    } else if (event_category === 'Marathon') {
-      await adminSupabase.from('marathon_events').delete().eq('id', event_id);
-      await adminSupabase.from('marathon_config').delete().eq('id', event_id);
-    } else {
-      await adminSupabase.from('bookings').delete().eq('event_id', event_id);
-    }
+    // 1. Forcefully delete from ALL possible child tables to prevent orphans
+    // regardless of what the frontend thinks the category is.
+    await adminSupabase.from('tournament_events').delete().eq('id', event_id);
+    await adminSupabase.from('tournament_events').delete().eq('event_id', event_id);
+    await adminSupabase.from('tournament_categories').delete().eq('event_id', event_id);
+    await adminSupabase.from('marathon_events').delete().eq('id', event_id);
+    await adminSupabase.from('marathon_events').delete().eq('event_id', event_id);
+    await adminSupabase.from('marathon_config').delete().eq('id', event_id);
+    await adminSupabase.from('marathon_config').delete().eq('event_id', event_id);
+    await adminSupabase.from('bookings').delete().eq('event_id', event_id);
 
     // 2. Delete the event from primary events table
     const { error: deleteError } = await adminSupabase

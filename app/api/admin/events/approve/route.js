@@ -23,10 +23,6 @@ export async function POST(req) {
         publish_status: 'published',
         listing_status: 'active',
         approval_status: 'approved',
-        is_public: true,
-        is_bookable: true,
-        approved_at: now,
-        published_at: now,
         updated_at: now
       })
       .eq('id', event_id);

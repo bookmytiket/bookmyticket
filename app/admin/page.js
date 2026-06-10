@@ -2251,8 +2251,13 @@ function AdminHomePage() {
 
     // 2. Merge all events for the main dashboard and management view
     const eventsArr = useMemo(() => {
+        const marathonIds = new Set(marathonEvents.map(e => e.id));
+        const tournamentIds = new Set(tournamentEvents.map(e => e.id).concat(tournamentEvents.map(e => e.event_id).filter(Boolean)));
+
+        const filteredPhysicalEvents = physicalEvents.filter(e => !marathonIds.has(e.id) && !tournamentIds.has(e.id));
+
         const merged = [
-            ...physicalEvents.map(e => ({ ...e, event_category: 'Physical' })),
+            ...filteredPhysicalEvents.map(e => ({ ...e, event_category: 'Physical' })),
             ...tournamentEvents.map(e => ({ ...e, event_category: 'Tournament', title: e.event_name })),
             ...marathonEvents.map(e => ({ ...e, event_category: 'Marathon' }))
         ];
@@ -2739,13 +2744,37 @@ function AdminHomePage() {
 
     const handlePlatformEventUpdate = async (event, updates) => {
         try {
-            if (event.event_category === 'Tournament') {
-                await updateTournamentEvent({ id: event.id, ...updates });
-            } else if (event.event_category === 'Marathon') {
-                await updateMarathonEvent({ id: event.id, ...updates });
-            } else {
-                await updatePhysicalEvent({ id: event.id, ...updates });
+            // Map visibility flags to the events (master) table
+            const masterUpdates = {};
+            const childUpdates = {};
+            
+            for (const [key, value] of Object.entries(updates)) {
+                if (key === 'is_exclusive' || key === 'exclusive') masterUpdates['exclusive'] = value;
+                else if (key === 'is_spotlight' || key === 'spotlight') masterUpdates['spotlight'] = value;
+                else if (key === 'featured') masterUpdates['featured'] = value;
+                else if (key === 'status') {
+                    masterUpdates['status'] = value;
+                    childUpdates['status'] = value;
+                }
+                else childUpdates[key] = value;
             }
+
+            // Always update master table for visibility flags regardless of event type
+            if (Object.keys(masterUpdates).length > 0) {
+                await updatePhysicalEvent({ id: event.id, ...masterUpdates });
+            }
+
+            // Update child tables specifically if there are specific child updates
+            if (Object.keys(childUpdates).length > 0) {
+                if (event.event_category === 'Tournament') {
+                    await updateTournamentEvent({ id: event.id, ...childUpdates });
+                } else if (event.event_category === 'Marathon') {
+                    await updateMarathonEvent({ id: event.id, ...childUpdates });
+                } else if (event.event_category === 'Physical') {
+                    await updatePhysicalEvent({ id: event.id, ...childUpdates });
+                }
+            }
+            
             showToast("Event updated successfully", "success");
         } catch (err) {
             showToast("Failed to update event: " + err.message, "error");
