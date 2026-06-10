@@ -14,10 +14,21 @@ export async function POST(req) {
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
-    // Update Event Status
+    // Update Event Status to published, single source of truth
+    const now = new Date().toISOString();
     const { error: updateError } = await adminSupabase
       .from('events')
-      .update({ status: 'approved', publish_status: 'approved' })
+      .update({ 
+        status: 'published', 
+        publish_status: 'published',
+        listing_status: 'active',
+        approval_status: 'approved',
+        is_public: true,
+        is_bookable: true,
+        approved_at: now,
+        published_at: now,
+        updated_at: now
+      })
       .eq('id', event_id);
 
     if (updateError) throw updateError;
@@ -26,8 +37,13 @@ export async function POST(req) {
     const tablesToSync = ['marathon_events', 'tournament_events', 'badminton_events', 'competition_events', 'sports_events'];
     for (const table of tablesToSync) {
       try {
-        await adminSupabase.from(table).update({ status: 'approved', publish_status: 'approved' }).eq('id', event_id);
-      } catch (_) {}
+        await adminSupabase.from(table).update({ 
+          status: 'published', 
+          updated_at: now
+        }).eq('id', event_id);
+      } catch (err) {
+        console.error(`Failed to sync ${table}:`, err);
+      }
     }
 
     // Update Review Status (best effort)
@@ -83,7 +99,7 @@ export async function POST(req) {
       } catch (_) {}
     }
 
-    return NextResponse.json({ success: true, status: 'approved' });
+    return NextResponse.json({ success: true, status: 'published' });
   } catch (error) {
     console.error('Error in admin approve event:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
