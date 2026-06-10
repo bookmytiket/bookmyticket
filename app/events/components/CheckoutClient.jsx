@@ -1099,7 +1099,7 @@ export default function CheckoutClient({ id: propId, sessionToken }) {
                             Order ID: #{lastBooking?.id?.slice(-8).toUpperCase()}
                         </div>
 
-                        <div className="max-w-[500px] mx-auto mb-16 transform hover:scale-[1.02] transition-transform">
+                        <div className="max-w-4xl mx-auto mb-16 transform hover:scale-[1.02] transition-transform">
                             <DigitalTicket 
                                 booking={{
                                     ...lastBooking,
