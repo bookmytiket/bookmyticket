@@ -527,6 +527,8 @@ export default function CheckoutClient({ id: propId, sessionToken }) {
         return getFeeBreakdown(discountedBase, resolvedFeeSettings);
     }, [baseAmount, discountAmount, resolvedFeeSettings, session, sessionToken]);
 
+    const isFree = total === 0;
+
     const handleQtyChange = async (newQty) => {
         if (newQty < 1) return;
         setQty(newQty);
@@ -663,8 +665,6 @@ export default function CheckoutClient({ id: propId, sessionToken }) {
 
         setIsProcessing(true);
         try {
-            const isFree = total === 0;
-
             if (sessionToken) {
                 // Update participantData with RSVP answers in the session before confirming
                 if (event?.rsvpFields?.length > 0) {
