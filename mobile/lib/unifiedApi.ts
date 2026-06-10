@@ -57,16 +57,37 @@ export const UnifiedApi = {
   baseUrl: API_BASE_URL,
 
   async getEvents(query: Query = {}) {
-    const events = await request<any[]>('/api/v1/events', {}, query);
-    return Array.isArray(events) ? events : [];
+    try {
+      const events = await request<any[]>('/api/v1/events', {}, query);
+      return Array.isArray(events) ? events : [];
+    } catch (err) {
+      console.warn('UnifiedApi.getEvents fallback to Supabase');
+      const { data } = await supabase.from('events').select('*').neq('is_deleted', true).order('created_at', { ascending: false });
+      return data || [];
+    }
   },
 
-  getEvent(id: string) {
-    return request<any>(`/api/v1/events/${id}`);
+  async getEvent(id: string) {
+    try {
+      return await request<any>(`/api/v1/events/${id}`);
+    } catch (err) {
+      console.warn('UnifiedApi.getEvent fallback to Supabase');
+      const { data } = await supabase.from('events').select('*').eq('id', id).single();
+      return data;
+    }
   },
 
-  getBookings() {
-    return request<any[]>('/api/v1/bookings');
+  async getBookings() {
+    try {
+      return await request<any[]>('/api/v1/bookings');
+    } catch (err) {
+      console.warn('UnifiedApi.getBookings fallback to Supabase');
+      const { data: sessionData } = await supabase.auth.getSession();
+      const userId = sessionData?.session?.user?.id;
+      if (!userId) return [];
+      const { data } = await supabase.from('bookings').select('*, events(*), tickets(*)').eq('user_id', userId).order('created_at', { ascending: false });
+      return data || [];
+    }
   },
 
   createBooking(booking: any) {
@@ -92,8 +113,18 @@ export const UnifiedApi = {
     });
   },
 
-  getTicket(id: string) {
-    return request<any>(`/api/v1/tickets/${id}`);
+  async getTicket(id: string) {
+    try {
+      return await request<any>(`/api/v1/tickets/${id}`);
+    } catch (err) {
+      console.warn('UnifiedApi.getTicket fallback to Supabase');
+      const { data } = await supabase.from('bookings').select('*, events(*), tickets(*)').eq('id', id).single();
+      if (data) {
+        const { data: items } = await supabase.from('booking_items').select('*').eq('booking_id', id);
+        if (items) data.booking_items = items;
+      }
+      return data;
+    }
   },
 
   getWallet() {
