@@ -49,6 +49,7 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Home',
+          href: '/(tabs)',
           tabBarLabel: 'HOME',
           tabBarIcon: ({ color }) => <Home size={22} color={color} />,
         }}
@@ -57,6 +58,7 @@ export default function TabLayout() {
         name="events"
         options={{
           title: 'Events',
+          href: '/(tabs)/events',
           tabBarLabel: 'EVENTS',
           tabBarIcon: ({ color }) => <Calendar size={22} color={color} />,
         }}
@@ -71,6 +73,7 @@ export default function TabLayout() {
         name="services"
         options={{
           title: 'Services',
+          href: '/(tabs)/services',
           tabBarLabel: 'SERVICES',
           tabBarIcon: ({ color }) => <Sparkles size={22} color={color} />,
         }}
@@ -80,6 +83,7 @@ export default function TabLayout() {
         name="tickets"
         options={{
           title: 'Tickets',
+          href: '/(tabs)/tickets',
           tabBarLabel: 'TICKETS',
           tabBarIcon: ({ color }) => <Ticket size={22} color={color} />,
         }}
@@ -89,6 +93,7 @@ export default function TabLayout() {
         name="profile"
         options={{
           title: 'Profile',
+          href: '/(tabs)/profile',
           tabBarLabel: 'PROFILE',
           tabBarIcon: ({ color }) => <User size={22} color={color} />,
         }}

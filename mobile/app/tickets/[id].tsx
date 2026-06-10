@@ -119,31 +119,21 @@ export default function TicketDetailScreen() {
       setBooking(data);
 
       if (data.event_id) {
-        // Fetch modern event_branding table if it exists
-        const { data: brandingData } = await supabase
-          .from('event_branding')
-          .select('*')
-          .eq('event_id', data.event_id)
-          .maybeSingle();
+        // Fetch global active sponsors and partners
+        const [sponsorsRes, partnersRes] = await Promise.all([
+          supabase.from('sponsors').select('*').eq('status', 'active').order('display_order', { ascending: true }),
+          supabase.from('partners').select('*').eq('status', 'active').order('display_order', { ascending: true })
+        ]);
         
-        if (brandingData) {
-          const logos = [];
-          if (brandingData.sponsor_logo) logos.push({ url: brandingData.sponsor_logo, role: 'Official Sponsor' });
-          if (brandingData.co_sponsor_logo) logos.push({ url: brandingData.co_sponsor_logo, role: 'Co-Sponsor' });
-          if (brandingData.partner_logo) logos.push({ url: brandingData.partner_logo, role: 'Event Partner' });
-          if (brandingData.venue_logo) logos.push({ url: brandingData.venue_logo, role: 'Venue Partner' });
-          setSponsors(logos);
-        } else {
-          // Fallback to legacy sponsors table
-          const { data: sponsorData } = await supabase
-            .from('sponsors')
-            .select('*')
-            .eq('event_id', data.event_id);
-          
-          if (sponsorData && sponsorData.length > 0) {
-            setSponsors(sponsorData.map((s: any) => ({ url: s.logo_url, role: s.sponsor_name || s.type || 'Partner' })));
-          }
+        const logos = [];
+        if (sponsorsRes.data) {
+          sponsorsRes.data.slice(0, 3).forEach(s => logos.push({ url: s.logo_url, role: s.name || 'Sponsor' }));
         }
+        if (partnersRes.data) {
+          partnersRes.data.slice(0, 2).forEach(p => logos.push({ url: p.logo_url, role: p.name || 'Partner' }));
+        }
+        
+        setSponsors(logos);
       }
     } catch (err) {
       console.error('Error fetching booking:', err);
@@ -552,7 +542,7 @@ const styles = StyleSheet.create({
   sponsorTitle: { fontSize: 11, fontWeight: '900', color: '#cbd5e1', letterSpacing: 2, textAlign: 'center', marginBottom: 16 },
   sponsorScroll: { gap: 20, paddingHorizontal: 10 },
   sponsorCard: { alignItems: 'center', gap: 6 },
-  sponsorLogo: { width: 50, height: 50, borderRadius: 12 },
+  sponsorLogo: { width: 80, height: 80, borderRadius: 16, backgroundColor: '#fff' },
   sponsorName: { fontSize: 9, fontWeight: '700', color: '#94a3b8' },
   actionContainer: { marginTop: 30 },
   mainAction: { height: 60, borderRadius: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12 },

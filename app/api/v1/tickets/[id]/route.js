@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { normalizeBooking, ok } from "@/lib/shared/contracts";
 import { getBearerUser, jsonError, jsonOk, readProfileRole } from "@/lib/shared/supabaseServer";
 

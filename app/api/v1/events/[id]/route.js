@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { ok } from "@/lib/shared/contracts";
 import { fetchEventDetail } from "@/lib/shared/eventService";
 import { jsonError, jsonOk, requireAdminClient } from "@/lib/shared/supabaseServer";
