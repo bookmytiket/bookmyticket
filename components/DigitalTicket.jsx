@@ -300,12 +300,12 @@ export default function DigitalTicket({ booking, event, ticket: initialTicket, s
                     </div>
 
                     {/* Sponsors & Partners Section */}
-                    <div className="mt-auto pt-4 flex flex-col items-center gap-1.5 opacity-40">
-                        <p className="text-[7px] font-black text-white uppercase tracking-[0.3em]">Sponsors & Partners</p>
-                        <div className="flex items-center gap-4 px-4 py-2 rounded-full bg-white/5 border border-white/5 shadow-inner">
+                    <div className="mt-auto pt-4 flex flex-col items-center gap-1.5">
+                        <p className="text-[7px] font-black text-white/60 uppercase tracking-[0.3em]">Sponsors & Partners</p>
+                        <div className="flex items-center gap-4 mt-2">
                              {branding?.sponsors?.length > 0 ? (
-                                branding.sponsors.slice(0, 3).map((logo, idx) => (
-                                    <img key={idx} src={logo} className="h-4 w-auto brightness-0 invert opacity-80" alt="Sponsor Logo" />
+                                branding.sponsors.slice(0, 3).map((sponsor, idx) => (
+                                    <img key={idx} src={sponsor.logo_url || sponsor} className="h-16 md:h-20 w-auto max-w-[140px] md:max-w-[180px] object-contain drop-shadow-xl bg-white rounded-xl p-2" alt={sponsor.name || "Sponsor Logo"} />
                                 ))
                              ) : [
                                 branding?.sponsor_logo_1,
@@ -319,7 +319,7 @@ export default function DigitalTicket({ booking, event, ticket: initialTicket, s
                                     branding?.partner_logo_1,
                                     branding?.partner_logo_2
                                 ].filter(Boolean).slice(0, 2).map((logo, idx) => (
-                                    <img key={idx} src={logo} className="h-4 w-auto brightness-0 invert opacity-80" alt="Logo" />
+                                    <img key={idx} src={logo} className="h-16 md:h-20 w-auto max-w-[140px] md:max-w-[180px] object-contain drop-shadow-xl bg-white rounded-xl p-2" alt="Logo" />
                                 ))
                              ) : (
                                 <span className="text-[7px] font-black text-white uppercase tracking-[0.2em]">{branding?.name || "BookMyTicket"}</span>

@@ -203,11 +203,11 @@ export default function DigitalInvoice({ booking, event, branding = {} }) {
                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3">
                         COMPUTER GENERATED INVOICE. NO SIGNATURE REQUIRED.
                     </p>
-                    <div className="flex justify-center items-center gap-6 flex-wrap grayscale opacity-60">
+                    <div className="flex justify-center items-center gap-6 flex-wrap">
                         {branding?.sponsors?.length > 0 ? (
                             <>
-                                {branding.sponsors.slice(0, 4).map((logo, idx) => (
-                                    <img key={idx} src={logo} className="h-8 w-auto object-contain" alt="Sponsor Logo" />
+                                {branding.sponsors.slice(0, 4).map((sponsor, idx) => (
+                                    <img key={idx} src={sponsor.logo_url || sponsor} className="h-20 md:h-24 w-auto max-w-[200px] md:max-w-[250px] object-contain" alt={sponsor.name || "Sponsor Logo"} />
                                 ))}
                                 <span className="h-4 w-[1px] bg-slate-300" />
                                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest text-left">

@@ -43,7 +43,7 @@ import {
     MoreVertical, Zap, Briefcase, LayoutDashboard, Settings, Video, Image as ImageIcon, 
     Sparkles, CheckCircle, Ticket, Users, Menu, Bell, Save, X, Plus, Trash2, Mail, Lock, 
     CreditCard, Code, Globe, Shield, FileText, Megaphone, Tag, LayoutGrid, Calendar, 
-    Wallet, UserCheck, TrendingUp,
+    Wallet, UserCheck, TrendingUp, Handshake,
     ShoppingCart, UserCircle, Gift, Send, BarChart3, Archive, MessageCircle, Upload, 
     Edit, Search, AlertCircle, ChevronDown, ChevronRight, LogOut, Activity, RefreshCw, 
     AlertTriangle, Info, Smartphone, MessageSquare, Landmark, Ban, Sun, Moon, Filter, 
