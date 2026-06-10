@@ -98,6 +98,13 @@ export default function CheckoutClient({ id: propId, sessionToken }) {
     const [eventLoading, setEventLoading] = useState(true);
     const [sessionLoading, setSessionLoading] = useState(!!sessionToken);
     const [sessionErrorMsg, setSessionErrorMsg] = useState('');
+    const [scrolled, setScrolled] = useState(false);
+
+    useEffect(() => {
+        const handleScroll = () => setScrolled(window.scrollY > 150);
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
 
     const [qty, setQty] = useState(1);
     const [termsAccepted, setTermsAccepted] = useState(false);
@@ -1167,6 +1174,36 @@ export default function CheckoutClient({ id: propId, sessionToken }) {
                     </motion.div>
                 )}
             </AnimatePresence>
+
+            {event && (
+                <div 
+                    className={`fixed top-0 left-0 right-0 z-[100] bg-white border-b border-slate-200 shadow-sm transition-transform duration-300 flex items-center justify-between px-4 sm:px-8 py-3 ${scrolled ? 'translate-y-0' : '-translate-y-full'}`}
+                >
+                    <div className="flex items-center gap-4">
+                        <button 
+                            onClick={() => router.back()}
+                            className="p-2 -ml-2 text-slate-600 hover:text-pink-500 transition-colors"
+                        >
+                            <ChevronLeft size={24} />
+                        </button>
+                        <div className="flex flex-col">
+                            <h2 className="text-base sm:text-lg font-bold text-slate-900 leading-tight truncate max-w-[200px] sm:max-w-[600px]">
+                                {event.title}
+                            </h2>
+                            <div className="flex items-center gap-3 text-[11px] font-medium text-slate-500 mt-1">
+                                <div className="flex items-center gap-1">
+                                    <Calendar size={12} className="text-emerald-500" />
+                                    <span>{event.date}</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                    <MapPin size={12} className="text-rose-500" />
+                                    <span className="truncate max-w-[100px] sm:max-w-[200px]">{event.venue || event.location || 'TBA'}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <div className="w-full px-4 md:px-12 py-2 space-y-2">
                 <div className="space-y-4">
