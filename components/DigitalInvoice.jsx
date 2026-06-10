@@ -53,22 +53,22 @@ export default function DigitalInvoice({ booking, event, branding = {} }) {
                 className="w-full bg-white shadow-2xl rounded-3xl overflow-hidden border border-slate-100 font-sans text-slate-800"
             >
                 {/* Header Section */}
-                <div className="bg-[#2e1065] p-6 md:p-8 text-white relative overflow-hidden">
-                    {/* Subtle Yellow accent line at top */}
-                    <div className="absolute top-0 left-0 w-full h-1 bg-yellow-400 opacity-50" />
+                <div className="bg-[#FEFF00] p-6 md:p-8 text-slate-900 relative overflow-hidden">
+                    {/* Subtle dark accent line at top */}
+                    <div className="absolute top-0 left-0 w-full h-1.5 bg-slate-900 opacity-20" />
                     
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 relative z-10">
                         <div className="space-y-1">
                             <img 
                                 src={branding.logo_url || "/logo.png"} 
                                 alt="BookMyTicket" 
-                                className="h-14 w-auto brightness-0 invert object-contain" 
+                                className="h-14 w-auto brightness-0 object-contain" 
                             />
-                            <p className="text-yellow-400/80 text-[9px] font-black uppercase tracking-[0.3em]">Nexvant Technologies</p>
+                            <p className="text-slate-800 text-[9px] font-black uppercase tracking-[0.3em]">Nexvant Technologies</p>
                         </div>
                         <div className="text-right md:text-right w-full md:w-auto">
-                            <h1 className="text-2xl font-black uppercase tracking-tighter mb-0 text-yellow-400">Tax Invoice</h1>
-                            <p className="text-white font-black tracking-widest text-[9px] uppercase opacity-60">Original for Recipient</p>
+                            <h1 className="text-2xl font-black uppercase tracking-tighter mb-0 text-slate-900">Tax Invoice</h1>
+                            <p className="text-slate-700 font-black tracking-widest text-[9px] uppercase opacity-80">Original for Recipient</p>
                         </div>
                     </div>
                 </div>
@@ -134,7 +134,7 @@ export default function DigitalInvoice({ booking, event, branding = {} }) {
                     <div className="overflow-hidden rounded-2xl border border-slate-100">
                         <table className="w-full text-left border-collapse">
                             <thead>
-                                <tr className="bg-[#2e1065] text-yellow-400">
+                                <tr className="bg-[#FEFF00] text-slate-900">
                                     <th className="p-3 text-[8px] font-black uppercase tracking-widest">Description</th>
                                     <th className="p-3 text-[8px] font-black uppercase tracking-widest text-center">Qty</th>
                                     <th className="p-3 text-[8px] font-black uppercase tracking-widest text-right">Price</th>
@@ -203,10 +203,24 @@ export default function DigitalInvoice({ booking, event, branding = {} }) {
                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3">
                         COMPUTER GENERATED INVOICE. NO SIGNATURE REQUIRED.
                     </p>
-                    <div className="flex justify-center items-center gap-6 grayscale opacity-60">
-                        <img src="/logo.png" className="h-8 w-auto object-contain" alt="Logo" />
-                        <span className="h-4 w-[1px] bg-slate-300" />
-                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">© 2026 Nexvant Technologies</p>
+                    <div className="flex justify-center items-center gap-6 flex-wrap grayscale opacity-60">
+                        {branding?.sponsors?.length > 0 ? (
+                            <>
+                                {branding.sponsors.slice(0, 4).map((logo, idx) => (
+                                    <img key={idx} src={logo} className="h-8 w-auto object-contain" alt="Sponsor Logo" />
+                                ))}
+                                <span className="h-4 w-[1px] bg-slate-300" />
+                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest text-left">
+                                    Official<br/>Partners
+                                </p>
+                            </>
+                        ) : (
+                            <>
+                                <img src="/logo.png" className="h-8 w-auto object-contain" alt="Logo" />
+                                <span className="h-4 w-[1px] bg-slate-300" />
+                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">© 2026 Nexvant Technologies</p>
+                            </>
+                        )}
                     </div>
                 </div>
             </div>

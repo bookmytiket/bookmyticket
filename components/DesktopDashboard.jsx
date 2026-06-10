@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Ticket, Heart, Lock, LogOut, Sparkles, LayoutDashboard, ArrowLeft } from "lucide-react";
 import JoinNowButton from "./JoinNowButton";
 import TicketCard from "./TicketCard";
+import MyRewards from "./MyRewards";
 
 export default function DesktopDashboard({
     user,
@@ -119,25 +120,7 @@ export default function DesktopDashboard({
                                                 >
                                                     Invoice
                                                 </button>
-                                                {!booking.isVendorBooking && (
-                                                    <button 
-                                                        onClick={async (e) => {
-                                                            e.target.innerText = "Sending...";
-                                                            try {
-                                                                const res = await fetch(`/api/v1/tickets/${booking.id || booking._id}/resend`, { method: 'POST' });
-                                                                const data = await res.json();
-                                                                e.target.innerText = "Resent!";
-                                                                setTimeout(() => e.target.innerText = "Resend Email", 2000);
-                                                            } catch (err) {
-                                                                e.target.innerText = "Error";
-                                                                setTimeout(() => e.target.innerText = "Resend Email", 2000);
-                                                            }
-                                                        }}
-                                                        className="text-purple-500 text-[10px] font-black uppercase tracking-widest hover:text-slate-900 transition-colors"
-                                                    >
-                                                        Resend Email
-                                                    </button>
-                                                )}
+
                                                 <JoinNowButton 
                                                     eventId={booking.eventId} 
                                                     className="h-7 !px-3 !py-0 !rounded-lg !text-[9px]"
@@ -221,6 +204,8 @@ export default function DesktopDashboard({
                         )}
                     </div>
                 );
+            case "rewards":
+                return <MyRewards user={user} t={t} />;
             default:
                 return null;
         }
@@ -258,6 +243,12 @@ export default function DesktopDashboard({
                         style={{ width: "100%", padding: "12px 16px", background: activeTab === "wishlist" ? t.activeItem : "transparent", border: "none", borderRadius: "8px", display: "flex", alignItems: "center", gap: "12px", cursor: "pointer", color: activeTab === "wishlist" ? t.activeText : t.textSub, fontWeight: "600", fontSize: "14px", marginBottom: "4px", transition: "all 0.2s" }}
                     >
                         <Heart size={18} /> Wishlist
+                    </button>
+                    <button
+                        onClick={() => setActiveTab("rewards")}
+                        style={{ width: "100%", padding: "12px 16px", background: activeTab === "rewards" ? t.activeItem : "transparent", border: "none", borderRadius: "8px", display: "flex", alignItems: "center", gap: "12px", cursor: "pointer", color: activeTab === "rewards" ? t.activeText : t.textSub, fontWeight: "600", fontSize: "14px", marginBottom: "4px", transition: "all 0.2s" }}
+                    >
+                        <Sparkles size={18} /> Rewards
                     </button>
                     <button
                         onClick={() => setActiveTab("change_password")}

@@ -264,98 +264,64 @@ export default function ProfilePage() {
 
             {/* View Ticket Modal */}
             {viewTicketModal && (
-                <>
-                    {/* Desktop View Modal */}
-                    <div className="hidden md:flex" style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.85)", alignItems: "center", justifyContent: "center", zIndex: 11000, padding: "10px", paddingBottom: "20px", backdropFilter: "blur(12px)", overflowY: "auto" }} onClick={() => setViewTicketModal(null)}>
-                        <div style={{ width: "100%", maxWidth: "850px", position: "relative" }} onClick={e => e.stopPropagation()}>
-                            <button 
-                                onClick={() => setViewTicketModal(null)} 
-                                className="absolute top-4 right-4 z-[100] p-2 bg-slate-900/10 hover:bg-slate-900/20 text-slate-900 hover:text-purple-900 transition-all rounded-full"
-                            >
-                                <X size={20} />
-                            </button>
-                            
-                            <DigitalTicket 
-                                booking={viewTicketModal}
-                                event={{
-                                    title: viewTicketModal.eventName || "Event Ticket",
-                                    img: viewTicketModal.eventImg || "https://images.unsplash.com/photo-1540575467063-178a50c2df87",
-                                    date: viewTicketModal.eventDate || "—",
-                                    time: viewTicketModal.eventTime || "—",
-                                    location: viewTicketModal.eventLocation || "Venue",
-                                    category: viewTicketModal.events?.category || "Event"
-                                }}
-                                showDownload={true}
-                                branding={siteBranding}
-                            />
+                <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.85)", zIndex: 11000, padding: "60px 20px", backdropFilter: "blur(12px)", overflowY: "auto", overflowX: "hidden" }} onClick={() => setViewTicketModal(null)}>
+                    <div style={{ width: "100%", maxWidth: "850px", margin: "0 auto", position: "relative" }} onClick={e => e.stopPropagation()}>
+                        <button 
+                            onClick={() => setViewTicketModal(null)} 
+                            className="absolute -top-4 -right-4 md:-top-6 md:-right-6 z-[100] p-2.5 bg-white text-slate-900 hover:text-pink-600 hover:scale-110 transition-all rounded-full shadow-2xl border border-slate-200"
+                        >
+                            <X size={20} className="stroke-[3px]" />
+                        </button>
+                        
+                        <DigitalTicket 
+                            booking={viewTicketModal}
+                            event={{
+                                title: viewTicketModal.eventName || "Event Ticket",
+                                img: viewTicketModal.eventImg || "https://images.unsplash.com/photo-1540575467063-178a50c2df87",
+                                date: viewTicketModal.eventDate || "—",
+                                time: viewTicketModal.eventTime || "—",
+                                location: viewTicketModal.eventLocation || "Venue",
+                                category: viewTicketModal.events?.category || "Event"
+                            }}
+                            showDownload={true}
+                            branding={siteBranding}
+                        />
 
-                            {/* Meeting Access Button if applicable */}
-                            {(viewTicketModal.meetingUrl || viewTicketModal.isVirtual) && (
-                                <div className="mt-4 px-4">
-                                    <JoinNowButton 
-                                        eventId={viewTicketModal.eventId} 
-                                        className="w-full !py-4 !text-xs !tracking-[0.2em] !shadow-xl"
-                                    />
-                                </div>
-                            )}
-                        </div>
+                        {/* Meeting Access Button if applicable */}
+                        {(viewTicketModal.meetingUrl || viewTicketModal.isVirtual) && (
+                            <div className="mt-4 px-4">
+                                <JoinNowButton 
+                                    eventId={viewTicketModal.eventId} 
+                                    className="w-full !py-4 !text-xs !tracking-[0.2em] !shadow-xl"
+                                />
+                            </div>
+                        )}
                     </div>
-
-                    {/* Mobile View Modal */}
-                    <MobileTicketView 
-                        booking={viewTicketModal}
-                        event={{
-                            title: viewTicketModal.eventName || "Event Ticket",
-                            img: viewTicketModal.eventImg || "https://images.unsplash.com/photo-1540575467063-178a50c2df87",
-                            date: viewTicketModal.eventDate || "—",
-                            time: viewTicketModal.eventTime || "—",
-                            location: viewTicketModal.eventLocation || "Venue",
-                            category: viewTicketModal.events?.category || "Event"
-                        }}
-                        ticket={null}
-                        onClose={() => setViewTicketModal(null)}
-                        branding={siteBranding}
-                    />
-                </>
+                </div>
             )}
 
             {/* View Invoice Modal */}
             {viewInvoiceModal && (
-                <>
-                    {/* Desktop View Modal */}
-                    <div className="hidden md:flex" style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.85)", alignItems: "center", justifyContent: "center", zIndex: 11000, padding: "20px", backdropFilter: "blur(12px)", overflowY: "auto" }} onClick={() => setViewInvoiceModal(null)}>
-                        <div style={{ width: "100%", maxWidth: "900px", position: "relative" }} onClick={e => e.stopPropagation()}>
-                            <button 
-                                onClick={() => setViewInvoiceModal(null)} 
-                                className="absolute top-4 right-4 z-[100] p-2 bg-slate-900/10 hover:bg-slate-900/20 text-slate-900 hover:text-pink-600 transition-all rounded-full"
-                            >
-                                <X size={20} />
-                            </button>
-                            
-                            <DigitalInvoice 
-                                booking={viewInvoiceModal}
-                                event={{
-                                    title: viewInvoiceModal.eventName || "Event Booking",
-                                    date: viewInvoiceModal.eventDate || "—",
-                                    location: viewInvoiceModal.eventLocation || "Venue"
-                                }}
-                                branding={siteBranding}
-                            />
-                        </div>
+                <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.85)", zIndex: 11000, padding: "40px 20px", backdropFilter: "blur(12px)", overflowY: "auto", overflowX: "hidden" }} onClick={() => setViewInvoiceModal(null)}>
+                    <div style={{ width: "100%", maxWidth: "900px", margin: "0 auto", position: "relative" }} onClick={e => e.stopPropagation()}>
+                        <button 
+                            onClick={() => setViewInvoiceModal(null)} 
+                            className="absolute -top-4 -right-4 md:-top-6 md:-right-6 z-[100] p-2.5 bg-white text-slate-900 hover:text-pink-600 hover:scale-110 transition-all rounded-full shadow-2xl border border-slate-200"
+                        >
+                            <X size={20} className="stroke-[3px]" />
+                        </button>
+                        
+                        <DigitalInvoice 
+                            booking={viewInvoiceModal}
+                            event={{
+                                title: viewInvoiceModal.eventName || "Event Booking",
+                                date: viewInvoiceModal.eventDate || "—",
+                                location: viewInvoiceModal.eventLocation || "Venue"
+                            }}
+                            branding={siteBranding}
+                        />
                     </div>
-
-                    {/* Mobile View Modal */}
-                    <MobileInvoiceView 
-                        booking={viewInvoiceModal}
-                        event={{
-                            title: viewInvoiceModal.eventName || "Event Booking",
-                            date: viewInvoiceModal.eventDate || "—",
-                            location: viewInvoiceModal.eventLocation || "Venue"
-                        }}
-                        onClose={() => setViewInvoiceModal(null)}
-                        branding={siteBranding}
-                    />
-                </>
+                </div>
             )}
         </div>
     );

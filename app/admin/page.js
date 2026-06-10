@@ -38,6 +38,7 @@ import DirectOnboardingAdmin from "@/app/admin/components/DirectOnboardingAdmin"
 import AdminRevenueCommissionDashboard from "@/app/admin/components/AdminRevenueCommissionDashboard";
 import AdminCancellationRequests from "@/app/admin/components/AdminCancellationRequests";
 import RewardsManagement from "@/app/admin/components/RewardsManagement";
+import SponsorsPartnersAdmin from "@/app/admin/components/SponsorsPartnersAdmin";
 import { 
     MoreVertical, Zap, Briefcase, LayoutDashboard, Settings, Video, Image as ImageIcon, 
     Sparkles, CheckCircle, Ticket, Users, Menu, Bell, Save, X, Plus, Trash2, Mail, Lock, 
@@ -3587,6 +3588,7 @@ function AdminHomePage() {
                                 <NavLink id="coupons" label="Advanced Coupons" icon={Tag} active={activeTab === "coupons"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
                                 <NavLink id="promotions" label="Promotional Hub" icon={Sparkles} active={activeTab === "promotions"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
                                 <NavLink id="rewards_vouchers" label="Rewards & Vouchers" icon={Gift} active={activeTab === "rewards_vouchers"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
+                                <NavLink id="sponsors_partners" label="Sponsors & Partners" icon={Handshake} active={activeTab === "sponsors_partners"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
                                 <NavLink id="banner_ads" label="Marketing Banners" icon={Megaphone} active={activeTab === "banner_ads"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
                                 <NavLink id="hero" label="Hero Banner" icon={ImageIcon} active={activeTab === "hero"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
                                 <NavLink id="video_banner" label="Video Banner" icon={Video} active={activeTab === "video_banner"} setActiveTab={setActiveTab} setIsSidebarOpen={setIsSidebarOpen} />
@@ -4930,6 +4932,10 @@ function AdminHomePage() {
 
                     {activeTab === "rewards_vouchers" && (
                         <RewardsManagement />
+                    )}
+
+                    {activeTab === "sponsors_partners" && (
+                        <SponsorsPartnersAdmin />
                     )}
                     
                     {activeTab === "promotions" && (

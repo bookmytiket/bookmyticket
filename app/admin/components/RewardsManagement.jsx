@@ -24,6 +24,10 @@ export default function RewardsManagement() {
         end_date: '',
         total_quantity: 0
     });
+    
+    const fileInputRef = React.useRef(null);
+    const [uploadingCampaignId, setUploadingCampaignId] = useState(null);
+    const [isUploading, setIsUploading] = useState(false);
 
     useEffect(() => {
         fetchCampaigns();
@@ -65,6 +69,53 @@ export default function RewardsManagement() {
         }
     };
 
+    const triggerFileUpload = (campaignId) => {
+        setUploadingCampaignId(campaignId);
+        if (fileInputRef.current) {
+            fileInputRef.current.click();
+        }
+    };
+
+    const handleFileUpload = async (e) => {
+        const file = e.target.files[0];
+        if (!file || !uploadingCampaignId) return;
+
+        setIsUploading(true);
+        try {
+            const text = await file.text();
+            // Parse CSV: split by newlines, split by comma, take first column, filter out empty
+            const codes = text.split(/\r?\n/)
+                .map(line => line.split(',')[0].trim())
+                .filter(code => code && code.length > 0 && code.toLowerCase() !== 'code' && code.toLowerCase() !== 'voucher_code');
+            
+            if (codes.length === 0) {
+                showToast('No valid codes found in CSV', 'error');
+                setIsUploading(false);
+                return;
+            }
+
+            const res = await fetch('/api/admin/rewards/vouchers/upload', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ campaign_id: uploadingCampaignId, codes })
+            });
+            const result = await res.json();
+
+            if (result.success) {
+                showToast(`Successfully uploaded ${result.count} vouchers!`, 'success');
+                fetchCampaigns(); // Refresh to update count
+            } else {
+                showToast(result.error || 'Upload failed', 'error');
+            }
+        } catch (err) {
+            showToast('Error parsing file', 'error');
+        } finally {
+            setIsUploading(false);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+            setUploadingCampaignId(null);
+        }
+    };
+
     if (loading) return <div className="p-10 text-center text-pink-500 font-bold animate-pulse">Loading Campaigns...</div>;
 
     return (
@@ -87,6 +138,14 @@ export default function RewardsManagement() {
                     {showForm ? 'Cancel Creation' : <><Plus size={20} /> New Campaign</>}
                 </button>
             </div>
+
+            <input 
+                type="file" 
+                accept=".csv" 
+                ref={fileInputRef} 
+                onChange={handleFileUpload} 
+                className="hidden" 
+            />
 
             {showForm && (
                 <form onSubmit={handleCreate} className="bg-gradient-to-br from-pink-50/50 to-purple-50/50 p-8 rounded-2xl mb-8 border border-pink-200/60 shadow-inner relative overflow-hidden">
@@ -173,6 +232,7 @@ export default function RewardsManagement() {
                             <th className="p-5">Reward Value</th>
                             <th className="p-5">Validity</th>
                             <th className="p-5">Status</th>
+                            <th className="p-5">Vouchers</th>
                             <th className="p-5">Actions</th>
                         </tr>
                     </thead>
@@ -205,8 +265,22 @@ export default function RewardsManagement() {
                                     </span>
                                 </td>
                                 <td className="p-5">
-                                    <button className="flex items-center gap-1.5 text-pink-600 hover:text-purple-700 font-bold bg-pink-50 hover:bg-pink-100 px-4 py-2 rounded-lg transition-colors border border-pink-100 cursor-pointer">
-                                        <UploadCloud size={16} /> Upload Vouchers
+                                    <div className="flex flex-col">
+                                        <span className="font-bold text-slate-700 text-lg">{c.vouchers_uploaded || 0}</span>
+                                        <span className="text-xs text-slate-400">Total Uploaded</span>
+                                    </div>
+                                </td>
+                                <td className="p-5">
+                                    <button 
+                                        onClick={() => triggerFileUpload(c.id)}
+                                        disabled={isUploading && uploadingCampaignId === c.id}
+                                        className={`flex items-center gap-1.5 font-bold px-4 py-2 rounded-lg transition-colors border cursor-pointer
+                                            ${isUploading && uploadingCampaignId === c.id 
+                                                ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed' 
+                                                : 'text-pink-600 hover:text-purple-700 bg-pink-50 hover:bg-pink-100 border-pink-100'}`}
+                                    >
+                                        <UploadCloud size={16} className={isUploading && uploadingCampaignId === c.id ? 'animate-bounce' : ''} /> 
+                                        {isUploading && uploadingCampaignId === c.id ? 'Uploading...' : 'Upload Vouchers'}
                                     </button>
                                 </td>
                             </tr>

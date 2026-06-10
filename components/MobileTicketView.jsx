@@ -108,7 +108,7 @@ export default function MobileTicketView({ booking, event, ticket, onClose, bran
             </div>
 
             {/* Scrollable Body */}
-            <div className="flex-1 overflow-y-auto px-6 py-6 pb-28 space-y-6">
+            <div className="flex-1 overflow-y-auto px-6 py-6 pb-40 space-y-6">
                 {/* Visual Pass Card */}
                 <div 
                     ref={cardRef}
@@ -181,13 +181,32 @@ export default function MobileTicketView({ booking, event, ticket, onClose, bran
                         </div>
 
                         {/* QR Code section */}
-                        <div className="flex flex-col items-center pt-2">
+                        <div className="flex flex-col items-center pt-2 pb-4">
                             <div className="p-3 bg-white rounded-3xl shadow-xl">
                                 <QRCodeSVG value={ticket?.qr_code || ticketNumber} size={150} level="H" fgColor="#020617" />
                             </div>
                             <p className="text-[9px] font-black text-white/30 uppercase tracking-widest mt-4">Scan QR at Entry Gate</p>
                             <p className="text-sm font-mono font-bold text-pink-500 mt-1">#{ticketNumber}</p>
                         </div>
+
+                        {/* Sponsors & Partners Strip */}
+                        {(branding.sponsors?.length > 0 || branding.partners?.length > 0) && (
+                            <div className="pt-4 border-t border-white/10 text-center space-y-4">
+                                <p className="text-[8px] font-black text-white/30 uppercase tracking-widest">Supported By</p>
+                                <div className="flex flex-wrap justify-center gap-4 pb-4">
+                                    {branding.sponsors?.filter(s => s.status !== 'inactive').map((sponsor, i) => (
+                                        <div key={i} className="h-8 w-auto opacity-50 contrast-200 grayscale">
+                                            <img src={sponsor.logo_url} className="h-full w-auto object-contain" alt={sponsor.name} />
+                                        </div>
+                                    ))}
+                                    {branding.partners?.filter(p => p.status !== 'inactive').map((partner, i) => (
+                                        <div key={`p-${i}`} className="h-8 w-auto opacity-50 contrast-200 grayscale">
+                                            <img src={partner.logo_url} className="h-full w-auto object-contain" alt={partner.name} />
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
 

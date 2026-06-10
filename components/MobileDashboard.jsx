@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import JoinNowButton from "./JoinNowButton";
 import TicketCard from "./TicketCard";
+import MyRewards from "./MyRewards";
 
 export default function MobileDashboard({ 
     user, 
@@ -63,6 +64,7 @@ export default function MobileDashboard({
                 {[
                     { id: "my_booking", label: "Bookings", icon: Ticket },
                     { id: "wishlist", label: "Wishlist", icon: Heart },
+                    { id: "rewards", label: "Rewards", icon: Sparkles },
                     { id: "change_password", label: "Security", icon: Lock }
                 ].map((tab) => {
                     const Icon = tab.icon;
@@ -182,24 +184,7 @@ export default function MobileDashboard({
                                                 >
                                                     Invoice
                                                 </button>
-                                                {!booking.isVendorBooking && (
-                                                    <button 
-                                                        onClick={async (e) => {
-                                                            e.target.innerText = "Wait..";
-                                                            try {
-                                                                await fetch(`/api/v1/tickets/${booking.id || booking._id}/resend`, { method: 'POST' });
-                                                                e.target.innerText = "Sent!";
-                                                                setTimeout(() => e.target.innerText = "Resend", 2000);
-                                                            } catch (err) {
-                                                                e.target.innerText = "Error";
-                                                                setTimeout(() => e.target.innerText = "Resend", 2000);
-                                                            }
-                                                        }}
-                                                        className="h-11 px-4 rounded-xl bg-purple-50 text-purple-600 border border-purple-100 text-[9px] font-black uppercase tracking-widest flex items-center justify-center hover:bg-purple-100"
-                                                    >
-                                                        Resend
-                                                    </button>
-                                                )}
+
                                             </div>
                                         </div>
 
@@ -271,6 +256,10 @@ export default function MobileDashboard({
                             </button>
                         </div>
                     </div>
+                )}
+                
+                {activeTab === "rewards" && (
+                    <MyRewards user={user} t={t} />
                 )}
             </div>
 

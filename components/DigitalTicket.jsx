@@ -65,27 +65,27 @@ export default function DigitalTicket({ booking, event, ticket: initialTicket, s
         const c = String(category || 'Event').toLowerCase();
         
         let theme = {
-            icon: <Zap className="text-pink-400" size={20} />,
-            accent: "text-pink-400",
-            titleStyle: { fontWeight: "900", letterSpacing: "-0.03em", textShadow: "0 2px 15px rgba(236,72,153,0.5)" },
+            icon: <Zap className="text-[#FEFF00]" size={20} />,
+            accent: "text-[#FEFF00]",
+            titleStyle: { fontWeight: "900", letterSpacing: "-0.03em", textShadow: "0 2px 15px rgba(254,255,0,0.5)" },
             overlay: "from-fuchsia-900/90 via-purple-900/80 to-slate-900/90",
             glow1: "bg-pink-600",
-            glow2: "bg-purple-600",
-            border: "border-pink-500/30",
+            glow2: "bg-[#FEFF00]",
+            border: "border-[#FEFF00]/40",
             fallbackBg: "#4a044e"
         };
 
         if (c.includes('marathon') || c.includes('sport')) {
             theme = {
                 ...theme,
-                icon: <Trophy className="text-pink-400" size={20} />,
-                titleStyle: { fontFamily: "'Impact', 'Arial Black', sans-serif", letterSpacing: "-0.05em", transform: "skewX(-10deg)", textShadow: "0 2px 15px rgba(236,72,153,0.5)" },
+                icon: <Trophy className="text-[#FEFF00]" size={20} />,
+                titleStyle: { fontFamily: "'Impact', 'Arial Black', sans-serif", letterSpacing: "-0.05em", transform: "skewX(-10deg)", textShadow: "0 2px 15px rgba(254,255,0,0.5)" },
             };
         } else if (c.includes('corporate') || c.includes('business')) {
             theme = {
                 ...theme,
-                icon: <Briefcase className="text-pink-400" size={20} />,
-                titleStyle: { fontWeight: "300", letterSpacing: "0.05em", textShadow: "0 2px 15px rgba(236,72,153,0.5)" },
+                icon: <Briefcase className="text-[#FEFF00]" size={20} />,
+                titleStyle: { fontWeight: "300", letterSpacing: "0.05em", textShadow: "0 2px 15px rgba(254,255,0,0.5)" },
             };
         }
 
@@ -286,7 +286,7 @@ export default function DigitalTicket({ booking, event, ticket: initialTicket, s
                 {/* Right Section: Stub */}
                 <div className="flex-1 bg-white/5 p-8 flex flex-col items-center justify-center relative">
                     <div 
-                        className={`p-3 bg-gradient-to-tr from-yellow-400 to-purple-600 rounded-2xl shadow-2xl transition-all cursor-pointer ${!isRevealed && !isCapturing ? 'blur-md grayscale opacity-20' : ''}`}
+                        className={`p-3 bg-gradient-to-tr from-[#FEFF00] via-pink-500 to-purple-600 rounded-2xl shadow-2xl transition-all cursor-pointer ${!isRevealed && !isCapturing ? 'blur-md grayscale opacity-20' : ''}`}
                         onClick={() => setIsRevealed(!isRevealed)}
                     >
                         <div className="bg-white p-1 rounded-xl">
@@ -303,15 +303,25 @@ export default function DigitalTicket({ booking, event, ticket: initialTicket, s
                     <div className="mt-auto pt-4 flex flex-col items-center gap-1.5 opacity-40">
                         <p className="text-[7px] font-black text-white uppercase tracking-[0.3em]">Sponsors & Partners</p>
                         <div className="flex items-center gap-4 px-4 py-2 rounded-full bg-white/5 border border-white/5 shadow-inner">
-                             {[
+                             {branding?.sponsors?.length > 0 ? (
+                                branding.sponsors.slice(0, 3).map((logo, idx) => (
+                                    <img key={idx} src={logo} className="h-4 w-auto brightness-0 invert opacity-80" alt="Sponsor Logo" />
+                                ))
+                             ) : [
                                 branding?.sponsor_logo_1,
                                 branding?.sponsor_logo_2,
                                 branding?.partner_logo_1,
                                 branding?.partner_logo_2
-                             ].filter(Boolean).slice(0, 2).map((logo, idx) => (
-                                <img key={idx} src={logo} className="h-4 w-auto brightness-0 invert opacity-80" alt="Logo" />
-                             ))}
-                             {![branding?.sponsor_logo_1, branding?.sponsor_logo_2, branding?.partner_logo_1, branding?.partner_logo_2].some(Boolean) && (
+                             ].filter(Boolean).length > 0 ? (
+                                [
+                                    branding?.sponsor_logo_1,
+                                    branding?.sponsor_logo_2,
+                                    branding?.partner_logo_1,
+                                    branding?.partner_logo_2
+                                ].filter(Boolean).slice(0, 2).map((logo, idx) => (
+                                    <img key={idx} src={logo} className="h-4 w-auto brightness-0 invert opacity-80" alt="Logo" />
+                                ))
+                             ) : (
                                 <span className="text-[7px] font-black text-white uppercase tracking-[0.2em]">{branding?.name || "BookMyTicket"}</span>
                              )}
                         </div>
@@ -336,7 +346,7 @@ export default function DigitalTicket({ booking, event, ticket: initialTicket, s
                     <button 
                         onClick={downloadTicket}
                         disabled={downloading}
-                        className={`flex items-center gap-3 px-14 py-4 bg-white text-slate-950 rounded-2xl font-black uppercase tracking-[0.2em] text-[12px] hover:scale-105 active:scale-95 transition-all shadow-2xl ${details.neonColor}`}
+                        className={`flex items-center gap-3 px-14 py-4 bg-[#FEFF00] text-slate-950 rounded-2xl font-black uppercase tracking-[0.2em] text-[12px] hover:scale-105 active:scale-95 transition-all shadow-2xl ${details.neonColor}`}
                     >
                         {downloading ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
                         {downloading ? "Rendering High-Quality..." : "Download Digital Pass"}

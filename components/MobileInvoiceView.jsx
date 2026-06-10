@@ -24,7 +24,7 @@ export default function MobileInvoiceView({ booking, event, onClose, branding = 
 
     if (!booking || !event) return null;
 
-    const invoiceNumber = `INV-${booking.id.slice(0, 8).toUpperCase()}`;
+    const invoiceNumber = `INV-${(booking.id || booking._id || "XXXXXXXX").slice(0, 8).toUpperCase()}`;
     const date = new Date(booking.created_at || Date.now()).toLocaleDateString('en-IN', {
         day: '2-digit',
         month: 'short',
@@ -180,6 +180,25 @@ export default function MobileInvoiceView({ booking, event, onClose, branding = 
                             </p>
                         </div>
                     </div>
+
+                    {/* Sponsors & Partners Strip */}
+                    {(branding.sponsors?.length > 0 || branding.partners?.length > 0) && (
+                        <div className="pt-6 mt-6 border-t border-white/10 text-center space-y-4">
+                            <p className="text-[8px] font-black text-white/30 uppercase tracking-widest">Supported By</p>
+                            <div className="flex flex-wrap justify-center gap-4">
+                                {branding.sponsors?.filter(s => s.status !== 'inactive').map((sponsor, i) => (
+                                    <div key={i} className="h-8 w-auto opacity-50 contrast-200 grayscale">
+                                        <img src={sponsor.logo_url} className="h-full w-auto object-contain" alt={sponsor.name} />
+                                    </div>
+                                ))}
+                                {branding.partners?.filter(p => p.status !== 'inactive').map((partner, i) => (
+                                    <div key={`p-${i}`} className="h-8 w-auto opacity-50 contrast-200 grayscale">
+                                        <img src={partner.logo_url} className="h-full w-auto object-contain" alt={partner.name} />
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
 
