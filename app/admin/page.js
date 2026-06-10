@@ -2775,15 +2775,16 @@ function AdminHomePage() {
 
             // Hard Delete
             setAdminDeletionProgress(["Permanently Deleting Event...", "Removing Dependencies..."]);
-            if (event.event_category === 'Tournament') {
-                await supabase.from("tournament_events").delete().eq("id", event.id);
-            } else if (event.event_category === 'Marathon') {
-                await supabase.from("marathon_config").delete().eq("id", event.id);
-            } else {
-                await supabase.from("bookings").delete().eq("event_id", event.id);
+            const res = await fetch('/api/admin/events/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ event_id: event.id, event_category: event.event_category })
+            });
+            const data = await res.json();
+            
+            if (!data.success) {
+                throw new Error(data.error || "Failed to delete event via API");
             }
-            setAdminDeletionProgress(prev => [...prev, "Removing from Database..."]);
-            await deleteEvent({ id: event.id });
             
             setAdminDeletionProgress(prev => [...prev, "Completed"]);
             setTimeout(() => {
