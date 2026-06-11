@@ -117,51 +117,8 @@ export async function POST(request) {
         const nowIso = new Date().toISOString();
 
         // 3.5 Auto-Assign Bib Number if Configured (for Marathons/Sports)
-        let assignedBibNumber = null;
-        try {
-            const packageId = session.package_id || "default";
-            
-            // Query bib config for the specific package, or fallback to any config for the event
-            let { data: bibConfig, error: bibErr } = await supabaseAdmin
-                .from("marathon_bib_config")
-                .select("*")
-                .eq("event_id", session.event_id)
-                .ilike("category_id", packageId)
-                .maybeSingle();
-
-            if (!bibConfig) {
-                const { data: fallbackConfig } = await supabaseAdmin
-                    .from("marathon_bib_config")
-                    .select("*")
-                    .eq("event_id", session.event_id)
-                    .limit(1)
-                    .maybeSingle();
-                if (fallbackConfig) bibConfig = fallbackConfig;
-            }
-
-            if (bibConfig && bibConfig.current_number <= bibConfig.end_number) {
-                assignedBibNumber = `${bibConfig.prefix ? bibConfig.prefix + '-' : ''}${bibConfig.current_number}`;
-                
-                // Increment current_number
-                await supabaseAdmin
-                    .from("marathon_bib_config")
-                    .update({ current_number: bibConfig.current_number + 1 })
-                    .eq("id", bibConfig.id);
-                
-                // Save to participant_bibs
-                await supabaseAdmin
-                    .from("participant_bibs")
-                    .insert({
-                        event_id: session.event_id,
-                        booking_id: bookingId,
-                        category_id: packageId,
-                        bib_number: assignedBibNumber
-                    });
-            }
-        } catch (bibAssignErr) {
-            console.error("Bib Assignment Error:", bibAssignErr);
-        }
-
+        let assignedBibNumber = await assignBibNumber(session.event_id, bookingId, session.package_id || "default");
+        
         // 4. Update Booking Status to Confirmed immediately
         const updatedCustomerDetails = {
             ...(booking.customer_details || {}),

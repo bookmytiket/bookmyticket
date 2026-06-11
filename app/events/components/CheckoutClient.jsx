@@ -844,9 +844,34 @@ export default function CheckoutClient({ id: propId, sessionToken }) {
 
             if (error) throw error;
 
+            let finalBibNumber = null;
+            try {
+                // Auto-assign BIB if this event uses it
+                const bibRes = await fetch('/api/booking-session/assign-bib', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        eventId: event.id,
+                        bookingId: booking.id,
+                        categoryName: packageData?.name || ticketCategory
+                    })
+                });
+                const bibData = await bibRes.json();
+                if (bibData.success && bibData.bibNumber) {
+                    finalBibNumber = bibData.bibNumber;
+                    booking.customer_details = { ...booking.customer_details, bib_number: finalBibNumber };
+                }
+            } catch(e) {
+                console.error("BIB assign error in legacy flow:", e);
+            }
+
             try {
                 if (participantParam) {
                     const participantData = JSON.parse(participantParam);
+                    // Add bib number to participant data if generated
+                    if (finalBibNumber) {
+                        participantData.bib_number = finalBibNumber;
+                    }
                     await fetch('/api/runner-registration', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },

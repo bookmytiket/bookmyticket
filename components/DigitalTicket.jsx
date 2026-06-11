@@ -105,10 +105,11 @@ export default function DigitalTicket({ booking, event, ticket: initialTicket, s
         }
 
         const bibNumber = booking?.bib_number || booking?.customer_details?.bib_number || ticket?.bib_number;
+        const showBib = bibNumber && event?.bib_display_on_ticket !== false;
 
         return {
             label: category || "Event",
-            fields: bibNumber ? [
+            fields: showBib ? [
                 { label: "ATTENDEE", value: booking?.customer_name || booking?.customer_details?.name || booking?.customer_email || "Guest" },
                 { label: "EVENT TYPE", value: event?.category || "General" },
                 { label: "CATEGORY", value: booking?.customer_details?.packageId || zone },
