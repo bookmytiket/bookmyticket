@@ -728,6 +728,8 @@ export default function CheckoutClient({ id: propId, sessionToken }) {
                         paymentMethod: 'Free',
                         location: event.location,
                         meetingUrl: event.meetingUrl,
+                        customer_name: (rsvpAnswers && rsvpAnswers[Object.keys(rsvpAnswers).find(k => ["name", "full name", "fullname"].includes(k.toLowerCase()))]) || user?.user_metadata?.full_name || "Guest",
+                        bib_number: verifyData?.bibNumber
                     });
                     setBookingDone(true);
                 } else {

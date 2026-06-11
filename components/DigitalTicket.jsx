@@ -104,7 +104,7 @@ export default function DigitalTicket({ booking, event, ticket: initialTicket, s
             }).join(', ');
         }
 
-        const bibNumber = booking?.customer_details?.bib_number;
+        const bibNumber = booking?.bib_number || booking?.customer_details?.bib_number || ticket?.bib_number;
 
         return {
             label: category || "Event",
@@ -246,18 +246,20 @@ export default function DigitalTicket({ booking, event, ticket: initialTicket, s
                                     <p className="text-xs font-black text-white truncate">
                                         {booking?.customer_details?.showtimeDate 
                                             ? new Date(booking.customer_details.showtimeDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) 
-                                            : (event.date || "TBA")}
+                                            : (event.event_start_date || event.startDate || event.event_date || event.date || "TBA")}
                                     </p>
                                 </div>
-                                {booking?.customer_details?.showtimeStart && (
+                                { (booking?.customer_details?.showtimeStart || event.event_start_time || event.time) && (
                                     <div className="space-y-1 min-w-0">
                                         <div className="flex items-center gap-1.5 text-white/60">
                                             <Zap size={10} />
                                             <p className="text-[8px] font-black uppercase tracking-widest">Time</p>
                                         </div>
                                         <p className="text-xs font-black text-white truncate">
-                                            {new Date(`2000-01-01T${booking.customer_details.showtimeStart}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
-                                            {booking.customer_details.showtimeName && ` (${booking.customer_details.showtimeName})`}
+                                            {booking?.customer_details?.showtimeStart 
+                                                ? new Date(`2000-01-01T${booking.customer_details.showtimeStart}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+                                                : (event.event_start_time || event.startTime || event.event_time || event.time || "TBA")}
+                                            {booking?.customer_details?.showtimeName && ` (${booking.customer_details.showtimeName})`}
                                         </p>
                                     </div>
                                 )}

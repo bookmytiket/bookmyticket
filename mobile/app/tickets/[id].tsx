@@ -296,8 +296,8 @@ export default function TicketDetailScreen() {
             {/* Ticket Body - Glassmorphism details */}
             <View style={styles.ticketBody}>
               <RNView style={styles.primaryDetails}>
-                <DetailItem icon={<Calendar size={14} color={colors.tint} />} label="DATE" value={event.date || 'TBA'} />
-                <DetailItem icon={<Clock size={14} color={colors.tint} />} label="TIME" value={event.time || 'TBA'} />
+                <DetailItem icon={<Calendar size={14} color={colors.tint} />} label="DATE" value={event.event_start_date || event.startDate || event.event_date || event.date || 'TBA'} />
+                <DetailItem icon={<Clock size={14} color={colors.tint} />} label="TIME" value={event.event_start_time || event.startTime || event.event_time || event.time || 'TBA'} />
                 <DetailItem icon={<MapPin size={14} color={colors.tint} />} label="VENUE" value={event.location || event.city || 'TBA'} />
               </RNView>
 
@@ -307,8 +307,8 @@ export default function TicketDetailScreen() {
                   <Text style={styles.infoValue}>{booking.customer_details?.name || booking.attendee_name || 'Guest'}</Text>
                 </View>
                 <View style={styles.infoCol}>
-                  <Text style={styles.infoLabel}>{booking.customer_details?.bib_number ? 'BIB NUMBER' : 'QUANTITY'}</Text>
-                  <Text style={styles.infoValue}>{booking.customer_details?.bib_number || `${booking.quantity || 1} Person(s)`}</Text>
+                  <Text style={styles.infoLabel}>{booking.bib_number || booking.customer_details?.bib_number ? 'BIB NUMBER' : 'QUANTITY'}</Text>
+                  <Text style={styles.infoValue}>{booking.bib_number || booking.customer_details?.bib_number || `${booking.quantity || 1} Person(s)`}</Text>
                 </View>
                 <View style={styles.infoCol}>
                   <Text style={styles.infoLabel}>BOOKING ID</Text>

@@ -104,10 +104,13 @@ export default function DigitalInvoice({ booking, event, branding = {} }) {
                                 <User size={14} className="text-yellow-500" />
                                 <h3 className="text-[10px] font-black uppercase tracking-tight">Billed To</h3>
                             </div>
-                            <div className="bg-slate-50 rounded-lg p-3 border border-slate-100">
+                            <div className="bg-slate-50 rounded-lg p-3 border border-slate-100 h-[100px]">
                                 <p className="text-sm font-black text-slate-900 mb-0">{booking.customer_details?.name || "Guest User"}</p>
                                 <p className="text-[10px] font-bold text-slate-500">{booking.customer_details?.email}</p>
                                 <p className="text-[10px] font-bold text-slate-500 mt-0.5">{booking.customer_details?.phone}</p>
+                                {(booking.bib_number || booking.customer_details?.bib_number) && (
+                                    <p className="text-[10px] font-black text-pink-600 mt-2 uppercase tracking-widest border border-pink-200 bg-pink-50 inline-block px-2 py-0.5 rounded">BIB: {booking.bib_number || booking.customer_details?.bib_number}</p>
+                                )}
                             </div>
                         </div>
 
@@ -116,14 +119,14 @@ export default function DigitalInvoice({ booking, event, branding = {} }) {
                                 <FileText size={14} className="text-yellow-500" />
                                 <h3 className="text-[10px] font-black uppercase tracking-tight">Event Details</h3>
                             </div>
-                            <div className="bg-slate-50 rounded-lg p-3 border border-slate-100">
+                            <div className="bg-slate-50 rounded-lg p-3 border border-slate-100 h-[100px]">
                                 <p className="text-sm font-black text-slate-900 mb-0">{event.title}</p>
-                                <div className="flex items-center gap-3 mt-0.5">
+                                    <div className="flex flex-col gap-1 mt-1">
+                                        <div className="flex items-center gap-1 text-[10px] font-bold text-slate-500">
+                                            <Calendar size={10} /> {event.event_start_date || event.startDate || event.event_date || event.date || "TBA"} {(event.event_start_time || event.startTime || event.time) ? `at ${event.event_start_time || event.startTime || event.time}` : ''}
+                                        </div>
                                     <div className="flex items-center gap-1 text-[10px] font-bold text-slate-500">
-                                        <Calendar size={10} /> {event.date}
-                                    </div>
-                                    <div className="flex items-center gap-1 text-[10px] font-bold text-slate-500">
-                                        <MapPin size={10} /> {event.location?.split(',')[0]}
+                                        <MapPin size={10} /> {event.location?.split(',')[0] || event.venue || 'Venue TBA'}
                                     </div>
                                 </div>
                             </div>

@@ -47,12 +47,21 @@ export async function POST(request) {
                 .maybeSingle();
             if (!bErr && b) {
                 booking = b;
-                
+                const pKeys = Object.keys(participantData);
+                const findKey = (searchStrs) => {
+                    const k = pKeys.find(key => searchStrs.some(s => key.toLowerCase() === s.toLowerCase()));
+                    return k ? participantData[k] : null;
+                };
+
+                const participantName = findKey(["name", "full name", "fullname"]);
+                const participantEmail = findKey(["email", "email address", "emailaddress"]);
+                const participantPhone = findKey(["phone", "phone number", "phonenumber", "mobile"]);
+
                 // Update booking details with current session and pricing snapshot
                 const customerDetails = {
-                    name: booking.customer_details?.name || "Guest User",
-                    email: booking.customer_details?.email || "",
-                    phone: booking.customer_details?.phone || "",
+                    name: participantName || booking.customer_details?.name || "Guest User",
+                    email: participantEmail || booking.customer_details?.email || "",
+                    phone: participantPhone || booking.customer_details?.phone || "",
                     applied_campaign_id: pricingSnapshot.appliedCampaignId || null,
                     applied_campaign_code: pricingSnapshot.appliedCampaignCode || null,
                     showtime_id: participantData.showtimeId || null,
@@ -100,10 +109,20 @@ export async function POST(request) {
             const authUser = authUserData?.user;
             const fallbackName = authUser?.user_metadata?.full_name || authUser?.email || "Guest User";
 
+            const pKeys = Object.keys(participantData);
+            const findKey = (searchStrs) => {
+                const k = pKeys.find(key => searchStrs.some(s => key.toLowerCase() === s.toLowerCase()));
+                return k ? participantData[k] : null;
+            };
+
+            const participantName = findKey(["name", "full name", "fullname"]);
+            const participantEmail = findKey(["email", "email address", "emailaddress"]);
+            const participantPhone = findKey(["phone", "phone number", "phonenumber", "mobile"]);
+
             const customerDetails = {
-                name: profile?.full_name || fallbackName,
-                email: profile?.email || authUser?.email || "",
-                phone: profile?.phone || authUser?.phone || "",
+                name: participantName || profile?.full_name || fallbackName,
+                email: participantEmail || profile?.email || authUser?.email || "",
+                phone: participantPhone || profile?.phone || authUser?.phone || "",
                 applied_campaign_id: pricingSnapshot.appliedCampaignId || null,
                 applied_campaign_code: pricingSnapshot.appliedCampaignCode || null,
                 showtime_id: participantData.showtimeId || null,

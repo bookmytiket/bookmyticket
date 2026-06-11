@@ -91,7 +91,7 @@ export async function executeJob({ jobId, jobType, bookingId, payload = {}, orig
             success = res.success;
             if (!res.success) errorMsg = res.error || res.message || "Reward unlocking failed";
         } else if (jobType === "notifications") {
-            // Run email/SMS/WhatsApp notifications
+            // Run email/SMS/WhatsApp notifications via old API
             if (payload.phoneNumber || payload.email) {
                 const targetOrigin = origin || process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
                 const res = await fetch(`${targetOrigin}/api/comm/trigger`, {
@@ -119,6 +119,14 @@ export async function executeJob({ jobId, jobType, bookingId, payload = {}, orig
                 }
             } else {
                 success = true; // No contact info to notify
+            }
+
+            // New Robust Email Workflow
+            try {
+                const { sendBookingConfirmationEmail } = await import('@/lib/emailTriggers');
+                await sendBookingConfirmationEmail(bookingId);
+            } catch (err) {
+                console.error("Failed to send booking confirmation email:", err);
             }
         } else if (jobType === "event_marketing") {
             const targetOrigin = origin || process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";

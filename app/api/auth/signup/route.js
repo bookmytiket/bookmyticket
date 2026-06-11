@@ -95,6 +95,14 @@ export async function POST(request) {
             })
         }).catch(e => console.error("Server-side Welcome trigger failed", e));
 
+        // Send Email using robust workflow
+        try {
+            const { sendWelcomeEmail } = await import('@/lib/emailTriggers');
+            sendWelcomeEmail(data.user.id, email.trim().toLowerCase(), full_name).catch(console.error);
+        } catch (e) {
+            console.error("Welcome email trigger failed", e);
+        }
+
         return NextResponse.json({ success: true, userId: data.user.id });
     } catch (err) {
         console.error('[/api/auth/signup] Error:', err);
