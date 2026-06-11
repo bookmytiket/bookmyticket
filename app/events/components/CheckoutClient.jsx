@@ -392,7 +392,7 @@ export default function CheckoutClient({ id: propId, sessionToken }) {
     const isSuccess = searchParams.get('success') === 'true';
 
     const { data: existingBooking } = useSupabaseQuery('bookings', (q) => 
-        q.eq('id', bookingIdFromUrl).single(),
+        q.eq('id', bookingIdFromUrl).limit(1).maybeSingle(),
         [bookingIdFromUrl],
         { enabled: !!bookingIdFromUrl }
     );

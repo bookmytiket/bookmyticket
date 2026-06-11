@@ -32,7 +32,7 @@ export default function PaymentClient({ id: eventId, bookingId: propBookingId })
     const [cashfree, setCashfree] = useState(null);
 
     const { data: booking } = useSupabaseQuery('bookings', (q) => 
-        q.eq('id', bookingId).single(),
+        q.eq('id', bookingId).limit(1).maybeSingle(),
         [bookingId],
         { enabled: !!bookingId }
     );

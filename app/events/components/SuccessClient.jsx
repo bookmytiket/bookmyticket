@@ -20,7 +20,7 @@ export default function SuccessClient({ eventId, bookingId }) {
     const [copiedRewardId, setCopiedRewardId] = useState(null);
 
     const { data: booking, loading: bookingLoading } = useSupabaseQuery('bookings', (q) => 
-        q.select('*, events(*)').eq('id', bookingId).single(),
+        q.select('*, events(*)').eq('id', bookingId).limit(1).maybeSingle(),
         [bookingId]
     );
 
