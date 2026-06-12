@@ -46,6 +46,7 @@ import { reverseGeocode, geocode } from "@/lib/googleMaps";
 import TransactionHistory from "./components/TransactionHistory";
 import CategorySelection from "./components/CategorySelection";
 import KYCOnboarding from "./components/KYCOnboarding/KYCOnboarding";
+import AllBookingsPage from "./components/AllBookingsPage";
 class OrganiserErrorBoundary extends Component {
   state = { error: null };
   static getDerivedStateFromError(error) {
@@ -7483,6 +7484,23 @@ function OrganiserPanel() {
                                             Publish Event
                                           </button>
                                         )}
+                                        {ev.type === "Marathon" && (
+                                          <Link
+                                            title="Download Participants Report"
+                                            href={`/organiser/marathon/dashboard/${ev.id}?tab=participants`}
+                                            style={{
+                                              border: `1px solid ${t.border}`,
+                                              background: t.cardBg,
+                                              color: "#ec4899",
+                                              padding: "8px",
+                                              borderRadius: "8px",
+                                              cursor: "pointer",
+                                              display: "inline-flex"
+                                            }}
+                                          >
+                                            <Download size={16} />
+                                          </Link>
+                                        )}
                                         {(ev.banner || ev.img) && (
                                             <a 
                                                 href={ev.banner || ev.img} 
@@ -8913,383 +8931,32 @@ function OrganiserPanel() {
         case "rejected_bookings":
         case "booking_report":
         case "event_bookings": {
-          const statusFilter =
-            activeTab === "completed_bookings"
-              ? "Confirmed"
-              : activeTab === "pending_bookings"
-                ? "Pending"
-                : activeTab === "rejected_bookings"
-                  ? "Cancelled"
-                  : "all";
+          if (activeTab === "booking_report") {
+            return (
+              <BookingAnalytics
+                events={eventsData}
+                bookings={bookingsData}
+                theme={theme}
+              />
+            );
+          }
 
           const myEventIds = new Set(events.map((e) => String(e.id)));
           const myBookings = convexBookings.filter((b) =>
             myEventIds.has(String(b.event_id)) && b.status !== "Pending"
           );
-          const filtered =
-            statusFilter === "all" ||
-            activeTab === "all_bookings" ||
-            activeTab === "event_bookings"
-              ? myBookings
-              : myBookings.filter((b) => b.status === statusFilter);
-
-          const viewTitle =
-            activeTab === "completed_bookings"
-              ? "Completed Bookings"
-              : activeTab === "pending_bookings"
-                ? "Pending Bookings"
-                : activeTab === "rejected_bookings"
-                  ? "Rejected Bookings"
-                  : activeTab === "booking_report"
-                    ? "Booking Report"
-                    : "All Bookings";
-
-          const Breadcrumb = ({ title }) => (
-            <div
-              className="breadcrumb"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                marginBottom: "24px",
-                fontSize: "14px",
-                color: t.textSub,
-              }}
-            >
-              <div
-                style={{ display: "flex", alignItems: "center", gap: "4px" }}
-              >
-                <Home size={14} />
-                <span>Bookings</span>
-              </div>
-              <ChevronDown size={14} style={{ transform: "rotate(-90deg)" }} />
-              <div style={{ color: "#3b82f6", fontWeight: 700 }}>{title}</div>
-            </div>
-          );
 
           return (
-            <div>
-              {/* Production Diagnostic: Show warning if Supabase is disconnected */}
-              {!supabase && (
-                <div
-                  style={{
-                    margin: "20px auto",
-                    padding: "16px",
-                    background: "#fef2f2",
-                    border: "1px solid #fee2e2",
-                    borderRadius: "12px",
-                    color: "#b91c1c",
-                    fontSize: "14px",
-                    fontWeight: 700,
-                    textAlign: "center",
-                    maxWidth: "600px",
-                  }}
-                >
-                  ⚠️ Warning: Authentication & Database System Disconnected.{" "}
-                  <br />
-                  <span style={{ fontWeight: 400, fontSize: "12px" }}>
-                    Please ensure NEXT_PUBLIC_SUPABASE_URL and NON_ANON_KEY are
-                    set in Vercel.
-                  </span>
-                </div>
-              )}
-
-              <Breadcrumb title={viewTitle} />
-              <div
-                style={{
-                  backgroundColor: t.cardBg,
-                  padding: "32px",
-                  borderRadius: "16px",
-                  border: `1px solid ${t.border}`,
-                  boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)",
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    marginBottom: "32px",
-                  }}
-                >
-                  <h3
-                    style={{
-                      fontSize: "24px",
-                      fontWeight: 800,
-                      color: t.textMain,
-                      margin: 0,
-                    }}
-                  >
-                    {viewTitle}
-                  </h3>
-                  {activeTab !== "booking_report" && (
-                    <div style={{ display: "flex", gap: "12px" }}>
-                      <div
-                        style={{
-                          padding: "8px 16px",
-                          borderRadius: "8px",
-                          backgroundColor: t.bg,
-                          border: `1px solid ${t.border}`,
-                          fontSize: "14px",
-                          color: t.textSub,
-                        }}
-                      >
-                        Total Bookings:{" "}
-                        <span style={{ fontWeight: 800, color: t.textMain }}>
-                          {filtered.length}
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {activeTab === "booking_report" ? (
-                  <BookingAnalytics
-                    events={eventsData}
-                    bookings={bookingsData}
-                    theme={theme}
-                  />
-                ) : (
-                  <div style={{ overflowX: "auto" }}>
-                    <table
-                      style={{
-                        width: "100%",
-                        borderCollapse: "separate",
-                        borderSpacing: "0 8px",
-                      }}
-                    >
-                      <thead>
-                        <tr style={{ textAlign: "left" }}>
-                          <th
-                            style={{
-                              padding: "12px 16px",
-                              color: t.textSub,
-                              fontSize: "13px",
-                              fontWeight: 700,
-                            }}
-                          >
-                            Order ID
-                          </th>
-                          <th
-                            style={{
-                              padding: "12px 16px",
-                              color: t.textSub,
-                              fontSize: "13px",
-                              fontWeight: 700,
-                            }}
-                          >
-                            Event Name
-                          </th>
-                          <th
-                            style={{
-                              padding: "12px 16px",
-                              color: t.textSub,
-                              fontSize: "13px",
-                              fontWeight: 700,
-                            }}
-                          >
-                            Customer Details
-                          </th>
-                          <th
-                            style={{
-                              padding: "12px 16px",
-                              color: t.textSub,
-                              fontSize: "13px",
-                              fontWeight: 700,
-                            }}
-                          >
-                            Tickets
-                          </th>
-                          <th
-                            style={{
-                              padding: "12px 16px",
-                              color: t.textSub,
-                              fontSize: "13px",
-                              fontWeight: 700,
-                            }}
-                          >
-                            Amount
-                          </th>
-                          <th
-                            style={{
-                              padding: "12px 16px",
-                              color: t.textSub,
-                              fontSize: "13px",
-                              fontWeight: 700,
-                            }}
-                          >
-                            Status
-                          </th>
-                          <th
-                            style={{
-                              padding: "12px 16px",
-                              color: t.textSub,
-                              fontSize: "13px",
-                              fontWeight: 700,
-                            }}
-                          >
-                            Details
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filtered.length === 0 ? (
-                          <tr>
-                            <td
-                              colSpan={6}
-                              style={{
-                                textAlign: "center",
-                                padding: "64px",
-                                color: t.textSub,
-                              }}
-                            >
-                              No {statusFilter.toLowerCase()} bookings found.
-                            </td>
-                          </tr>
-                        ) : (
-                          filtered.map((b) => (
-                            <tr
-                              key={b.id}
-                              style={{
-                                backgroundColor: t.bg,
-                                borderRadius: "12px",
-                                boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
-                              }}
-                            >
-                              <td
-                                style={{
-                                  padding: "20px 16px",
-                                  borderRadius: "12px 0 0 12px",
-                                  fontSize: "13px",
-                                  fontWeight: 800,
-                                  color: t.textMain,
-                                }}
-                              >
-                                #{b.id.slice(-8).toUpperCase()}
-                              </td>
-                              <td
-                                style={{
-                                  padding: "20px 16px",
-                                  fontSize: "14px",
-                                  fontWeight: 600,
-                                  color: t.textMain,
-                                }}
-                              >
-                                {b.event_name || b.eventName || "—"}
-                              </td>
-                              <td style={{ padding: "20px 16px" }}>
-                                <div
-                                  style={{
-                                    fontSize: "14px",
-                                    fontWeight: 600,
-                                    color: t.textMain,
-                                  }}
-                                >
-                                  {b.user_name ||
-                                    b.userName ||
-                                    b.customer_details?.name ||
-                                    "Guest User"}
-                                </div>
-                                <div
-                                  style={{ fontSize: "12px", color: t.textSub }}
-                                >
-                                  {b.customer_details?.email ||
-                                    b.user_id ||
-                                    b.userId}
-                                </div>
-                              </td>
-                              <td
-                                style={{
-                                  padding: "20px 16px",
-                                  fontSize: "14px",
-                                  fontWeight: 700,
-                                }}
-                              >
-                                {b.ticket_count || b.ticketCount}
-                              </td>
-                              <td
-                                style={{
-                                  padding: "20px 16px",
-                                  fontSize: "15px",
-                                  fontWeight: 800,
-                                  color: "#22c55e",
-                                }}
-                              >
-                                ₹
-                                {(
-                                  b.total_price ||
-                                  b.totalPrice ||
-                                  0
-                                ).toLocaleString()}
-                              </td>
-                              <td
-                                style={{
-                                  padding: "20px 16px",
-                                  borderRadius: "0 12px 12px 0",
-                                }}
-                              >
-                                <div style={{ display: "flex", gap: "8px" }}>
-                                  <span
-                                    style={{
-                                      padding: "6px 14px",
-                                      borderRadius: "100px",
-                                      fontSize: "11px",
-                                      fontWeight: 800,
-                                      backgroundColor:
-                                        b.status === "Confirmed"
-                                          ? "#22c55e20"
-                                          : b.status === "Scanned"
-                                            ? "#22c55e20"
-                                            : b.status === "Pending"
-                                              ? "#f59e0b20"
-                                              : "#ef444420",
-                                      color:
-                                        b.status === "Confirmed"
-                                          ? "#22c55e"
-                                          : b.status === "Scanned"
-                                            ? "#22c55e"
-                                            : b.status === "Pending"
-                                              ? "#f59e0b"
-                                              : "#ef4444",
-                                    }}
-                                  >
-                                    {b.status === "Scanned"
-                                      ? "CHECKED IN"
-                                      : b.status
-                                        ? b.status.toUpperCase()
-                                        : "UNKNOWN"}
-                                  </span>
-                                  <button
-                                    onClick={() => setViewingBookingDetails(b)}
-                                    style={{
-                                      padding: "6px 12px",
-                                      borderRadius: "8px",
-                                      border: `1px solid ${t.border}`,
-                                      background: t.cardBg,
-                                      color: t.textMain,
-                                      fontSize: "10px",
-                                      fontWeight: 800,
-                                      cursor: "pointer",
-                                      display: "flex",
-                                      alignItems: "center",
-                                      gap: "4px",
-                                    }}
-                                  >
-                                    <Info size={12} /> INFO
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            </div>
+            <AllBookingsPage 
+              bookings={myBookings}
+              events={eventsData}
+              theme={t}
+              user={user}
+              supabase={supabase}
+            />
           );
         }
+
         case "withdraw": {
           const Breadcrumb = ({ title }) => (
             <div

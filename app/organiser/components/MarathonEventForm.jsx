@@ -1177,7 +1177,7 @@ export default function MarathonEventForm({ marathonId, isRSVP, onCancel, onPubl
             {/* Step BIB Config */}
             {currentStep === (isRSVP ? 3 : 4) && (
                 <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
-                    <BibConfiguration config={bibConfig} onChange={setBibConfig} />
+                    <BibConfiguration config={bibConfig} onChange={setBibConfig} eventId={localMarathonId} />
                     <div className="flex justify-between mt-8">
                         <button onClick={() => setCurrentStep(isRSVP ? 2 : 3)} className="px-10 py-4 text-slate-800 font-bold uppercase tracking-widest text-xs flex items-center gap-2"><ChevronLeft size={16} /> Back</button>
                         <button onClick={() => handleNext(isRSVP ? 4 : 5)} className="px-10 py-4 bg-slate-900 text-white rounded-2xl font-bold uppercase tracking-widest text-xs shadow-xl flex items-center gap-2">Next <ChevronRight size={16} /></button>

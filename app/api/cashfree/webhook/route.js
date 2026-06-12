@@ -5,6 +5,7 @@ import { after } from "next/server";
 import crypto from "crypto";
 import { generateSecureQRToken } from "@/lib/security";
 import { queueJob, executeJob } from "@/app/utils/backgroundJobs";
+import { assignBibNumber } from "@/lib/bibGenerator";
 
 const supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -144,6 +145,14 @@ export async function POST(request) {
                     coupon_id: booking.coupon_id,
                     booking_id: bookingId
                 });
+            }
+
+            // 6. Automatically Assign BIB Number
+            const categoryName = booking.category || booking.race_category_id || "default";
+            try {
+                await assignBibNumber(booking.event_id, bookingId, categoryName);
+            } catch (bibErr) {
+                console.error("Auto BIB generation failed in cashfree webhook:", bibErr.message);
             }
 
             // ── DEFERRED BACKGROUND PROCESSING ─────────────────────────────────────

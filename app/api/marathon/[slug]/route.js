@@ -11,7 +11,7 @@ const adminClient = createClient(
  * Returns full public marathon event data including categories, sponsors, benefits.
  */
 export async function GET(request, { params }) {
-  const { slug } = params;
+  const { slug } = await params;
 
   if (!slug) {
     return NextResponse.json({ error: 'Slug is required' }, { status: 400 });

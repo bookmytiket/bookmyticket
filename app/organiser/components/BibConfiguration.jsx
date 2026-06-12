@@ -1,11 +1,42 @@
 "use client";
-import React from "react";
-import { Hash, Settings2, ToggleLeft, ToggleRight, Info } from "lucide-react";
+import React, { useState } from "react";
+import { Hash, Settings2, ToggleLeft, ToggleRight, Info, Play, Loader2, CheckCircle2 } from "lucide-react";
 
-export default function BibConfiguration({ config, onChange }) {
+export default function BibConfiguration({ config, onChange, eventId }) {
+    const [isBackfilling, setIsBackfilling] = useState(false);
+    const [backfillResult, setBackfillResult] = useState(null);
+
     if (!config) return null;
 
     const toggleBib = () => onChange({ ...config, bib_enabled: !config.bib_enabled });
+
+    const handleBackfill = async () => {
+        if (!eventId) return alert("Please save the event first before assigning BIB numbers.");
+        
+        const confirmMsg = "This will automatically assign sequential BIB numbers to all confirmed bookings that don't have one yet. Continue?";
+        if (!window.confirm(confirmMsg)) return;
+
+        setIsBackfilling(true);
+        setBackfillResult(null);
+
+        try {
+            const res = await fetch('/api/marathon/backfill-bib', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ event_id: eventId })
+            });
+            const data = await res.json();
+            if (data.success) {
+                setBackfillResult({ success: true, count: data.count });
+            } else {
+                setBackfillResult({ success: false, error: data.error });
+            }
+        } catch (err) {
+            setBackfillResult({ success: false, error: err.message });
+        } finally {
+            setIsBackfilling(false);
+        }
+    };
 
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -105,7 +136,51 @@ export default function BibConfiguration({ config, onChange }) {
                                     <span className="text-[10px] text-slate-500">Show BIB number on PDF and QR tickets</span>
                                 </div>
                             </label>
+
+                            <label className="flex items-center gap-3 cursor-pointer p-4 bg-white rounded-xl border border-slate-200 hover:border-purple-300 transition-colors">
+                                <input 
+                                    type="checkbox" 
+                                    className="w-5 h-5 rounded text-purple-500 focus:ring-purple-500"
+                                    checked={config.auto_bib_generation !== false}
+                                    onChange={e => onChange({ ...config, auto_bib_generation: e.target.checked })}
+                                />
+                                <div>
+                                    <span className="text-sm font-bold text-slate-900 block">Auto Generate BIBs</span>
+                                    <span className="text-[10px] text-slate-500">Automatically assign next BIB on booking</span>
+                                </div>
+                            </label>
                         </div>
+
+                        {eventId && (
+                            <div className="border-t border-slate-200 pt-6 mt-6">
+                                <h3 className="text-sm font-black text-slate-900 uppercase mb-4 flex items-center gap-2">
+                                    <Settings2 size={16} /> Organizer Utilities
+                                </h3>
+                                <div className="bg-white p-4 rounded-xl border border-slate-200 flex flex-col md:flex-row items-center justify-between gap-4">
+                                    <div>
+                                        <p className="text-sm font-bold text-slate-900">Assign Missing BIB Numbers</p>
+                                        <p className="text-[11px] text-slate-500 max-w-md">Scans all confirmed registrations and automatically assigns sequential BIB numbers to anyone missing one. Ideal for migrating data or initializing sequences.</p>
+                                    </div>
+                                    <button 
+                                        onClick={handleBackfill}
+                                        disabled={isBackfilling}
+                                        className="flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-xl text-xs font-black uppercase tracking-wider hover:bg-purple-700 transition disabled:opacity-50 whitespace-nowrap"
+                                    >
+                                        {isBackfilling ? <Loader2 size={16} className="animate-spin" /> : <Play size={16} />}
+                                        {isBackfilling ? "Assigning..." : "Assign Missing BIBs"}
+                                    </button>
+                                </div>
+                                {backfillResult && (
+                                    <div className={`mt-4 p-3 rounded-lg text-xs font-bold flex items-center gap-2 ${backfillResult.success ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                                        {backfillResult.success ? (
+                                            <><CheckCircle2 size={16} /> Successfully assigned {backfillResult.count} missing BIB numbers.</>
+                                        ) : (
+                                            <>Error: {backfillResult.error}</>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

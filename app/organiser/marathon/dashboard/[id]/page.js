@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/components/AuthContext';
 import { createClient } from '@supabase/supabase-js';
 import { 
@@ -8,16 +8,18 @@ import {
   Filter, CheckCircle2, AlertCircle, TrendingUp, DollarSign 
 } from 'lucide-react';
 import MarathonPosterGenerator from '../../../components/MarathonPosterGenerator';
+import DownloadReports from '../../../components/DownloadReports';
 
 export default function MarathonDashboard() {
   const { id } = useParams();
+  const searchParams = useSearchParams();
   const { user } = useAuth();
   
   const [marathon, setMarathon] = useState(null);
   const [registrations, setRegistrations] = useState([]);
   const [checkins, setCheckins] = useState([]);
   const [documents, setDocuments] = useState([]);
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'overview');
   const [loading, setLoading] = useState(true);
   
   useEffect(() => {
@@ -155,54 +157,13 @@ export default function MarathonDashboard() {
           </div>
         )}
 
-        {/* PARTICIPANTS */}
+        {/* PARTICIPANTS & REPORTS */}
         {activeTab === 'participants' && (
-          <div className="bg-white/5 border border-white/10 rounded-3xl overflow-hidden animate-in fade-in">
-            <div className="p-6 border-b border-white/10 flex justify-between items-center">
-              <h3 className="font-black">All Participants</h3>
-              <div className="flex gap-2">
-                <div className="relative">
-                  <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
-                  <input placeholder="Search ID or Name..." className="pl-10 pr-4 py-2 bg-black/50 border border-white/10 rounded-xl text-sm outline-none focus:border-pink-500" />
-                </div>
-                <button className="p-2 border border-white/10 rounded-xl hover:bg-white/5"><Filter size={18}/></button>
-              </div>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead className="bg-black/50 text-white/50 text-[10px] uppercase tracking-widest font-bold">
-                  <tr>
-                    <th className="p-4">Reg ID</th>
-                    <th className="p-4">Participant</th>
-                    <th className="p-4">Category</th>
-                    <th className="p-4">T-Shirt</th>
-                    <th className="p-4">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/5">
-                  {registrations.map(reg => (
-                    <tr key={reg.id} className="hover:bg-white/5">
-                      <td className="p-4 font-mono text-xs">{reg.registration_id}</td>
-                      <td className="p-4">
-                        <p className="font-bold">{reg.participant_name}</p>
-                        <p className="text-xs text-white/50">{reg.participant_email || reg.participant_phone}</p>
-                      </td>
-                      <td className="p-4">
-                        <span className="px-2 py-1 bg-white/10 rounded-md text-xs">{reg.marathon_categories?.category_name}</span>
-                      </td>
-                      <td className="p-4">{reg.tshirt_size || '-'}</td>
-                      <td className="p-4">
-                        <span className="px-2 py-1 bg-green-500/20 text-green-400 rounded-md text-xs font-bold">{reg.payment_status}</span>
-                      </td>
-                    </tr>
-                  ))}
-                  {registrations.length === 0 && (
-                    <tr><td colSpan="5" className="p-8 text-center text-white/50">No registrations yet</td></tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <DownloadReports 
+            marathon={marathon} 
+            registrations={registrations} 
+            checkins={checkins} 
+          />
         )}
 
         {/* VERIFICATION */}
@@ -275,6 +236,7 @@ export default function MarathonDashboard() {
             </div>
           </div>
         )}
+
 
         {/* POSTER */}
         {activeTab === 'poster' && (

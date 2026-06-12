@@ -856,6 +856,7 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                     <BibConfiguration 
                         config={config.bibConfig} 
                         onChange={cfg => updateConfig('bibConfig', cfg)} 
+                        eventId={postEvent.id}
                     />
                     <div className="pt-10 flex justify-between">
                         <button onClick={() => setCurrentStep(4)} className="px-10 py-4 text-slate-800 font-bold uppercase tracking-widest text-[10px] flex items-center gap-2"><ArrowLeft size={16} /> Back</button>

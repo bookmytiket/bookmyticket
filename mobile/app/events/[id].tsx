@@ -800,6 +800,15 @@ export default function EventDetailScreen() {
                     <Text style={{ color: '#fff', fontWeight: '800', fontSize: 12 }}>Cancel Event</Text>
                   </Pressable>
                 </View>
+                {event?.type === 'Marathon' && (
+                  <Pressable 
+                    style={{ backgroundColor: colors.tint, paddingHorizontal: 16, paddingVertical: 14, borderRadius: 12, marginTop: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                    onPress={() => router.push({ pathname: '/organiser/marathon-participants', params: { marathonId: event.id } })}
+                  >
+                    <Download size={16} color="#fff" />
+                    <Text style={{ color: '#fff', fontWeight: '800', fontSize: 14 }}>Download Participants Report</Text>
+                  </Pressable>
+                )}
               </RNView>
             </MotiView>
           )}

@@ -679,7 +679,8 @@ const PhysicalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEdi
                             bib_per_category: false,
                             bib_display_on_ticket: true
                         }} 
-                        onChange={cfg => setPostEvent(p => ({ ...p, bibConfig: cfg }))} 
+                        onChange={cfg => setPostEvent(p => ({ ...p, bibConfig: cfg }))}
+                        eventId={postEvent.id} 
                     />
                     <div className="pt-10 flex justify-between">
                         <button onClick={prevStep} className="px-10 py-5 text-slate-400 font-black uppercase tracking-widest text-[10px] flex items-center gap-3 hover:text-slate-900 transition-colors"><ArrowLeft size={18} /> Ticket Return</button>
