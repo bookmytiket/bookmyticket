@@ -9,6 +9,8 @@ import {
 } from 'lucide-react';
 import MarathonPosterGenerator from '../../../components/MarathonPosterGenerator';
 import DownloadReports from '../../../components/DownloadReports';
+import BibBadgeManager from '../../../components/BibBadgeManager';
+import { Tag } from 'lucide-react';
 
 export default function MarathonDashboard() {
   const { id } = useParams();
@@ -85,6 +87,7 @@ export default function MarathonDashboard() {
   const tabs = [
     { id: 'overview', label: 'Overview', icon: TrendingUp },
     { id: 'participants', label: 'Participants', icon: Users, badge: registrations.length },
+    { id: 'badges', label: 'BIB Badges', icon: Tag },
     { id: 'verification', label: 'ID Verification', icon: ShieldCheck, badge: pendingVerification },
     { id: 'checkins', label: 'Check-Ins', icon: QrCode, badge: totalCheckedIn },
     { id: 'poster', label: 'Smart Poster', icon: Layout },
@@ -164,6 +167,16 @@ export default function MarathonDashboard() {
             registrations={registrations} 
             checkins={checkins} 
           />
+        )}
+
+        {/* BIB BADGES */}
+        {activeTab === 'badges' && (
+          <div className="animate-in fade-in slide-in-from-bottom-4">
+            <BibBadgeManager 
+              marathon={marathon} 
+              registrations={registrations} 
+            />
+          </div>
         )}
 
         {/* VERIFICATION */}

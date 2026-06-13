@@ -47,6 +47,7 @@ import TransactionHistory from "./components/TransactionHistory";
 import CategorySelection from "./components/CategorySelection";
 import KYCOnboarding from "./components/KYCOnboarding/KYCOnboarding";
 import AllBookingsPage from "./components/AllBookingsPage";
+import BibBadgeManager from "./components/BibBadgeManager";
 class OrganiserErrorBoundary extends Component {
   state = { error: null };
   static getDerivedStateFromError(error) {
@@ -8957,6 +8958,39 @@ function OrganiserPanel() {
           );
         }
 
+        case "bib_badges": {
+          const eventsMap = eventsData.reduce((acc, ev) => { acc[ev.id] = ev; return acc; }, {});
+          const myEventIds = new Set(events.map((e) => String(e.id)));
+          const myBookings = convexBookings.filter((b) =>
+            myEventIds.has(String(b.event_id)) && b.status !== "Pending"
+          );
+
+          const badgeRegistrations = myBookings.map(b => {
+            const ev = eventsMap[b.event_id] || {};
+            const userDetails = b.customer_details || b.user_details || {};
+            const meta = b.metadata || {};
+            const participant_name = userDetails["Full Name"] || userDetails.name || meta.participant_name || b.name || b.customer_name || "Guest";
+            const bib = b.bib_number || meta.bib_number || userDetails.bib_number || userDetails["BIB Number"];
+            return {
+              id: b.id,
+              registration_id: b.booking_id || b.id,
+              participant_name,
+              category_name: ev.type || "Event",
+              bib_number: bib
+            };
+          });
+
+          return (
+            <div style={{ padding: '24px' }}>
+              <BibBadgeManager 
+                marathon={{ title: "Organizer Events" }} 
+                registrations={badgeRegistrations} 
+                theme={t}
+              />
+            </div>
+          );
+        }
+
         case "withdraw": {
           const Breadcrumb = ({ title }) => (
             <div
@@ -14174,6 +14208,12 @@ function OrganiserPanel() {
                       className={`sidebar-dropdown-item ${activeTab === "completed_bookings" ? "active" : ""}`}
                     >
                       Completed
+                    </button>
+                    <button
+                      onClick={() => setActiveTab("bib_badges")}
+                      className={`sidebar-dropdown-item ${activeTab === "bib_badges" ? "active" : ""}`}
+                    >
+                      BIB Badge Manager
                     </button>
                     <button
                       onClick={() => setActiveTab("booking_report")}

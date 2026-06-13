@@ -11,6 +11,7 @@ import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import CustomSelect from './CustomSelect';
+import BibBadgeManager from './BibBadgeManager';
 
 // Default and Optional Columns definition
 const ALL_COLUMNS = [
@@ -55,6 +56,7 @@ export default function AllBookingsPage({ bookings = [], events = [], theme: t, 
   const [showFilters, setShowFilters] = useState(false);
   const [showColManager, setShowColManager] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const [showBadgeManager, setShowBadgeManager] = useState(false);
   const [selectedBookings, setSelectedBookings] = useState(new Set());
   const [sortConfig, setSortConfig] = useState({ key: "created_at", direction: "desc" });
   
@@ -417,211 +419,246 @@ export default function AllBookingsPage({ bookings = [], events = [], theme: t, 
           </div>
         </div>
 
-        {/* Global Search */}
-        <div style={{ position: 'relative', width: '100%', maxWidth: '400px' }}>
-          <Search size={18} color={t.textSub} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }} />
-          <input 
-            type="text" 
-            placeholder="Search by Name, Email, Ticket ID, BIB..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            style={{
-              width: '100%', padding: '12px 14px 12px 40px',
-              backgroundColor: t.cardBg, border: `1px solid ${t.border}`,
-              borderRadius: '12px', color: t.textMain, fontSize: '14px',
-              outline: 'none', transition: 'border-color 0.2s'
-            }}
+        {/* Global Search and Actions */}
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <div style={{ position: 'relative', width: '100%', maxWidth: '400px' }}>
+            <Search size={18} color={t.textSub} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }} />
+            <input 
+              type="text" 
+              placeholder="Search by Name, Email, Ticket ID, BIB..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              style={{
+                width: '100%', padding: '12px 14px 12px 40px',
+                backgroundColor: t.cardBg, border: `1px solid ${t.border}`,
+                borderRadius: '12px', color: t.textMain, fontSize: '14px',
+                outline: 'none', transition: 'border-color 0.2s'
+              }}
+            />
+          </div>
+
+          <button 
+            onClick={() => setShowBadgeManager(!showBadgeManager)}
+            style={{ padding: '12px 20px', backgroundColor: showBadgeManager ? '#ec4899' : '#1e293b', color: '#fff', borderRadius: '12px', fontWeight: 700, fontSize: '13px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.2s', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}
+          >
+            <Printer size={16} /> {showBadgeManager ? 'Back to Bookings' : 'BIB Badges'}
+          </button>
+        </div>
+      </div>
+
+      {showBadgeManager ? (
+        <div className="mt-8 animate-in fade-in slide-in-from-bottom-4">
+          <BibBadgeManager 
+            marathon={{ title: "All Events" }} 
+            registrations={bookings.map(b => {
+              const ev = eventsMap[b.event_id] || {};
+              const userDetails = b.customer_details || b.user_details || {};
+              const meta = b.metadata || {};
+              const participant_name = userDetails["Full Name"] || userDetails.name || meta.participant_name || b.name || b.customer_name || "Guest";
+              const bib = b.bib_number || meta.bib_number || userDetails.bib_number || userDetails["BIB Number"];
+              return {
+                id: b.id,
+                registration_id: b.booking_id || b.id,
+                participant_name,
+                category_name: ev.type || "Event",
+                bib_number: bib
+              };
+            })}
+            theme={t}
           />
         </div>
-      </div>
-
-      {/* Advanced Filters Panel */}
-      <AnimatePresence>
-        {showFilters && (
-          <motion.div 
-            initial={{ height: 0, opacity: 0, overflow: 'hidden' }} 
-            animate={{ height: 'auto', opacity: 1, transitionEnd: { overflow: 'visible' } }} 
-            exit={{ height: 0, opacity: 0, overflow: 'hidden' }}
-            style={{ marginBottom: '24px' }}
-          >
-            <div style={{ padding: '24px', backgroundColor: t.cardBg, borderRadius: '16px', border: `1px solid ${t.border}` }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <h4 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: t.textMain }}>Advanced Filters</h4>
-                <button 
-                  onClick={() => setFilters({ eventCategory: "", eventName: "", bookingStatus: "", paymentStatus: "", ticketCategory: "", bibNumber: "", ticketId: "" })}
-                  style={{ background: 'transparent', border: 'none', color: '#ef4444', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
-                >
-                  Clear Filters
-                </button>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '16px' }}>
-                <CustomSelect 
-                  value={filters.eventCategory} 
-                  onChange={(v) => setFilters({...filters, eventCategory: v})}
-                  placeholder="All Categories"
-                  options={[
-                    { label: "All Categories", value: "" },
-                    { label: "Marathon", value: "Marathon" },
-                    { label: "Tournament", value: "Tournament" },
-                    { label: "Music Concert", value: "Music Concert" },
-                    { label: "RSVP Event", value: "RSVP Event" }
-                  ]}
-                />
-                <CustomSelect 
-                  value={filters.bookingStatus} 
-                  onChange={(v) => setFilters({...filters, bookingStatus: v})}
-                  placeholder="All Booking Statuses"
-                  options={[
-                    { label: "All Booking Statuses", value: "" },
-                    { label: "Confirmed", value: "Confirmed" },
-                    { label: "Pending", value: "Pending" },
-                    { label: "Cancelled", value: "Cancelled" }
-                  ]}
-                />
-                <CustomSelect 
-                  value={filters.paymentStatus} 
-                  onChange={(v) => setFilters({...filters, paymentStatus: v})}
-                  placeholder="All Payment Statuses"
-                  options={[
-                    { label: "All Payment Statuses", value: "" },
-                    { label: "Paid", value: "Paid" },
-                    { label: "Free", value: "Free" },
-                    { label: "Pending", value: "Pending" }
-                  ]}
-                />
-                <input 
-                  type="text" placeholder="Filter by BIB Number" 
-                  value={filters.bibNumber} onChange={(e) => setFilters({...filters, bibNumber: e.target.value})}
-                  className="w-full bg-white border border-slate-200 text-slate-900 text-sm font-semibold px-4 py-3.5 rounded-2xl focus:outline-none focus:border-pink-300 transition-all shadow-inner"
-                />
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Column Manager */}
-      <AnimatePresence>
-        {showColManager && (
-          <motion.div 
-            initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-            style={{ overflow: 'hidden', marginBottom: '24px' }}
-          >
-            <div style={{ padding: '24px', backgroundColor: t.cardBg, borderRadius: '16px', border: `1px solid ${t.border}` }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <h4 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: t.textMain }}>Manage Columns</h4>
-                <button onClick={() => setVisibleColumns(ALL_COLUMNS.filter(c => c.default).map(c => c.id))} style={{ background: 'transparent', border: 'none', color: '#3b82f6', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>Reset to Default</button>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px' }}>
-                {ALL_COLUMNS.map(col => (
-                  <label key={col.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '14px', color: t.textMain }}>
-                    <input 
-                      type="checkbox" 
-                      checked={visibleColumns.includes(col.id)} 
-                      onChange={() => toggleColumn(col.id)}
-                      style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#3b82f6' }}
-                    />
-                    {col.label}
-                  </label>
-                ))}
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Bulk Actions Bar */}
-      <AnimatePresence>
-        {selectedBookings.size > 0 && (
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }}
-            style={{ 
-              position: 'fixed', bottom: '32px', left: '50%', transform: 'translateX(-50%)',
-              backgroundColor: '#1e293b', color: '#fff', padding: '12px 24px', borderRadius: '100px',
-              display: 'flex', alignItems: 'center', gap: '20px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2)', zIndex: 100
-            }}
-          >
-            <span style={{ fontWeight: 700, fontSize: '14px' }}>{selectedBookings.size} selected</span>
-            <div style={{ width: '1px', height: '20px', backgroundColor: '#334155' }}></div>
-            <button style={{ background: 'none', border: 'none', color: '#fff', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}><Check size={14}/> Mark Check-in</button>
-            <button style={{ background: 'none', border: 'none', color: '#fff', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}><Mail size={14}/> Email Selected</button>
-            <button onClick={() => setSelectedBookings(new Set())} style={{ background: 'none', border: 'none', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', marginLeft: '10px' }}><X size={14}/></button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Table Container */}
-      <div style={{ backgroundColor: t.cardBg, borderRadius: '16px', border: `1px solid ${t.border}`, overflow: 'hidden', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '1200px' }}>
-            <thead style={{ backgroundColor: t.bg, borderBottom: `1px solid ${t.border}` }}>
-              <tr>
-                <th style={{ padding: '16px', width: '50px' }}>
-                  <button onClick={toggleSelectAll} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', color: t.textSub }}>
-                    {selectedBookings.size === filteredAndSortedRows.length && filteredAndSortedRows.length > 0 ? <CheckSquare size={18} color="#3b82f6" /> : <Square size={18} />}
+      ) : (
+      <>
+        {/* Advanced Filters Panel */}
+        <AnimatePresence>
+          {showFilters && (
+            <motion.div 
+              initial={{ height: 0, opacity: 0, overflow: 'hidden' }} 
+              animate={{ height: 'auto', opacity: 1, transitionEnd: { overflow: 'visible' } }} 
+              exit={{ height: 0, opacity: 0, overflow: 'hidden' }}
+              style={{ marginBottom: '24px' }}
+            >
+              <div style={{ padding: '24px', backgroundColor: t.cardBg, borderRadius: '16px', border: `1px solid ${t.border}` }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                  <h4 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: t.textMain }}>Advanced Filters</h4>
+                  <button 
+                    onClick={() => setFilters({ eventCategory: "", eventName: "", bookingStatus: "", paymentStatus: "", ticketCategory: "", bibNumber: "", ticketId: "" })}
+                    style={{ background: 'transparent', border: 'none', color: '#ef4444', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
+                  >
+                    Clear Filters
                   </button>
-                </th>
-                {ALL_COLUMNS.filter(c => visibleColumns.includes(c.id)).map(col => (
-                  <th key={col.id} onClick={() => handleSort(col.id)} style={{ padding: '16px 12px', fontSize: '12px', fontWeight: 700, color: t.textSub, textTransform: 'uppercase', letterSpacing: '0.05em', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '16px' }}>
+                  <CustomSelect 
+                    value={filters.eventCategory} 
+                    onChange={(v) => setFilters({...filters, eventCategory: v})}
+                    placeholder="All Categories"
+                    options={[
+                      { label: "All Categories", value: "" },
+                      { label: "Marathon", value: "Marathon" },
+                      { label: "Tournament", value: "Tournament" },
+                      { label: "Music Concert", value: "Music Concert" },
+                      { label: "RSVP Event", value: "RSVP Event" }
+                    ]}
+                  />
+                  <CustomSelect 
+                    value={filters.bookingStatus} 
+                    onChange={(v) => setFilters({...filters, bookingStatus: v})}
+                    placeholder="All Booking Statuses"
+                    options={[
+                      { label: "All Booking Statuses", value: "" },
+                      { label: "Confirmed", value: "Confirmed" },
+                      { label: "Pending", value: "Pending" },
+                      { label: "Cancelled", value: "Cancelled" }
+                    ]}
+                  />
+                  <CustomSelect 
+                    value={filters.paymentStatus} 
+                    onChange={(v) => setFilters({...filters, paymentStatus: v})}
+                    placeholder="All Payment Statuses"
+                    options={[
+                      { label: "All Payment Statuses", value: "" },
+                      { label: "Paid", value: "Paid" },
+                      { label: "Free", value: "Free" },
+                      { label: "Pending", value: "Pending" }
+                    ]}
+                  />
+                  <input 
+                    type="text" placeholder="Filter by BIB Number" 
+                    value={filters.bibNumber} onChange={(e) => setFilters({...filters, bibNumber: e.target.value})}
+                    className="w-full bg-white border border-slate-200 text-slate-900 text-sm font-semibold px-4 py-3.5 rounded-2xl focus:outline-none focus:border-pink-300 transition-all shadow-inner"
+                  />
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Column Manager */}
+        <AnimatePresence>
+          {showColManager && (
+            <motion.div 
+              initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+              style={{ overflow: 'hidden', marginBottom: '24px' }}
+            >
+              <div style={{ padding: '24px', backgroundColor: t.cardBg, borderRadius: '16px', border: `1px solid ${t.border}` }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                  <h4 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: t.textMain }}>Manage Columns</h4>
+                  <button onClick={() => setVisibleColumns(ALL_COLUMNS.filter(c => c.default).map(c => c.id))} style={{ background: 'transparent', border: 'none', color: '#3b82f6', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>Reset to Default</button>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px' }}>
+                  {ALL_COLUMNS.map(col => (
+                    <label key={col.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '14px', color: t.textMain }}>
+                      <input 
+                        type="checkbox" 
+                        checked={visibleColumns.includes(col.id)} 
+                        onChange={() => toggleColumn(col.id)}
+                        style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#3b82f6' }}
+                      />
                       {col.label}
-                      <ArrowUpDown size={12} opacity={sortConfig.key === col.id ? 1 : 0.3} color={sortConfig.key === col.id ? '#3b82f6' : 'inherit'} />
-                    </div>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filteredAndSortedRows.length === 0 ? (
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Bulk Actions Bar */}
+        <AnimatePresence>
+          {selectedBookings.size > 0 && (
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }}
+              style={{ 
+                position: 'fixed', bottom: '32px', left: '50%', transform: 'translateX(-50%)',
+                backgroundColor: '#1e293b', color: '#fff', padding: '12px 24px', borderRadius: '100px',
+                display: 'flex', alignItems: 'center', gap: '20px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2)', zIndex: 100
+              }}
+            >
+              <span style={{ fontWeight: 700, fontSize: '14px' }}>{selectedBookings.size} selected</span>
+              <div style={{ width: '1px', height: '20px', backgroundColor: '#334155' }}></div>
+              <button style={{ background: 'none', border: 'none', color: '#fff', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}><Check size={14}/> Mark Check-in</button>
+              <button style={{ background: 'none', border: 'none', color: '#fff', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}><Mail size={14}/> Email Selected</button>
+              <button onClick={() => setSelectedBookings(new Set())} style={{ background: 'none', border: 'none', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', marginLeft: '10px' }}><X size={14}/></button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Table Container */}
+        <div style={{ backgroundColor: t.cardBg, borderRadius: '16px', border: `1px solid ${t.border}`, overflow: 'hidden', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '1200px' }}>
+              <thead style={{ backgroundColor: t.bg, borderBottom: `1px solid ${t.border}` }}>
                 <tr>
-                  <td colSpan={visibleColumns.length + 1} style={{ padding: '40px', textAlign: 'center', color: t.textSub, fontSize: '15px' }}>
-                    No bookings match your criteria.
-                  </td>
+                  <th style={{ padding: '16px', width: '50px' }}>
+                    <button onClick={toggleSelectAll} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', color: t.textSub }}>
+                      {selectedBookings.size === filteredAndSortedRows.length && filteredAndSortedRows.length > 0 ? <CheckSquare size={18} color="#3b82f6" /> : <Square size={18} />}
+                    </button>
+                  </th>
+                  {ALL_COLUMNS.filter(c => visibleColumns.includes(c.id)).map(col => (
+                    <th key={col.id} onClick={() => handleSort(col.id)} style={{ padding: '16px 12px', fontSize: '12px', fontWeight: 700, color: t.textSub, textTransform: 'uppercase', letterSpacing: '0.05em', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        {col.label}
+                        <ArrowUpDown size={12} opacity={sortConfig.key === col.id ? 1 : 0.3} color={sortConfig.key === col.id ? '#3b82f6' : 'inherit'} />
+                      </div>
+                    </th>
+                  ))}
                 </tr>
-              ) : (
-                filteredAndSortedRows.map((row, index) => (
-                  <tr key={row.id} style={{ borderBottom: `1px solid ${t.border}`, backgroundColor: selectedBookings.has(row.id) ? '#3b82f60a' : 'transparent', transition: 'background-color 0.2s' }}>
-                    <td style={{ padding: '16px' }}>
-                      <button onClick={() => toggleSelectRow(row.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', color: t.textSub }}>
-                        {selectedBookings.has(row.id) ? <CheckSquare size={18} color="#3b82f6" /> : <Square size={18} />}
-                      </button>
+              </thead>
+              <tbody>
+                {filteredAndSortedRows.length === 0 ? (
+                  <tr>
+                    <td colSpan={visibleColumns.length + 1} style={{ padding: '40px', textAlign: 'center', color: t.textSub, fontSize: '15px' }}>
+                      No bookings match your criteria.
                     </td>
-                    {ALL_COLUMNS.filter(c => visibleColumns.includes(c.id)).map(col => {
-                      let value = row[col.id];
-                      let cellContent = value;
-
-                      // Custom rendering for specific columns
-                      if (col.id === 'payment_status') {
-                        const isPaid = value === 'Paid' || value === 'Success' || value === 'Free';
-                        const isFree = value === 'Free';
-                        const bgColor = isFree ? '#3b82f620' : (isPaid ? '#22c55e20' : '#f59e0b20');
-                        const textColor = isFree ? '#3b82f6' : (isPaid ? '#22c55e' : '#f59e0b');
-                        
-                        cellContent = <span style={{ padding: '4px 10px', borderRadius: '100px', fontSize: '11px', fontWeight: 700, backgroundColor: bgColor, color: textColor }}>{value}</span>;
-                      } else if (col.id === 'booking_status') {
-                        const isConf = value === 'Confirmed';
-                        cellContent = <span style={{ padding: '4px 10px', borderRadius: '100px', fontSize: '11px', fontWeight: 700, backgroundColor: isConf ? '#3b82f620' : '#ef444420', color: isConf ? '#3b82f6' : '#ef4444' }}>{value}</span>;
-                      } else if (col.id === 'bib_number') {
-                        cellContent = <span style={{ fontWeight: 800, color: value !== '--' ? '#ec4899' : t.textSub }}>{value}</span>;
-                      } else if (col.id === 'participant_name') {
-                        cellContent = <span style={{ fontWeight: 600, color: t.textMain }}>{value}</span>;
-                      } else if (col.id === 'registration_fee') {
-                        cellContent = <span style={{ fontWeight: 600 }}>₹{value}</span>;
-                      }
-
-                      return (
-                        <td key={col.id} style={{ padding: '16px 12px', fontSize: '14px', color: t.textMain, whiteSpace: 'nowrap' }}>
-                          {cellContent}
-                        </td>
-                      );
-                    })}
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  filteredAndSortedRows.map((row, index) => (
+                    <tr key={row.id} style={{ borderBottom: `1px solid ${t.border}`, backgroundColor: selectedBookings.has(row.id) ? '#3b82f60a' : 'transparent', transition: 'background-color 0.2s' }}>
+                      <td style={{ padding: '16px' }}>
+                        <button onClick={() => toggleSelectRow(row.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', color: t.textSub }}>
+                          {selectedBookings.has(row.id) ? <CheckSquare size={18} color="#3b82f6" /> : <Square size={18} />}
+                        </button>
+                      </td>
+                      {ALL_COLUMNS.filter(c => visibleColumns.includes(c.id)).map(col => {
+                        let value = row[col.id];
+                        let cellContent = value;
+
+                        // Custom rendering for specific columns
+                        if (col.id === 'payment_status') {
+                          const isPaid = value === 'Paid' || value === 'Success' || value === 'Free';
+                          const isFree = value === 'Free';
+                          const bgColor = isFree ? '#3b82f620' : (isPaid ? '#22c55e20' : '#f59e0b20');
+                          const textColor = isFree ? '#3b82f6' : (isPaid ? '#22c55e' : '#f59e0b');
+                          
+                          cellContent = <span style={{ padding: '4px 10px', borderRadius: '100px', fontSize: '11px', fontWeight: 700, backgroundColor: bgColor, color: textColor }}>{value}</span>;
+                        } else if (col.id === 'booking_status') {
+                          const isConf = value === 'Confirmed';
+                          cellContent = <span style={{ padding: '4px 10px', borderRadius: '100px', fontSize: '11px', fontWeight: 700, backgroundColor: isConf ? '#3b82f620' : '#ef444420', color: isConf ? '#3b82f6' : '#ef4444' }}>{value}</span>;
+                        } else if (col.id === 'bib_number') {
+                          cellContent = <span style={{ fontWeight: 800, color: value !== '--' ? '#ec4899' : t.textSub }}>{value}</span>;
+                        } else if (col.id === 'participant_name') {
+                          cellContent = <span style={{ fontWeight: 600, color: t.textMain }}>{value}</span>;
+                        } else if (col.id === 'registration_fee') {
+                          cellContent = <span style={{ fontWeight: 600 }}>₹{value}</span>;
+                        }
+
+                        return (
+                          <td key={col.id} style={{ padding: '16px 12px', fontSize: '14px', color: t.textMain, whiteSpace: 'nowrap' }}>
+                            {cellContent}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      </>
+      )}
+
     </div>
   );
 }
