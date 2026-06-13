@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useRef } from 'react';
-import { Download, Search, Filter, Printer, RefreshCw, CheckCircle2, XCircle } from 'lucide-react';
+import { Download, Search, Filter, Printer, RefreshCw, CheckCircle2, XCircle, Eye, X } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 
@@ -16,9 +16,69 @@ export default function BibBadgeManager({ marathon, registrations, theme }) {
   const [categoryFilter, setCategoryFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [generatingId, setGeneratingId] = useState(null);
+  const [previewData, setPreviewData] = useState(null);
   
+  // Reusable Template Component
+  const BadgeTemplate = ({ data, isPreview }) => {
+    if (!data) return null;
+    const rawBib = data.bib_number || "";
+    // Match everything up to the last consecutive sequence of digits
+    const match = rawBib.match(/^(.*?)(\d+)$/);
+    const bibPrefix = match ? match[1].replace(/[-_\s]+$/, '') : ""; // Remove trailing hyphens/spaces
+    const bibNumber = match ? match[2] : rawBib;
+
+    const eventDate = marathon?.event_date 
+      ? new Date(marathon.event_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) 
+      : "";
+
+    return (
+      <div 
+        className={`bg-white relative flex flex-col justify-center items-center text-slate-900 overflow-hidden border-[12px] border-slate-100 shadow-2xl origin-center`} 
+        style={{ 
+          fontFamily: 'sans-serif',
+          width: settings.orientation === 'landscape' ? '210mm' : '148mm',
+          height: settings.orientation === 'landscape' ? '148mm' : '210mm',
+          ...(isPreview && { transform: 'scale(0.5)', transformOrigin: 'center' })
+        }}
+      >
+        <div className="flex flex-col items-center justify-center w-full h-full p-12 text-center">
+          
+          {/* Category */}
+          <h2 className="text-4xl font-black uppercase text-pink-600 tracking-widest mb-6">
+            {data.category_name}
+          </h2>
+
+          {/* BIB Area */}
+          <div className="flex flex-col items-center justify-center mb-10 w-full px-8">
+            {bibPrefix && (
+              <div className="text-3xl font-bold text-slate-400 uppercase tracking-widest mb-2 whitespace-normal break-words max-w-full leading-normal">
+                {bibPrefix}
+              </div>
+            )}
+            <div className="text-[170px] font-black text-slate-900 leading-tight tracking-tighter w-full whitespace-normal break-words py-4">
+              {bibNumber}
+            </div>
+          </div>
+
+          {/* Participant Name */}
+          <h1 className="text-6xl font-black uppercase text-slate-800 w-full px-8 mb-4 whitespace-normal break-words leading-tight">
+            {data.participant_name}
+          </h1>
+
+          {/* Event Date */}
+          {eventDate && (
+            <p className="text-2xl font-bold text-slate-400 uppercase tracking-widest">
+              {eventDate}
+            </p>
+          )}
+
+        </div>
+      </div>
+    );
+  };
+
   const [settings, setSettings] = useState({
-    orientation: 'portrait',
+    orientation: 'landscape',
     format: 'a5',
     showEventLogo: true,
     showParticipantName: true,
@@ -251,15 +311,26 @@ export default function BibBadgeManager({ marathon, registrations, theme }) {
                     )}
                   </td>
                   <td className="p-4 text-right">
-                    <button 
-                      onClick={() => generatePDF(reg)}
-                      disabled={!reg.bib_number || generatingId === reg.id}
-                      className="px-4 py-2 rounded-lg text-xs font-bold transition-all disabled:opacity-30 flex items-center gap-2 ml-auto"
-                      style={{ backgroundColor: t.cardBg, border: `1px solid ${t.border}`, color: t.textMain }}
-                    >
-                      {generatingId === reg.id ? <RefreshCw className="animate-spin" size={14} /> : <Download size={14} />}
-                      PDF
-                    </button>
+                    <div className="flex items-center justify-end gap-2">
+                      <button 
+                        onClick={() => setPreviewData(reg)}
+                        disabled={!reg.bib_number}
+                        className="p-2 rounded-lg text-xs font-bold transition-all disabled:opacity-30"
+                        style={{ backgroundColor: t.cardBg, border: `1px solid ${t.border}`, color: t.textMain }}
+                        title="Preview BIB Card"
+                      >
+                        <Eye size={16} />
+                      </button>
+                      <button 
+                        onClick={() => generatePDF(reg)}
+                        disabled={!reg.bib_number || generatingId === reg.id}
+                        className="px-4 py-2 rounded-lg text-xs font-bold transition-all disabled:opacity-30 flex items-center gap-2"
+                        style={{ backgroundColor: t.cardBg, border: `1px solid ${t.border}`, color: t.textMain }}
+                      >
+                        {generatingId === reg.id ? <RefreshCw className="animate-spin" size={14} /> : <Download size={14} />}
+                        PDF
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -271,66 +342,56 @@ export default function BibBadgeManager({ marathon, registrations, theme }) {
         </div>
       </div>
 
-      {/* Hidden Render Template */}
       <div className="absolute top-0 left-0 -z-50 opacity-0 pointer-events-none overflow-hidden h-0 w-0">
-        {activeBadgeData && (
-          <div ref={badgeRef} className={`bg-white relative p-8 flex flex-col items-center justify-between text-slate-900 border-[10px] border-pink-500 shadow-2xl ${settings.orientation === 'landscape' ? 'w-[210mm] h-[148mm]' : 'w-[148mm] h-[210mm]'}`} style={{ fontFamily: 'sans-serif' }}>
-            
-            {/* Header / Logos */}
-            {settings.showEventLogo && (
-              <div className="w-full text-center space-y-4">
-                {marathon?.logo_url && (
-                  <img src={marathon.logo_url} className="h-24 object-contain mx-auto" />
-                )}
-                <h1 className="text-4xl font-black uppercase text-pink-600 tracking-tight">{marathon?.title || "Event Name"}</h1>
-                <p className="text-lg font-bold text-slate-500">{new Date(marathon?.event_date).toDateString()} • {marathon?.city}</p>
-              </div>
-            )}
+        <div 
+          ref={badgeRef} 
+          style={{ 
+            width: settings.orientation === 'landscape' ? '210mm' : '148mm',
+            height: settings.orientation === 'landscape' ? '148mm' : '210mm',
+          }}
+        >
+          <BadgeTemplate data={activeBadgeData} isPreview={false} />
+        </div>
+      </div>
 
-            {/* BIB Number Center */}
-            <div className={`w-full text-center ${settings.orientation === 'landscape' ? 'py-4' : 'py-12'}`}>
-              <div className="text-2xl font-black text-slate-400 uppercase tracking-widest mb-4">Official BIB</div>
-              <div className="text-8xl font-black text-slate-900 tracking-tighter bg-slate-100 py-6 rounded-3xl border-4 border-slate-200">
-                {activeBadgeData.bib_number}
-              </div>
+      {/* Preview Modal */}
+      {previewData && (
+        <div 
+          className="fixed inset-0 z-[100] flex items-start justify-center p-4 md:p-10 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 overflow-y-auto"
+          onClick={() => setPreviewData(null)}
+        >
+          <div 
+            className="relative bg-[#13131a] border border-white/10 rounded-3xl overflow-hidden flex flex-col max-w-4xl w-full mt-10 shadow-2xl"
+            style={{ backgroundColor: t.bg, border: `1px solid ${t.border}` }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b shrink-0 z-10 relative" style={{ borderColor: t.border, backgroundColor: t.bg }}>
+              <h3 className="text-xl font-black" style={{ color: t.textMain }}>BIB Preview</h3>
+              <button 
+                onClick={() => setPreviewData(null)}
+                className="p-2 rounded-full hover:bg-white/10 transition-colors"
+                style={{ color: t.textMain }}
+              >
+                <X size={20} />
+              </button>
             </div>
 
-            {/* Participant Details */}
-            {settings.showParticipantName && (
-              <div className="w-full bg-slate-50 rounded-3xl p-6 border border-slate-200">
-                <h2 className="text-3xl font-black uppercase mb-4">{activeBadgeData.participant_name}</h2>
-                <div className="flex justify-between items-center">
-                  <div>
-                    <p className="text-sm font-bold text-slate-400 uppercase">Category</p>
-                    <p className="text-xl font-black">{activeBadgeData.category_name}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-bold text-slate-400 uppercase">Ticket ID</p>
-                    <p className="text-lg font-mono font-bold text-slate-600">{activeBadgeData.registration_id.slice(-8).toUpperCase()}</p>
-                  </div>
-                </div>
+            {/* Modal Body - Scaled Content */}
+            <div className="p-4 md:p-8 flex items-start justify-center overflow-auto bg-black/5" style={{ maxHeight: '70vh' }}>
+              <div style={{
+                width: settings.orientation === 'landscape' ? '210mm' : '148mm',
+                height: settings.orientation === 'landscape' ? '148mm' : '210mm',
+                transform: 'scale(0.6)',
+                transformOrigin: 'top center',
+                marginBottom: '-40%' // Compensate for the scaled down height in document flow
+              }}>
+                <BadgeTemplate data={previewData} isPreview={false} />
               </div>
-            )}
-
-            {/* Footer / QR */}
-            <div className="w-full flex items-center justify-between mt-8 border-t-2 border-slate-100 pt-8">
-              {settings.showQR ? (
-                <div>
-                  <img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${activeBadgeData.registration_id}`} alt="QR" className="w-32 h-32 rounded-xl" />
-                  <p className="text-[10px] font-bold text-slate-400 mt-2 text-center uppercase">Scan for Check-in</p>
-                </div>
-              ) : <div/>}
-              
-              {settings.showPoweredBy && (
-                <div className="text-right">
-                  <p className="text-sm font-bold text-slate-400">Powered by</p>
-                  <p className="text-2xl font-black text-indigo-600 tracking-tighter">BookMyTicket</p>
-                </div>
-              )}
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
     </div>
   );
