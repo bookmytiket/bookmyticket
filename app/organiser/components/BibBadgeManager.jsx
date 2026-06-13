@@ -342,7 +342,7 @@ export default function BibBadgeManager({ marathon, registrations, theme }) {
         </div>
       </div>
 
-      <div className="absolute top-0 left-0 -z-50 opacity-0 pointer-events-none overflow-hidden h-0 w-0">
+      <div className="fixed top-[-10000px] left-[-10000px]">
         <div 
           ref={badgeRef} 
           style={{ 

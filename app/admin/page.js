@@ -1812,11 +1812,7 @@ function AdminHomePage() {
     // Admin Security Gate: Support all administrative roles
     const adminRoles = useMemo(() => ["admin", "super_admin", "system_admin", "finance_admin", "moderator", "support_admin"], []);
     
-    useEffect(() => {
-        if (!loading && (!user || !adminRoles.includes(user.role?.toLowerCase()))) {
-            router.push("/signin?redirect=/admin");
-        }
-    }, [user, loading, router, adminRoles]);
+    // RequireAuth layout wrapper handles the security redirect already.
 
     useEffect(() => {
         if (!user || !adminRoles.includes(user.role)) return;

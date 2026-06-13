@@ -1175,10 +1175,7 @@ function HomeClient() {
                 </div>
             </section>
 
-            {/* 6) Featured Organizers Section */}
-            {!activeOrganiser && eventPartners && eventPartners.length > 0 && (
-              <FeaturedOrganisers organisers={eventPartners} />
-            )}
+
 
             {/* 7) Virtual Events */}
             <VirtualEvents events={normalizedOrgEvents} />

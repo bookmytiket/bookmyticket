@@ -61,15 +61,7 @@ export default function FeaturedOrganisers({ organisers = [] }) {
                   e.currentTarget.style.boxShadow = "0 4px 15px rgba(0,0,0,0.03)";
                 }}
               >
-                <div style={{ 
-                    width: "80px", height: "80px", 
-                    borderRadius: "16px", 
-                    overflow: "hidden", 
-                    marginBottom: "20px",
-                    background: "#000" // Fallback if no logo or dark logo
-                }}>
-                  <img src={org.logo_url || org.logo} alt={org.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                </div>
+
                 
                 <h3 style={{ 
                     fontSize: "16px", 

@@ -5,9 +5,17 @@ import { useSocialLinks } from '@/hooks/useSocialLinks';
 import { Headset } from 'lucide-react';
 import { FaWhatsapp, FaInstagram } from 'react-icons/fa';
 
+import { usePathname } from 'next/navigation';
+
 export default function SocialFloatingWidget() {
     const { whatsapp, instagram, trackClick } = useSocialLinks();
     const [isOpen, setIsOpen] = useState(false);
+    const pathname = usePathname();
+
+    // Hide widget on authentication pages to maintain a clean layout
+    if (pathname === '/signin' || pathname === '/signup') {
+        return null;
+    }
 
     const handleClick = (platform, url) => {
         trackClick(platform, 'widget');
