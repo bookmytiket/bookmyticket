@@ -35,12 +35,15 @@ export async function GET(request) {
             .not('is_deleted', 'eq', true)
             .not('status', 'in', '("CANCELLED","DELETED","CANCELLATION_REQUESTED","DELETION_REQUESTED")');
 
-        // Apply District Filter (Highest Priority)
-        if (district && district !== 'All' && district !== 'India') {
-            // Fix: Include both exact match and partial match for robustness
-            eventsQuery = eventsQuery.or(`district.ilike.%${district}%,city.ilike.%${district}%,venue.ilike.%${district}%`);
-        } else if (city && city !== 'All Cities' && city !== 'India') {
-            eventsQuery = eventsQuery.or(`city.ilike.%${city}%,district.ilike.%${city}%`);
+        // 2. Apply Location Filter (City/District)
+        const locationFilter = (district && district !== 'All' && district !== 'India') ? district 
+                             : (city && city !== 'All Cities' && city !== 'India') ? city 
+                             : null;
+
+        if (locationFilter) {
+            const loc = locationFilter.trim().toLowerCase();
+            // Use exact ilike (case-insensitive) instead of wildcard to prevent false positive substring matches
+            eventsQuery = eventsQuery.or(`city.ilike.${loc},district.ilike.${loc},venue.ilike.%${loc}%`);
         }
 
         if (type) {

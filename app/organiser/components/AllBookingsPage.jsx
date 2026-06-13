@@ -33,8 +33,8 @@ const ALL_COLUMNS = [
   { id: "bib_name", label: "Bib Name", default: false },
   { id: "running_club", label: "Running Club", default: false },
   { id: "age", label: "Age", default: false },
-  { id: "gender", label: "Gender", default: false },
-  { id: "dob", label: "Date of Birth", default: false },
+  { id: "gender", label: "Gender", default: true },
+  { id: "dob", label: "Date of Birth", default: true },
   { id: "blood_group", label: "Blood Group", default: false },
   { id: "emergency_contact", label: "Emergency Contact", default: false },
   { id: "tshirt_size", label: "T-Shirt Size", default: false },
@@ -68,7 +68,9 @@ export default function AllBookingsPage({ bookings = [], events = [], theme: t, 
     paymentStatus: "",
     ticketCategory: "",
     bibNumber: "",
-    ticketId: ""
+    ticketId: "",
+    gender: "",
+    checkInStatus: ""
   });
 
   // Column preferences state
@@ -104,24 +106,37 @@ export default function AllBookingsPage({ bookings = [], events = [], theme: t, 
       
       const isMarathon = ev.type === "Marathon";
       
+      // Helper to find keys case-insensitively or by partial match
+      const findKey = (obj, searchStrs) => {
+        if (!obj) return null;
+        const keys = Object.keys(obj);
+        const k = keys.find(key => searchStrs.some(s => key.toLowerCase().includes(s.toLowerCase())));
+        return k ? obj[k] : null;
+      };
+
+      const participantInfo = userDetails.participant || meta.participant || {};
+
       // Try to find the participant name anywhere it might be hiding
       const participant_name = 
-        userDetails["Full Name"] || 
-        userDetails.name || 
+        findKey(participantInfo, ["name", "full name"]) ||
+        findKey(userDetails, ["name", "full name"]) ||
         meta.participant_name || 
         b.name || 
         b.customer_name || 
         "Guest";
 
-      // Try to find the BIB number anywhere it might be hiding
       const bib = 
         b.bib_number || 
         meta.bib_number || 
         userDetails.bib_number || 
+        participantInfo.bib_number ||
         userDetails["BIB Number"] || 
+        participantInfo["BIB Number"] ||
         (isMarathon ? "--" : "--");
 
       const email = 
+        participantInfo.email ||
+        participantInfo["Email Address"] ||
         userDetails["Email Address"] || 
         userDetails.email || 
         meta.email || 
@@ -130,6 +145,8 @@ export default function AllBookingsPage({ bookings = [], events = [], theme: t, 
         "";
 
       const mobile = 
+        participantInfo.phone ||
+        participantInfo["Phone Number"] ||
         userDetails["Phone Number"] || 
         userDetails.phone || 
         meta.phone || 
@@ -159,18 +176,18 @@ export default function AllBookingsPage({ bookings = [], events = [], theme: t, 
         event_date: ev.date || ev.startDate || "TBA",
         check_in_status: b.scanned || b.is_scanned || b.check_in_status === 'Checked In' ? "Checked In" : "Pending",
         registration_id: meta.registration_id || "",
-        bib_name: meta.bib_name || userDetails["BIB Name"] || "",
-        running_club: meta.running_club || userDetails["Running Club"] || "",
-        age: meta.age || userDetails.age || "",
-        gender: meta.gender || userDetails.gender || "",
-        dob: meta.dob || userDetails.dob || "",
-        blood_group: meta.blood_group || userDetails["Blood Group"] || "",
-        emergency_contact: meta.emergency_contact || userDetails["Emergency Contact"] || "",
-        tshirt_size: meta.tshirt_size || userDetails["T-Shirt Size"] || "",
-        address: userDetails.address || userDetails.Place || "",
-        city: userDetails.city || userDetails.Place || "",
-        state: userDetails.state || "",
-        country: userDetails.country || "",
+        bib_name: meta.bib_name || findKey(participantInfo, ["bib name"]) || findKey(userDetails, ["bib name"]) || "",
+        running_club: meta.running_club || findKey(participantInfo, ["running club", "club"]) || findKey(userDetails, ["running club", "club"]) || "",
+        age: meta.age || findKey(participantInfo, ["age"]) || findKey(userDetails, ["age"]) || "--",
+        gender: meta.gender || findKey(participantInfo, ["gender", "sex"]) || findKey(userDetails, ["gender", "sex"]) || "--",
+        dob: meta.dob || meta.date_of_birth || findKey(participantInfo, ["dob", "date of birth", "birth date"]) || findKey(userDetails, ["dob", "date of birth", "birth date"]) || "--",
+        blood_group: meta.blood_group || findKey(participantInfo, ["blood group", "blood_group"]) || findKey(userDetails, ["blood group", "blood_group"]) || "--",
+        emergency_contact: meta.emergency_contact || findKey(participantInfo, ["emergency contact"]) || findKey(userDetails, ["emergency contact"]) || "--",
+        tshirt_size: meta.tshirt_size || findKey(participantInfo, ["t-shirt", "tshirt", "shirt size"]) || findKey(userDetails, ["t-shirt", "tshirt", "shirt size"]) || "--",
+        address: findKey(participantInfo, ["address", "place", "location"]) || findKey(userDetails, ["address", "place", "location"]) || "--",
+        city: findKey(participantInfo, ["city", "town"]) || findKey(userDetails, ["city", "town"]) || "--",
+        state: findKey(participantInfo, ["state", "province"]) || findKey(userDetails, ["state", "province"]) || "--",
+        country: findKey(participantInfo, ["country"]) || findKey(userDetails, ["country"]) || "--",
         qr_status: b.qr_code ? "Generated" : "Pending",
         kit_issued: meta.kit_issued ? "Yes" : "No",
         certificate_status: meta.certificate_issued ? "Issued" : "Pending",
@@ -208,6 +225,14 @@ export default function AllBookingsPage({ bookings = [], events = [], theme: t, 
     if (filters.ticketCategory) result = result.filter(r => r.race_category.includes(filters.ticketCategory));
     if (filters.bibNumber) result = result.filter(r => r.bib_number.includes(filters.bibNumber));
     if (filters.ticketId) result = result.filter(r => r.ticket_id.includes(filters.ticketId));
+    if (filters.gender) result = result.filter(r => r.gender === filters.gender);
+    if (filters.checkInStatus) {
+      if (filters.checkInStatus === "Checked-In") {
+         result = result.filter(r => r.check_in_status !== "Pending");
+      } else {
+         result = result.filter(r => r.check_in_status === filters.checkInStatus);
+      }
+    }
 
     // Sort
     result.sort((a, b) => {
@@ -520,6 +545,27 @@ export default function AllBookingsPage({ bookings = [], events = [], theme: t, 
                       { label: "All Payment Statuses", value: "" },
                       { label: "Paid", value: "Paid" },
                       { label: "Free", value: "Free" },
+                      { label: "Pending", value: "Pending" }
+                    ]}
+                  />
+                  <CustomSelect 
+                    value={filters.gender} 
+                    onChange={(v) => setFilters({...filters, gender: v})}
+                    placeholder="All Genders"
+                    options={[
+                      { label: "All Genders", value: "" },
+                      { label: "Male", value: "Male" },
+                      { label: "Female", value: "Female" },
+                      { label: "Other", value: "Other" }
+                    ]}
+                  />
+                  <CustomSelect 
+                    value={filters.checkInStatus} 
+                    onChange={(v) => setFilters({...filters, checkInStatus: v})}
+                    placeholder="All Check-in Status"
+                    options={[
+                      { label: "All Check-in Status", value: "" },
+                      { label: "Checked-In", value: "Checked-In" },
                       { label: "Pending", value: "Pending" }
                     ]}
                   />

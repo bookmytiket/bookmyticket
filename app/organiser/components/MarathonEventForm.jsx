@@ -367,6 +367,12 @@ export default function MarathonEventForm({ marathonId, isRSVP, onCancel, onPubl
                 if (categories.length === 0) throw new Error("At least one Run Category is required");
             }
 
+            // Normalize location data to ensure consistent casing and prevent mismatches
+            const normalizeLoc = (str) => {
+                if (!str || typeof str !== 'string') return null;
+                return str.trim().split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+            };
+
             // 1. Sync with primary 'events' table first to maintain global visibility
             const eventPayload = {
                 title: eventData.title || "Untitled Marathon",
@@ -375,12 +381,12 @@ export default function MarathonEventForm({ marathonId, isRSVP, onCancel, onPubl
                 img: eventData.banner_image,
                 date: eventData.event_date || null,
                 time: eventData.event_time || null,
-                venue: eventData.venue || null,
-                city: eventData.city,
-                state: eventData.state,
-                country: eventData.country,
-                district: eventData.district || null,
-                pincode: eventData.zipCode,
+                venue: normalizeLoc(eventData.venue),
+                city: normalizeLoc(eventData.city),
+                state: normalizeLoc(eventData.state),
+                country: normalizeLoc(eventData.country) || "India",
+                district: normalizeLoc(eventData.district),
+                pincode: eventData.zipCode ? eventData.zipCode.trim() : null,
                 status: newStatus === 'Published' || eventData.status?.toLowerCase() === 'published' ? 'published' : newStatus === 'PendingReview' ? 'pending_review' : 'draft',
                 publish_status: newStatus === 'Published' || eventData.status?.toLowerCase() === 'published' ? 'published' : newStatus === 'PendingReview' ? 'pending_review' : 'draft',
                 visibility_status: 'public',
@@ -491,11 +497,11 @@ export default function MarathonEventForm({ marathonId, isRSVP, onCancel, onPubl
                 event_time: eventData.event_time || null,
                 event_end_date: eventData.event_end_date || null,
                 event_end_time: eventData.event_end_time || null,
-                venue: eventData.venue || null,
-                city: eventData.city,
-                state: eventData.state,
-                country: eventData.country,
-                district: eventData.district || null,
+                venue: normalizeLoc(eventData.venue),
+                city: normalizeLoc(eventData.city),
+                state: normalizeLoc(eventData.state),
+                country: normalizeLoc(eventData.country) || "India",
+                district: normalizeLoc(eventData.district),
                 map_location: eventData.map_location,
                 route_map_image: eventData.route_map_image || null,
                 starting_point: eventData.starting_point,

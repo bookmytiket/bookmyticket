@@ -880,6 +880,19 @@ export default function EventBookClient({ id }) {
                                                 onChange={e => setParticipantData({...participantData, dob: e.target.value})}
                                             />
                                         </div>
+                                        <div>
+                                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 pl-1">Gender</label>
+                                            <select 
+                                                className="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl text-sm font-black text-slate-900 outline-none focus:border-pink-500 appearance-none"
+                                                value={participantData.gender || ""}
+                                                onChange={e => setParticipantData({...participantData, gender: e.target.value})}
+                                            >
+                                                <option value="" disabled>Select Gender</option>
+                                                <option value="Male">Male</option>
+                                                <option value="Female">Female</option>
+                                                <option value="Other">Other</option>
+                                            </select>
+                                        </div>
                                     </div>
                                 </motion.div>
                             )}

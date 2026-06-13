@@ -250,6 +250,12 @@ function HomeClient() {
           params.append('organiser', activeOrganiser);
       }
       
+      if (selectedDistrict && selectedDistrict !== 'All' && selectedDistrict !== 'India') {
+          params.append('district', selectedDistrict);
+      } else if (selectedCity && selectedCity !== 'All Cities' && selectedCity !== 'India') {
+          params.append('city', selectedCity);
+      }
+      
       // Cache buster for instant updates
       const url = `/api/events/public?${params.toString()}&t=${Date.now()}`;
       const res = await fetch(url, { cache: 'no-store' });
@@ -262,12 +268,12 @@ function HomeClient() {
     } finally {
       setApiLoading(false);
     }
-  }, [activeOrganiser]);
+  }, [activeOrganiser, selectedDistrict, selectedCity]);
 
   // Initial fetch and city change fetch
   useEffect(() => {
     fetchPublicEvents();
-  }, [fetchPublicEvents]);
+  }, [fetchPublicEvents, selectedDistrict, selectedCity]);
 
   // 2. Realtime listener to trigger API re-fetch
   useEffect(() => {
@@ -385,6 +391,8 @@ function HomeClient() {
       results = results.filter(ev => eventMatchesCategory(ev, cat));
     }
 
+    // Location filtering is now handled exclusively at the API level (/api/events/public)
+
     return results.filter(ev => {
       const eventDate = parseEventDate(ev.rawDate || ev.date, ev.rawTime || ev.time, ev);
       if (!eventDate) return false; // Hide expired/invalid
@@ -392,28 +400,10 @@ function HomeClient() {
       const isToday = eventDate.toDateString() === now.toDateString();
       return eventDate >= now || isToday;
     });
-  }, [activeCat, searchQuery, allEventsForFilter, now]);
+  }, [activeCat, searchQuery, allEventsForFilter, now, selectedDistrict, selectedCity]);
 
-  const filteredEvents = useMemo(() => {
-    let results = platformEvents;
-
-    // 0. Filter by Selected District/City (Only apply to 'Nearby' or general filtered list)
-    if (selectedDistrict || selectedCity) {
-      const target = (selectedDistrict || selectedCity).toLowerCase();
-      
-      results = results.filter(ev => {
-        if (ev.virtual === true) return true;
-        
-        const evCity = String(ev.city || '').toLowerCase();
-        const evDistrict = String(ev.district || '').toLowerCase();
-        const evLoc = String(ev.location || '').toLowerCase();
-
-        return evCity.includes(target) || evDistrict.includes(target) || evLoc.includes(target);
-      });
-    }
-
-    return results;
-  }, [platformEvents, selectedDistrict, selectedCity]);
+  // filteredEvents is now exactly platformEvents since location filtering is applied globally
+  const filteredEvents = platformEvents;
 
   const featuredEventsList = useMemo(() => platformEvents.filter((e) => e.featured || e.is_spotlight || e.is_exclusive), [platformEvents]);
 
@@ -423,12 +413,12 @@ function HomeClient() {
 
   const exclusiveEventsList = useMemo(() => platformEvents.filter((e) => e.exclusive || e.is_exclusive), [platformEvents]);
   
-  const tournamentEventsList = useMemo(() => allLiveEvents.filter((e) => 
+  const tournamentEventsList = useMemo(() => platformEvents.filter((e) => 
     e.type === "Tournament Event" || 
     e.type === "Tournament" || 
     e.tournament_data ||
     (Array.isArray(e.tournament_events) && e.tournament_events.length > 0)
-  ), [allLiveEvents]);
+  ), [platformEvents]);
 
   const trendingTournamentsList = useMemo(() => tournamentEventsList.filter((e) => e.trending || e.featured), [tournamentEventsList]);
   
@@ -837,18 +827,36 @@ function HomeClient() {
                 </div>
             </section>
 
-            {/* 3.5) Events Near You (ALL published events) */}
+            {/* 3.5) Events Near You / Explore Events */}
             <section style={{ width: '100%', maxWidth: '1240px', margin: '0 auto', padding: '40px 20px' }}>
                 <div style={{ marginBottom: '32px' }}>
                     <h2 style={{ fontSize: '28px', fontWeight: 900, color: '#111827', margin: '0 0 8px', letterSpacing: '-0.04em', lineHeight: 1.1, fontFamily: 'var(--font-heading)' }}>
-                        Events <span style={{
-                            background: 'linear-gradient(135deg, #f84464 0%, #c026d3 100%)',
-                            WebkitBackgroundClip: 'text',
-                            WebkitTextFillColor: 'transparent',
-                            display: 'inline-block'
-                        }}>Near You</span> 📍
+                        {filteredEvents.length > 0 ? (
+                            <>
+                                Events in <span style={{
+                                    background: 'linear-gradient(135deg, #f84464 0%, #c026d3 100%)',
+                                    WebkitBackgroundClip: 'text',
+                                    WebkitTextFillColor: 'transparent',
+                                    display: 'inline-block'
+                                }}>{selectedDistrict || selectedCity || 'Your Area'}</span> 📍
+                            </>
+                        ) : (
+                            <>
+                                Explore <span style={{
+                                    background: 'linear-gradient(135deg, #f84464 0%, #c026d3 100%)',
+                                    WebkitBackgroundClip: 'text',
+                                    WebkitTextFillColor: 'transparent',
+                                    display: 'inline-block'
+                                }}>Events</span> 🌍
+                            </>
+                        )}
                     </h2>
-                    <p style={{ color: '#9ca3af', fontSize: '13px', margin: 0, fontWeight: 500 }}>Discover everything happening in {selectedCity}</p>
+                    <p style={{ color: '#9ca3af', fontSize: '13px', margin: 0, fontWeight: 500 }}>
+                        {filteredEvents.length > 0 
+                            ? `Discover everything happening in ${selectedDistrict || selectedCity || 'your area'}`
+                            : 'Discover exciting events happening everywhere'
+                        }
+                    </p>
                 </div>
                 
                 <div className="grid grid-cols-1 min-[480px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
@@ -858,7 +866,7 @@ function HomeClient() {
                         ))
                     ) : (
                         <div style={{ gridColumn: '1 / -1', padding: '40px', textAlign: 'center', color: '#9ca3af', border: '1px dashed #e2e8f0', borderRadius: '16px' }}>
-                            No events found in this area.
+                            No events found in {selectedDistrict || selectedCity || 'your area'}. Try another location or browse all events.
                         </div>
                     )}
                 </div>
