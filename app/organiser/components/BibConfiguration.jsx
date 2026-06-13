@@ -5,6 +5,14 @@ import { Hash, Settings2, ToggleLeft, ToggleRight, Info, Play, Loader2, CheckCir
 export default function BibConfiguration({ config, onChange, eventId }) {
     const [isBackfilling, setIsBackfilling] = useState(false);
     const [backfillResult, setBackfillResult] = useState(null);
+    const [tempStartNumber, setTempStartNumber] = useState(null);
+
+    // Sync temp state when config changes externally
+    React.useEffect(() => {
+        if (config && tempStartNumber === null) {
+            setTempStartNumber(String(config.bib_start_number || 1).padStart(config.bib_padding || 4, '0'));
+        }
+    }, [config?.bib_start_number, config?.bib_padding]);
 
     if (!config) return null;
 
@@ -84,11 +92,17 @@ export default function BibConfiguration({ config, onChange, eventId }) {
                                     Starting Number*
                                 </label>
                                 <input
-                                    type="number"
+                                    type="text"
                                     className="w-full bg-white border border-slate-200 text-sm font-bold text-slate-900 p-4 rounded-xl focus:outline-none focus:border-purple-500"
-                                    placeholder="e.g. 1001"
-                                    value={config.bib_start_number || ""}
-                                    onChange={e => onChange({ ...config, bib_start_number: parseInt(e.target.value) || 0 })}
+                                    placeholder="e.g. 0001"
+                                    value={tempStartNumber !== null ? tempStartNumber : String(config.bib_start_number || 1).padStart(config.bib_padding || 4, '0')}
+                                    onChange={e => setTempStartNumber(e.target.value.replace(/\D/g, ''))}
+                                    onBlur={() => {
+                                        const parsed = parseInt(tempStartNumber, 10);
+                                        const finalNum = isNaN(parsed) ? (config.bib_start_number || 1) : parsed;
+                                        onChange({ ...config, bib_start_number: finalNum });
+                                        setTempStartNumber(String(finalNum).padStart(config.bib_padding || 4, '0'));
+                                    }}
                                 />
                                 <p className="text-[9px] text-slate-400">The first BIB number to generate.</p>
                             </div>

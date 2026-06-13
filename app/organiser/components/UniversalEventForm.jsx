@@ -352,7 +352,8 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                 bib_start_number: 1001,
                 bib_padding: 4,
                 bib_per_category: false,
-                bib_display_on_ticket: true
+                bib_display_on_ticket: true,
+                auto_bib_generation: true
             },
             publish: base.publish || {
                 isPublic: true,

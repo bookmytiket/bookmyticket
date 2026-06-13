@@ -150,7 +150,7 @@ export async function POST(request) {
             // 6. Automatically Assign BIB Number
             const categoryName = booking.category || booking.race_category_id || "default";
             try {
-                await assignBibNumber(booking.event_id, bookingId, categoryName);
+                await assignBibNumber(booking.event_id, bookingId, categoryName, true);
             } catch (bibErr) {
                 console.error("Auto BIB generation failed in cashfree webhook:", bibErr.message);
             }

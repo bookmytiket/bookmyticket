@@ -118,7 +118,7 @@ export async function POST(request) {
 
         // 3.5 Auto-Assign Bib Number if Configured (for Marathons/Sports)
         const categoryName = booking.category || booking.race_category_id || session.package_id || "default";
-        let assignedBibNumber = await assignBibNumber(session.event_id, bookingId, categoryName);
+        let assignedBibNumber = await assignBibNumber(session.event_id, bookingId, categoryName, true);
         
         // 4. Update Booking Status to Confirmed immediately
         const updatedCustomerDetails = {

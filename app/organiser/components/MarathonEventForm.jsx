@@ -246,7 +246,8 @@ export default function MarathonEventForm({ marathonId, isRSVP, onCancel, onPubl
                 bib_start_number: source.bib_start_number || 1001,
                 bib_padding: source.bib_padding || 4,
                 bib_per_category: source.bib_per_category || false,
-                bib_display_on_ticket: source.bib_display_on_ticket !== false
+                bib_display_on_ticket: source.bib_display_on_ticket !== false,
+                auto_bib_generation: dynCfg.auto_bib_generation !== false
             });
 
             // ── Fetch categories (handles both FK column names for backward compatibility) ────────
@@ -429,6 +430,7 @@ export default function MarathonEventForm({ marathonId, isRSVP, onCancel, onPubl
                         waitlist: c.waitlist || false,
                         autoApprove: c.autoApprove !== false
                     })),
+                    auto_bib_generation: bibConfig.auto_bib_generation !== false,
                     form_fields: customFields.map(f => ({
                         ...f,
                         options: Array.isArray(f.options) ? f.options.filter(Boolean) : f.options
