@@ -20,10 +20,11 @@ const ALL_COLUMNS = [
   { id: "bib_number", label: "BIB Number", default: true },
   { id: "event_name", label: "Event Name", default: true },
   { id: "event_category", label: "Event Category", default: true },
-  { id: "participant_name", label: "Participant Name", default: true },
+  { id: "participant_name", label: "Full Name", default: true },
   { id: "email", label: "Email", default: true },
   { id: "mobile", label: "Mobile Number", default: true },
   { id: "race_category", label: "Race / Ticket Category", default: true },
+  { id: "distance", label: "Distance", default: true },
   { id: "registration_fee", label: "Registration Fee", default: true },
   { id: "payment_status", label: "Payment Status", default: true },
   { id: "booking_status", label: "Booking Status", default: true },
@@ -56,6 +57,8 @@ export default function AllBookingsPage({ bookings = [], events = [], theme: t, 
   const [showFilters, setShowFilters] = useState(false);
   const [showColManager, setShowColManager] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const rowsPerPage = 20;
   const [showBadgeManager, setShowBadgeManager] = useState(false);
   const [selectedBookings, setSelectedBookings] = useState(new Set());
   const [sortConfig, setSortConfig] = useState({ key: "created_at", direction: "desc" });
@@ -70,7 +73,8 @@ export default function AllBookingsPage({ bookings = [], events = [], theme: t, 
     bibNumber: "",
     ticketId: "",
     gender: "",
-    checkInStatus: ""
+    checkInStatus: "",
+    distance: ""
   });
 
   // Column preferences state
@@ -106,20 +110,31 @@ export default function AllBookingsPage({ bookings = [], events = [], theme: t, 
       
       const isMarathon = ev.type === "Marathon";
       
-      // Helper to find keys case-insensitively or by partial match
+      // Helper to find keys case-insensitively or by partial match that have a valid value
       const findKey = (obj, searchStrs) => {
         if (!obj) return null;
         const keys = Object.keys(obj);
-        const k = keys.find(key => searchStrs.some(s => key.toLowerCase().includes(s.toLowerCase())));
-        return k ? obj[k] : null;
+        for (const key of keys) {
+          if (searchStrs.some(s => key.toLowerCase().includes(s.toLowerCase()))) {
+            const val = obj[key];
+            if (val && typeof val === 'string' && val.trim().length > 0) {
+              return val.trim();
+            } else if (val && typeof val !== 'string') {
+              return String(val);
+            }
+          }
+        }
+        return null;
       };
 
       const participantInfo = userDetails.participant || meta.participant || {};
 
-      // Try to find the participant name anywhere it might be hiding
+      // Try to find the participant name anywhere it might be hiding, prioritizing 'Full Name'
       const participant_name = 
-        findKey(participantInfo, ["name", "full name"]) ||
-        findKey(userDetails, ["name", "full name"]) ||
+        findKey(participantInfo, ["full name", "fullname"]) ||
+        findKey(userDetails, ["full name", "fullname"]) ||
+        findKey(participantInfo, ["name"]) ||
+        findKey(userDetails, ["name"]) ||
         meta.participant_name || 
         b.name || 
         b.customer_name || 
@@ -135,24 +150,27 @@ export default function AllBookingsPage({ bookings = [], events = [], theme: t, 
         (isMarathon ? "--" : "--");
 
       const email = 
-        participantInfo.email ||
-        participantInfo["Email Address"] ||
-        userDetails["Email Address"] || 
-        userDetails.email || 
+        findKey(participantInfo, ["email", "mail"]) ||
+        findKey(userDetails, ["email", "mail"]) ||
         meta.email || 
         b.email || 
         b.customer_email || 
         "";
 
-      const mobile = 
-        participantInfo.phone ||
-        participantInfo["Phone Number"] ||
-        userDetails["Phone Number"] || 
-        userDetails.phone || 
+      const rawMobile = 
+        findKey(participantInfo, ["phone", "mobile", "contact number", "mobile_number", "phone_number", "participant_mobile"]) ||
+        findKey(userDetails, ["phone", "mobile", "contact number", "mobile_number", "phone_number", "participant_mobile"]) ||
         meta.phone || 
+        meta.mobile ||
         b.phone || 
+        b.mobile ||
+        b.mobile_number ||
         b.customer_phone || 
+        b.profiles?.phone ||
+        b.profiles?.mobile ||
         "";
+      
+      const mobile = typeof rawMobile === 'string' && rawMobile.trim().length > 4 ? rawMobile.trim() : (rawMobile || "Not Provided");
 
       const registration_fee = b.amount || b.total_price || b.payment_amount || 0;
       let payment_status = b.payment_status || (b.status === 'Confirmed' ? 'Paid' : 'Pending');
@@ -170,6 +188,21 @@ export default function AllBookingsPage({ bookings = [], events = [], theme: t, 
         email,
         mobile,
         race_category: b.category || meta.category || b.ticket_type || "General",
+        distance: (() => {
+          let d = b.distance || meta.distance || meta.distance_km || userDetails?.distance || userDetails?.distance_km || findKey(participantInfo, ["distance", "km"]) || findKey(userDetails, ["distance", "km"]);
+          if (!d && isMarathon) {
+              const fallbackCat = b.category || meta.category || b.ticket_type || "";
+              const kmMatch = String(fallbackCat).match(/(\d+(\.\d+)?)\s*km/i);
+              if (kmMatch) {
+                  d = kmMatch[1];
+              } else {
+                  d = fallbackCat || "Not Provided";
+              }
+          }
+          if (!d) return "--";
+          if (String(d).match(/^\d+(\.\d+)?$/)) return `${d} KM`;
+          return d;
+        })(),
         registration_fee,
         payment_status,
         booking_status: b.status || "Pending",
@@ -213,7 +246,8 @@ export default function AllBookingsPage({ bookings = [], events = [], theme: t, 
         r.ticket_id.toLowerCase().includes(q) ||
         r.booking_id.toLowerCase().includes(q) ||
         r.event_name.toLowerCase().includes(q) ||
-        r.bib_number.toLowerCase().includes(q)
+        r.bib_number.toLowerCase().includes(q) ||
+        (r.distance && r.distance.toLowerCase().includes(q))
       );
     }
 
@@ -226,6 +260,7 @@ export default function AllBookingsPage({ bookings = [], events = [], theme: t, 
     if (filters.bibNumber) result = result.filter(r => r.bib_number.includes(filters.bibNumber));
     if (filters.ticketId) result = result.filter(r => r.ticket_id.includes(filters.ticketId));
     if (filters.gender) result = result.filter(r => r.gender === filters.gender);
+    if (filters.distance) result = result.filter(r => r.distance === filters.distance || (r.distance && r.distance.includes(filters.distance)));
     if (filters.checkInStatus) {
       if (filters.checkInStatus === "Checked-In") {
          result = result.filter(r => r.check_in_status !== "Pending");
@@ -249,6 +284,14 @@ export default function AllBookingsPage({ bookings = [], events = [], theme: t, 
 
     return result;
   }, [rows, search, filters, sortConfig]);
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters, search, sortConfig]);
+
+  const totalPages = Math.ceil(filteredAndSortedRows.length / rowsPerPage);
+  const paginatedRows = filteredAndSortedRows.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
 
   const toggleColumn = (colId) => {
     setVisibleColumns(prev => 
@@ -560,6 +603,15 @@ export default function AllBookingsPage({ bookings = [], events = [], theme: t, 
                     ]}
                   />
                   <CustomSelect 
+                    value={filters.distance} 
+                    onChange={(v) => setFilters({...filters, distance: v})}
+                    placeholder="All Distances"
+                    options={[
+                      { label: "All Distances", value: "" },
+                      ...Array.from(new Set(rows.map(r => r.distance).filter(d => d && d !== "--" && d !== "N/A"))).map(d => ({ label: d, value: d }))
+                    ]}
+                  />
+                  <CustomSelect 
                     value={filters.checkInStatus} 
                     onChange={(v) => setFilters({...filters, checkInStatus: v})}
                     placeholder="All Check-in Status"
@@ -659,7 +711,7 @@ export default function AllBookingsPage({ bookings = [], events = [], theme: t, 
                     </td>
                   </tr>
                 ) : (
-                  filteredAndSortedRows.map((row, index) => (
+                  paginatedRows.map((row, index) => (
                     <tr key={row.id} style={{ borderBottom: `1px solid ${t.border}`, backgroundColor: selectedBookings.has(row.id) ? '#3b82f60a' : 'transparent', transition: 'background-color 0.2s' }}>
                       <td style={{ padding: '16px' }}>
                         <button onClick={() => toggleSelectRow(row.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', color: t.textSub }}>
@@ -701,6 +753,44 @@ export default function AllBookingsPage({ bookings = [], events = [], theme: t, 
               </tbody>
             </table>
           </div>
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', borderTop: `1px solid ${t.border}`, backgroundColor: t.cardBg }}>
+              <span style={{ fontSize: '13px', color: t.textSub, fontWeight: 500 }}>
+                Showing {((currentPage - 1) * rowsPerPage) + 1} to {Math.min(currentPage * rowsPerPage, filteredAndSortedRows.length)} of {filteredAndSortedRows.length} bookings
+              </span>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button 
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  style={{
+                    padding: '6px 12px', borderRadius: '6px', fontSize: '13px', fontWeight: 600,
+                    backgroundColor: currentPage === 1 ? 'transparent' : '#3b82f6',
+                    color: currentPage === 1 ? t.textSub : '#fff',
+                    border: `1px solid ${currentPage === 1 ? t.border : '#3b82f6'}`,
+                    cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  Previous
+                </button>
+                <button 
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  style={{
+                    padding: '6px 12px', borderRadius: '6px', fontSize: '13px', fontWeight: 600,
+                    backgroundColor: currentPage === totalPages ? 'transparent' : '#3b82f6',
+                    color: currentPage === totalPages ? t.textSub : '#fff',
+                    border: `1px solid ${currentPage === totalPages ? t.border : '#3b82f6'}`,
+                    cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </>
       )}

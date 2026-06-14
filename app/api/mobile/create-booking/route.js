@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { assignBibNumber } from "@/lib/bibGenerator";
 
 export async function POST(request) {
   try {
@@ -73,9 +74,27 @@ export async function POST(request) {
 
     if (bookingError) throw bookingError;
 
+    let assignedBibNumber = null;
+    if (isFree) {
+        try {
+            const categoryName = payload.category || payload.race_category_id || "default";
+            assignedBibNumber = await assignBibNumber(booking.event_id, booking.id, categoryName, true);
+        } catch (bibErr) {
+            console.error("Auto BIB generation failed in mobile booking:", bibErr.message);
+        }
+    }
+
+    const updatedCustomerDetails = {
+        ...(booking.customer_details || {}),
+        ...(assignedBibNumber ? { bib_number: assignedBibNumber } : {})
+    };
+
     await supabaseAdmin
       .from("bookings")
-      .update({ booking_ref: String(booking.id).slice(-8).toUpperCase() })
+      .update({ 
+          booking_ref: String(booking.id).slice(-8).toUpperCase(),
+          customer_details: updatedCustomerDetails
+      })
       .eq("id", booking.id);
 
     const selectedSeats = customerDetails.selected_seats || payload.selected_seats || [];

@@ -28,6 +28,9 @@ export default function DigitalInvoice({ booking, event, branding = {} }) {
         year: 'numeric'
     });
 
+    const customerDetails = booking.customer_details || {};
+    const customerName = (customerDetails.participant && (customerDetails.participant["Full Name"] || customerDetails.participant.fullname || customerDetails.participant.name)) || customerDetails["Full Name"] || customerDetails.fullname || customerDetails.name || "Guest User";
+
     const downloadPDF = async () => {
         if (!invoiceRef.current) return;
         setDownloading(true);
@@ -105,7 +108,7 @@ export default function DigitalInvoice({ booking, event, branding = {} }) {
                                 <h3 className="text-[10px] font-black uppercase tracking-tight">Billed To</h3>
                             </div>
                             <div className="bg-slate-50 rounded-lg p-3 border border-slate-100 h-[100px]">
-                                <p className="text-sm font-black text-slate-900 mb-0">{booking.customer_details?.name || "Guest User"}</p>
+                                <p className="text-sm font-black text-slate-900 mb-0">{customerName}</p>
                                 <p className="text-[10px] font-bold text-slate-500">{booking.customer_details?.email}</p>
                                 <p className="text-[10px] font-bold text-slate-500 mt-0.5">{booking.customer_details?.phone}</p>
                                 {(booking.bib_number || booking.customer_details?.bib_number) && (

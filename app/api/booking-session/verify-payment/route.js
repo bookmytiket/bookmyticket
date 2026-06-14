@@ -4,6 +4,7 @@ import { after } from "next/server";
 import crypto from "crypto";
 import { generateSecureQRToken } from "@/lib/security";
 import { queueJob, executeJob } from "@/app/utils/backgroundJobs";
+import { assignBibNumber } from "@/lib/bibGenerator";
 
 const supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -365,6 +366,8 @@ export async function POST(request) {
             const customerDetails = booking.customer_details || {};
             const phoneNumber = customerDetails.phone || customerDetails.mobile;
             const email = customerDetails.email;
+            
+            const customerName = (customerDetails.participant && (customerDetails.participant["Full Name"] || customerDetails.participant.fullname || customerDetails.participant.name)) || customerDetails["Full Name"] || customerDetails.fullname || customerDetails.name || "Customer";
 
             if (phoneNumber || email) {
                 const { jobId: notifyJobId } = await queueJob({
@@ -373,7 +376,7 @@ export async function POST(request) {
                     payload: {
                         phoneNumber,
                         email,
-                        name: customerDetails.name || "Customer",
+                        name: customerName,
                         eventName: session.events?.title || "Event",
                         date: session.events?.date || "TBA",
                         venue: session.events?.venue || "TBA",
@@ -389,7 +392,7 @@ export async function POST(request) {
                     payload: {
                         phoneNumber,
                         email,
-                        name: customerDetails.name || "Customer",
+                        name: customerName,
                         eventName: session.events?.title || "Event",
                         date: session.events?.date || "TBA",
                         venue: session.events?.venue || "TBA",

@@ -106,6 +106,12 @@ export default function CheckoutClient({ id: propId, sessionToken }) {
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
+    useEffect(() => {
+        if (user?.phone && !customerPhone) {
+            setCustomerPhone(user.phone.replace(/^\+\d+\s/, '')); // strip country code if present, or just leave it
+        }
+    }, [user]);
+
     const [qty, setQty] = useState(1);
     const [termsAccepted, setTermsAccepted] = useState(false);
     const [appliedCoupon, setAppliedCoupon] = useState(null);
@@ -118,6 +124,8 @@ export default function CheckoutClient({ id: propId, sessionToken }) {
     const [bookingType, setBookingType] = useState('standard');
     const [ticketPrice, setTicketPrice] = useState(499);
     const [session, setSession] = useState(null);
+    const [customerPhone, setCustomerPhone] = useState("");
+    const [customerCountryCode, setCustomerCountryCode] = useState("+91");
 
     useEffect(() => {
         if (!sessionToken) return;
@@ -670,17 +678,21 @@ export default function CheckoutClient({ id: propId, sessionToken }) {
             }
         }
 
+        if (!customerPhone || customerPhone.trim().length < 5) {
+            setNotification({ message: 'Please provide a valid Mobile Number', type: 'error' });
+            return;
+        }
+
         setIsProcessing(true);
         try {
             if (sessionToken) {
-                // Update participantData with RSVP answers in the session before confirming
-                if (event?.rsvpFields?.length > 0) {
-                    await fetch('/api/booking-session/update-participant', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ sessionToken, extraDetails: rsvpAnswers })
-                    }).catch(() => {});
-                }
+                // Update participantData with RSVP answers and phone in the session before confirming
+                const extraDetails = { ...rsvpAnswers, phone: customerCountryCode + " " + customerPhone.trim() };
+                await fetch('/api/booking-session/update-participant', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sessionToken, extraDetails })
+                }).catch(() => {});
 
                 // 1. Accept terms on session
                 await fetch('/api/booking-session/accept-terms', {
@@ -833,7 +845,7 @@ export default function CheckoutClient({ id: propId, sessionToken }) {
                     customer_details: {
                         name: user.name || "Guest User",
                         email: user.identifier || user.email || "",
-                        phone: user.phone || "",
+                        phone: customerCountryCode + " " + customerPhone.trim(),
                         applied_campaign_id: appliedCoupon?.isCampaign ? appliedCoupon.id : null,
                         applied_campaign_code: appliedCoupon?.isCampaign ? appliedCoupon.code : null,
                         ...regData
@@ -1526,6 +1538,29 @@ export default function CheckoutClient({ id: propId, sessionToken }) {
                                         readOnly
                                         className="w-full px-8 py-5 bg-slate-50 border border-slate-100 rounded-[2rem] text-sm font-bold text-slate-900 outline-none"
                                     />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Mobile Number*</label>
+                                    <div className="flex gap-2 w-full px-4 py-2 bg-white border border-slate-100 focus-within:border-pink-200 focus-within:ring-4 focus-within:ring-pink-500/10 rounded-[2rem] transition-all">
+                                        <select 
+                                            className="w-24 bg-transparent text-sm font-bold text-slate-900 outline-none appearance-none cursor-pointer border-r border-slate-100"
+                                            value={customerCountryCode}
+                                            onChange={e => setCustomerCountryCode(e.target.value)}
+                                        >
+                                            <option value="+91">+91 (IN)</option>
+                                            <option value="+1">+1 (US)</option>
+                                            <option value="+44">+44 (UK)</option>
+                                            <option value="+61">+61 (AU)</option>
+                                            <option value="+971">+971 (AE)</option>
+                                        </select>
+                                        <input 
+                                            type="tel"
+                                            placeholder="10-digit mobile number"
+                                            value={customerPhone}
+                                            onChange={e => setCustomerPhone(e.target.value)}
+                                            className="flex-1 bg-transparent text-sm font-bold text-slate-900 outline-none px-2"
+                                        />
+                                    </div>
                                 </div>
                                 {isFree && event?.rsvpFields?.map((field) => (
                                     <div key={field} className="space-y-2">

@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic';
 import { normalizeBooking, ok } from "@/lib/shared/contracts";
 import { getBearerUser, jsonError, jsonOk, readProfileRole } from "@/lib/shared/supabaseServer";
+import { assignBibNumber } from "@/lib/bibGenerator";
 
 function getSelectedSeats(payload, customerDetails) {
   const seats = customerDetails?.selected_seats || payload.selected_seats || [];
@@ -196,7 +197,26 @@ export async function POST(request) {
     if (bookingError) throw bookingError;
 
     const bookingRef = String(booking.id).slice(-8).toUpperCase();
-    await supabase.from("bookings").update({ booking_ref: bookingRef }).eq("id", booking.id);
+
+    let assignedBibNumber = null;
+    if (isConfirmed) {
+        try {
+            const categoryName = payload.category || payload.race_category_id || "default";
+            assignedBibNumber = await assignBibNumber(booking.event_id, booking.id, categoryName, true);
+        } catch (bibErr) {
+            console.error("Auto BIB generation failed in v1 booking:", bibErr.message);
+        }
+    }
+
+    const updatedCustomerDetails = {
+        ...(booking.customer_details || {}),
+        ...(assignedBibNumber ? { bib_number: assignedBibNumber } : {})
+    };
+
+    await supabase.from("bookings").update({ 
+        booking_ref: bookingRef,
+        customer_details: updatedCustomerDetails
+    }).eq("id", booking.id);
 
     const { error: itemError } = await supabase.from("booking_items").insert({
       booking_id: booking.id,
@@ -218,7 +238,7 @@ export async function POST(request) {
         payload: {
           to: user.email,
           user_id: user.id,
-          customer_name: customerDetails.name || user.user_metadata?.full_name || "Guest",
+          customer_name: (customerDetails.participant && (customerDetails.participant["Full Name"] || customerDetails.participant.fullname || customerDetails.participant.name)) || customerDetails["Full Name"] || customerDetails.fullname || customerDetails.name || user.user_metadata?.full_name || "Guest",
           event_name: payload.event_name || eventRow.title || eventRow.name || "Event",
           booking_reference: bookingRef,
           ticket_count: ticketCount,

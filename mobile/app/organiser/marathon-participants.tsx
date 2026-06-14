@@ -31,7 +31,8 @@ export default function MarathonParticipants() {
         .from('marathon_registrations')
         .select(`
           *,
-          marathon_categories ( category_name, distance_km )
+          marathon_categories ( category_name, distance_km ),
+          profiles:user_id ( phone, mobile )
         `)
         .eq('marathon_id', marathonId)
         .order('created_at', { ascending: false });
@@ -72,13 +73,14 @@ export default function MarathonParticipants() {
     }
     
     try {
-      const headers = ['BIB Number', 'Registration ID', 'Name', 'Category', 'Phone', 'Payment Status', 'Date'];
+      const headers = ['BIB Number', 'Registration ID', 'Name', 'Category', 'Distance', 'Phone', 'Payment Status', 'Date'];
       const rows = filteredData.map(reg => [
         reg.bib_number || 'N/A',
         reg.registration_id,
         reg.participant_name,
         reg.marathon_categories?.category_name || '-',
-        reg.participant_phone || '-',
+        reg.marathon_categories?.distance_km ? `${reg.marathon_categories.distance_km} KM` : '-',
+        reg.profiles?.phone || reg.profiles?.mobile || '-',
         reg.payment_status || '-',
         new Date(reg.created_at).toLocaleDateString()
       ]);
@@ -170,7 +172,12 @@ export default function MarathonParticipants() {
               <Text style={[styles.idText, { color: colors.muted }]}>{reg.registration_id}</Text>
               
               <View style={styles.cardFooter}>
-                <Text style={[styles.categoryText, { color: colors.text }]}>{reg.marathon_categories?.category_name || 'General'}</Text>
+                <View>
+                  <Text style={[styles.categoryText, { color: colors.text }]}>{reg.marathon_categories?.category_name || 'General'}</Text>
+                  {reg.marathon_categories?.distance_km && (
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: colors.tint, marginTop: 2 }}>{reg.marathon_categories.distance_km} KM</Text>
+                  )}
+                </View>
                 <Text style={[styles.dateText, { color: colors.muted }]}>{new Date(reg.created_at).toLocaleDateString()}</Text>
               </View>
             </View>

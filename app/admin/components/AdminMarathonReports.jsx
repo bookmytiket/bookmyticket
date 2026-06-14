@@ -53,7 +53,8 @@ export default function AdminMarathonReports({ t, theme }) {
         .select(`
           *,
           marathon_categories ( category_name, distance_km ),
-          marathon_events ( title, organiser_id, user_profiles:organiser_id ( full_name ) )
+          marathon_events ( title, organiser_id, user_profiles:organiser_id ( full_name ) ),
+          profiles:user_id ( phone, mobile, email )
         `);
       
       const { data: chks } = await adminClient.from('marathon_checkins').select('*');
@@ -98,11 +99,12 @@ export default function AdminMarathonReports({ t, theme }) {
         'BIB Number': reg.bib_number || 'N/A',
         'Ticket ID': reg.ticket_id || 'N/A',
         'Registration ID': reg.registration_id || 'N/A',
-        'Participant Name': reg.participant_name || '-',
+        'Full Name': reg.participant_name || '-',
         'Gender': reg.participant_gender || '-',
-        'Mobile': reg.participant_phone || '-',
-        'Email': reg.participant_email || '-',
+        'Mobile': reg.profiles?.phone || reg.profiles?.mobile || '-',
+        'Email': reg.profiles?.email || '-',
         'Category': reg.marathon_categories?.category_name || '-',
+        'Distance': reg.marathon_categories?.distance_km ? `${reg.marathon_categories.distance_km} KM` : '-',
         'Payment Status': reg.payment_status || '-',
         'Amount': reg.payment_amount || '0',
         'Booking Date': new Date(reg.created_at).toLocaleString(),
@@ -167,11 +169,11 @@ export default function AdminMarathonReports({ t, theme }) {
 
       const data = getReportData();
       const rows = data.map((d, i) => [
-        i + 1, d['Event'], d['Organizer'], d['BIB Number'], d['Registration ID'], d['Participant Name'], d['Category'], d['Payment Status']
+        i + 1, d['Event'], d['Organizer'], d['BIB Number'], d['Registration ID'], d['Full Name'], d['Category'], d['Payment Status']
       ]);
 
       doc.autoTable({
-        head: [['S.No', 'Event', 'Organizer', 'BIB', 'Reg ID', 'Name', 'Category', 'Payment']],
+        head: [['S.No', 'Event', 'Organizer', 'BIB', 'Reg ID', 'Full Name', 'Category', 'Payment']],
         body: rows,
         startY: 35,
         styles: { fontSize: 8 }
@@ -236,7 +238,7 @@ export default function AdminMarathonReports({ t, theme }) {
               <tr>
                 <th className="p-4">BIB</th>
                 <th className="p-4">Event</th>
-                <th className="p-4">Participant</th>
+                <th className="p-4">Full Name</th>
                 <th className="p-4">Category</th>
                 <th className="p-4">Payment</th>
               </tr>

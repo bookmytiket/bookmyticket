@@ -107,15 +107,18 @@ export default function DigitalTicket({ booking, event, ticket: initialTicket, s
         const bibNumber = booking?.bib_number || booking?.customer_details?.bib_number || ticket?.bib_number;
         const showBib = bibNumber && event?.bib_display_on_ticket !== false;
 
+        const customerDetails = booking?.customer_details || {};
+        const customerName = (customerDetails.participant && (customerDetails.participant["Full Name"] || customerDetails.participant.fullname || customerDetails.participant.name)) || customerDetails["Full Name"] || customerDetails.fullname || customerDetails.name || booking?.customer_name || booking?.customer_email || "Guest";
+
         return {
             label: category || "Event",
             fields: showBib ? [
-                { label: "ATTENDEE", value: booking?.customer_name || booking?.customer_details?.name || booking?.customer_email || "Guest" },
+                { label: "ATTENDEE", value: customerName },
                 { label: "EVENT TYPE", value: event?.category || "General" },
                 { label: "CATEGORY", value: booking?.customer_details?.packageId || zone },
                 { label: "BIB NUMBER", value: bibNumber }
             ] : [
-                { label: "ATTENDEE", value: booking?.customer_name || booking?.customer_details?.name || booking?.customer_email || "Guest" },
+                { label: "ATTENDEE", value: customerName },
                 { label: "EVENT TYPE", value: event?.category || "General" },
                 { label: "SEAT CATEGORY", value: zone },
                 { label: "SEAT NO", value: seatNo }

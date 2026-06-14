@@ -4,6 +4,7 @@ import { after } from "next/server";
 import crypto from "crypto";
 import { generateSecureQRToken } from "@/lib/security";
 import { queueJob, executeJob } from "@/app/utils/backgroundJobs";
+import { assignBibNumber } from "@/lib/bibGenerator";
 
 const supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -60,13 +61,28 @@ export async function POST(request) {
 
             if (fetchErr) throw fetchErr;
 
+            // 2.5 Automatically Assign BIB Number
+            const categoryName = booking.category || booking.race_category_id || "default";
+            let assignedBibNumber = null;
+            try {
+                assignedBibNumber = await assignBibNumber(booking.event_id, id, categoryName, true);
+            } catch (bibErr) {
+                console.error("Auto BIB generation failed in razorpay verify:", bibErr.message);
+            }
+
+            const updatedCustomerDetails = {
+                ...(booking.customer_details || {}),
+                ...(assignedBibNumber ? { bib_number: assignedBibNumber } : {})
+            };
+
             const { error: updateErr } = await supabaseAdmin
                 .from('bookings')
                 .update({ 
                     status: 'Confirmed',
                     payment_status: 'paid',
                     confirmed_at: nowIso,
-                    booking_ref: id.slice(-8).toUpperCase()
+                    booking_ref: id.slice(-8).toUpperCase(),
+                    customer_details: updatedCustomerDetails
                 })
                 .eq('id', id);
 
@@ -260,6 +276,8 @@ export async function POST(request) {
                 const customerDetails = booking.customer_details || {};
                 const phoneNumber = customerDetails.phone || customerDetails.mobile;
                 const email = customerDetails.email;
+                
+                const customerName = (customerDetails.participant && (customerDetails.participant["Full Name"] || customerDetails.participant.fullname || customerDetails.participant.name)) || customerDetails["Full Name"] || customerDetails.fullname || customerDetails.name || "Customer";
 
                 if (phoneNumber || email) {
                     const { jobId: notifyJobId } = await queueJob({
@@ -268,7 +286,7 @@ export async function POST(request) {
                         payload: {
                             phoneNumber,
                             email,
-                            name: customerDetails.name || "Customer",
+                            name: customerName,
                             eventName: booking.events?.title || "Event",
                             date: booking.events?.date || "TBA",
                             ticketNumber
@@ -282,7 +300,7 @@ export async function POST(request) {
                         payload: {
                             phoneNumber,
                             email,
-                            name: customerDetails.name || "Customer",
+                            name: customerName,
                             eventName: booking.events?.title || "Event",
                             date: booking.events?.date || "TBA",
                             ticketNumber

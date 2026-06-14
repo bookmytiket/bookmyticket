@@ -222,6 +222,8 @@ export async function POST(request) {
                 const customerDetails = booking.customer_details || {};
                 const phoneNumber = customerDetails.phone || customerDetails.mobile;
                 const email = customerDetails.email;
+                
+                const customerName = (customerDetails.participant && (customerDetails.participant["Full Name"] || customerDetails.participant.fullname || customerDetails.participant.name)) || customerDetails["Full Name"] || customerDetails.fullname || customerDetails.name || "Customer";
 
                 if (phoneNumber || email) {
                     const { jobId: notifyJobId } = await queueJob({
@@ -230,7 +232,7 @@ export async function POST(request) {
                         payload: {
                             phoneNumber,
                             email,
-                            name: customerDetails.name || "Customer",
+                            name: customerName,
                             eventName: booking.events?.title || "Event",
                             date: booking.events?.date || "TBA",
                             ticketNumber
@@ -244,7 +246,7 @@ export async function POST(request) {
                         payload: {
                             phoneNumber,
                             email,
-                            name: customerDetails.name || "Customer",
+                            name: customerName,
                             eventName: booking.events?.title || "Event",
                             date: booking.events?.date || "TBA",
                             ticketNumber

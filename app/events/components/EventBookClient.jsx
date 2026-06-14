@@ -301,6 +301,7 @@ export default function EventBookClient({ id }) {
                 id: c.id,
                 title: c.event_name,
                 price: Number(c.fee) || 0,
+                distance: c.distance || c.distance_km || null,
                 description: `Entry fee for ${c.event_name}. Distance: ${c.distance || 'N/A'}`,
                 features: ['Competition Entry', c.gender && c.gender !== 'All' ? `${c.gender} Only` : 'All Genders']
             }));
@@ -312,6 +313,7 @@ export default function EventBookClient({ id }) {
                 id: c.id || `mara_cat_${i}`,
                 title: c.title || c.category_name || 'Category',
                 price: Number(c.price) || 0,
+                distance: c.distance_km || c.distance || null,
                 description: `Entry for ${c.title || c.category_name}. Distance: ${c.distance_km || 'N/A'}KM`,
                 features: ['Marathon Entry', c.age_group ? `Age: ${c.age_group}` : 'Open Category']
             }));
@@ -324,6 +326,7 @@ export default function EventBookClient({ id }) {
                 id: cat.id || `comp_cat_${i}`,
                 title: cat.name || cat.title || cat.category_name || 'Category',
                 price: Number(cat.price) || 0,
+                distance: cat.distance || cat.distance_km || cat.distance_in_km || null,
                 description: cat.description || `Standard entry for ${cat.name || cat.title || cat.category_name || 'this category'}.`,
                 features: cat.features || ['Competition Entry']
             }));
@@ -615,7 +618,10 @@ export default function EventBookClient({ id }) {
                     userId: user.id,
                     participantData: {
                         selectedSeats,
-                        participant: participantData,
+                        participant: { 
+                            ...participantData, 
+                            distance: selectedPackage?.distance || (selectedPackage?.title && selectedPackage.title.includes('KM') ? selectedPackage.title : null) || null 
+                        },
                         team: teamData,
                         bookingType,
                         price: currentPrice,
@@ -863,13 +869,26 @@ export default function EventBookClient({ id }) {
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 pl-1">Phone Number</label>
-                                            <input 
-                                                className="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl text-sm font-black text-slate-900 outline-none focus:border-pink-500"
-                                                placeholder="+91 XXXXX XXXXX"
-                                                value={participantData.phone || ""}
-                                                onChange={e => setParticipantData({...participantData, phone: e.target.value})}
-                                            />
+                                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 pl-1">Mobile Number*</label>
+                                            <div className="flex gap-2">
+                                                <select 
+                                                    className="w-24 bg-slate-50 border border-slate-200 p-4 rounded-2xl text-sm font-black text-slate-900 outline-none focus:border-pink-500 appearance-none"
+                                                    value={participantData.countryCode || "+91"}
+                                                    onChange={e => setParticipantData({...participantData, countryCode: e.target.value})}
+                                                >
+                                                    <option value="+91">+91 (IN)</option>
+                                                    <option value="+1">+1 (US)</option>
+                                                    <option value="+44">+44 (UK)</option>
+                                                    <option value="+61">+61 (AU)</option>
+                                                    <option value="+971">+971 (AE)</option>
+                                                </select>
+                                                <input 
+                                                    className="flex-1 bg-slate-50 border border-slate-200 p-4 rounded-2xl text-sm font-black text-slate-900 outline-none focus:border-pink-500"
+                                                    placeholder="10-digit mobile number"
+                                                    value={participantData.mobile || participantData.phone || ""}
+                                                    onChange={e => setParticipantData({...participantData, mobile: e.target.value, phone: (participantData.countryCode || "+91") + " " + e.target.value})}
+                                                />
+                                            </div>
                                         </div>
                                         <div>
                                             <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 pl-1">Date of Birth</label>
