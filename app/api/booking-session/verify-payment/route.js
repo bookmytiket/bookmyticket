@@ -133,7 +133,8 @@ export async function POST(request) {
                 payment_status: "paid",
                 confirmed_at: nowIso,
                 booking_ref: bookingId.slice(-8).toUpperCase(),
-                customer_details: updatedCustomerDetails
+                customer_details: updatedCustomerDetails,
+                ...(assignedBibNumber ? { bib_number: assignedBibNumber } : {})
             })
             .eq("id", bookingId);
 

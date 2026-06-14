@@ -215,7 +215,8 @@ export async function POST(request) {
 
     await supabase.from("bookings").update({ 
         booking_ref: bookingRef,
-        customer_details: updatedCustomerDetails
+        customer_details: updatedCustomerDetails,
+        ...(assignedBibNumber ? { bib_number: assignedBibNumber } : {})
     }).eq("id", booking.id);
 
     const { error: itemError } = await supabase.from("booking_items").insert({

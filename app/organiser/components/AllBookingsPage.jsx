@@ -425,7 +425,7 @@ export default function AllBookingsPage({ bookings = [], events = [], theme: t, 
                 onClick={() => setShowExportMenu(!showExportMenu)}
                 style={{
                   display: 'flex', alignItems: 'center', gap: '8px',
-                  backgroundColor: '#10b981', color: '#fff', border: 'none',
+                  backgroundColor: '#a855f7', color: '#fff', border: 'none',
                   padding: '10px 16px', borderRadius: '10px', fontSize: '14px', fontWeight: 600,
                   cursor: 'pointer', boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.2)'
                 }}
@@ -448,10 +448,10 @@ export default function AllBookingsPage({ bookings = [], events = [], theme: t, 
                       {selectedBookings.size > 0 ? `Export ${selectedBookings.size} Selected` : 'Export All'}
                     </div>
                     <button onClick={exportExcel} style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '10px 12px', border: 'none', background: 'transparent', color: t.textMain, cursor: 'pointer', borderRadius: '6px', textAlign: 'left', fontSize: '14px' }}>
-                      <FileSpreadsheet size={16} color="#10b981" /> Excel (.xlsx)
+                      <FileSpreadsheet size={16} color="#a855f7" /> Excel (.xlsx)
                     </button>
                     <button onClick={exportCSV} style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '10px 12px', border: 'none', background: 'transparent', color: t.textMain, cursor: 'pointer', borderRadius: '6px', textAlign: 'left', fontSize: '14px' }}>
-                      <FileText size={16} color="#3b82f6" /> CSV (.csv)
+                      <FileText size={16} color="#d946ef" /> CSV (.csv)
                     </button>
                     <button onClick={exportPDF} style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '10px 12px', border: 'none', background: 'transparent', color: t.textMain, cursor: 'pointer', borderRadius: '6px', textAlign: 'left', fontSize: '14px' }}>
                       <PdfFile size={16} color="#ef4444" /> PDF Document
@@ -475,9 +475,9 @@ export default function AllBookingsPage({ bookings = [], events = [], theme: t, 
               onClick={() => setShowFilters(!showFilters)}
               style={{
                 display: 'flex', alignItems: 'center', gap: '8px',
-                backgroundColor: showFilters ? '#3b82f6' : t.cardBg, 
+                backgroundColor: showFilters ? '#d946ef' : t.cardBg, 
                 color: showFilters ? '#fff' : t.textMain, 
-                border: `1px solid ${showFilters ? '#3b82f6' : t.border}`,
+                border: `1px solid ${showFilters ? '#d946ef' : t.border}`,
                 padding: '10px 16px', borderRadius: '10px', fontSize: '14px', fontWeight: 600, cursor: 'pointer',
                 transition: 'all 0.2s'
               }}
@@ -642,7 +642,7 @@ export default function AllBookingsPage({ bookings = [], events = [], theme: t, 
               <div style={{ padding: '24px', backgroundColor: t.cardBg, borderRadius: '16px', border: `1px solid ${t.border}` }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                   <h4 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: t.textMain }}>Manage Columns</h4>
-                  <button onClick={() => setVisibleColumns(ALL_COLUMNS.filter(c => c.default).map(c => c.id))} style={{ background: 'transparent', border: 'none', color: '#3b82f6', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>Reset to Default</button>
+                  <button onClick={() => setVisibleColumns(ALL_COLUMNS.filter(c => c.default).map(c => c.id))} style={{ background: 'transparent', border: 'none', color: '#d946ef', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>Reset to Default</button>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px' }}>
                   {ALL_COLUMNS.map(col => (
@@ -651,7 +651,7 @@ export default function AllBookingsPage({ bookings = [], events = [], theme: t, 
                         type="checkbox" 
                         checked={visibleColumns.includes(col.id)} 
                         onChange={() => toggleColumn(col.id)}
-                        style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#3b82f6' }}
+                        style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#d946ef' }}
                       />
                       {col.label}
                     </label>
@@ -690,14 +690,14 @@ export default function AllBookingsPage({ bookings = [], events = [], theme: t, 
                 <tr>
                   <th style={{ padding: '16px', width: '50px' }}>
                     <button onClick={toggleSelectAll} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', color: t.textSub }}>
-                      {selectedBookings.size === filteredAndSortedRows.length && filteredAndSortedRows.length > 0 ? <CheckSquare size={18} color="#3b82f6" /> : <Square size={18} />}
+                      {selectedBookings.size === filteredAndSortedRows.length && filteredAndSortedRows.length > 0 ? <CheckSquare size={18} color="#d946ef" /> : <Square size={18} />}
                     </button>
                   </th>
                   {ALL_COLUMNS.filter(c => visibleColumns.includes(c.id)).map(col => (
                     <th key={col.id} onClick={() => handleSort(col.id)} style={{ padding: '16px 12px', fontSize: '12px', fontWeight: 700, color: t.textSub, textTransform: 'uppercase', letterSpacing: '0.05em', cursor: 'pointer', whiteSpace: 'nowrap' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         {col.label}
-                        <ArrowUpDown size={12} opacity={sortConfig.key === col.id ? 1 : 0.3} color={sortConfig.key === col.id ? '#3b82f6' : 'inherit'} />
+                        <ArrowUpDown size={12} opacity={sortConfig.key === col.id ? 1 : 0.3} color={sortConfig.key === col.id ? '#d946ef' : 'inherit'} />
                       </div>
                     </th>
                   ))}
@@ -712,10 +712,10 @@ export default function AllBookingsPage({ bookings = [], events = [], theme: t, 
                   </tr>
                 ) : (
                   paginatedRows.map((row, index) => (
-                    <tr key={row.id} style={{ borderBottom: `1px solid ${t.border}`, backgroundColor: selectedBookings.has(row.id) ? '#3b82f60a' : 'transparent', transition: 'background-color 0.2s' }}>
+                    <tr key={row.id} style={{ borderBottom: `1px solid ${t.border}`, backgroundColor: selectedBookings.has(row.id) ? '#d946ef0a' : 'transparent', transition: 'background-color 0.2s' }}>
                       <td style={{ padding: '16px' }}>
                         <button onClick={() => toggleSelectRow(row.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', color: t.textSub }}>
-                          {selectedBookings.has(row.id) ? <CheckSquare size={18} color="#3b82f6" /> : <Square size={18} />}
+                          {selectedBookings.has(row.id) ? <CheckSquare size={18} color="#d946ef" /> : <Square size={18} />}
                         </button>
                       </td>
                       {ALL_COLUMNS.filter(c => visibleColumns.includes(c.id)).map(col => {
@@ -726,13 +726,13 @@ export default function AllBookingsPage({ bookings = [], events = [], theme: t, 
                         if (col.id === 'payment_status') {
                           const isPaid = value === 'Paid' || value === 'Success' || value === 'Free';
                           const isFree = value === 'Free';
-                          const bgColor = isFree ? '#3b82f620' : (isPaid ? '#22c55e20' : '#f59e0b20');
-                          const textColor = isFree ? '#3b82f6' : (isPaid ? '#22c55e' : '#f59e0b');
+                          const bgColor = isFree ? '#d946ef20' : (isPaid ? '#22c55e20' : '#f59e0b20');
+                          const textColor = isFree ? '#d946ef' : (isPaid ? '#22c55e' : '#f59e0b');
                           
                           cellContent = <span style={{ padding: '4px 10px', borderRadius: '100px', fontSize: '11px', fontWeight: 700, backgroundColor: bgColor, color: textColor }}>{value}</span>;
                         } else if (col.id === 'booking_status') {
                           const isConf = value === 'Confirmed';
-                          cellContent = <span style={{ padding: '4px 10px', borderRadius: '100px', fontSize: '11px', fontWeight: 700, backgroundColor: isConf ? '#3b82f620' : '#ef444420', color: isConf ? '#3b82f6' : '#ef4444' }}>{value}</span>;
+                          cellContent = <span style={{ padding: '4px 10px', borderRadius: '100px', fontSize: '11px', fontWeight: 700, backgroundColor: isConf ? '#d946ef20' : '#ef444420', color: isConf ? '#d946ef' : '#ef4444' }}>{value}</span>;
                         } else if (col.id === 'bib_number') {
                           cellContent = <span style={{ fontWeight: 800, color: value !== '--' ? '#ec4899' : t.textSub }}>{value}</span>;
                         } else if (col.id === 'participant_name') {
@@ -765,9 +765,9 @@ export default function AllBookingsPage({ bookings = [], events = [], theme: t, 
                   disabled={currentPage === 1}
                   style={{
                     padding: '6px 12px', borderRadius: '6px', fontSize: '13px', fontWeight: 600,
-                    backgroundColor: currentPage === 1 ? 'transparent' : '#3b82f6',
+                    backgroundColor: currentPage === 1 ? 'transparent' : '#d946ef',
                     color: currentPage === 1 ? t.textSub : '#fff',
-                    border: `1px solid ${currentPage === 1 ? t.border : '#3b82f6'}`,
+                    border: `1px solid ${currentPage === 1 ? t.border : '#d946ef'}`,
                     cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
                     transition: 'all 0.2s'
                   }}
@@ -779,9 +779,9 @@ export default function AllBookingsPage({ bookings = [], events = [], theme: t, 
                   disabled={currentPage === totalPages}
                   style={{
                     padding: '6px 12px', borderRadius: '6px', fontSize: '13px', fontWeight: 600,
-                    backgroundColor: currentPage === totalPages ? 'transparent' : '#3b82f6',
+                    backgroundColor: currentPage === totalPages ? 'transparent' : '#d946ef',
                     color: currentPage === totalPages ? t.textSub : '#fff',
-                    border: `1px solid ${currentPage === totalPages ? t.border : '#3b82f6'}`,
+                    border: `1px solid ${currentPage === totalPages ? t.border : '#d946ef'}`,
                     cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
                     transition: 'all 0.2s'
                   }}

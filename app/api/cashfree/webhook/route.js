@@ -55,6 +55,20 @@ export async function POST(request) {
 
             if (fetchErr) throw fetchErr;
 
+            // 1.5 Automatically Assign BIB Number before confirming
+            const categoryName = booking.category || booking.race_category_id || "default";
+            let assignedBibNumber = null;
+            try {
+                assignedBibNumber = await assignBibNumber(booking.event_id, bookingId, categoryName, true);
+            } catch (bibErr) {
+                console.error("Auto BIB generation failed in cashfree webhook:", bibErr.message);
+            }
+
+            const updatedCustomerDetails = {
+                ...(booking.customer_details || {}),
+                ...(assignedBibNumber ? { bib_number: assignedBibNumber } : {})
+            };
+
             // 2. Update Booking Status immediately
             await supabaseAdmin
                 .from('bookings')
@@ -62,7 +76,9 @@ export async function POST(request) {
                     status: 'Confirmed',
                     payment_status: 'paid',
                     confirmed_at: nowIso,
-                    booking_ref: bookingId.slice(-8).toUpperCase()
+                    booking_ref: bookingId.slice(-8).toUpperCase(),
+                    customer_details: updatedCustomerDetails,
+                    ...(assignedBibNumber ? { bib_number: assignedBibNumber } : {})
                 })
                 .eq('id', bookingId);
 
@@ -147,13 +163,7 @@ export async function POST(request) {
                 });
             }
 
-            // 6. Automatically Assign BIB Number
-            const categoryName = booking.category || booking.race_category_id || "default";
-            try {
-                await assignBibNumber(booking.event_id, bookingId, categoryName, true);
-            } catch (bibErr) {
-                console.error("Auto BIB generation failed in cashfree webhook:", bibErr.message);
-            }
+
 
             // ── DEFERRED BACKGROUND PROCESSING ─────────────────────────────────────
             const protocol = headers['x-forwarded-proto'] || 'https';
