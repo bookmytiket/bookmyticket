@@ -310,20 +310,35 @@ export default function MarathonEventForm({ marathonId, isRSVP, onCancel, onPubl
             const { data: spons } = await supabase
                 .from('marathon_sponsors')
                 .select('*')
-                .eq('marathon_id', localMarathonId);
+                .eq('marathon_id', localMarathonId)
+                .catch(() => ({ data: null })); // Ignore if table doesn't exist
             
             const dynSponsors = source.sponsor_logos || dynCfg.sponsors || dynCfg.sponsor_logos || [];
             if (spons && spons.length > 0) {
                 setSponsors(spons);
             } else if (dynSponsors.length > 0) {
-                setSponsors(dynSponsors.map(s => typeof s === 'string' ? { name: '', logo: s } : s));
+                setSponsors(dynSponsors.map(s => {
+                    if (typeof s === 'string') return { sponsor_name: '', logo_url: s, sponsor_type: 'Partner' };
+                    return {
+                        sponsor_name: s.sponsor_name || s.name || '',
+                        logo_url: s.logo_url || s.logo || '',
+                        sponsor_type: s.sponsor_type || 'Partner'
+                    };
+                }));
             }
 
             const { data: bens } = await supabase
                 .from('marathon_benefits')
                 .select('*')
-                .eq('marathon_id', localMarathonId);
-            if (bens && bens.length > 0) setBenefits(bens);
+                .eq('marathon_id', localMarathonId)
+                .catch(() => ({ data: null })); // Ignore if table doesn't exist
+                
+            const dynBenefits = dynCfg.benefits || [];
+            if (bens && bens.length > 0) {
+                setBenefits(bens);
+            } else if (dynBenefits.length > 0) {
+                setBenefits(dynBenefits);
+            }
 
             // ── Custom form fields from dynamic_config ────────────────────────────
             if (dynCfg.form_fields && dynCfg.form_fields.length > 0) {

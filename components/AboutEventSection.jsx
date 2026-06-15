@@ -258,6 +258,16 @@ export default function AboutEventSection({ event, config = {} }) {
 
     const dbHighlightsList = safeArray(dbData?.highlights);
     const benefitsList = safeArray(benefits);
+    const sponsorsList = config?.sponsors || config?.sponsor_logos || [];
+
+    // Normalize sponsors
+    const normalizedSponsors = sponsorsList.map(s => {
+        if (typeof s === 'string') return { name: 'Sponsor', logo: s };
+        return {
+            name: s.sponsor_name || s.name || 'Sponsor',
+            logo: s.logo_url || s.logo || ''
+        };
+    }).filter(s => s.logo);
 
     if (loading) {
         return (
@@ -456,6 +466,34 @@ export default function AboutEventSection({ event, config = {} }) {
                 <SectionHeader icon={HelpCircle} title="Frequently Asked Questions" subtitle="Common queries answered" />
                 <Accordion items={faqs} />
             </motion.div>
+
+            {/* ── 8. Sponsors ── */}
+            {normalizedSponsors.length > 0 && (
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.35 }}
+                    className="bg-white rounded-[24px] border border-slate-100 shadow-sm p-6"
+                >
+                    <SectionHeader icon={Star} title="Official Sponsors" subtitle="Our Event Partners" />
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mt-6">
+                        {normalizedSponsors.map((sponsor, i) => (
+                            <div key={i} className="bg-slate-50 border border-slate-100 rounded-2xl p-4 flex flex-col items-center justify-center text-center hover:border-pink-200 transition-colors group">
+                                <div className="w-full h-16 relative flex items-center justify-center mb-2">
+                                    <img 
+                                        src={sponsor.logo} 
+                                        alt={sponsor.name} 
+                                        className="max-h-full max-w-full object-contain filter grayscale group-hover:grayscale-0 opacity-70 group-hover:opacity-100 transition-all"
+                                        onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextSibling.style.display = 'block'; }}
+                                    />
+                                    <span style={{ display: 'none' }} className="text-sm font-bold text-slate-400">{sponsor.name}</span>
+                                </div>
+                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{sponsor.name}</span>
+                            </div>
+                        ))}
+                    </div>
+                </motion.div>
+            )}
 
         </div>
     );
