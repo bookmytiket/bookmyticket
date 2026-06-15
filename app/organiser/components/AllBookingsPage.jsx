@@ -189,17 +189,33 @@ export default function AllBookingsPage({ bookings = [], events = [], theme: t, 
         mobile,
         race_category: b.race_category_id || b.category || meta.category || b.ticket_type || userDetails?.category || "General",
         distance: (() => {
+          // First try to find by specific key
           let d = b.distance || meta.distance || meta.distance_km || userDetails?.distance || userDetails?.distance_km || findKey(participantInfo, ["distance", "km"]) || findKey(userDetails, ["distance", "km"]);
+          
+          // If not found by key, search all values in participantInfo and userDetails for something that looks like a distance (e.g., "5 KM", "10KM")
+          if (!d) {
+              const findDistanceInValues = (obj) => {
+                  if (!obj) return null;
+                  for (const key of Object.keys(obj)) {
+                      const val = String(obj[key] || "");
+                      const match = val.match(/(\d+(?:\.\d+)?)\s*km/i);
+                      if (match) return match[0];
+                  }
+                  return null;
+              };
+              d = findDistanceInValues(participantInfo) || findDistanceInValues(userDetails);
+          }
+
           if (!d && isMarathon) {
               const fallbackCat = b.race_category_id || b.category || meta.category || b.ticket_type || userDetails?.category || "";
               const kmMatch = String(fallbackCat).match(/(\d+(\.\d+)?)\s*km/i);
               if (kmMatch) {
                   d = kmMatch[1];
               } else {
-                  d = fallbackCat || "Not Provided";
+                  d = fallbackCat || "--";
               }
           }
-          if (!d || d === "--") return "--";
+          if (!d || d === "--" || d === "Not Provided") return "--";
           if (String(d).match(/^\d+(\.\d+)?$/)) return `${d} KM`;
           return d;
         })(),
