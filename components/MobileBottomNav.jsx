@@ -17,7 +17,7 @@ export default function MobileBottomNav() {
 
   const handleBookNow = () => {
     // If we're on a turf or service page, scroll to booking section
-    if (pathname.includes('/turfs/') || pathname.includes('/services/')) {
+    if (pathname?.includes('/turfs/') || pathname?.includes('/services/')) {
       const section = document.getElementById('booking-section') || document.getElementById('booking-form');
       if (section) {
         section.scrollIntoView({ behavior: 'smooth' });
@@ -26,8 +26,8 @@ export default function MobileBottomNav() {
     }
 
     // If we're on an event detail page, route to the event book page
-    if (pathname.includes('/events/detail')) {
-      const eventId = searchParams.get('id');
+    if (pathname?.includes('/events/detail')) {
+      const eventId = searchParams?.get('id');
       if (eventId) {
         const bookUrl = `/events/book?id=${eventId}`;
         if (!user) {
@@ -41,13 +41,13 @@ export default function MobileBottomNav() {
 
     // Default behavior
     if (!user) {
-      router.push(`/signin?redirect=${encodeURIComponent(pathname)}`);
+      router.push(`/signin?redirect=${encodeURIComponent(pathname || '/')}`);
     } else {
       router.push('/#explore-popular-events');
     }
   };
 
-  const isBookHidden = pathname.includes('/events/book') || pathname.includes('/checkout');
+  const isBookHidden = pathname?.includes('/events/book') || pathname?.includes('/checkout');
 
   return (
     <nav className="mobile-bottom-nav">
@@ -59,7 +59,7 @@ export default function MobileBottomNav() {
         </Link>
 
         {/* Column 2: Events */}
-        <Link href="/#explore-popular-events" className={`nav-item ${pathname.includes('#explore') || pathname.includes('/events') && !pathname.includes('/events/book') ? 'active' : ''}`}>
+        <Link href="/#explore-popular-events" className={`nav-item ${pathname?.includes('#explore') || (pathname?.includes('/events') && !pathname?.includes('/events/book')) ? 'active' : ''}`}>
           <Calendar size={20} strokeWidth={2.5} className="nav-icon" />
           <span className="nav-label">Events</span>
         </Link>
@@ -81,7 +81,7 @@ export default function MobileBottomNav() {
         {/* Column 4: Tickets */}
         <Link 
           href={user ? "/profile?tab=my_booking" : `/signin?redirect=${encodeURIComponent('/profile?tab=my_booking')}`} 
-          className={`nav-item ${pathname.includes('my_booking') || (pathname.includes('/profile') && searchParams.get('tab') === 'my_booking') ? 'active' : ''}`}
+          className={`nav-item ${pathname?.includes('my_booking') || (pathname?.includes('/profile') && searchParams?.get('tab') === 'my_booking') ? 'active' : ''}`}
         >
           <Ticket size={20} strokeWidth={2.5} className="nav-icon" />
           <span className="nav-label">Tickets</span>
@@ -90,7 +90,7 @@ export default function MobileBottomNav() {
         {/* Column 5: Profile */}
         <Link 
           href={user ? "/profile" : "/signin?redirect=/profile"} 
-          className={`nav-item ${pathname === '/profile' && !searchParams.get('tab') ? 'active' : ''}`}
+          className={`nav-item ${pathname === '/profile' && !searchParams?.get('tab') ? 'active' : ''}`}
         >
           <User size={20} strokeWidth={2.5} className="nav-icon" />
           <span className="nav-label">Profile</span>

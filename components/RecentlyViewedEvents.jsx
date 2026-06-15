@@ -45,6 +45,7 @@ export default function RecentlyViewedEvents({ events: propEvents, liveEvents })
     }, []);
 
     const isExpiredEvent = (ev) => {
+        if (!ev) return true;
         const d = parseEventDate(ev.rawDate || ev.date, ev.rawTime || ev.time);
         return d ? d < new Date() : false;
     };

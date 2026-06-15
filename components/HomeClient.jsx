@@ -169,9 +169,9 @@ function HomeClient() {
     return () => clearInterval(interval);
   }, []);
 
-  const activeCat = searchParams.get("category");
-  const searchQuery = searchParams.get("q") || "";
-  const activeOrganiser = searchParams.get("organiser");
+  const activeCat = searchParams?.get("category");
+  const searchQuery = searchParams?.get("q") || "";
+  const activeOrganiser = searchParams?.get("organiser");
   const [heroSlides, setHeroSlides] = useState([]);
 
   const { data: allConfig } = useSupabaseQuery('system_config', (q) => q, []);
