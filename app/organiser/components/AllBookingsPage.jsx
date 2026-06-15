@@ -187,11 +187,11 @@ export default function AllBookingsPage({ bookings = [], events = [], theme: t, 
         participant_name,
         email,
         mobile,
-        race_category: b.category || meta.category || b.ticket_type || "General",
+        race_category: b.race_category_id || b.category || meta.category || b.ticket_type || userDetails?.category || "General",
         distance: (() => {
           let d = b.distance || meta.distance || meta.distance_km || userDetails?.distance || userDetails?.distance_km || findKey(participantInfo, ["distance", "km"]) || findKey(userDetails, ["distance", "km"]);
           if (!d && isMarathon) {
-              const fallbackCat = b.category || meta.category || b.ticket_type || "";
+              const fallbackCat = b.race_category_id || b.category || meta.category || b.ticket_type || userDetails?.category || "";
               const kmMatch = String(fallbackCat).match(/(\d+(\.\d+)?)\s*km/i);
               if (kmMatch) {
                   d = kmMatch[1];
@@ -199,7 +199,7 @@ export default function AllBookingsPage({ bookings = [], events = [], theme: t, 
                   d = fallbackCat || "Not Provided";
               }
           }
-          if (!d) return "--";
+          if (!d || d === "--") return "--";
           if (String(d).match(/^\d+(\.\d+)?$/)) return `${d} KM`;
           return d;
         })(),

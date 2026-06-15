@@ -117,26 +117,52 @@ export async function POST(request) {
 
         const nowIso = new Date().toISOString();
 
-        // 3.5 Auto-Assign Bib Number if Configured (for Marathons/Sports)
+        // 3.5 Auto-Assign Bib Number and Confirm Booking ATOMICALLY
         const categoryName = booking.category || booking.race_category_id || session.package_id || "default";
-        let assignedBibNumber = await assignBibNumber(session.event_id, bookingId, categoryName, true);
         
-        // 4. Update Booking Status to Confirmed immediately
-        const updatedCustomerDetails = {
-            ...(booking.customer_details || {}),
-            ...(assignedBibNumber ? { bib_number: assignedBibNumber } : {})
-        };
-        await supabaseAdmin
-            .from("bookings")
-            .update({ 
-                status: "Confirmed",
-                payment_status: "paid",
-                confirmed_at: nowIso,
-                booking_ref: bookingId.slice(-8).toUpperCase(),
-                customer_details: updatedCustomerDetails,
+        let assignedBibNumber = null;
+        let confirmErr = null;
+        let confirmResult = null;
+        
+        try {
+            const { data, error } = await supabaseAdmin.rpc('atomic_confirm_and_assign_bib', {
+                p_booking_id: bookingId,
+                p_category_name: categoryName,
+                p_is_auto: true,
+                p_payment_status: 'paid',
+                p_booking_ref: bookingId.slice(-8).toUpperCase(),
+                p_customer_details: booking.customer_details || {}
+            });
+            confirmResult = data;
+            confirmErr = error;
+        } catch (e) {
+            confirmErr = e;
+        }
+
+        if (confirmErr || !confirmResult || !confirmResult.success) {
+            console.error("Atomic confirmation failed (RPC missing?), falling back to JS assignment:", confirmErr || confirmResult);
+            // Fallback to JS loop
+            assignedBibNumber = await assignBibNumber(session.event_id, bookingId, categoryName, true);
+            
+            const updatedCustomerDetails = {
+                ...(booking.customer_details || {}),
                 ...(assignedBibNumber ? { bib_number: assignedBibNumber } : {})
-            })
-            .eq("id", bookingId);
+            };
+
+            await supabaseAdmin
+                .from("bookings")
+                .update({ 
+                    status: "Confirmed",
+                    payment_status: "paid",
+                    confirmed_at: nowIso,
+                    booking_ref: bookingId.slice(-8).toUpperCase(),
+                    customer_details: updatedCustomerDetails,
+                    ...(assignedBibNumber ? { bib_number: assignedBibNumber } : {})
+                })
+                .eq("id", bookingId);
+        } else {
+            assignedBibNumber = confirmResult.bib_number;
+        }
 
         // 5. Update payment_transactions status
         await supabaseAdmin

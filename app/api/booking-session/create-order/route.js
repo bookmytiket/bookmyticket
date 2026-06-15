@@ -66,6 +66,7 @@ export async function POST(request) {
                     applied_campaign_code: pricingSnapshot.appliedCampaignCode || null,
                     showtime_id: participantData.showtimeId || null,
                     showtime_name: participantData.showtimeName || null,
+                    category: session.package_id || pricingSnapshot.categoryName || booking.customer_details?.category || null,
                     ...participantData
                 };
 
@@ -85,7 +86,8 @@ export async function POST(request) {
                         total_price: Number(pricingSnapshot.totalPrice) || 0,
                         selected_seats: participantData.selectedSeats || [],
                         customer_details: customerDetails,
-                        showtime_id: participantData.showtimeId || null
+                        showtime_id: participantData.showtimeId || null,
+                        race_category_id: session.package_id || pricingSnapshot.categoryName || null
                     })
                     .eq("id", bookingId)
                     .select()
@@ -127,6 +129,7 @@ export async function POST(request) {
                 applied_campaign_code: pricingSnapshot.appliedCampaignCode || null,
                 showtime_id: participantData.showtimeId || null,
                 showtime_name: participantData.showtimeName || null,
+                category: session.package_id || pricingSnapshot.categoryName || null,
                 ...participantData
             };
 
@@ -152,7 +155,8 @@ export async function POST(request) {
                     event_name: event.title,
                     location: event.location,
                     customer_details: customerDetails,
-                    showtime_id: participantData.showtimeId || null
+                    showtime_id: participantData.showtimeId || null,
+                    race_category_id: session.package_id || pricingSnapshot.categoryName || null
                 }])
                 .select()
                 .single();

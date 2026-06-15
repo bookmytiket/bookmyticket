@@ -198,26 +198,61 @@ export async function POST(request) {
 
     const bookingRef = String(booking.id).slice(-8).toUpperCase();
 
-    let assignedBibNumber = null;
-    if (isConfirmed) {
-        try {
-            const categoryName = payload.category || payload.race_category_id || "default";
-            assignedBibNumber = await assignBibNumber(booking.event_id, booking.id, categoryName, true);
-        } catch (bibErr) {
-            console.error("Auto BIB generation failed in v1 booking:", bibErr.message);
-        }
-    }
-
     const updatedCustomerDetails = {
-        ...(booking.customer_details || {}),
-        ...(assignedBibNumber ? { bib_number: assignedBibNumber } : {})
+        ...(booking.customer_details || {})
     };
 
-    await supabase.from("bookings").update({ 
-        booking_ref: bookingRef,
-        customer_details: updatedCustomerDetails,
-        ...(assignedBibNumber ? { bib_number: assignedBibNumber } : {})
-    }).eq("id", booking.id);
+    let assignedBibNumber = null;
+    if (isConfirmed) {
+        const categoryName = payload.category || payload.race_category_id || "default";
+        
+        let confirmErr = null;
+        let confirmResult = null;
+        
+        try {
+            const { data, error } = await supabase.rpc('atomic_confirm_and_assign_bib', {
+                p_booking_id: booking.id,
+                p_category_name: categoryName,
+                p_is_auto: true,
+                p_payment_status: 'paid',
+                p_booking_ref: bookingRef,
+                p_customer_details: updatedCustomerDetails
+            });
+            confirmResult = data;
+            confirmErr = error;
+        } catch (e) {
+            confirmErr = e;
+        }
+
+        if (confirmErr || !confirmResult || !confirmResult.success) {
+            console.error("Atomic confirmation failed in v1 bookings (RPC missing?), falling back:", confirmErr || confirmResult);
+            
+            // Fallback to JS loop
+            try {
+                assignedBibNumber = await assignBibNumber(booking.event_id, booking.id, categoryName, true);
+            } catch (bibErr) {
+                console.error("Auto BIB generation failed in v1 booking fallback:", bibErr.message);
+            }
+
+            const finalCustomerDetails = {
+                ...updatedCustomerDetails,
+                ...(assignedBibNumber ? { bib_number: assignedBibNumber } : {})
+            };
+
+            await supabase.from("bookings").update({ 
+                booking_ref: bookingRef,
+                customer_details: finalCustomerDetails,
+                ...(assignedBibNumber ? { bib_number: assignedBibNumber } : {})
+            }).eq("id", booking.id);
+        } else {
+            assignedBibNumber = confirmResult.bib_number;
+        }
+    } else {
+        await supabase.from("bookings").update({ 
+            booking_ref: bookingRef,
+            customer_details: updatedCustomerDetails
+        }).eq("id", booking.id);
+    }
 
     const { error: itemError } = await supabase.from("booking_items").insert({
       booking_id: booking.id,

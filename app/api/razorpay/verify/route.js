@@ -61,33 +61,55 @@ export async function POST(request) {
 
             if (fetchErr) throw fetchErr;
 
-            // 2.5 Automatically Assign BIB Number
+            // 2.5 Automatically Assign BIB Number and Confirm ATOMICALLY
             const categoryName = booking.category || booking.race_category_id || "default";
+            
             let assignedBibNumber = null;
+            let confirmErr = null;
+            let confirmResult = null;
+            
             try {
-                assignedBibNumber = await assignBibNumber(booking.event_id, id, categoryName, true);
-            } catch (bibErr) {
-                console.error("Auto BIB generation failed in razorpay verify:", bibErr.message);
+                const { data, error } = await supabaseAdmin.rpc('atomic_confirm_and_assign_bib', {
+                    p_booking_id: id,
+                    p_category_name: categoryName,
+                    p_is_auto: true,
+                    p_payment_status: 'paid',
+                    p_booking_ref: id.slice(-8).toUpperCase(),
+                    p_customer_details: booking.customer_details || {}
+                });
+                confirmResult = data;
+                confirmErr = error;
+            } catch (e) {
+                confirmErr = e;
             }
 
-            const updatedCustomerDetails = {
-                ...(booking.customer_details || {}),
-                ...(assignedBibNumber ? { bib_number: assignedBibNumber } : {})
-            };
-
-            const { error: updateErr } = await supabaseAdmin
-                .from('bookings')
-                .update({ 
-                    status: 'Confirmed',
-                    payment_status: 'paid',
-                    confirmed_at: nowIso,
-                    booking_ref: id.slice(-8).toUpperCase(),
-                    customer_details: updatedCustomerDetails,
+            if (confirmErr || !confirmResult || !confirmResult.success) {
+                console.error("Atomic confirmation failed in razorpay verify (RPC missing?), falling back:", confirmErr || confirmResult);
+                
+                // Fallback to JS loop
+                assignedBibNumber = await assignBibNumber(booking.event_id, id, categoryName, true);
+                
+                const updatedCustomerDetails = {
+                    ...(booking.customer_details || {}),
                     ...(assignedBibNumber ? { bib_number: assignedBibNumber } : {})
-                })
-                .eq('id', id);
+                };
 
-            if (updateErr) throw updateErr;
+                await supabaseAdmin
+                    .from('bookings')
+                    .update({ 
+                        status: 'Confirmed',
+                        payment_status: 'paid',
+                        confirmed_at: nowIso,
+                        booking_ref: id.slice(-8).toUpperCase(),
+                        customer_details: updatedCustomerDetails,
+                        ...(assignedBibNumber ? { bib_number: assignedBibNumber } : {})
+                    })
+                    .eq('id', id);
+            } else {
+                assignedBibNumber = confirmResult.bib_number;
+            }
+
+
 
             // 3.5 Mark individual seats as sold in seat_inventory
             if (booking.selected_seats && booking.selected_seats.length > 0) {

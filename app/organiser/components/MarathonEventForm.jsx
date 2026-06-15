@@ -172,6 +172,16 @@ export default function MarathonEventForm({ marathonId, isRSVP, onCancel, onPubl
         fetchCities();
     }, [eventData.district, eventData.country]);
 
+    const cleanCategoryName = (name) => {
+        if (!name) return "";
+        let clean = String(name);
+        // Repeatedly remove any (X KM) or (X.X KM) suffixes case-insensitively
+        while (/(?:\s*\(\d+(?:\.\d+)?\s*KM\))+$/i.test(clean)) {
+            clean = clean.replace(/(?:\s*\(\d+(?:\.\d+)?\s*KM\))+$/i, '').trim();
+        }
+        return clean;
+    };
+
     const fetchMarathonDetails = async () => {
         setLoading(true);
         try {
@@ -259,7 +269,7 @@ export default function MarathonEventForm({ marathonId, isRSVP, onCancel, onPubl
                 console.log("[MarathonForm] Using categories from marathon_categories table");
                 finalCategories = catData.map((c, i) => ({
                     id: c.id || i,
-                    category_name: c.category_name || c.title || c.name || "Category",
+                    category_name: cleanCategoryName(c.category_name || c.title || c.name || "Category"),
                     distance_km: Number(c.distance_km) || 0,
                     age_group: c.age_group || "Open",
                     gender_category: c.gender_category || "All",
@@ -424,18 +434,21 @@ export default function MarathonEventForm({ marathonId, isRSVP, onCancel, onPubl
                 bib_display_on_ticket: bibConfig.bib_display_on_ticket,
                 dynamic_config: {
                     // Simplified categories for booking sidebar price display
-                    categories: categories.map(c => ({
-                        id: c.id || Math.random().toString(36).substr(2, 9),
-                        title: `${c.category_name} (${c.distance_km}KM)`,
-                        name: `${c.category_name} (${c.distance_km}KM)`,
-                        price: isRSVP ? 0 : (Number(c.price) || 0),
-                        distance_km: Number(c.distance_km) || 0,
-                        age_group: c.age_group || 'Open',
-                        gender_category: c.gender_category || 'All',
-                        slots_total: Number(c.slots_total) || 100,
-                        waitlist: c.waitlist || false,
-                        autoApprove: c.autoApprove !== false
-                    })),
+                    categories: categories.map(c => {
+                        const baseName = cleanCategoryName(c.category_name);
+                        return {
+                            id: c.id || Math.random().toString(36).substr(2, 9),
+                            title: `${baseName} (${c.distance_km}KM)`,
+                            name: `${baseName} (${c.distance_km}KM)`,
+                            price: isRSVP ? 0 : (Number(c.price) || 0),
+                            distance_km: Number(c.distance_km) || 0,
+                            age_group: c.age_group || 'Open',
+                            gender_category: c.gender_category || 'All',
+                            slots_total: Number(c.slots_total) || 100,
+                            waitlist: c.waitlist || false,
+                            autoApprove: c.autoApprove !== false
+                        };
+                    }),
                     auto_bib_generation: bibConfig.auto_bib_generation !== false,
                     form_fields: customFields.map(f => ({
                         ...f,
@@ -445,19 +458,22 @@ export default function MarathonEventForm({ marathonId, isRSVP, onCancel, onPubl
                         ...f,
                         options: Array.isArray(f.options) ? f.options.filter(Boolean) : f.options
                     })),
-                    marathonCategories: categories.map(c => ({
-                        id: c.id || Math.random().toString(36).substr(2, 9),
-                        category_name: c.category_name,
-                        distance_km: Number(c.distance_km) || 0,
-                        age_group: c.age_group || 'Open',
-                        gender_category: c.gender_category || 'All',
-                        price: isRSVP ? 0 : (Number(c.price) || 0),
-                        slots: Number(c.slots_total) || 100,
-                        totalSlots: Number(c.slots_total) || 100,
-                        waitlist: c.waitlist || false,
-                        autoApprove: c.autoApprove !== false,
-                        ageRates: isRSVP ? [] : (c.pricing || c.ageRates || []) // Preserve age-based pricing
-                    })),
+                    marathonCategories: categories.map(c => {
+                        const baseName = cleanCategoryName(c.category_name);
+                        return {
+                            id: c.id || Math.random().toString(36).substr(2, 9),
+                            category_name: baseName,
+                            distance_km: Number(c.distance_km) || 0,
+                            age_group: c.age_group || 'Open',
+                            gender_category: c.gender_category || 'All',
+                            price: isRSVP ? 0 : (Number(c.price) || 0),
+                            slots: Number(c.slots_total) || 100,
+                            totalSlots: Number(c.slots_total) || 100,
+                            waitlist: c.waitlist || false,
+                            autoApprove: c.autoApprove !== false,
+                            ageRates: isRSVP ? [] : (c.pricing || c.ageRates || []) // Preserve age-based pricing
+                        };
+                    }),
                     subtitle: eventData.subtitle,
                     awareness_text: eventData.awareness_text,
                     sponsors: sponsors,
